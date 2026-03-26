@@ -46,4 +46,5 @@ Indicate the module your commit primarily affects. Common scopes include:
 
 - **Direct Commits to `main` are STRICTLY FORBIDDEN.**
 - **Create Branches**: All feature development and bug fixes must be done on a new branch checked out from `main` (e.g., `feat/timeline-drag`, `fix/overlap-crash`).
-- **Use Pull Requests**: Once your work is complete, open a Pull Request (PR) to merge your branch back into `main`.
+- **Continuous Commits**: Make incremental commits to your branch as you progress through the implementation.
+- **Use Pull Requests**: Once the entire feature or workflow is fully complete (or when instructed by the reviewer), open a Pull Request (PR) to merge your branch back into `main`. The PR description should summarize all the commits and changes made.
