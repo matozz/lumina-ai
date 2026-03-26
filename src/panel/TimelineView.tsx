@@ -11,6 +11,19 @@ import { cn } from '../utils/cn';
 export function TimelineView() {
   const { parsedDsl, globalBeat, compileResult, currentDslCode, setCurrentDslCode } = useUiStore();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const trackHeadersScrollRef = useRef<HTMLDivElement>(null);
+  
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (trackHeadersScrollRef.current) {
+      // Prevent macOS elastic scroll bounce from causing negative scrollTop
+      // or scrolling beyond max height, which would misalign the two containers
+      const target = e.currentTarget;
+      const maxScrollTop = target.scrollHeight - target.clientHeight;
+      const safeScrollTop = Math.max(0, Math.min(target.scrollTop, maxScrollTop));
+      
+      trackHeadersScrollRef.current.scrollTop = safeScrollTop;
+    }
+  };
   
   const [selectedPhaser, setSelectedPhaser] = useState<string | null>(null);
   
@@ -276,8 +289,9 @@ export function TimelineView() {
       const scrollLeft = container.scrollLeft;
       const containerWidth = container.clientWidth;
       
+      // Auto-scroll when playhead moves out of view
       if (playheadX > scrollLeft + containerWidth - 100) {
-        container.scrollTo({ left: Math.max(0, playheadX - 100), behavior: 'smooth' });
+        container.scrollTo({ left: Math.max(0, playheadX - 100), behavior: 'auto' });
       } else if (playheadX < scrollLeft) {
         container.scrollTo({ left: Math.max(0, playheadX - 100), behavior: 'auto' });
       }
@@ -299,14 +313,20 @@ export function TimelineView() {
 
         <TimelineTrackHeaders 
           tracks={tracks} 
-          activeTrackName={moving?.activeTrackName} 
+          activeTrackName={moving?.activeTrackName}
+          scrollRef={trackHeadersScrollRef}
+          globalBeat={globalBeat}
         />
         
-        <div ref={scrollRef} className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar relative bg-[#0a0a0c]">
+        <div 
+          ref={scrollRef} 
+          onScroll={handleScroll}
+          className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar relative bg-[#0a0a0c] overscroll-none"
+        >
           <div style={{ width: SCROLL_WIDTH, height: '100%', position: 'relative' }}>
             <TimelineGrid totalBeats={TOTAL_BEATS} beatWidth={BEAT_WIDTH} />
             
-            <div className="flex flex-col relative z-0 pt-px">
+            <div className="flex flex-col relative z-0">
               {tracks.map((t) => (
                 <DroppableTrack
                   key={t.name}
@@ -336,6 +356,10 @@ export function TimelineView() {
                   onDelete={handleDelete}
                 />
               ))}
+              {/* Spacer matching the extra padding in TrackHeaders */}
+              <div 
+                className="w-full h-10 border-b border-zinc-800/30" 
+              />
               <div 
                 className="flex-1 min-h-25" 
                 onClick={() => {
