@@ -10,6 +10,7 @@ export const engine = {
 
   play: () => invoke("play"),
   stop: () => invoke("stop"),
+  resetBeat: () => invoke("reset_beat"),
   setTempo: (bpm: number) => invoke("set_tempo", { bpm }),
 
   triggerPhaser: (name: string) =>

@@ -90,6 +90,26 @@ pub async fn stop(state: State<'_, Arc<EngineState>>) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn reset_beat(state: State<'_, Arc<EngineState>>) -> Result<(), String> {
+    let mut r_state = state.runtime.write().await;
+    r_state.global_beat = 0.0;
+    state.scheduler.reset_beat();
+    
+    // Also reset any active timeline execution state since we jumped in time
+    if r_state.sequencer_mode == crate::state::SequencerMode::Timeline {
+        r_state.active_phasers.clear();
+        let show_guard = state.compiled_show.read().await;
+        if let Some(show) = &*show_guard {
+            if let Some(timeline) = &show.timeline {
+                r_state.timeline_executor = Some(crate::engine::timeline::TimelineExecutor::new(timeline.clone()));
+            }
+        }
+    }
+    
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn set_tempo(bpm: u32, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
     state.scheduler.set_tempo(bpm);
     Ok(())

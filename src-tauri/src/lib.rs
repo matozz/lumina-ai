@@ -40,6 +40,7 @@ pub fn run() {
             commands::validate_dsl,
             commands::play,
             commands::stop,
+            commands::reset_beat,
             commands::set_tempo,
             commands::trigger_phaser,
             commands::stop_phaser,
