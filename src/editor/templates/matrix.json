@@ -1,0 +1,54 @@
+{
+  "meta": { "name": "Matrix Layout", "version": "1.0", "tempo": 120 },
+  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 64] }],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "matrix",
+      "rows": 8,
+      "columns": 8,
+      "spacing": 40,
+      "origin": [0, 0]
+    }
+  },
+  "groups": [
+    { "name": "All", "fixtures": { "range": [1, 64] }, "sortBy": "none" },
+    { "name": "ByX", "fixtures": { "range": [1, 64] }, "sortBy": "x" },
+    { "name": "ByY", "fixtures": { "range": [1, 64] }, "sortBy": "y" },
+    { "name": "ByCenter", "fixtures": { "range": [1, 64] }, "sortBy": "distance_center" }
+  ],
+  "presets": [],
+  "phasers": [
+    {
+      "name": "Horizontal Wave",
+      "target": "ByX",
+      "speed": 60,
+      "steps": [
+        { "values": { "color": "#ff0000" }, "width": 50, "transition": 100 },
+        { "values": { "color": "#0000ff" }, "width": 50, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+    },
+    {
+      "name": "Vertical Flow",
+      "target": "ByY",
+      "speed": 80,
+      "steps": [
+        { "values": { "color": "#00ff00", "dimmer": 1.0 }, "width": 20, "transition": 0 },
+        { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 80, "transition": 0 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+    },
+    {
+      "name": "Ripple Out",
+      "target": "ByCenter",
+      "speed": 90,
+      "steps": [
+        { "values": { "color": "#ffffff", "dimmer": 1.0 }, "width": 20, "transition": 100, "accel": -100, "decel": -100 },
+        { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 80, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+    }
+  ],
+  "sequences": []
+}

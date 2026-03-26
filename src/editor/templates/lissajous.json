@@ -1,0 +1,46 @@
+{
+  "meta": { "name": "Lissajous Knot", "version": "1.0", "tempo": 130 },
+  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 120] }],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "formula",
+      "formula": {
+        "x": "sin(3 * t + 1.5708)",
+        "y": "sin(2 * t)",
+        "tRange": [0, 6.283185],
+        "count": 120,
+        "scale": 150
+      }
+    }
+  },
+  "groups": [
+    { "name": "All", "fixtures": { "range": [1, 120] }, "sortBy": "none" },
+    { "name": "ByY", "fixtures": { "range": [1, 120] }, "sortBy": "y" }
+  ],
+  "presets": [],
+  "phasers": [
+    {
+      "name": "Snake Run",
+      "target": "All",
+      "speed": 60,
+      "steps": [
+        { "values": { "color": "#00aaff", "dimmer": 1.0 }, "width": 15, "transition": 100 },
+        { "values": { "color": "#aa00ff", "dimmer": 0.5 }, "width": 15, "transition": 100 },
+        { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 70, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+    },
+    {
+      "name": "Y-Axis Gradient",
+      "target": "ByY",
+      "speed": 30,
+      "steps": [
+        { "values": { "color": "#ff0088", "dimmer": 0.8 }, "width": 50, "transition": 100 },
+        { "values": { "color": "#ff8800", "dimmer": 0.8 }, "width": 50, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+    }
+  ],
+  "sequences": []
+}

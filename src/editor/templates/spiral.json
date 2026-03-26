@@ -1,0 +1,47 @@
+{
+  "meta": { "name": "Golden Spiral", "version": "1.0", "tempo": 120 },
+  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 150] }],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "formula",
+      "formula": {
+        "x": "0.5 * t * cos(t)",
+        "y": "0.5 * t * sin(t)",
+        "tRange": [0, 31.4159],
+        "count": 150,
+        "scale": 15
+      }
+    }
+  },
+  "groups": [
+    { "name": "Path", "fixtures": { "range": [1, 150] }, "sortBy": "none" },
+    { "name": "ByAngle", "fixtures": { "range": [1, 150] }, "sortBy": "angle_center" }
+  ],
+  "presets": [],
+  "phasers": [
+    {
+      "name": "Inward Flow",
+      "target": "Path",
+      "speed": 120,
+      "steps": [
+        { "values": { "color": "#ffffff", "dimmer": 1.0 }, "width": 5, "transition": 0 },
+        { "values": { "color": "#ffaa00", "dimmer": 0.6 }, "width": 15, "transition": 100 },
+        { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 80, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 360, "to": 0 } }
+    },
+    {
+      "name": "Windmill",
+      "target": "ByAngle",
+      "speed": 45,
+      "steps": [
+        { "values": { "color": "#00ff44", "dimmer": 0.8 }, "width": 33.3, "transition": 100 },
+        { "values": { "color": "#0044ff", "dimmer": 0.8 }, "width": 33.3, "transition": 100 },
+        { "values": { "color": "#4400ff", "dimmer": 0.8 }, "width": 33.4, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 1080 } }
+    }
+  ],
+  "sequences": []
+}
