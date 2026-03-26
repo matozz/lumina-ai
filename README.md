@@ -23,7 +23,34 @@ Lumina AI leverages a hybrid architecture for optimal performance:
   - Auto-overlap resolution (blocks automatically trim when colliding).
   - Multi-track selection and deletion.
 - **High-Performance Rendering**: Utilizes direct DOM manipulation via Refs to bypass React's render cycle during drag operations, achieving perfectly smooth 60fps UI updates.
-- **Custom DSL Engine**: A robust Rust backend that interprets and executes `.lumina` script files in real-time.
+- **Custom DSL Engine**: A robust Rust backend that parses and executes custom JSON-based DSL payloads in real-time.
+
+## Custom JSON DSL Example
+
+Lumina AI uses a powerful JSON-based Domain Specific Language (DSL) to define fixtures, layouts, and dynamic lighting effects (Phasers). This allows for precise, programmable control over the entire show.
+
+Here is an example of defining a set of lights and creating a "Blink" phaser effect:
+
+```json
+{
+  "meta": { "name": "Basic Show", "version": "1.0", "tempo": 120 },
+  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 10] }],
+  "groups": [
+    { "name": "All Spots", "fixtures": { "range": [1, 10] }, "sortBy": "none" }
+  ],
+  "phasers": [
+    {
+      "name": "Blink",
+      "steps": [
+        { "values": { "dimmer": 100 }, "transition": 0.0, "delay": 0.0 },
+        { "values": { "dimmer": 0 }, "transition": 0.5, "delay": 0.0 }
+      ],
+      "speed": 1.0,
+      "phase": "0..360"
+    }
+  ]
+}
+```
 
 ## Tech Stack
 
