@@ -12,6 +12,8 @@ We use a lightweight adaptation of [Conventional Commits](https://www.convention
 <type>(<scope>): <emoji> <description>
 ```
 
+**Rule**: Keep the first line of the commit message (the subject line) **under 72 characters** so it doesn't get truncated in GitHub or terminal logs. If more context is needed, add an empty line after the subject, followed by a detailed body.
+
 ### 2. Allowed Types
 
 - `feat`: A new feature
