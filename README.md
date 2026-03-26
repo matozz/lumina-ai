@@ -2,6 +2,9 @@
 
 A modern, high-performance timeline and sequencer engine for lighting shows, built with Tauri 2.0, React, TypeScript, and Rust.
 
+> **🤖 Vibe Coding & AI-Driven Development**
+> Lumina AI embraces "Vibe Coding" — it is heavily guided and iterated upon by AI agents. For AI assistants contributing to this project, please refer to the [`AGENTS.md`](./AGENTS.md) file at the root of the repository, as well as the architectural specifications in the [`/agent-docs`](./agent-docs/) directory.
+
 ## Architecture
 
 Lumina AI leverages a hybrid architecture for optimal performance:
