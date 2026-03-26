@@ -16,7 +16,7 @@ export function DroppableTrack({ track, beatWidth, selectedPhaser, onGridClick, 
   return (
     <div 
       className={cn(
-        "h-12 border-b border-zinc-800/30 relative hover:bg-zinc-900/30 transition-colors group",
+        "h-12 border-b border-zinc-800/30 relative hover:bg-zinc-900/30 transition-colors group box-border",
         selectedPhaser && "cursor-crosshair"
       )}
       onClick={(e) => onGridClick(e, track.name)}
