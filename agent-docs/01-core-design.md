@@ -16,7 +16,7 @@ Lumina AI is a specialized lighting show engine combining a React-based frontend
 
 ### Backend (Rust + Tauri)
 - **Core Engine**: Handles the actual execution of lighting states.
-- **DSL Compiler**: Parses and compiles `.lumina` script files into executable sequences.
+- **DSL Compiler**: Parses and compiles custom JSON-based DSL payloads into executable sequences.
 - **Scheduler**: Tokio-based asynchronous scheduler for precise timing and playback execution.
 
 ## Data Flow

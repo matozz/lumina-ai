@@ -31,8 +31,8 @@ Lumina AI is a high-performance timeline and sequencer engine for lighting shows
 - **Format / Check**: Ensure to run `pnpm build` (which includes `tsc` check) before declaring a task complete to ensure no TypeScript compilation errors were introduced.
 
 ### Iterating on the DSL
-If the user asks to add a new keyword to the `.lumina` DSL:
-1. Update `src-tauri/src/compiler/parser.rs` to recognize the new syntax.
+If the user asks to add a new keyword or capability to the JSON DSL:
+1. Update `src-tauri/src/compiler/mod.rs` to recognize the new fields.
 2. Implement execution logic in `src-tauri/src/engine/`.
 3. Inform the frontend of the new capability (update UI templates/Monaco editor support if applicable).
 
