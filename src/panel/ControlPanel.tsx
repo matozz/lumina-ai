@@ -1,6 +1,6 @@
 import { useUiStore, SequencerMode } from "../stores/uiStore";
 import { engine } from "../bridge/commands";
-import { Play, Square, Activity, Clock } from "lucide-react";
+import { Play, Pause, Square, Activity, Clock } from "lucide-react";
 import { cn } from "../utils/cn";
 
 export function ControlPanel() {
@@ -14,6 +14,12 @@ export function ControlPanel() {
     }
   };
 
+  const handleStop = async () => {
+    await engine.stop();
+    await engine.resetBeat();
+    useUiStore.getState().setGlobalBeat(0);
+  };
+
   const handleTempoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTempo = parseInt(e.target.value, 10);
     await engine.setTempo(newTempo);
@@ -22,6 +28,11 @@ export function ControlPanel() {
 
   const handleModeChange = async (mode: SequencerMode) => {
     try {
+      if (mode !== sequencerMode) {
+        await engine.stop();
+        await engine.resetBeat();
+        useUiStore.getState().setGlobalBeat(0);
+      }
       await engine.setSequencerMode(mode);
       setSequencerMode(mode);
     } catch (e) {
@@ -88,12 +99,23 @@ export function ControlPanel() {
           className={cn(
             "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-md text-sm font-medium transition-all",
             isPlaying 
-              ? "bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white border-zinc-700" 
-              : "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 shadow-sm"
+              ? "bg-zinc-800 text-amber-400 hover:bg-zinc-700 hover:text-amber-300 border-zinc-700 shadow-inner" 
+              : "bg-emerald-500 text-white hover:bg-emerald-400 shadow-sm shadow-emerald-500/20"
           )}
         >
-          {isPlaying ? <Square size={16} /> : <Play size={16} fill="currentColor" />}
-          {isPlaying ? "Stop Engine" : "Play Engine"}
+          {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
+          {isPlaying ? "Pause" : "Play"}
+        </button>
+        
+        <button 
+          onClick={handleStop}
+          className={cn(
+            "flex items-center justify-center px-4 py-3 rounded-md transition-all",
+            "bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 border border-zinc-800"
+          )}
+          title="Stop and Return to Start"
+        >
+          <Square size={16} fill="currentColor" />
         </button>
       </div>
 

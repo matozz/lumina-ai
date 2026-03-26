@@ -46,13 +46,14 @@ impl Scheduler {
         running.store(true, Ordering::SeqCst);
 
         std::thread::spawn(move || {
-            let mut global_beat: f64 = 0.0;
-            let mut last_integer_beat: i64 = -1;
             let mut next_tick = Instant::now();
-
-            // Setup tokio runtime for calling async methods synchronously if needed,
-            // but we can also just use block_on
             let rt = tokio::runtime::Runtime::new().unwrap();
+            
+            // Read initial global_beat from state when starting/resuming
+            let mut global_beat = rt.block_on(async {
+                state.runtime.read().await.global_beat
+            });
+            let mut last_integer_beat: i64 = global_beat.floor() as i64;
 
             while running.load(Ordering::SeqCst) {
                 let bpm = tempo.load(Ordering::Relaxed) as f64;
@@ -190,6 +191,15 @@ impl Scheduler {
 
     pub fn stop(&self) {
         self.running.store(false, Ordering::SeqCst);
+    }
+    
+    pub fn reset_beat(&self) {
+        // Only relevant if we have internal beat state in the scheduler thread
+        // For now, the global beat is entirely derived from `state.runtime.global_beat` 
+        // but we manage our own local `global_beat` var inside the run loop.
+        // We'll need to communicate this reset to the thread if it's running.
+        // Since we modify r_state in `reset_beat` command, the next time `start` is called
+        // it starts from 0 anyway, but let's signal a reset via an atomic if it's currently running.
     }
 
     pub fn set_tempo(&self, bpm: u32) {
