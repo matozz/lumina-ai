@@ -3,12 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import { engine } from "../bridge/commands";
 import { useUiStore } from "../stores/uiStore";
 import { TEMPLATES } from "./templates";
-import { XCircle } from "lucide-react";
+import { XCircle, FileCode2 } from "lucide-react";
 import { cn } from "../utils/cn";
 
 export function DslEditor() {
   const { currentDslCode: code, setCurrentDslCode: setCode } = useUiStore();
-  const { compileErrors, compileStatus, setCompileResult, setCompileErrors, setCompileStatus } = useUiStore();
+  const { compileErrors, setCompileResult, setCompileErrors, setCompileStatus } = useUiStore();
 
   const latestCodeRef = useRef(code);
   latestCodeRef.current = code;
@@ -56,18 +56,19 @@ export function DslEditor() {
   };
 
   return (
-    <div className={cn("flex flex-col h-full w-100 border-r border-zinc-800 bg-zinc-950 shadow-xl z-10")}>
-      <div className={cn("p-3 border-b border-zinc-800 bg-zinc-900/50 flex justify-between items-center gap-3")}>
+    <div className={cn("flex flex-col h-full w-112.5 border-r border-zinc-800 bg-zinc-950 shadow-xl z-10 shrink-0")}>
+      <div className={cn("h-10 border-b border-zinc-800 bg-zinc-900/80 flex items-center px-4 justify-between backdrop-blur-md shrink-0")}>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-zinc-100 font-semibold text-sm tracking-tight">DSL Editor</span>
+          <FileCode2 className="w-4 h-4 text-indigo-400" />
+          <span className="text-xs font-semibold text-zinc-200 tracking-wide">DSL EDITOR</span>
         </div>
         
         <div className="flex gap-2 flex-1 justify-end">
           <select 
             onChange={(e) => loadTemplate(e.target.value)}
             className={cn(
-              "h-8 max-w-37.5 items-center justify-between rounded-md border border-zinc-800 bg-zinc-950",
-              "px-2 py-1 text-xs text-zinc-300 placeholder:text-zinc-400",
+              "h-6 max-w-37.5 items-center justify-between rounded border border-zinc-800 bg-zinc-950",
+              "px-1.5 py-0 text-xs text-zinc-300 placeholder:text-zinc-400",
               "focus:outline-none focus:ring-1 focus:ring-zinc-500 transition-colors"
             )}
           >
@@ -75,17 +76,6 @@ export function DslEditor() {
               <option key={t.key} value={t.key}>{t.name}</option>
             ))}
           </select>
-          <button 
-            onClick={() => compileCode(code)} 
-            disabled={compileStatus === 'compiling'}
-            className={cn(
-              "inline-flex items-center justify-center rounded-md text-xs font-medium transition-colors",
-              "focus-visible:outline-none focus-visible:ring-1 disabled:pointer-events-none disabled:opacity-50",
-              "bg-zinc-100 text-zinc-900 shadow hover:bg-zinc-200 h-8 px-3"
-            )}
-          >
-            Compile
-          </button>
         </div>
       </div>
       <div className="flex-1 overflow-hidden relative">
