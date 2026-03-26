@@ -24,6 +24,13 @@ Lumina AI is a high-performance timeline and sequencer engine for lighting shows
 
 ## Workflow & Commands
 
+### Development Lifecycle
+When tasked with a feature or fix:
+1. **Branching**: Do NOT create a PR for every single small change. Instead, check out a new branch for the feature context (e.g., `feat/ui-overhaul`).
+2. **Continuous Commits**: Make continuous, incremental commits as you converse with the user and complete sub-tasks.
+3. **Merging**: Only push to origin and create a Pull Request when the user explicitly instructs you to "merge", "open PR", or indicates the entire feature is fully complete.
+4. **PR Description**: When opening the PR, analyze all the commits you made on the branch and provide a comprehensive summary in the PR body.
+
 ### Setup & Run
 - **Install dependencies**: `pnpm install` (always use `pnpm`).
 - **Run Frontend/Backend in Dev**: `pnpm tauri dev`
