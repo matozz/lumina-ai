@@ -5,9 +5,10 @@
     "type": "generator",
     "generator": {
       "shape": "circle",
-      "count": 20,
-      "radius": 150,
-      "origin": [0, 0]
+      "rings": 1,
+      "increment": 20,
+      "gap": 150,
+      "center": [0, 0]
     }
   },
   "groups": [
@@ -27,6 +28,7 @@
       "phase": { "mode": "constant", "value": 0 }
     }
   ],
+  "sequences": [],
   "timeline": {
     "bpm": 120,
     "events": []

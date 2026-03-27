@@ -26,6 +26,7 @@
       "phase": { "mode": "spread", "spread": { "from": 0, "to": 720 } }
     }
   ],
+  "sequences": [],
   "timeline": {
     "bpm": 120,
     "events": []

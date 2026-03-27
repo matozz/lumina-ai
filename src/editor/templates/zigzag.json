@@ -49,6 +49,7 @@
       "phase": { "mode": "block", "blocks": 2 }
     }
   ],
+  "sequences": [],
   "timeline": {
     "bpm": 130,
     "events": []
