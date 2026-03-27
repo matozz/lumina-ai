@@ -12,27 +12,39 @@
     }
   },
   "groups": [
-    { "name": "All", "fixtures": { "range": [1, 12] }, "sortBy": "none" }
+    { "name": "All", "fixtures": { "range": [1, 12] }, "sortBy": "angle_center" },
+    { "name": "Odd", "fixtures": { "list": [1, 3, 5, 7, 9, 11] }, "sortBy": "none" },
+    { "name": "Even", "fixtures": { "list": [2, 4, 6, 8, 10, 12] }, "sortBy": "none" }
   ],
   "presets": [],
   "phasers": [
     {
-      "name": "Cyan Magenta Bump",
-      "target": "All",
+      "name": "Odd Bump",
+      "target": "Odd",
       "multiplier": 2.0,
       "steps": [
-        { "values": { "color": "#00ffff", "dimmer": 1.0 }, "width": 50, "transition": 0 },
-        { "values": { "color": "#ff00ff", "dimmer": 1.0 }, "width": 50, "transition": 0 }
+        { "values": { "color": "#00ffff", "dimmer": 1.0 }, "width": 10, "transition": 0 },
+        { "values": { "color": "#000033", "dimmer": 0.2 }, "width": 90, "transition": 50 }
       ],
-      "phase": { "mode": "block", "blocks": 2 }
+      "phase": { "mode": "constant", "value": 0 }
     },
     {
-      "name": "Fire Flash",
-      "target": "All",
-      "multiplier": 1.0,
+      "name": "Even Bump",
+      "target": "Even",
+      "multiplier": 2.0,
       "steps": [
-        { "values": { "color": "#ff3300", "dimmer": 1.0 }, "width": 10, "transition": 0 },
-        { "values": { "color": "#220000", "dimmer": 0.2 }, "width": 90, "transition": 100 }
+        { "values": { "color": "#ff00ff", "dimmer": 1.0 }, "width": 10, "transition": 0 },
+        { "values": { "color": "#330000", "dimmer": 0.2 }, "width": 90, "transition": 50 }
+      ],
+      "phase": { "mode": "constant", "value": 180 }
+    },
+    {
+      "name": "Sweep Flash",
+      "target": "All",
+      "multiplier": 0.5,
+      "steps": [
+        { "values": { "color": "#ffffff", "dimmer": 1.0 }, "width": 5, "transition": 0 },
+        { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 95, "transition": 100 }
       ],
       "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
     }

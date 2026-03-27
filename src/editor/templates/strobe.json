@@ -12,16 +12,17 @@
     }
   },
   "groups": [
-    { "name": "Odd", "fixtures": { "list": [1,3,5,7,9] }, "sortBy": "none" },
-    { "name": "Even", "fixtures": { "list": [2,4,6,8,10] }, "sortBy": "none" },
-    { "name": "All", "fixtures": { "range": [1, 10] }, "sortBy": "x" }
+    { "name": "Odd", "fixtures": { "list": [1, 3, 5, 7, 9] }, "sortBy": "none" },
+    { "name": "Even", "fixtures": { "list": [2, 4, 6, 8, 10] }, "sortBy": "none" },
+    { "name": "All", "fixtures": { "range": [1, 10] }, "sortBy": "x" },
+    { "name": "ByCenter", "fixtures": { "range": [1, 10] }, "sortBy": "distance_center" }
   ],
   "presets": [],
   "phasers": [
     {
       "name": "Alt Strobe",
       "target": "All",
-      "multiplier": 4.0,
+      "multiplier": 2.0,
       "steps": [
         { "values": { "dimmer": 1.0 }, "width": 10, "transition": 0 },
         { "values": { "dimmer": 0.0 }, "width": 90, "transition": 0 }
@@ -29,14 +30,14 @@
       "phase": { "mode": "block", "blocks": 2 }
     },
     {
-      "name": "Random Sparks",
-      "target": "All",
-      "multiplier": 4.0,
+      "name": "Center Burst",
+      "target": "ByCenter",
+      "multiplier": 1.0,
       "steps": [
-        { "values": { "dimmer": 1.0 }, "width": 5, "transition": 0 },
-        { "values": { "dimmer": 0.0 }, "width": 95, "transition": 0 }
+        { "values": { "dimmer": 1.0 }, "width": 15, "transition": 0 },
+        { "values": { "dimmer": 0.0 }, "width": 85, "transition": 0 }
       ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 1000 } }
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 180 } }
     }
   ],
   "sequences": [],
