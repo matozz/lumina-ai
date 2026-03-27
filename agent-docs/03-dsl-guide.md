@@ -66,18 +66,22 @@ Note: Layout information (like `circle` or `matrix`) is now defined globally in 
 
 ## Guidelines for Generating Visually Striking DSL Effects
 
-When tasked with generating or modifying DSL effects, follow these guidelines to ensure the results are visually meaningful and dynamic:
+When tasked with generating or modifying DSL effects, follow these core principles to ensure the results are visually meaningful, dynamic, and strictly synchronized with the show's rhythm. Avoid chaotic, meaningless, or "robot-like" movements at all costs.
 
-### 1. Contrast & Dynamics
-- **Color Contrast**: Mix complementary colors (e.g., `#ff0000` and `#00ffff`) or contrasting intensities instead of subtle variations to make the effect pop.
-- **Sharp vs. Soft Transitions**: 
-  - For a *punchy* or rhythmic effect (e.g., Strobe, Hard Chase), use a `transition` of `0` and distinct `width` values (e.g., `width: 10` for on, `width: 90` for off).
-  - For a *flowing* or ambient effect (e.g., Breathe, Sine Wave), use a `transition` of `100` and balanced `width` values.
+### 1. Rhythmic Synchronization (Tight to the Beat)
+- **Intentional Movement**: Every Phaser action (Pan/Tilt movement, Dimmer flashing) must have a clear visual purpose and direction. **Never** generate random, meaningless shaking (e.g., constant bouncing without dimming).
+- **Orderly Execution**: Choose between sharp, synchronized hits across all fixtures, or use `spread` (e.g., `from: 0, to: 360`) to make the effect roll through the array like an organized wave.
 
-### 2. Utilizing Spread and Layouts
-- **Phase Spread**: Use `spread` effectively to distribute an effect across multiple fixtures. A spread of `{"from": 0, "to": 360}` creates a perfect loop across the group.
-- **Grouping**: Leverage the new global `groups` definition to target specific subsets of fixtures (e.g., `sortBy: "distance_center"` for a zoom-in/out effect or `sortBy: "angle_center"` for a radar sweep).
+### 2. Utilizing Spatial Layouts
+- **Embrace the Array**: When using layouts like `matrix` or complex shapes like `lissajous`, avoid keeping all fixtures at `dimmer: 1.0` constantly. Use tight `width` values (e.g., `width: 10` for on, `width: 90` for off) paired with `spread` to create radar sweeps, ripples, or moving trails.
+- **Avoid Visual Clutter**: Pushing too many static colors across an array (like a flat rainbow) looks chaotic and low-resolution. Always pair color sweeps with a Dimmer wave to give it breathing room and shape.
 
-### 3. Layering & Multipliers
+### 3. Clean and Intentional Transitions
+- **Don't Mix High-Frequency Chaos**: Do not combine hyper-fast strobing, rapid color changing, and wide Pan/Tilt swings in the same fixture group. It creates a visual disaster.
+- **Purposeful Transitions**:
+  - For organic pulses/breathing: Use `transition: 100` with distinct `accel/decel` curves.
+  - For sharp chases/strobes: Use `transition: 0` for crisp, punchy cuts.
+
+### 4. Layering & Multipliers
 - **Combine Multiple Phasers**: The best templates use 2-3 overlapping phasers targeting different parameters (e.g., one phaser driving `pan/tilt` movement, while another drives a `dimmer` chase on top of it).
 - **Vary Multipliers**: Give different phasers slightly different `multiplier` values (e.g., `1.0` for movement, `2.0` for dimmer) to create complex, evolving polyrhythms instead of static loops.
