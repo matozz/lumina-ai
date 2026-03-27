@@ -85,3 +85,6 @@ When tasked with generating or modifying DSL effects, follow these core principl
 ### 4. Layering & Multipliers
 - **Combine Multiple Phasers**: The best templates use 2-3 overlapping phasers targeting different parameters (e.g., one phaser driving `pan/tilt` movement, while another drives a `dimmer` chase on top of it).
 - **Vary Multipliers**: Give different phasers slightly different `multiplier` values (e.g., `1.0` for movement, `2.0` for dimmer) to create complex, evolving polyrhythms instead of static loops.
+
+### 5. Proper Data Pairing (Dimmer + Color)
+- **Always Pair Dimmer with Color for RGB Fixtures**: The rendering engine defaults unknown RGB color values to black (`#000000`). If you define a step like `{ "dimmer": 1.0 }` without a corresponding `color`, the fixture will technically be "on" but rendering black, making it invisible on the canvas. Always provide a default color (e.g., `"color": "#ffffff"`) when raising the dimmer on RGB patches.

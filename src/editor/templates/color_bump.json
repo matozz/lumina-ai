@@ -1,6 +1,6 @@
 {
   "meta": { "name": "Color Bump" },
-  "patch": [{ "type": "par", "color": "rgb", "idRange": [1, 12] }],
+  "patch": [{ "type": "par", "color": "rgb", "idRange": [1, 13] }],
   "layout": {
     "type": "generator",
     "generator": {
@@ -12,9 +12,9 @@
     }
   },
   "groups": [
-    { "name": "All", "fixtures": { "range": [1, 12] }, "sortBy": "angle_center" },
-    { "name": "Odd", "fixtures": { "list": [1, 3, 5, 7, 9, 11] }, "sortBy": "none" },
-    { "name": "Even", "fixtures": { "list": [2, 4, 6, 8, 10, 12] }, "sortBy": "none" }
+    { "name": "All", "fixtures": { "range": [1, 13] }, "sortBy": "angle_center" },
+    { "name": "Odd", "fixtures": [2, 4, 6, 8, 10, 12], "sortBy": "none" },
+    { "name": "Even", "fixtures": [3, 5, 7, 9, 11, 13], "sortBy": "none" }
   ],
   "presets": [],
   "phasers": [

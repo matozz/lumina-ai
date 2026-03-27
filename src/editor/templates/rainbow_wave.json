@@ -35,8 +35,8 @@
       "target": "All",
       "multiplier": 1.0,
       "steps": [
-        { "values": { "dimmer": 1.0 }, "width": 30, "transition": 100 },
-        { "values": { "dimmer": 0.0 }, "width": 70, "transition": 100 }
+        { "values": { "dimmer": 1.0, "color": "#ffffff" }, "width": 30, "transition": 100 },
+        { "values": { "dimmer": 0.0, "color": "#000000" }, "width": 70, "transition": 100 }
       ],
       "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
     }
