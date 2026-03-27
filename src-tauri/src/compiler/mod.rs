@@ -72,7 +72,7 @@ pub struct CompiledPreset {
 pub struct CompiledPhaser {
     pub name: String,
     pub target: String,
-    pub speed: f64,
+    pub multiplier: Option<f64>,
     pub steps: Vec<CompiledStep>,
     pub phase: PhaseConfig,
 }
@@ -551,7 +551,7 @@ impl Compiler {
             map.insert(p.name.clone(), CompiledPhaser {
                 name: p.name.clone(),
                 target: p.target.clone(),
-                speed: p.speed,
+                multiplier: p.multiplier,
                 steps,
                 phase,
             });

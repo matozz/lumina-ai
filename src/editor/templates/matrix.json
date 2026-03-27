@@ -22,7 +22,7 @@
     {
       "name": "Horizontal Wave",
       "target": "ByX",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         { "values": { "color": "#ff0000" }, "width": 50, "transition": 100 },
         { "values": { "color": "#0000ff" }, "width": 50, "transition": 100 }
@@ -32,7 +32,7 @@
     {
       "name": "Vertical Flow",
       "target": "ByY",
-      "speed": 80,
+      "multiplier": 1.0,
       "steps": [
         { "values": { "color": "#00ff00", "dimmer": 1.0 }, "width": 20, "transition": 0 },
         { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 80, "transition": 0 }
@@ -42,7 +42,7 @@
     {
       "name": "Ripple Out",
       "target": "ByCenter",
-      "speed": 90,
+      "multiplier": 1.0,
       "steps": [
         { "values": { "color": "#ffffff", "dimmer": 1.0 }, "width": 20, "transition": 100, "accel": -100, "decel": -100 },
         { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 80, "transition": 100 }

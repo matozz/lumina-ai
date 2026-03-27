@@ -41,7 +41,7 @@ export function ControlPanel() {
     }
   };
 
-  const handlePhaserToggle = async (name: string) => {
+  const handlePhaserToggle = async (name: string, multiplier: number = 1.0) => {
     if (!isPlaying) {
       await engine.play();
       useUiStore.getState().setIsPlaying(true);
@@ -51,10 +51,16 @@ export function ControlPanel() {
       await handleModeChange('live');
     }
     
-    if (activePhasers.includes(name)) {
-      await engine.stopPhaser(name);
+    const activePhaser = activePhasers.find(p => p.name === name);
+    
+    if (activePhaser) {
+      if (activePhaser.multiplier === multiplier) {
+        await engine.stopPhaser(name);
+      } else {
+        await engine.triggerPhaser(name, multiplier);
+      }
     } else {
-      await engine.triggerPhaser(name);
+      await engine.triggerPhaser(name, multiplier);
     }
   };
 
@@ -176,25 +182,59 @@ export function ControlPanel() {
             </div>
             <div className={cn("grid grid-cols-2 gap-2")}>
               {compileResult?.phaser_names.map(name => {
-                const isActive = activePhasers.includes(name);
+                const activePhaser = activePhasers.find(p => p.name === name);
+                const isActive = !!activePhaser;
+                const currentMultiplier = activePhaser?.multiplier ?? 1.0;
+                
                 return (
-                  <Button 
-                    key={name}
-                    variant="outline"
-                    onClick={() => handlePhaserToggle(name)}
-                    className={cn(
-                      "rounded-lg text-[11px] font-medium transition-all flex flex-col items-center justify-center gap-2 p-4 h-auto border",
-                      isActive 
-                        ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:bg-indigo-500/30 hover:text-indigo-200" 
-                        : "bg-zinc-900/80 text-zinc-500 border-zinc-800 hover:bg-zinc-800 hover:text-zinc-300 hover:border-zinc-700"
+                  <div key={name} className="flex flex-col gap-1">
+                    <Button 
+                      variant="outline"
+                      onClick={() => handlePhaserToggle(name, currentMultiplier)}
+                      className={cn(
+                        "rounded-lg text-[11px] font-medium transition-all flex flex-col items-center justify-center gap-2 p-4 border",
+                        isActive ? "h-14" : "h-20",
+                        isActive 
+                          ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:bg-indigo-500/30 hover:text-indigo-200" 
+                          : "bg-zinc-900/80 text-zinc-500 border-zinc-800 hover:bg-zinc-800 hover:text-zinc-300 hover:border-zinc-700"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-2 h-2 rounded-full transition-all",
+                        isActive ? "bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]" : "bg-zinc-800"
+                      )} />
+                      <span className="text-center leading-tight line-clamp-2 px-1 whitespace-normal wrap-break-word">{name}</span>
+                    </Button>
+                    
+                    {isActive && (
+                      <div className="flex gap-1 h-6">
+                        <Button
+                          variant="outline"
+                          onClick={(e) => { e.stopPropagation(); handlePhaserToggle(name, Math.max(0.125, currentMultiplier * 0.5)); }}
+                          className={cn(
+                            "flex-1 rounded text-[9px] font-bold px-0 transition-colors",
+                            currentMultiplier < 1.0
+                              ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
+                              : "bg-zinc-900/80 text-zinc-500 border-zinc-800 hover:bg-zinc-800"
+                          )}
+                        >
+                          {currentMultiplier < 1.0 ? `${currentMultiplier}x` : '.5x'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={(e) => { e.stopPropagation(); handlePhaserToggle(name, Math.min(8.0, currentMultiplier * 2)); }}
+                          className={cn(
+                            "flex-1 rounded text-[9px] font-bold px-0 transition-colors",
+                            currentMultiplier > 1.0
+                              ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
+                              : "bg-zinc-900/80 text-zinc-500 border-zinc-800 hover:bg-zinc-800"
+                          )}
+                        >
+                          {currentMultiplier > 1.0 ? `${currentMultiplier}x` : '2x'}
+                        </Button>
+                      </div>
                     )}
-                  >
-                    <div className={cn(
-                      "w-2 h-2 rounded-full transition-all",
-                      isActive ? "bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]" : "bg-zinc-800"
-                    )} />
-                    <span className="text-center leading-tight line-clamp-2 px-1 whitespace-normal wrap-break-word">{name}</span>
-                  </Button>
+                  </div>
                 );
               })}
               {(!compileResult || compileResult.phaser_names.length === 0) && (

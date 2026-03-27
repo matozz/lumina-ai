@@ -20,7 +20,7 @@
     {
       "name": "Global Breathe",
       "target": "All",
-      "speed": 30,
+      "multiplier": 0.5,
       "steps": [
         { "values": { "dimmer": 1.0, "color": "#ff4444" }, "width": 50, "transition": 100, "accel": -50, "decel": -50 },
         { "values": { "dimmer": 0.1, "color": "#440000" }, "width": 50, "transition": 100, "accel": -50, "decel": -50 }
@@ -30,7 +30,7 @@
     {
       "name": "Center Out Breathe",
       "target": "ByCenter",
-      "speed": 45,
+      "multiplier": 0.5,
       "steps": [
         { "values": { "dimmer": 1.0, "color": "#44aaff" }, "width": 50, "transition": 100 },
         { "values": { "dimmer": 0.0, "color": "#000000" }, "width": 50, "transition": 100 }

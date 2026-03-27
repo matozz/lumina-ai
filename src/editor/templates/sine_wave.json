@@ -19,7 +19,7 @@
     {
       "name": "Sine Fly",
       "target": "All",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         { "values": { "tilt": -60.0, "dimmer": 1.0, "color": "#00aaff" }, "width": 50, "transition": 100, "accel": 30, "decel": -30 },
         { "values": { "tilt": 60.0, "dimmer": 0.2, "color": "#001144" }, "width": 50, "transition": 100, "accel": -30, "decel": 30 }

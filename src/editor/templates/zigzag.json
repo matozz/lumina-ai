@@ -21,7 +21,7 @@
     {
       "name": "Zig Zag Color",
       "target": "TopRow",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         { "values": { "color": "#ff00ff" }, "width": 50, "transition": 100 },
         { "values": { "color": "#ffff00" }, "width": 50, "transition": 100 }
@@ -31,7 +31,7 @@
     {
       "name": "Zig Zag Color Bot",
       "target": "BottomRow",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         { "values": { "color": "#ffff00" }, "width": 50, "transition": 100 },
         { "values": { "color": "#ff00ff" }, "width": 50, "transition": 100 }
@@ -41,7 +41,7 @@
     {
       "name": "Opposite Tilt",
       "target": "All",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         { "values": { "tilt": -45.0 }, "width": 50, "transition": 100 },
         { "values": { "tilt": 45.0 }, "width": 50, "transition": 100 }

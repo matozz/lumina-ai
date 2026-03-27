@@ -34,7 +34,7 @@
     {
       "name": "Chase",
       "target": "ByAngle",
-      "speed": 120,
+      "multiplier": 2.0,
       "steps": [
         { "values": { "color": "#ff0000", "dimmer": 1.0 }, "width": 20, "transition": 0 },
         { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 80, "transition": 0 }

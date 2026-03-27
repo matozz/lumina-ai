@@ -19,7 +19,7 @@
     {
       "name": "Knight Rider",
       "target": "All",
-      "speed": 140,
+      "multiplier": 2.0,
       "steps": [
         { "values": { "color": "#ff0000", "dimmer": 1.0 }, "width": 5, "transition": 50 },
         { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 95, "transition": 50 }
@@ -29,7 +29,7 @@
     {
       "name": "Matrix Rain",
       "target": "All",
-      "speed": 70,
+      "multiplier": 1.0,
       "steps": [
         { "values": { "color": "#00ff00", "dimmer": 1.0 }, "width": 10, "transition": 0 },
         { "values": { "color": "#003300", "dimmer": 0.0 }, "width": 90, "transition": 100 }

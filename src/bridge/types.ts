@@ -39,7 +39,7 @@ export interface EngineStatePayload {
   is_playing: boolean;
   tempo: number;
   global_beat: number;
-  active_phasers: string[];
+  active_phasers: { name: string; multiplier: number }[];
   current_cue: { sequence: string; cue_id: number; cue_name?: string } | null;
 }
 
@@ -84,7 +84,7 @@ export interface PresetDSL {
 export interface PhaserDSL {
   name: string;
   target: string;
-  speed: number;
+  multiplier?: number;
   steps: any[];
   phase: any;
 }

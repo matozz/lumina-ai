@@ -36,3 +36,34 @@ If you are asked to add a new command or capability to the DSL (e.g., a new effe
 1. **Rust Deserialization**: Update the Rust `struct`s and `Deserialize` implementations in `src-tauri/src/compiler/mod.rs` or `src-tauri/src/engine/` to recognize the new fields.
 2. **Rust Engine**: Create the underlying logic in `src-tauri/src/engine/` that handles how a `Strobe` behaves over time.
 3. **TypeScript Definitions**: Update any TypeScript interfaces and default templates in the frontend (`src/editor/templates.ts`) so the Monaco editor and UI can utilize the new capabilities.
+## Phasers and Timing
+
+Phasers use a `multiplier` instead of an absolute speed (BPM) value to ensure they stay perfectly synchronized with the global master tempo.
+
+### Speed Multiplier
+
+- `multiplier`: A relative float value that multiplies the global BPM.
+  - `1.0`: The phaser completes exactly one full cycle (360 degrees) per beat.
+  - `2.0`: Double speed (two cycles per beat).
+  - `0.5`: Half speed (one cycle every two beats).
+  - Default is `1.0` if omitted.
+
+Example:
+```json
+{
+  "name": "dimmer_chase",
+  "target": "group_1",
+  "multiplier": 1.0,
+  "steps": [
+    { "dimmer": 100 },
+    { "dimmer": 0 }
+  ],
+  "phase": {
+    "shape": "circle",
+    "rings": 1,
+    "increment": 36,
+    "gap": 0,
+    "center": 0
+  }
+}
+```

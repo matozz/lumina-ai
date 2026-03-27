@@ -1089,7 +1089,7 @@
     {
       "name": "Circle Ripple",
       "target": "CenterCircle",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         {
           "values": {
@@ -1119,7 +1119,7 @@
     {
       "name": "TL Spread",
       "target": "RectTopLeft",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         {
           "values": {
@@ -1149,7 +1149,7 @@
     {
       "name": "TR Spread",
       "target": "RectTopRight",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         {
           "values": {
@@ -1179,7 +1179,7 @@
     {
       "name": "BL Spread",
       "target": "RectBottomLeft",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         {
           "values": {
@@ -1209,7 +1209,7 @@
     {
       "name": "BR Spread",
       "target": "RectBottomRight",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         {
           "values": {

@@ -19,7 +19,7 @@
     {
       "name": "Rainbow Sweep",
       "target": "All",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         { "values": { "color": "#ff0000" }, "width": 16.6, "transition": 100 },
         { "values": { "color": "#ffff00" }, "width": 16.6, "transition": 100 },

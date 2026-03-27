@@ -21,7 +21,7 @@
     {
       "name": "Alt Strobe",
       "target": "All",
-      "speed": 240,
+      "multiplier": 4.0,
       "steps": [
         { "values": { "dimmer": 1.0 }, "width": 10, "transition": 0 },
         { "values": { "dimmer": 0.0 }, "width": 90, "transition": 0 }
@@ -31,7 +31,7 @@
     {
       "name": "Random Sparks",
       "target": "All",
-      "speed": 180,
+      "multiplier": 4.0,
       "steps": [
         { "values": { "dimmer": 1.0 }, "width": 5, "transition": 0 },
         { "values": { "dimmer": 0.0 }, "width": 95, "transition": 0 }

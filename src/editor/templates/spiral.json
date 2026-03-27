@@ -23,7 +23,7 @@
     {
       "name": "Inward Flow",
       "target": "Path",
-      "speed": 120,
+      "multiplier": 2.0,
       "steps": [
         { "values": { "color": "#ffffff", "dimmer": 1.0 }, "width": 5, "transition": 0 },
         { "values": { "color": "#ffaa00", "dimmer": 0.6 }, "width": 15, "transition": 100 },
@@ -34,7 +34,7 @@
     {
       "name": "Windmill",
       "target": "ByAngle",
-      "speed": 45,
+      "multiplier": 1.0,
       "steps": [
         { "values": { "color": "#00ff44", "dimmer": 0.8 }, "width": 33.3, "transition": 100 },
         { "values": { "color": "#0044ff", "dimmer": 0.8 }, "width": 33.3, "transition": 100 },

@@ -19,7 +19,7 @@
     {
       "name": "Engine Pulse",
       "target": "All",
-      "speed": 120,
+      "multiplier": 2.0,
       "steps": [
         { "values": { "dimmer": 1.0, "color": "#ffffff" }, "width": 5, "transition": 100 },
         { "values": { "dimmer": 0.5, "color": "#0088ff" }, "width": 45, "transition": 100 },
