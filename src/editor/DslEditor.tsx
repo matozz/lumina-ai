@@ -64,6 +64,8 @@ export function DslEditor() {
     }
   };
 
+  const currentTemplate = TEMPLATES.find(t => t.dsl === code)?.key || "";
+
   return (
     <div className={cn("flex flex-col h-full w-112.5 border-r border-zinc-800 bg-zinc-950 shadow-xl z-10 shrink-0")}>
       <div className={cn("h-10 border-b border-zinc-800 bg-zinc-900/80 flex items-center px-4 justify-between backdrop-blur-md shrink-0")}>
@@ -73,7 +75,7 @@ export function DslEditor() {
         </div>
         
         <div className="flex gap-2 flex-1 justify-end">
-          <Select onValueChange={loadTemplate}>
+          <Select value={currentTemplate} onValueChange={loadTemplate}>
             <SelectTrigger size="sm" className={cn(
               "h-6 max-w-37.5 items-center justify-between rounded border border-zinc-800 bg-zinc-950",
               "px-1.5 py-0 text-xs text-zinc-300 placeholder:text-zinc-400",
