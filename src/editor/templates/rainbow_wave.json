@@ -1,0 +1,37 @@
+{
+  "meta": { "name": "Rainbow Wave", "version": "1.0", "tempo": 120 },
+  "patch": [{ "type": "wash", "color": "rgb", "idRange": [1, 30] }],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "line",
+      "count": 30,
+      "spacing": 20,
+      "origin": [0, 0]
+    }
+  },
+  "groups": [
+    { "name": "All", "fixtures": { "range": [1, 30] }, "sortBy": "x" }
+  ],
+  "presets": [],
+  "phasers": [
+    {
+      "name": "Rainbow Sweep",
+      "target": "All",
+      "speed": 60,
+      "steps": [
+        { "values": { "color": "#ff0000" }, "width": 16.6, "transition": 100 },
+        { "values": { "color": "#ffff00" }, "width": 16.6, "transition": 100 },
+        { "values": { "color": "#00ff00" }, "width": 16.6, "transition": 100 },
+        { "values": { "color": "#00ffff" }, "width": 16.6, "transition": 100 },
+        { "values": { "color": "#0000ff" }, "width": 16.6, "transition": 100 },
+        { "values": { "color": "#ff00ff" }, "width": 17, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+    }
+  ],
+  "timeline": {
+    "bpm": 120,
+    "events": []
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "meta": { "name": "Pan Sweep", "version": "1.0", "tempo": 120 },
+  "patch": [{ "type": "moving_head", "color": "rgb", "idRange": [1, 8] }],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "line",
+      "count": 8,
+      "spacing": 50,
+      "origin": [0, 0]
+    }
+  },
+  "groups": [
+    { "name": "All", "fixtures": { "range": [1, 8] }, "sortBy": "x" }
+  ],
+  "presets": [],
+  "phasers": [
+    {
+      "name": "Left Right Sweep",
+      "target": "All",
+      "speed": 60,
+      "steps": [
+        { "values": { "pan": -45.0, "dimmer": 1.0, "color": "#ff00ff" }, "width": 50, "transition": 100 },
+        { "values": { "pan": 45.0, "dimmer": 1.0, "color": "#00ffff" }, "width": 50, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 180 } }
+    },
+    {
+      "name": "Mexican Wave",
+      "target": "All",
+      "speed": 90,
+      "steps": [
+        { "values": { "tilt": 45.0, "dimmer": 1.0, "color": "#ffffff" }, "width": 20, "transition": 100 },
+        { "values": { "tilt": 0.0, "dimmer": 0.5, "color": "#ff8800" }, "width": 80, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+    }
+  ],
+  "timeline": {
+    "bpm": 120,
+    "events": []
+  }
+}

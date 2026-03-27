@@ -1,0 +1,45 @@
+{
+  "meta": { "name": "Breathe Effect", "version": "1.0", "tempo": 120 },
+  "patch": [{ "type": "wash", "color": "rgb", "idRange": [1, 16] }],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "matrix",
+      "rows": 4,
+      "columns": 4,
+      "spacing": 50,
+      "origin": [0, 0]
+    }
+  },
+  "groups": [
+    { "name": "All", "fixtures": { "range": [1, 16] }, "sortBy": "none" },
+    { "name": "ByCenter", "fixtures": { "range": [1, 16] }, "sortBy": "distance_center" }
+  ],
+  "presets": [],
+  "phasers": [
+    {
+      "name": "Global Breathe",
+      "target": "All",
+      "speed": 30,
+      "steps": [
+        { "values": { "dimmer": 1.0, "color": "#ff4444" }, "width": 50, "transition": 100, "accel": -50, "decel": -50 },
+        { "values": { "dimmer": 0.1, "color": "#440000" }, "width": 50, "transition": 100, "accel": -50, "decel": -50 }
+      ],
+      "phase": { "mode": "constant", "value": 0 }
+    },
+    {
+      "name": "Center Out Breathe",
+      "target": "ByCenter",
+      "speed": 45,
+      "steps": [
+        { "values": { "dimmer": 1.0, "color": "#44aaff" }, "width": 50, "transition": 100 },
+        { "values": { "dimmer": 0.0, "color": "#000000" }, "width": 50, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 180 } }
+    }
+  ],
+  "timeline": {
+    "bpm": 120,
+    "events": []
+  }
+}

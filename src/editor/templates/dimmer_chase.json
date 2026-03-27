@@ -1,0 +1,43 @@
+{
+  "meta": { "name": "Dimmer Chase", "version": "1.0", "tempo": 120 },
+  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 20] }],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "circle",
+      "count": 20,
+      "radius": 100,
+      "origin": [0, 0]
+    }
+  },
+  "groups": [
+    { "name": "Circle", "fixtures": { "range": [1, 20] }, "sortBy": "x" }
+  ],
+  "presets": [],
+  "phasers": [
+    {
+      "name": "Hard Chase",
+      "target": "Circle",
+      "speed": 120,
+      "steps": [
+        { "values": { "dimmer": 1.0, "color": "#ffffff" }, "width": 10, "transition": 0 },
+        { "values": { "dimmer": 0.0 }, "width": 90, "transition": 0 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+    },
+    {
+      "name": "Soft Chase",
+      "target": "Circle",
+      "speed": 90,
+      "steps": [
+        { "values": { "dimmer": 1.0, "color": "#00ffcc" }, "width": 50, "transition": 100 },
+        { "values": { "dimmer": 0.0 }, "width": 50, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+    }
+  ],
+  "timeline": {
+    "bpm": 120,
+    "events": []
+  }
+}

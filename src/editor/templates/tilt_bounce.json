@@ -1,0 +1,33 @@
+{
+  "meta": { "name": "Tilt Bounce", "version": "1.0", "tempo": 120 },
+  "patch": [{ "type": "moving_head", "color": "rgb", "idRange": [1, 6] }],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "line",
+      "count": 6,
+      "spacing": 60,
+      "origin": [0, 0]
+    }
+  },
+  "groups": [
+    { "name": "All", "fixtures": { "range": [1, 6] }, "sortBy": "x" }
+  ],
+  "presets": [],
+  "phasers": [
+    {
+      "name": "Symmetric Bounce",
+      "target": "All",
+      "speed": 120,
+      "steps": [
+        { "values": { "tilt": -30.0, "dimmer": 1.0, "color": "#00ff88" }, "width": 50, "transition": 100, "accel": -50, "decel": 50 },
+        { "values": { "tilt": 30.0, "dimmer": 1.0, "color": "#8800ff" }, "width": 50, "transition": 100, "accel": 50, "decel": -50 }
+      ],
+      "phase": { "mode": "mirror", "spread": { "from": 0, "to": 180 } }
+    }
+  ],
+  "timeline": {
+    "bpm": 120,
+    "events": []
+  }
+}
