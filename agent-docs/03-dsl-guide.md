@@ -63,3 +63,21 @@ Example of a Phaser:
 ```
 
 Note: Layout information (like `circle` or `matrix`) is now defined globally in the `layout` and `groups` sections of the DSL, rather than directly inside individual phasers.
+
+## Guidelines for Generating Visually Striking DSL Effects
+
+When tasked with generating or modifying DSL effects, follow these guidelines to ensure the results are visually meaningful and dynamic:
+
+### 1. Contrast & Dynamics
+- **Color Contrast**: Mix complementary colors (e.g., `#ff0000` and `#00ffff`) or contrasting intensities instead of subtle variations to make the effect pop.
+- **Sharp vs. Soft Transitions**: 
+  - For a *punchy* or rhythmic effect (e.g., Strobe, Hard Chase), use a `transition` of `0` and distinct `width` values (e.g., `width: 10` for on, `width: 90` for off).
+  - For a *flowing* or ambient effect (e.g., Breathe, Sine Wave), use a `transition` of `100` and balanced `width` values.
+
+### 2. Utilizing Spread and Layouts
+- **Phase Spread**: Use `spread` effectively to distribute an effect across multiple fixtures. A spread of `{"from": 0, "to": 360}` creates a perfect loop across the group.
+- **Grouping**: Leverage the new global `groups` definition to target specific subsets of fixtures (e.g., `sortBy: "distance_center"` for a zoom-in/out effect or `sortBy: "angle_center"` for a radar sweep).
+
+### 3. Layering & Multipliers
+- **Combine Multiple Phasers**: The best templates use 2-3 overlapping phasers targeting different parameters (e.g., one phaser driving `pan/tilt` movement, while another drives a `dimmer` chase on top of it).
+- **Vary Multipliers**: Give different phasers slightly different `multiplier` values (e.g., `1.0` for movement, `2.0` for dimmer) to create complex, evolving polyrhythms instead of static loops.
