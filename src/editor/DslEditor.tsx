@@ -18,14 +18,17 @@ export function DslEditor() {
   const { currentDslCode: code, setCurrentDslCode: setCode } = useUiStore();
   const { compileErrors, setCompileResult, setCompileErrors, setCompileStatus } = useUiStore();
 
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>("combined");
+
   const latestCodeRef = useRef(code);
   latestCodeRef.current = code;
 
-  useState(() => {
+  useEffect(() => {
     if (!code) {
       setCode(TEMPLATES[0].dsl);
+      setSelectedTemplateKey(TEMPLATES[0].key);
     }
-  });
+  }, []); // Run only on mount
 
   const compileCode = async (codeToCompile: string) => {
     setCompileStatus('compiling');
@@ -57,14 +60,26 @@ export function DslEditor() {
   }, [code]); 
 
   const loadTemplate = (key: string | null) => {
-    if (!key) return;
+    if (!key || key === "custom") return;
     const template = TEMPLATES.find(t => t.key === key);
     if (template) {
       setCode(template.dsl);
+      setSelectedTemplateKey(key);
     }
   };
 
-  const currentTemplate = TEMPLATES.find(t => t.dsl === code)?.key || "";
+  const handleEditorChange = (val: string | undefined) => {
+    setCode(val || "");
+    
+    // If the user types something that matches a template exactly, select it
+    // Otherwise, mark it as custom
+    const matchedTemplate = TEMPLATES.find(t => t.dsl === val);
+    if (matchedTemplate) {
+      setSelectedTemplateKey(matchedTemplate.key);
+    } else {
+      setSelectedTemplateKey("custom");
+    }
+  };
 
   return (
     <div className={cn("flex flex-col h-full w-112.5 border-r border-zinc-800 bg-zinc-950 shadow-xl z-10 shrink-0")}>
@@ -75,7 +90,7 @@ export function DslEditor() {
         </div>
         
         <div className="flex gap-2 flex-1 justify-end">
-          <Select value={currentTemplate} onValueChange={loadTemplate}>
+          <Select value={selectedTemplateKey} onValueChange={loadTemplate}>
             <SelectTrigger size="sm" className={cn(
               "h-6 max-w-37.5 items-center justify-between rounded border border-zinc-800 bg-zinc-950",
               "px-1.5 py-0 text-xs text-zinc-300 placeholder:text-zinc-400",
@@ -85,6 +100,11 @@ export function DslEditor() {
             </SelectTrigger>
             <SelectContent className="bg-zinc-950 border-zinc-800">
               <SelectGroup>
+                {selectedTemplateKey === "custom" && (
+                  <SelectItem value="custom" className="text-zinc-400 italic focus:bg-zinc-800 focus:text-zinc-300">
+                    Custom...
+                  </SelectItem>
+                )}
                 {TEMPLATES.map(t => (
                   <SelectItem key={t.key} value={t.key} className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100">
                     {t.name}
@@ -115,7 +135,7 @@ export function DslEditor() {
           defaultLanguage="json"
           theme="vs-dark"
           value={code}
-          onChange={(val) => setCode(val || "")}
+          onChange={handleEditorChange}
           options={{ minimap: { enabled: false }, tabSize: 2, wordWrap: "on", fontSize: 13, scrollBeyondLastLine: false, padding: { top: 12, bottom: 12 } }}
         />
       </div>
