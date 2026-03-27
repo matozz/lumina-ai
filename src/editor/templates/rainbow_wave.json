@@ -4,8 +4,9 @@
   "layout": {
     "type": "generator",
     "generator": {
-      "shape": "line",
-      "count": 30,
+      "shape": "matrix",
+      "rows": 1,
+      "columns": 30,
       "spacing": 20,
       "origin": [0, 0]
     }
