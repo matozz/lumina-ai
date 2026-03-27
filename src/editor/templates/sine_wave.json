@@ -1,5 +1,5 @@
 {
-  "meta": { "name": "Sine Wave Fly", "version": "1.0", "tempo": 120 },
+  "meta": { "name": "Sine Wave Fly" },
   "patch": [{ "type": "moving_head", "color": "rgb", "idRange": [1, 24] }],
   "layout": {
     "type": "generator",

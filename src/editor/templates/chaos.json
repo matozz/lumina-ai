@@ -1,5 +1,5 @@
 {
-  "meta": { "name": "Chaos Random", "version": "1.0", "tempo": 120 },
+  "meta": { "name": "Chaos Random" },
   "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 16] }],
   "layout": {
     "type": "generator",

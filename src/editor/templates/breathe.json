@@ -1,5 +1,5 @@
 {
-  "meta": { "name": "Breathe Effect", "version": "1.0", "tempo": 120 },
+  "meta": { "name": "Breathe Effect" },
   "patch": [{ "type": "wash", "color": "rgb", "idRange": [1, 16] }],
   "layout": {
     "type": "generator",

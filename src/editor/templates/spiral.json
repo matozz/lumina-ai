@@ -1,5 +1,5 @@
 {
-  "meta": { "name": "Golden Spiral", "version": "1.0", "tempo": 120 },
+  "meta": { "name": "Golden Spiral" },
   "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 150] }],
   "layout": {
     "type": "generator",

@@ -1,5 +1,5 @@
 {
-  "meta": { "name": "Pixel Chase", "version": "1.0", "tempo": 140 },
+  "meta": { "name": "Pixel Chase" },
   "patch": [{ "type": "bar", "color": "rgb", "idRange": [1, 40] }],
   "layout": {
     "type": "generator",

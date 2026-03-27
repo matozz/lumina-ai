@@ -1,5 +1,5 @@
 {
-  "meta": { "name": "Tilt Bounce", "version": "1.0", "tempo": 120 },
+  "meta": { "name": "Tilt Bounce" },
   "patch": [{ "type": "moving_head", "color": "rgb", "idRange": [1, 6] }],
   "layout": {
     "type": "generator",

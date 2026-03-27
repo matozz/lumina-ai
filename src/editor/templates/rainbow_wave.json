@@ -1,5 +1,5 @@
 {
-  "meta": { "name": "Rainbow Wave", "version": "1.0", "tempo": 120 },
+  "meta": { "name": "Rainbow Wave" },
   "patch": [{ "type": "wash", "color": "rgb", "idRange": [1, 30] }],
   "layout": {
     "type": "generator",

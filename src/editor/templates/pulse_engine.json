@@ -1,5 +1,5 @@
 {
-  "meta": { "name": "Pulse Engine", "version": "1.0", "tempo": 120 },
+  "meta": { "name": "Pulse Engine" },
   "patch": [{ "type": "wash", "color": "rgb", "idRange": [1, 20] }],
   "layout": {
     "type": "generator",

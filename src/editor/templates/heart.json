@@ -1,5 +1,5 @@
 {
-  "meta": { "name": "Heart Show", "version": "1.0", "tempo": 120 },
+  "meta": { "name": "Heart Show" },
   "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 80] }],
   "layout": {
     "type": "generator",

@@ -1,5 +1,5 @@
 {
-  "meta": { "name": "Pan Sweep", "version": "1.0", "tempo": 120 },
+  "meta": { "name": "Pan Sweep" },
   "patch": [{ "type": "moving_head", "color": "rgb", "idRange": [1, 8] }],
   "layout": {
     "type": "generator",

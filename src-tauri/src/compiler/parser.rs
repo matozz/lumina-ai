@@ -15,8 +15,8 @@ pub struct ShowDSL {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MetaDSL {
     pub name: String,
-    pub version: String,
-    pub tempo: u32,
+    pub version: Option<String>,
+    pub tempo: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

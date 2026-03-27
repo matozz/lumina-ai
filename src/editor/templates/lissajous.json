@@ -1,5 +1,5 @@
 {
-  "meta": { "name": "Lissajous Knot", "version": "1.0", "tempo": 130 },
+  "meta": { "name": "Lissajous Knot" },
   "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 120] }],
   "layout": {
     "type": "generator",

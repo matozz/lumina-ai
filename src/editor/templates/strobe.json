@@ -1,5 +1,5 @@
 {
-  "meta": { "name": "Strobe Bursts", "version": "1.0", "tempo": 130 },
+  "meta": { "name": "Strobe Bursts" },
   "patch": [{ "type": "strobe", "color": "white", "idRange": [1, 10] }],
   "layout": {
     "type": "generator",

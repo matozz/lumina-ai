@@ -1,5 +1,5 @@
 {
-  "meta": { "name": "Zig Zag Split", "version": "1.0", "tempo": 130 },
+  "meta": { "name": "Zig Zag Split" },
   "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 16] }],
   "layout": {
     "type": "generator",
