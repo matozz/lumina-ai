@@ -1,6 +1,7 @@
 import { ListMusic } from 'lucide-react';
-import { cn } from '../utils/cn';
+import { cn } from '@/lib/utils';
 import type { CompileResult } from '../bridge/types';
+import { Button } from "@/components/ui/button";
 
 interface ResourcePanelProps {
   compileResult: CompileResult | null;
@@ -25,13 +26,14 @@ export function TimelineResourcePanel({ compileResult, selectedPhaser, onSelectP
           </div>
           <div className="flex flex-col gap-1">
             {phaserNames.map(name => (
-              <button
+              <Button
                 key={`res-phaser-${name}`}
+                variant="ghost"
                 onClick={() => onSelectPhaser(name)}
                 className={cn(
-                  "text-left px-2.5 py-1.5 text-xs rounded-md border transition-all duration-150 flex items-center justify-between group",
+                  "text-left px-2.5 py-1.5 text-xs rounded-md border transition-all duration-150 flex items-center justify-between group h-auto",
                   selectedPhaser === name 
-                    ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-300 shadow-sm" 
+                    ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-300 shadow-sm hover:bg-indigo-500/30 hover:text-indigo-200" 
                     : "bg-zinc-800/30 border-transparent text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
                 )}
               >
@@ -42,7 +44,7 @@ export function TimelineResourcePanel({ compileResult, selectedPhaser, onSelectP
                 )}>
                   Select
                 </span>
-              </button>
+              </Button>
             ))}
             {phaserNames.length === 0 && (
               <div className="text-xs text-zinc-600 italic px-2">No phasers found in DSL</div>

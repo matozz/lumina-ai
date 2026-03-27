@@ -1,6 +1,6 @@
 import React from 'react';
 import { DraggableBlock } from './DraggableBlock';
-import { cn } from '../utils/cn';
+import { cn } from '@/lib/utils';
 
 interface TrackProps {
   track: any;

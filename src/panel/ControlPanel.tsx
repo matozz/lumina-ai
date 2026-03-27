@@ -1,7 +1,8 @@
 import { useUiStore, SequencerMode } from "../stores/uiStore";
 import { engine } from "../bridge/commands";
 import { Play, Pause, Square, Activity, Clock, Settings2, SlidersHorizontal } from "lucide-react";
-import { cn } from "../utils/cn";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export function ControlPanel() {
   const { isPlaying, tempo, compileResult, activePhasers, sequencerMode, setSequencerMode } = useUiStore();
@@ -73,38 +74,41 @@ export function ControlPanel() {
       <div className="p-3 flex flex-col flex-1 overflow-y-auto custom-scrollbar">
         {/* Mode Switcher */}
         <div className={cn("flex bg-zinc-900 rounded p-1 border border-zinc-800/80 mb-3 shadow-inner")}>
-          <button 
+          <Button 
+            variant="ghost"
             onClick={() => handleModeChange('live')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[10px] font-bold tracking-wider rounded-sm transition-all",
+              "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[10px] font-bold tracking-wider rounded-sm transition-all h-auto",
               sequencerMode === 'live' 
-                ? "bg-zinc-800 text-white shadow-sm" 
+                ? "bg-zinc-800 text-white shadow-sm hover:bg-zinc-800 hover:text-white" 
                 : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
             )}
           >
             <Activity size={12} />
             LIVE PAD
-          </button>
-          <button 
+          </Button>
+          <Button 
+            variant="ghost"
             onClick={() => handleModeChange('timeline')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[10px] font-bold tracking-wider rounded-sm transition-all",
+              "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[10px] font-bold tracking-wider rounded-sm transition-all h-auto",
               sequencerMode === 'timeline' 
-                ? "bg-zinc-800 text-white shadow-sm" 
+                ? "bg-zinc-800 text-white shadow-sm hover:bg-zinc-800 hover:text-white" 
                 : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
             )}
           >
             <Clock size={12} />
             TIMELINE
-          </button>
+          </Button>
         </div>
 
         {/* Transport Controls */}
         <div className="flex gap-1.5 mb-3">
-          <button 
+          <Button 
+            variant="default"
             onClick={handlePlay} 
             className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded text-[11px] font-bold tracking-wider transition-all",
+              "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded text-[11px] font-bold tracking-wider transition-all h-auto",
               isPlaying 
                 ? "bg-zinc-800 text-amber-400 hover:bg-zinc-700 hover:text-amber-300 shadow-inner" 
                 : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm shadow-indigo-600/20"
@@ -112,18 +116,19 @@ export function ControlPanel() {
           >
             {isPlaying ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
             {isPlaying ? "PAUSE" : "PLAY"}
-          </button>
+          </Button>
           
-          <button 
+          <Button 
+            variant="outline"
             onClick={handleStop}
             className={cn(
-              "flex items-center justify-center px-3 py-2 rounded transition-all",
-              "bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 border border-zinc-800"
+              "flex items-center justify-center px-3 py-2 rounded transition-all h-auto",
+              "bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 border-zinc-800"
             )}
             title="Stop and Return to Start"
           >
             <Square size={12} fill="currentColor" />
-          </button>
+          </Button>
         </div>
 
         {/* Beat Indicators */}
@@ -173,13 +178,14 @@ export function ControlPanel() {
               {compileResult?.phaser_names.map(name => {
                 const isActive = activePhasers.includes(name);
                 return (
-                  <button 
+                  <Button 
                     key={name}
+                    variant="outline"
                     onClick={() => handlePhaserToggle(name)}
                     className={cn(
-                      "rounded-lg text-[11px] font-medium transition-all flex flex-col items-center justify-center gap-2 p-4 border",
+                      "rounded-lg text-[11px] font-medium transition-all flex flex-col items-center justify-center gap-2 p-4 h-auto border",
                       isActive 
-                        ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.15)]" 
+                        ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:bg-indigo-500/30 hover:text-indigo-200" 
                         : "bg-zinc-900/80 text-zinc-500 border-zinc-800 hover:bg-zinc-800 hover:text-zinc-300 hover:border-zinc-700"
                     )}
                   >
@@ -187,8 +193,8 @@ export function ControlPanel() {
                       "w-2 h-2 rounded-full transition-all",
                       isActive ? "bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]" : "bg-zinc-800"
                     )} />
-                    <span className="text-center leading-tight line-clamp-2 px-1">{name}</span>
-                  </button>
+                    <span className="text-center leading-tight line-clamp-2 px-1 whitespace-normal wrap-break-word">{name}</span>
+                  </Button>
                 );
               })}
               {(!compileResult || compileResult.phaser_names.length === 0) && (

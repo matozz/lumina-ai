@@ -6,7 +6,7 @@ import { TimelineResourcePanel } from './TimelineResourcePanel';
 import { TimelineTrackHeaders } from './TimelineTrackHeaders';
 import { TimelineGrid } from './TimelineGrid';
 import { TimelinePlayhead } from './TimelinePlayhead';
-import { cn } from '../utils/cn';
+import { cn } from '@/lib/utils';
 
 export function TimelineView() {
   const { parsedDsl, globalBeat, compileResult, currentDslCode, setCurrentDslCode } = useUiStore();

@@ -4,7 +4,15 @@ import { engine } from "../bridge/commands";
 import { useUiStore } from "../stores/uiStore";
 import { TEMPLATES } from "./templates";
 import { XCircle, FileCode2 } from "lucide-react";
-import { cn } from "../utils/cn";
+import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function DslEditor() {
   const { currentDslCode: code, setCurrentDslCode: setCode } = useUiStore();
@@ -48,7 +56,8 @@ export function DslEditor() {
     return () => clearTimeout(handler);
   }, [code]); 
 
-  const loadTemplate = (key: string) => {
+  const loadTemplate = (key: string | null) => {
+    if (!key) return;
     const template = TEMPLATES.find(t => t.key === key);
     if (template) {
       setCode(template.dsl);
@@ -64,18 +73,24 @@ export function DslEditor() {
         </div>
         
         <div className="flex gap-2 flex-1 justify-end">
-          <select 
-            onChange={(e) => loadTemplate(e.target.value)}
-            className={cn(
+          <Select onValueChange={loadTemplate}>
+            <SelectTrigger size="sm" className={cn(
               "h-6 max-w-37.5 items-center justify-between rounded border border-zinc-800 bg-zinc-950",
               "px-1.5 py-0 text-xs text-zinc-300 placeholder:text-zinc-400",
               "focus:outline-none focus:ring-1 focus:ring-zinc-500 transition-colors"
-            )}
-          >
-            {TEMPLATES.map(t => (
-              <option key={t.key} value={t.key}>{t.name}</option>
-            ))}
-          </select>
+            )}>
+              <SelectValue placeholder="Select a template..." />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-950 border-zinc-800">
+              <SelectGroup>
+                {TEMPLATES.map(t => (
+                  <SelectItem key={t.key} value={t.key} className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100">
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div className="flex-1 overflow-hidden relative">
