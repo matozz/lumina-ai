@@ -23,7 +23,7 @@ pub struct EngineStatePayload {
     pub is_playing: bool,
     pub tempo: u32,
     pub global_beat: f64,
-    pub active_phasers: Vec<String>,
+    pub active_phasers: Vec<crate::state::ActivePhaser>,
     pub current_cue: Option<crate::state::CueInfo>,
 }
 
@@ -84,6 +84,7 @@ impl Scheduler {
                                                         name: phaser,
                                                         start_beat: global_beat,
                                                         instance_id: Some(instance_id),
+                                                        multiplier: 1.0,
                                                     });
                                                 }
                                             }
@@ -134,7 +135,7 @@ impl Scheduler {
                             is_playing: true,
                             tempo: tempo.load(Ordering::Relaxed),
                             global_beat,
-                            active_phasers: r_state.active_phasers.iter().map(|p| p.name.clone()).collect(),
+                            active_phasers: r_state.active_phasers.clone(),
                             current_cue: r_state.current_cue.clone(),
                         };
 
@@ -181,7 +182,7 @@ impl Scheduler {
                     is_playing: false,
                     tempo: tempo.load(Ordering::Relaxed),
                     global_beat: r_state.global_beat,
-                    active_phasers: r_state.active_phasers.iter().map(|p| p.name.clone()).collect(),
+                    active_phasers: r_state.active_phasers.clone(),
                     current_cue: r_state.current_cue.clone(),
                 };
                 let _ = app.emit("engine:state-change", sp);

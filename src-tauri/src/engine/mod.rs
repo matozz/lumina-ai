@@ -51,7 +51,11 @@ pub fn compute_frame(
                     let total_width: f64 = phaser.steps.iter().map(|s| s.width).sum();
                     if total_width <= 0.0 { continue; }
 
-                    let cycle_position = ((global_beat * phaser.speed / 60.0 * 360.0)
+                    let multiplier = phaser.multiplier.unwrap_or(1.0) * active.multiplier;
+                    // Cycle position calculation based on global_beat and multiplier
+                    // A global_beat of 1.0 represents one quarter note in standard 4/4 time.
+                    // A multiplier of 1.0 means the phaser completes exactly one full cycle (360 degrees) per beat.
+                    let cycle_position = ((global_beat * multiplier * 360.0)
                         + phase_offset) % 360.0;
                     
                     // to prevent negative module issues

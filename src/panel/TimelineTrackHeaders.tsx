@@ -1,5 +1,6 @@
 import { Plus } from 'lucide-react';
-import { cn } from '../utils/cn';
+import { cn } from '@/lib/utils';
+import { Button } from "@/components/ui/button";
 
 interface TrackHeadersProps {
   tracks: { name: string; events: any[] }[];
@@ -41,12 +42,14 @@ export function TimelineTrackHeaders({ tracks, activeTrackName, scrollRef, globa
             </div>
           );
         })}
-        <button className={cn(
-          "h-10 w-full shrink-0 border-b border-zinc-800/30 flex items-center justify-center gap-1.5",
-          "text-[11px] font-medium text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/40 transition-colors"
-        )}>
+        <Button 
+          variant="ghost"
+          className={cn(
+            "h-10 w-full shrink-0 border-b border-zinc-800/30 flex items-center justify-center gap-1.5 rounded-none",
+            "text-[11px] font-medium text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/40 transition-colors"
+          )}>
           <Plus className="w-3.5 h-3.5" /> Add Track
-        </button>
+        </Button>
         <div className="flex-1 min-h-25" />
       </div>
     </div>

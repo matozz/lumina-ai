@@ -5,11 +5,16 @@ export type SequencerMode = 'live' | 'timeline';
 
 export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error';
 
+interface ActivePhaserState {
+  name: string;
+  multiplier: number;
+}
+
 interface UiState {
   isPlaying: boolean;
   tempo: number;
   globalBeat: number;
-  activePhasers: string[];
+  activePhasers: ActivePhaserState[];
   compileResult: CompileResult | null;
   compileErrors: CompileError[];
   compileStatus: CompileStatus;
@@ -20,7 +25,7 @@ interface UiState {
   setIsPlaying: (val: boolean) => void;
   setTempo: (val: number) => void;
   setGlobalBeat: (val: number) => void;
-  setActivePhasers: (val: string[]) => void;
+  setActivePhasers: (val: ActivePhaserState[]) => void;
   setCompileResult: (res: CompileResult | null) => void;
   setCompileErrors: (errors: CompileError[]) => void;
   setCompileStatus: (status: CompileStatus) => void;

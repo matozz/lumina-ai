@@ -1,0 +1,47 @@
+{
+  "meta": { "name": "Chaos Random" },
+  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 16] }],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "circle",
+      "rings": 1,
+      "increment": 16,
+      "gap": 120,
+      "center": [0, 0]
+    }
+  },
+  "groups": [
+    { "name": "All", "fixtures": { "range": [1, 16] }, "sortBy": "none" }
+  ],
+  "presets": [],
+  "phasers": [
+    {
+      "name": "Crazy Movements",
+      "target": "All",
+      "multiplier": 2.0,
+      "steps": [
+        { "values": { "pan": -90.0, "tilt": -45.0, "color": "#ff00ff" }, "width": 25, "transition": 100 },
+        { "values": { "pan": 90.0, "tilt": 45.0, "color": "#00ff00" }, "width": 25, "transition": 100 },
+        { "values": { "pan": -45.0, "tilt": 90.0, "color": "#ffff00" }, "width": 25, "transition": 100 },
+        { "values": { "pan": 45.0, "tilt": -90.0, "color": "#00ffff" }, "width": 25, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 2000 } }
+    },
+    {
+      "name": "Random Dimmer",
+      "target": "All",
+      "multiplier": 1.0,
+      "steps": [
+        { "values": { "dimmer": 1.0 }, "width": 20, "transition": 0 },
+        { "values": { "dimmer": 0.0 }, "width": 80, "transition": 0 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 800 } }
+    }
+  ],
+  "sequences": [],
+  "timeline": {
+    "bpm": 120,
+    "events": []
+  }
+}

@@ -15,8 +15,8 @@ pub struct ShowDSL {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MetaDSL {
     pub name: String,
-    pub version: String,
-    pub tempo: u32,
+    pub version: Option<String>,
+    pub tempo: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -146,7 +146,7 @@ pub struct GradientDef {
 pub struct PhaserDSL {
     pub name: String,
     pub target: String,
-    pub speed: f64,
+    pub multiplier: Option<f64>, // defaults to 1.0
     pub steps: Vec<PhaserStepDSL>,
     pub phase: PhaseConfigDSL,
 }

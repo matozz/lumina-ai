@@ -116,11 +116,13 @@ pub async fn set_tempo(bpm: u32, state: State<'_, Arc<EngineState>>) -> Result<(
 }
 
 #[tauri::command]
-pub async fn trigger_phaser(phaser_name: String, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
+pub async fn trigger_phaser(phaser_name: String, multiplier: f64, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
     let mut r_state = state.runtime.write().await;
-    if !r_state.active_phasers.iter().any(|p| p.name == phaser_name) {
+    if let Some(phaser) = r_state.active_phasers.iter_mut().find(|p| p.name == phaser_name) {
+        phaser.multiplier = multiplier;
+    } else {
         let beat = r_state.global_beat;
-        r_state.active_phasers.push(ActivePhaser { name: phaser_name, start_beat: beat, instance_id: None });
+        r_state.active_phasers.push(ActivePhaser { name: phaser_name, start_beat: beat, instance_id: None, multiplier });
     }
     Ok(())
 }

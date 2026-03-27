@@ -1,5 +1,5 @@
 {
-  "meta": { "name": "Heart Show", "version": "1.0", "tempo": 120 },
+  "meta": { "name": "Heart Show" },
   "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 80] }],
   "layout": {
     "type": "generator",
@@ -34,7 +34,7 @@
     {
       "name": "Chase",
       "target": "ByAngle",
-      "speed": 120,
+      "multiplier": 2.0,
       "steps": [
         { "values": { "color": "#ff0000", "dimmer": 1.0 }, "width": 20, "transition": 0 },
         { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 80, "transition": 0 }

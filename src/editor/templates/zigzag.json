@@ -1,0 +1,57 @@
+{
+  "meta": { "name": "Zig Zag Split" },
+  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 16] }],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "matrix",
+      "rows": 2,
+      "columns": 8,
+      "spacing": 40,
+      "origin": [0, 0]
+    }
+  },
+  "groups": [
+    { "name": "TopRow", "fixtures": { "range": [1, 8] }, "sortBy": "x" },
+    { "name": "BottomRow", "fixtures": { "range": [9, 16] }, "sortBy": "x" },
+    { "name": "All", "fixtures": { "range": [1, 16] }, "sortBy": "x" }
+  ],
+  "presets": [],
+  "phasers": [
+    {
+      "name": "Zig Zag Color",
+      "target": "TopRow",
+      "multiplier": 1.0,
+      "steps": [
+        { "values": { "color": "#ff00ff" }, "width": 50, "transition": 100 },
+        { "values": { "color": "#ffff00" }, "width": 50, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+    },
+    {
+      "name": "Zig Zag Color Bot",
+      "target": "BottomRow",
+      "multiplier": 1.0,
+      "steps": [
+        { "values": { "color": "#ffff00" }, "width": 50, "transition": 100 },
+        { "values": { "color": "#ff00ff" }, "width": 50, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+    },
+    {
+      "name": "Opposite Tilt",
+      "target": "All",
+      "multiplier": 1.0,
+      "steps": [
+        { "values": { "tilt": -45.0 }, "width": 50, "transition": 100 },
+        { "values": { "tilt": 45.0 }, "width": 50, "transition": 100 }
+      ],
+      "phase": { "mode": "block", "blocks": 2 }
+    }
+  ],
+  "sequences": [],
+  "timeline": {
+    "bpm": 130,
+    "events": []
+  }
+}

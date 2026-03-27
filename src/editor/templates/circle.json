@@ -1,5 +1,5 @@
 {
-  "meta": { "name": "Concentric Circles", "version": "1.0", "tempo": 120 },
+  "meta": { "name": "Concentric Circles" },
   "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 100] }],
   "layout": {
     "type": "generator",
@@ -21,7 +21,7 @@
     {
       "name": "Radar Scanner",
       "target": "ByAngle",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         { "values": { "color": "#00ffcc", "dimmer": 1.0 }, "width": 10, "transition": 100 },
         { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 90, "transition": 100 }
@@ -31,7 +31,7 @@
     {
       "name": "Zoom In",
       "target": "ByDist",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         { "values": { "color": "#ffcc00", "dimmer": 1.0 }, "width": 30, "transition": 100 },
         { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 70, "transition": 50 }

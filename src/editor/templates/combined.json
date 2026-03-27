@@ -1,7 +1,7 @@
 {
   "meta": {
     "name": "4 Rects + Circle",
-    "version": "1.0",
+    
     "tempo": 120
   },
   "patch": [
@@ -1089,7 +1089,7 @@
     {
       "name": "Circle Ripple",
       "target": "CenterCircle",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         {
           "values": {
@@ -1119,7 +1119,7 @@
     {
       "name": "TL Spread",
       "target": "RectTopLeft",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         {
           "values": {
@@ -1149,7 +1149,7 @@
     {
       "name": "TR Spread",
       "target": "RectTopRight",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         {
           "values": {
@@ -1179,7 +1179,7 @@
     {
       "name": "BL Spread",
       "target": "RectBottomLeft",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         {
           "values": {
@@ -1209,7 +1209,7 @@
     {
       "name": "BR Spread",
       "target": "RectBottomRight",
-      "speed": 60,
+      "multiplier": 1.0,
       "steps": [
         {
           "values": {
@@ -1240,55 +1240,6 @@
   "sequences": [],
   "timeline": {
     "bpm": 120,
-    "events": [
-      {
-        "beat": 0,
-        "duration": 16,
-        "action": {
-          "type": "phaser",
-          "phaser": "Circle Ripple"
-        }
-      },
-      {
-        "beat": 4,
-        "duration": 8,
-        "action": {
-          "type": "phaser",
-          "phaser": "TL Spread"
-        }
-      },
-      {
-        "beat": 8,
-        "duration": 8,
-        "action": {
-          "type": "phaser",
-          "phaser": "BR Spread"
-        }
-      },
-      {
-        "beat": 12,
-        "duration": 8,
-        "action": {
-          "type": "phaser",
-          "phaser": "TR Spread"
-        }
-      },
-      {
-        "beat": 16,
-        "duration": 8,
-        "action": {
-          "type": "phaser",
-          "phaser": "BL Spread"
-        }
-      },
-      {
-        "beat": 24,
-        "duration": 8,
-        "action": {
-          "type": "phaser",
-          "phaser": "Circle Ripple"
-        }
-      }
-    ]
+    "events": []
   }
 }

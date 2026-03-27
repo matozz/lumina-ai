@@ -1,0 +1,39 @@
+{
+  "meta": { "name": "Rainbow Wave" },
+  "patch": [{ "type": "wash", "color": "rgb", "idRange": [1, 30] }],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "matrix",
+      "rows": 1,
+      "columns": 30,
+      "spacing": 20,
+      "origin": [0, 0]
+    }
+  },
+  "groups": [
+    { "name": "All", "fixtures": { "range": [1, 30] }, "sortBy": "x" }
+  ],
+  "presets": [],
+  "phasers": [
+    {
+      "name": "Rainbow Sweep",
+      "target": "All",
+      "multiplier": 1.0,
+      "steps": [
+        { "values": { "color": "#ff0000" }, "width": 16.6, "transition": 100 },
+        { "values": { "color": "#ffff00" }, "width": 16.6, "transition": 100 },
+        { "values": { "color": "#00ff00" }, "width": 16.6, "transition": 100 },
+        { "values": { "color": "#00ffff" }, "width": 16.6, "transition": 100 },
+        { "values": { "color": "#0000ff" }, "width": 16.6, "transition": 100 },
+        { "values": { "color": "#ff00ff" }, "width": 17, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+    }
+  ],
+  "sequences": [],
+  "timeline": {
+    "bpm": 120,
+    "events": []
+  }
+}

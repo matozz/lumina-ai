@@ -1,0 +1,36 @@
+{
+  "meta": { "name": "Pulse Engine" },
+  "patch": [{ "type": "wash", "color": "rgb", "idRange": [1, 20] }],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "circle",
+      "rings": 1,
+      "increment": 20,
+      "gap": 150,
+      "center": [0, 0]
+    }
+  },
+  "groups": [
+    { "name": "All", "fixtures": { "range": [1, 20] }, "sortBy": "distance_center" }
+  ],
+  "presets": [],
+  "phasers": [
+    {
+      "name": "Engine Pulse",
+      "target": "All",
+      "multiplier": 2.0,
+      "steps": [
+        { "values": { "dimmer": 1.0, "color": "#ffffff" }, "width": 5, "transition": 100 },
+        { "values": { "dimmer": 0.5, "color": "#0088ff" }, "width": 45, "transition": 100 },
+        { "values": { "dimmer": 0.1, "color": "#0000ff" }, "width": 50, "transition": 100 }
+      ],
+      "phase": { "mode": "constant", "value": 0 }
+    }
+  ],
+  "sequences": [],
+  "timeline": {
+    "bpm": 120,
+    "events": []
+  }
+}

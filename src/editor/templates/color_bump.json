@@ -1,0 +1,45 @@
+{
+  "meta": { "name": "Color Bump" },
+  "patch": [{ "type": "par", "color": "rgb", "idRange": [1, 12] }],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "circle",
+      "rings": 1,
+      "increment": 12,
+      "gap": 150,
+      "center": [0, 0]
+    }
+  },
+  "groups": [
+    { "name": "All", "fixtures": { "range": [1, 12] }, "sortBy": "none" }
+  ],
+  "presets": [],
+  "phasers": [
+    {
+      "name": "Cyan Magenta Bump",
+      "target": "All",
+      "multiplier": 2.0,
+      "steps": [
+        { "values": { "color": "#00ffff", "dimmer": 1.0 }, "width": 50, "transition": 0 },
+        { "values": { "color": "#ff00ff", "dimmer": 1.0 }, "width": 50, "transition": 0 }
+      ],
+      "phase": { "mode": "block", "blocks": 2 }
+    },
+    {
+      "name": "Fire Flash",
+      "target": "All",
+      "multiplier": 1.0,
+      "steps": [
+        { "values": { "color": "#ff3300", "dimmer": 1.0 }, "width": 10, "transition": 0 },
+        { "values": { "color": "#220000", "dimmer": 0.2 }, "width": 90, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+    }
+  ],
+  "sequences": [],
+  "timeline": {
+    "bpm": 128,
+    "events": []
+  }
+}
