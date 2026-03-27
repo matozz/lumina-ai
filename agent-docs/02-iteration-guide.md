@@ -26,3 +26,6 @@ When you are asked to add features or fix bugs in Lumina AI, follow these guidel
 3. **Implement Backend**: Write the Rust logic and expose the Tauri `#[command]`.
 4. **Implement Frontend**: Build the React components and wire them up to the Tauri command using `@tauri-apps/api/core` `invoke`.
 5. **Test**: Run `pnpm run build` to ensure types align and no compilation errors exist in the frontend, and `cargo build` for the backend.
+6. **Self-Review & Commit**:
+   - Review your changes to ensure no useless comments, debugging logs, or redundant logic were generated.
+   - Commit with an appropriate Gitmoji (e.g., ✨ `feat:`, 🐛 `fix:`, ♻️ `refactor:`).

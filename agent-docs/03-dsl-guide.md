@@ -35,7 +35,7 @@ The Timeline mode acts as a visual generator for the DSL:
 If you are asked to add a new command or capability to the DSL (e.g., a new effect like `Strobe`):
 1. **Rust Deserialization**: Update the Rust `struct`s and `Deserialize` implementations in `src-tauri/src/compiler/mod.rs` or `src-tauri/src/engine/` to recognize the new fields.
 2. **Rust Engine**: Create the underlying logic in `src-tauri/src/engine/` that handles how a `Strobe` behaves over time.
-3. **TypeScript Definitions**: Update any TypeScript interfaces and default templates in the frontend (`src/editor/templates.ts`) so the Monaco editor and UI can utilize the new capabilities.
+3. **TypeScript Definitions**: Update any TypeScript interfaces and default templates in the frontend (`src/editor/templates/*.json`) so the Monaco editor and UI can utilize the new capabilities.
 ## Phasers and Timing
 
 Phasers use a `multiplier` instead of an absolute speed (BPM) value to ensure they stay perfectly synchronized with the global master tempo.
@@ -48,22 +48,43 @@ Phasers use a `multiplier` instead of an absolute speed (BPM) value to ensure th
   - `0.5`: Half speed (one cycle every two beats).
   - Default is `1.0` if omitted.
 
-Example:
+Example of a Phaser:
 ```json
 {
-  "name": "dimmer_chase",
-  "target": "group_1",
-  "multiplier": 1.0,
+  "name": "Hard Chase",
+  "target": "Circle",
+  "multiplier": 2.0,
   "steps": [
-    { "dimmer": 100 },
-    { "dimmer": 0 }
+    { "values": { "dimmer": 1.0, "color": "#ffffff" }, "width": 10, "transition": 0 },
+    { "values": { "dimmer": 0.0 }, "width": 90, "transition": 0 }
   ],
-  "phase": {
-    "shape": "circle",
-    "rings": 1,
-    "increment": 36,
-    "gap": 0,
-    "center": 0
-  }
+  "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
 }
 ```
+
+Note: Layout information (like `circle` or `matrix`) is now defined globally in the `layout` and `groups` sections of the DSL, rather than directly inside individual phasers.
+
+## Guidelines for Generating Visually Striking DSL Effects
+
+When tasked with generating or modifying DSL effects, follow these core principles to ensure the results are visually meaningful, dynamic, and strictly synchronized with the show's rhythm. Avoid chaotic, meaningless, or "robot-like" movements at all costs.
+
+### 1. Rhythmic Synchronization (Tight to the Beat)
+- **Intentional Movement**: Every Phaser action (Pan/Tilt movement, Dimmer flashing) must have a clear visual purpose and direction. **Never** generate random, meaningless shaking (e.g., constant bouncing without dimming).
+- **Orderly Execution**: Choose between sharp, synchronized hits across all fixtures, or use `spread` (e.g., `from: 0, to: 360`) to make the effect roll through the array like an organized wave.
+
+### 2. Utilizing Spatial Layouts
+- **Embrace the Array**: When using layouts like `matrix` or complex shapes like `lissajous`, avoid keeping all fixtures at `dimmer: 1.0` constantly. Use tight `width` values (e.g., `width: 10` for on, `width: 90` for off) paired with `spread` to create radar sweeps, ripples, or moving trails.
+- **Avoid Visual Clutter**: Pushing too many static colors across an array (like a flat rainbow) looks chaotic and low-resolution. Always pair color sweeps with a Dimmer wave to give it breathing room and shape.
+
+### 3. Clean and Intentional Transitions
+- **Don't Mix High-Frequency Chaos**: Do not combine hyper-fast strobing, rapid color changing, and wide Pan/Tilt swings in the same fixture group. It creates a visual disaster.
+- **Purposeful Transitions**:
+  - For organic pulses/breathing: Use `transition: 100` with distinct `accel/decel` curves.
+  - For sharp chases/strobes: Use `transition: 0` for crisp, punchy cuts.
+
+### 4. Layering & Multipliers
+- **Combine Multiple Phasers**: The best templates use 2-3 overlapping phasers targeting different parameters (e.g., one phaser driving `pan/tilt` movement, while another drives a `dimmer` chase on top of it).
+- **Vary Multipliers**: Give different phasers slightly different `multiplier` values (e.g., `1.0` for movement, `2.0` for dimmer) to create complex, evolving polyrhythms instead of static loops.
+
+### 5. Proper Data Pairing (Dimmer + Color)
+- **Always Pair Dimmer with Color for RGB Fixtures**: The rendering engine defaults unknown RGB color values to black (`#000000`). If you define a step like `{ "dimmer": 1.0 }` without a corresponding `color`, the fixture will technically be "on" but rendering black, making it invisible on the canvas. Always provide a default color (e.g., `"color": "#ffffff"`) when raising the dimmer on RGB patches.

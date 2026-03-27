@@ -5,8 +5,8 @@
     "type": "generator",
     "generator": {
       "shape": "matrix",
-      "rows": 4,
-      "columns": 10,
+      "rows": 1,
+      "columns": 40,
       "spacing": 20,
       "origin": [0, 0]
     }
@@ -19,22 +19,22 @@
     {
       "name": "Knight Rider",
       "target": "All",
-      "multiplier": 2.0,
+      "multiplier": 1.0,
       "steps": [
-        { "values": { "color": "#ff0000", "dimmer": 1.0 }, "width": 5, "transition": 50 },
-        { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 95, "transition": 50 }
+        { "values": { "color": "#ff0000", "dimmer": 1.0 }, "width": 5, "transition": 100 },
+        { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 95, "transition": 100 }
       ],
-      "phase": { "mode": "mirror", "spread": { "from": 0, "to": 360 } }
+      "phase": { "mode": "mirror", "spread": { "from": 0, "to": 180 } }
     },
     {
       "name": "Matrix Rain",
       "target": "All",
-      "multiplier": 1.0,
+      "multiplier": 1.5,
       "steps": [
         { "values": { "color": "#00ff00", "dimmer": 1.0 }, "width": 10, "transition": 0 },
         { "values": { "color": "#003300", "dimmer": 0.0 }, "width": 90, "transition": 100 }
       ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 1000 } }
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 720 } }
     }
   ],
   "sequences": [],

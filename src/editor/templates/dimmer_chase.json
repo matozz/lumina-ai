@@ -4,37 +4,36 @@
   "layout": {
     "type": "generator",
     "generator": {
-      "shape": "circle",
-      "rings": 1,
-      "increment": 20,
-      "gap": 100,
-      "center": [0, 0]
+      "shape": "matrix",
+      "rows": 1,
+      "columns": 20,
+      "spacing": 50,
+      "origin": [0, 0]
     }
   },
   "groups": [
-    { "name": "Circle", "fixtures": { "range": [1, 20] }, "sortBy": "x" }
+    { "name": "Line", "fixtures": { "range": [1, 20] }, "sortBy": "x" }
   ],
   "presets": [],
   "phasers": [
     {
-      "name": "Hard Chase",
-      "target": "Circle",
+      "name": "Laser Chase",
+      "target": "Line",
       "multiplier": 2.0,
       "steps": [
-        { "values": { "dimmer": 1.0, "color": "#ffffff" }, "width": 10, "transition": 0 },
-        { "values": { "dimmer": 0.0 }, "width": 90, "transition": 0 }
+        { "values": { "dimmer": 1.0, "color": "#00ffcc" }, "width": 10, "transition": 0 },
+        { "values": { "dimmer": 0.0, "color": "#000000" }, "width": 90, "transition": 0 }
       ],
       "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
     },
     {
-      "name": "Soft Chase",
-      "target": "Circle",
+      "name": "Background Wash",
+      "target": "Line",
       "multiplier": 1.0,
       "steps": [
-        { "values": { "dimmer": 1.0, "color": "#00ffcc" }, "width": 50, "transition": 100 },
-        { "values": { "dimmer": 0.0 }, "width": 50, "transition": 100 }
+        { "values": { "dimmer": 0.3, "color": "#002244" }, "width": 100, "transition": 0 }
       ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+      "phase": { "mode": "constant", "value": 0 }
     }
   ],
   "sequences": [],

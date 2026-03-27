@@ -19,34 +19,24 @@
   "presets": [],
   "phasers": [
     {
-      "name": "Zig Zag Color",
+      "name": "Top Fire",
       "target": "TopRow",
       "multiplier": 1.0,
       "steps": [
-        { "values": { "color": "#ff00ff" }, "width": 50, "transition": 100 },
-        { "values": { "color": "#ffff00" }, "width": 50, "transition": 100 }
+        { "values": { "dimmer": 1.0, "color": "#00ffcc", "tilt": 30.0 }, "width": 20, "transition": 0 },
+        { "values": { "dimmer": 0.0, "color": "#000000", "tilt": 0.0 }, "width": 80, "transition": 50 }
       ],
       "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
     },
     {
-      "name": "Zig Zag Color Bot",
+      "name": "Bottom Fire",
       "target": "BottomRow",
       "multiplier": 1.0,
       "steps": [
-        { "values": { "color": "#ffff00" }, "width": 50, "transition": 100 },
-        { "values": { "color": "#ff00ff" }, "width": 50, "transition": 100 }
+        { "values": { "dimmer": 1.0, "color": "#ff00cc", "tilt": -30.0 }, "width": 20, "transition": 0 },
+        { "values": { "dimmer": 0.0, "color": "#000000", "tilt": 0.0 }, "width": 80, "transition": 50 }
       ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
-    },
-    {
-      "name": "Opposite Tilt",
-      "target": "All",
-      "multiplier": 1.0,
-      "steps": [
-        { "values": { "tilt": -45.0 }, "width": 50, "transition": 100 },
-        { "values": { "tilt": 45.0 }, "width": 50, "transition": 100 }
-      ],
-      "phase": { "mode": "block", "blocks": 2 }
+      "phase": { "mode": "spread", "spread": { "from": 180, "to": 540 } }
     }
   ],
   "sequences": [],

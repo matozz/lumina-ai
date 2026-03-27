@@ -19,10 +19,20 @@
     {
       "name": "Symmetric Bounce",
       "target": "All",
+      "multiplier": 1.0,
+      "steps": [
+        { "values": { "tilt": -45.0, "color": "#00ff88" }, "width": 50, "transition": 100, "accel": -50, "decel": 50 },
+        { "values": { "tilt": 45.0, "color": "#8800ff" }, "width": 50, "transition": 100, "accel": 50, "decel": -50 }
+      ],
+      "phase": { "mode": "mirror", "spread": { "from": 0, "to": 180 } }
+    },
+    {
+      "name": "Snap Flash",
+      "target": "All",
       "multiplier": 2.0,
       "steps": [
-        { "values": { "tilt": -30.0, "dimmer": 1.0, "color": "#00ff88" }, "width": 50, "transition": 100, "accel": -50, "decel": 50 },
-        { "values": { "tilt": 30.0, "dimmer": 1.0, "color": "#8800ff" }, "width": 50, "transition": 100, "accel": 50, "decel": -50 }
+        { "values": { "dimmer": 1.0, "color": "#ffffff" }, "width": 15, "transition": 0 },
+        { "values": { "dimmer": 0.0, "color": "#000000" }, "width": 85, "transition": 0 }
       ],
       "phase": { "mode": "mirror", "spread": { "from": 0, "to": 180 } }
     }

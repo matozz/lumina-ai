@@ -12,31 +12,30 @@
     }
   },
   "groups": [
-    { "name": "All", "fixtures": { "range": [1, 16] }, "sortBy": "none" }
+    { "name": "All", "fixtures": { "range": [1, 16] }, "sortBy": "none" },
+    { "name": "ByAngle", "fixtures": { "range": [1, 16] }, "sortBy": "angle_center" }
   ],
   "presets": [],
   "phasers": [
     {
-      "name": "Crazy Movements",
+      "name": "Sync Flyout",
       "target": "All",
-      "multiplier": 2.0,
+      "multiplier": 0.5,
       "steps": [
-        { "values": { "pan": -90.0, "tilt": -45.0, "color": "#ff00ff" }, "width": 25, "transition": 100 },
-        { "values": { "pan": 90.0, "tilt": 45.0, "color": "#00ff00" }, "width": 25, "transition": 100 },
-        { "values": { "pan": -45.0, "tilt": 90.0, "color": "#ffff00" }, "width": 25, "transition": 100 },
-        { "values": { "pan": 45.0, "tilt": -90.0, "color": "#00ffff" }, "width": 25, "transition": 100 }
+        { "values": { "tilt": -60.0, "color": "#002244" }, "width": 50, "transition": 100, "accel": 50, "decel": -50 },
+        { "values": { "tilt": 0.0, "color": "#00ffcc" }, "width": 50, "transition": 100, "accel": -50, "decel": 50 }
       ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 2000 } }
+      "phase": { "mode": "constant", "value": 0 }
     },
     {
-      "name": "Random Dimmer",
-      "target": "All",
-      "multiplier": 1.0,
+      "name": "Chaos Snap",
+      "target": "ByAngle",
+      "multiplier": 2.0,
       "steps": [
-        { "values": { "dimmer": 1.0 }, "width": 20, "transition": 0 },
-        { "values": { "dimmer": 0.0 }, "width": 80, "transition": 0 }
+        { "values": { "dimmer": 1.0, "pan": 45.0, "color": "#ffffff" }, "width": 10, "transition": 0 },
+        { "values": { "dimmer": 0.0, "pan": -45.0, "color": "#000000" }, "width": 90, "transition": 0 }
       ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 800 } }
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 720 } }
     }
   ],
   "sequences": [],
