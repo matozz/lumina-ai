@@ -28,6 +28,8 @@ Lumina AI is a high-performance timeline and sequencer engine for lighting shows
 When tasked with a feature or fix:
 1. **Branching**: Do NOT create a PR for every single small change. Instead, check out a new branch for the feature context (e.g., `feat/ui-overhaul`).
 2. **Continuous Commits**: Make continuous, incremental commits as you converse with the user and complete sub-tasks.
+   - **Commit Messages**: ALWAYS start your commit message with an appropriate Gitmoji (e.g., ✨ `feat:`, 🐛 `fix:`, ♻️ `refactor:`, 📝 `docs:`, 🎨 `style:`, etc.).
+   - **Self-Review**: Before every commit, actively review the generated code to ensure no useless comments, debugging logs, or unnecessary logic are included. Keep the code clean and concise.
 3. **Merging**: Only push to origin and create a Pull Request when the user explicitly instructs you to "merge", "open PR", or indicates the entire feature is fully complete.
 4. **PR Description**: When opening the PR, analyze all the commits you made on the branch and provide a comprehensive summary in the PR body.
 
@@ -41,7 +43,7 @@ When tasked with a feature or fix:
 If the user asks to add a new keyword or capability to the JSON DSL:
 1. Update `src-tauri/src/compiler/mod.rs` to recognize the new fields.
 2. Implement execution logic in `src-tauri/src/engine/`.
-3. Inform the frontend of the new capability (update UI templates/Monaco editor support if applicable).
+3. Inform the frontend of the new capability (update UI templates in `src/editor/templates/*.json` / Monaco editor support if applicable).
 
 ## Agent Specific Notes
 - Read the detailed architectural documents in `/agent-docs/` before undertaking large refactors:
