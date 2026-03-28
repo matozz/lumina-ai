@@ -1,4 +1,4 @@
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 use std::sync::Arc;
 use crate::state::{EngineState, ActivePhaser};
 use crate::compiler::parser::ShowDSL;
@@ -43,12 +43,13 @@ pub async fn load_dsl(dsl_json: String, state: State<'_, Arc<EngineState>>) -> R
             
             let mut show_guard = state.compiled_show.write().await;
             
-            // If in timeline mode, re-initialize timeline executor with new DSL
+            // Reset active phasers when loading a new DSL (both live and timeline mode)
             let mut r_state = state.runtime.write().await;
+            r_state.active_phasers.clear();
+            
+            // If in timeline mode, re-initialize timeline executor with new DSL
             if r_state.sequencer_mode == crate::state::SequencerMode::Timeline {
                 if let Some(timeline) = &c.timeline {
-                    // Reset active phasers when timeline changes
-                    r_state.active_phasers.clear();
                     r_state.timeline_executor = Some(crate::engine::timeline::TimelineExecutor::new(timeline.clone()));
                 } else {
                     r_state.timeline_executor = None;
@@ -82,10 +83,26 @@ pub async fn play(app_handle: AppHandle, state: State<'_, Arc<EngineState>>) -> 
 }
 
 #[tauri::command]
-pub async fn stop(state: State<'_, Arc<EngineState>>) -> Result<(), String> {
+pub async fn stop(app_handle: AppHandle, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
     state.scheduler.stop();
     let mut r_state = state.runtime.write().await;
     r_state.is_playing = false;
+    r_state.active_phasers.clear(); // Reset active phasers on stop
+    
+    // Clear the canvas by computing a blackout frame
+    let show_guard = state.compiled_show.read().await;
+    if let Some(show) = &*show_guard {
+        let black_frame = crate::engine::compute_frame(r_state.global_beat, &[], show);
+        r_state.prev_frame = black_frame.clone();
+
+        let payload = crate::scheduler::FramePayload {
+            beat: r_state.global_beat,
+            full: true,
+            outputs: black_frame,
+        };
+        let _ = app_handle.emit("engine:frame-update", payload);
+    }
+    
     Ok(())
 }
 
