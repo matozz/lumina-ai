@@ -1,0 +1,47 @@
+{
+  "meta": { "name": "Matrix Target" },
+  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 100] }],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "matrix",
+      "rows": 10,
+      "columns": 10,
+      "spacing": 50,
+      "origin": [0, 0]
+    }
+  },
+  "groups": [
+    { "name": "All", "fixtures": { "range": [1, 100] }, "sortBy": "none" },
+    { "name": "ByCenter", "fixtures": { "range": [1, 100] }, "sortBy": "distance_center" },
+    { "name": "ByAngle", "fixtures": { "range": [1, 100] }, "sortBy": "angle_center" }
+  ],
+  "presets": [],
+  "phasers": [
+    {
+      "name": "Target Lock",
+      "target": "ByCenter",
+      "multiplier": 1.0,
+      "steps": [
+        { "values": { "color": "#ff0000", "dimmer": 1.0 }, "width": 15, "transition": 0 },
+        { "values": { "color": "#440000", "dimmer": 0.2 }, "width": 85, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 360, "to": 0 } }
+    },
+    {
+      "name": "Radar Sweep",
+      "target": "ByAngle",
+      "multiplier": 0.5,
+      "steps": [
+        { "values": { "color": "#00ffcc", "dimmer": 1.0 }, "width": 20, "transition": 50 },
+        { "values": { "color": "#002244", "dimmer": 0.0 }, "width": 80, "transition": 100 }
+      ],
+      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+    }
+  ],
+  "sequences": [],
+  "timeline": {
+    "bpm": 120,
+    "events": []
+  }
+}

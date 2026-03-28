@@ -1,6 +1,6 @@
 {
   "meta": { "name": "Chaos Random" },
-  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 16] }],
+  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 17] }],
   "layout": {
     "type": "generator",
     "generator": {
@@ -12,8 +12,8 @@
     }
   },
   "groups": [
-    { "name": "All", "fixtures": { "range": [1, 16] }, "sortBy": "none" },
-    { "name": "ByAngle", "fixtures": { "range": [1, 16] }, "sortBy": "angle_center" }
+    { "name": "All", "fixtures": { "range": [1, 17] }, "sortBy": "none" },
+    { "name": "ByAngle", "fixtures": { "range": [1, 17] }, "sortBy": "angle_center" }
   ],
   "presets": [],
   "phasers": [
