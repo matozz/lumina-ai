@@ -88,3 +88,7 @@ When tasked with generating or modifying DSL effects, follow these core principl
 
 ### 5. Proper Data Pairing (Dimmer + Color)
 - **Always Pair Dimmer with Color for RGB Fixtures**: The rendering engine defaults unknown RGB color values to black (`#000000`). If you define a step like `{ "dimmer": 1.0 }` without a corresponding `color`, the fixture will technically be "on" but rendering black, making it invisible on the canvas. Always provide a default color (e.g., `"color": "#ffffff"`) when raising the dimmer on RGB patches.
+
+### 6. Circle Layout Quirks (The +1 Rule)
+- **Center Point Consumption**: When using the `circle` layout generator, the engine *always* places the very first fixture (e.g., ID 1) exactly at the center coordinate. The actual ring generation starts from the second fixture. 
+- **How to Fix**: If you want a perfect ring of 16 fixtures (`increment: 16`), you MUST define your patch range as `[1, 17]` (total 17 fixtures). ID 1 goes to the center, and IDs 2-17 perfectly close the 16-point circle. Failing to add this `+1` will result in a circle with a permanent missing gap.
