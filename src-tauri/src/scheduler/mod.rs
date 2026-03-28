@@ -12,10 +12,10 @@ pub struct Scheduler {
 }
 
 #[derive(Clone, serde::Serialize)]
-struct FramePayload {
-    beat: f64,
-    full: bool,
-    outputs: Vec<crate::engine::FixtureOutput>,
+pub struct FramePayload {
+    pub beat: f64,
+    pub full: bool,
+    pub outputs: Vec<crate::engine::FixtureOutput>,
 }
 
 #[derive(Clone, serde::Serialize)]

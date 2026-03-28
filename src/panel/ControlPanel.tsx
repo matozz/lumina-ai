@@ -33,6 +33,7 @@ export function ControlPanel() {
         await engine.stop();
         await engine.resetBeat();
         useUiStore.getState().setGlobalBeat(0);
+        useUiStore.getState().setActivePhasers([]); // Explicitly clear UI state
       }
       await engine.setSequencerMode(mode);
       setSequencerMode(mode);
@@ -192,7 +193,7 @@ export function ControlPanel() {
                       variant="outline"
                       onClick={() => handlePhaserToggle(name, currentMultiplier)}
                       className={cn(
-                        "rounded-lg text-[11px] font-medium transition-all flex flex-col items-center justify-center gap-2 p-4 border",
+                        "rounded-lg text-[11px] font-medium transition-all flex flex-col items-center justify-center gap-2 p-2 border",
                         isActive ? "h-14" : "h-20",
                         isActive 
                           ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.15)] hover:bg-indigo-500/30 hover:text-indigo-200" 
@@ -200,19 +201,19 @@ export function ControlPanel() {
                       )}
                     >
                       <div className={cn(
-                        "w-2 h-2 rounded-full transition-all",
+                        "w-2 h-2 rounded-full transition-all shrink-0",
                         isActive ? "bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]" : "bg-zinc-800"
                       )} />
-                      <span className="text-center leading-tight line-clamp-2 px-1 whitespace-normal wrap-break-word">{name}</span>
+                      <span className="text-center leading-tight line-clamp-2 px-1 whitespace-normal wrap-break-word w-full">{name}</span>
                     </Button>
                     
                     {isActive && (
-                      <div className="flex gap-1 h-6">
+                      <div className="flex gap-1 h-5">
                         <Button
                           variant="outline"
                           onClick={(e) => { e.stopPropagation(); handlePhaserToggle(name, Math.max(0.125, currentMultiplier * 0.5)); }}
                           className={cn(
-                            "flex-1 rounded text-[9px] font-bold px-0 transition-colors",
+                            "flex-1 rounded text-[9px] font-bold px-0 transition-colors h-full min-h-0",
                             currentMultiplier < 1.0
                               ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
                               : "bg-zinc-900/80 text-zinc-500 border-zinc-800 hover:bg-zinc-800"
@@ -224,7 +225,7 @@ export function ControlPanel() {
                           variant="outline"
                           onClick={(e) => { e.stopPropagation(); handlePhaserToggle(name, Math.min(8.0, currentMultiplier * 2)); }}
                           className={cn(
-                            "flex-1 rounded text-[9px] font-bold px-0 transition-colors",
+                            "flex-1 rounded text-[9px] font-bold px-0 transition-colors h-full min-h-0",
                             currentMultiplier > 1.0
                               ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
                               : "bg-zinc-900/80 text-zinc-500 border-zinc-800 hover:bg-zinc-800"

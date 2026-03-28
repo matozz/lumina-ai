@@ -1,4 +1,4 @@
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 use std::sync::Arc;
 use crate::state::{EngineState, ActivePhaser};
 use crate::compiler::parser::ShowDSL;
@@ -83,11 +83,26 @@ pub async fn play(app_handle: AppHandle, state: State<'_, Arc<EngineState>>) -> 
 }
 
 #[tauri::command]
-pub async fn stop(state: State<'_, Arc<EngineState>>) -> Result<(), String> {
+pub async fn stop(app_handle: AppHandle, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
     state.scheduler.stop();
     let mut r_state = state.runtime.write().await;
     r_state.is_playing = false;
     r_state.active_phasers.clear(); // Reset active phasers on stop
+    
+    // Clear the canvas by computing a blackout frame
+    let show_guard = state.compiled_show.read().await;
+    if let Some(show) = &*show_guard {
+        let black_frame = crate::engine::compute_frame(r_state.global_beat, &[], show);
+        r_state.prev_frame = black_frame.clone();
+
+        let payload = crate::scheduler::FramePayload {
+            beat: r_state.global_beat,
+            full: true,
+            outputs: black_frame,
+        };
+        let _ = app_handle.emit("engine:frame-update", payload);
+    }
+    
     Ok(())
 }
 
