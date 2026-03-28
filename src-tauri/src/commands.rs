@@ -43,12 +43,13 @@ pub async fn load_dsl(dsl_json: String, state: State<'_, Arc<EngineState>>) -> R
             
             let mut show_guard = state.compiled_show.write().await;
             
-            // If in timeline mode, re-initialize timeline executor with new DSL
+            // Reset active phasers when loading a new DSL (both live and timeline mode)
             let mut r_state = state.runtime.write().await;
+            r_state.active_phasers.clear();
+            
+            // If in timeline mode, re-initialize timeline executor with new DSL
             if r_state.sequencer_mode == crate::state::SequencerMode::Timeline {
                 if let Some(timeline) = &c.timeline {
-                    // Reset active phasers when timeline changes
-                    r_state.active_phasers.clear();
                     r_state.timeline_executor = Some(crate::engine::timeline::TimelineExecutor::new(timeline.clone()));
                 } else {
                     r_state.timeline_executor = None;
@@ -86,6 +87,7 @@ pub async fn stop(state: State<'_, Arc<EngineState>>) -> Result<(), String> {
     state.scheduler.stop();
     let mut r_state = state.runtime.write().await;
     r_state.is_playing = false;
+    r_state.active_phasers.clear(); // Reset active phasers on stop
     Ok(())
 }
 
