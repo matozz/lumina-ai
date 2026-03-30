@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { engine } from "../bridge/commands";
 import { useUiStore } from "../stores/uiStore";
 import { TEMPLATES } from "./templates";
-import { XCircle, FileCode2 } from "lucide-react";
+import { XCircle, FileCode2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function DslEditor() {
   const { currentDslCode: code, setCurrentDslCode: setCode } = useUiStore();
@@ -25,8 +26,10 @@ export function DslEditor() {
 
   useEffect(() => {
     if (!code) {
-      setCode(TEMPLATES[0].dsl);
-      setSelectedTemplateKey(TEMPLATES[0].key);
+      // Find the first valid template to set as default
+      const firstValidTemplate = TEMPLATES.find(t => !t.disabled) || TEMPLATES[0];
+      setCode(firstValidTemplate.dsl);
+      setSelectedTemplateKey(firstValidTemplate.key);
     }
   }, []); // Run only on mount
 
@@ -62,7 +65,7 @@ export function DslEditor() {
   const loadTemplate = (key: string | null) => {
     if (!key || key === "custom") return;
     const template = TEMPLATES.find(t => t.key === key);
-    if (template) {
+    if (template && !template.disabled) {
       setCode(template.dsl);
       setSelectedTemplateKey(key);
     }
@@ -81,6 +84,12 @@ export function DslEditor() {
     }
   };
 
+  const copyError = (e: React.MouseEvent, errorMessage: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigator.clipboard.writeText(errorMessage);
+  };
+
   return (
     <div className={cn("flex flex-col h-full w-112.5 border-r border-zinc-800 bg-zinc-950 shadow-xl z-10 shrink-0")}>
       <div className={cn("h-10 border-b border-zinc-800 bg-zinc-900/80 flex items-center px-4 justify-between backdrop-blur-md shrink-0")}>
@@ -89,25 +98,44 @@ export function DslEditor() {
           <span className="text-xs font-semibold text-zinc-200 tracking-wide">DSL EDITOR</span>
         </div>
         
-        <div className="flex gap-2 flex-1 justify-end">
+        <div className="flex gap-2 justify-end">
           <Select value={selectedTemplateKey} onValueChange={loadTemplate}>
-            <SelectTrigger size="sm" className={cn(
-              "h-6 max-w-37.5 items-center justify-between rounded border border-zinc-800 bg-zinc-950",
-              "px-1.5 py-0 text-xs text-zinc-300 placeholder:text-zinc-400",
-              "focus:outline-none focus:ring-1 focus:ring-zinc-500 transition-colors"
-            )}>
+            <SelectTrigger size="sm">
               <SelectValue placeholder="Select a template..." />
             </SelectTrigger>
-            <SelectContent className="bg-zinc-950 border-zinc-800">
+            <SelectContent className="bg-zinc-950 border-zinc-800 w-45">
               <SelectGroup>
                 {selectedTemplateKey === "custom" && (
-                  <SelectItem value="custom" className="text-zinc-400 italic focus:bg-zinc-800 focus:text-zinc-300">
+                  <SelectItem value="custom" className="text-zinc-400 italic focus:bg-zinc-800 focus:text-zinc-300 pr-8">
                     Custom...
                   </SelectItem>
                 )}
                 {TEMPLATES.map(t => (
-                  <SelectItem key={t.key} value={t.key} className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100">
-                    {t.name}
+                  <SelectItem 
+                    key={t.key} 
+                    value={t.key} 
+                    className={cn(
+                      "flex items-center focus:bg-zinc-800 focus:text-zinc-100 pr-8",
+                      t.disabled ? "text-zinc-600 opacity-80" : "text-zinc-300"
+                    )}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>{t.name}</span>
+                      {t.disabled && t.errorMessage && (
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <div onClick={(e) => copyError(e, t.errorMessage!)}>
+                              <AlertTriangle className="w-3.5 h-3.5 text-red-500/80 shrink-0" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" >
+                            <p className="text-[11px] font-mono whitespace-pre-wrap wrap-break-word opacity-80">
+                              {t.errorMessage}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectGroup>

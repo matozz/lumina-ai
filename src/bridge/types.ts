@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export interface FixtureOutput {
   id: number;
   r: number;    // 0-255
@@ -43,102 +45,159 @@ export interface EngineStatePayload {
   active_phasers: { id: string; multiplier: number }[];
 }
 
-export interface ShowDSL {
-  meta: {
-    name: string;
-  };
-  patch: PatchDSL[];
-  layout: LayoutDSL;
-  groups: GroupDSL[];
-  phasers: PhaserDSL[];
-  timeline?: TimelineDSL;
-}
+// -----------------------------------------------------------------------------
+// Zod Schemas for ShowDSL
+// -----------------------------------------------------------------------------
 
-export interface PatchDSL {
-  type: "spot" | "pixel";
-  id_range: [number, number];
-}
+export const PatchDSLSchema = z.object({
+  type: z.enum(["spot", "pixel"]),
+  id_range: z.tuple([z.number(), z.number()]),
+});
 
-export interface LayoutDSL {
-  type: "generator";
-  generator: GeneratorDSL;
-}
+export const FormulaDefSchema = z.object({
+  x: z.string(),
+  y: z.string(),
+  t_range: z.tuple([z.number(), z.number()]),
+  count: z.number(),
+  scale: z.number().optional(),
+});
 
-export type GeneratorDSL = 
-  | { shape: "matrix"; rows: number; columns: number; spacing: number; origin?: [number, number] }
-  | { shape: "circle"; rings: number; increment: number; gap: number; center?: [number, number] }
-  | { shape: "formula"; formula: FormulaDef }
-  | { shape: "svg_path"; svgPath: SvgPathDef }
-  | { shape: "custom"; fixtures: CustomFixturePos[] };
+export const SvgPathDefSchema = z.object({
+  d: z.string(),
+  sample_count: z.number(),
+  scale: z.number().optional(),
+});
 
-export interface FormulaDef {
-  x: string;
-  y: string;
-  t_range: [number, number];
-  count: number;
-  scale?: number;
-}
+export const CustomFixturePosSchema = z.object({
+  id: z.number(),
+  x: z.number(),
+  y: z.number(),
+});
 
-export interface SvgPathDef {
-  d: string;
-  sample_count: number;
-  scale?: number;
-}
+export const GeneratorDSLSchema = z.discriminatedUnion("shape", [
+  z.object({
+    shape: z.literal("matrix"),
+    rows: z.number(),
+    columns: z.number(),
+    spacing: z.number(),
+    origin: z.tuple([z.number(), z.number()]).optional(),
+  }),
+  z.object({
+    shape: z.literal("circle"),
+    rings: z.number(),
+    increment: z.number(),
+    gap: z.number(),
+    center: z.tuple([z.number(), z.number()]).optional(),
+  }),
+  z.object({
+    shape: z.literal("formula"),
+    formula: FormulaDefSchema,
+  }),
+  z.object({
+    shape: z.literal("svg_path"),
+    svgPath: SvgPathDefSchema,
+  }),
+  z.object({
+    shape: z.literal("custom"),
+    fixtures: z.array(CustomFixturePosSchema),
+  }),
+]);
 
-export interface CustomFixturePos {
-  id: number;
-  x: number;
-  y: number;
-}
+export const LayoutDSLSchema = z.object({
+  type: z.literal("generator"),
+  generator: GeneratorDSLSchema,
+});
 
-export interface GroupDSL {
-  name: string;
-  fixtures: number[] | { range: [number, number] };
-  sort_by?: string;
-}
+export const GroupDSLSchema = z.object({
+  name: z.string(),
+  fixtures: z.union([
+    z.array(z.number()),
+    z.object({ range: z.tuple([z.number(), z.number()]) }),
+  ]),
+  sort_by: z.string().optional(),
+});
 
-export interface PhaserDSL {
-  id: string;
-  name: string;
-  target: string;
-  multiplier?: number;
-  steps: PhaserStepDSL[];
-  phase: PhaseConfigDSL;
-}
+export const PhaserStepDSLSchema = z.object({
+  values: z.object({
+    color: z.string().optional(),
+    dimmer: z.number().optional(),
+  }),
+  width: z.number().optional(),
+  transition: z.number().optional(),
+  accel: z.number().optional(),
+  decel: z.number().optional(),
+});
 
-export interface PhaserStepDSL {
-  values: {
-    color?: string;
-    dimmer?: number;
-  };
-  width?: number;
-  transition?: number;
-  accel?: number;
-  decel?: number;
-}
+export const PhaseConfigDSLSchema = z.object({
+  mode: z.enum(["spread", "grouped"]),
+  spread: z.object({ from: z.number(), to: z.number() }).optional(),
+  grouped: z.object({ group_size: z.number(), spread: z.tuple([z.number(), z.number()]) }).optional(),
+});
 
-export interface PhaseConfigDSL {
-  mode: "spread" | "grouped";
-  spread?: { from: number; to: number };
-  grouped?: { group_size: number; spread: [number, number] };
-}
+export const PhaserDSLSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  target: z.string(),
+  multiplier: z.number().optional(),
+  steps: z.array(PhaserStepDSLSchema),
+  phase: PhaseConfigDSLSchema,
+});
 
-export interface TimelineEventDSL {
-  beat: number;
-  duration?: number;
-  action: TimelineActionDefDSL;
-}
+export const KeyframeDSLSchema = z.object({
+  time: z.number(),
+  value: z.any(),
+  easing: z.string().optional(),
+});
 
-export type TimelineActionDefDSL = 
-  | { type: "phaser"; phaser: string }
-  | { type: "animate"; target: string; keyframes: KeyframeDSL[] };
+export const TimelineActionDefDSLSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("phaser"),
+    phaser: z.string(),
+  }),
+  z.object({
+    type: z.literal("animate"),
+    target: z.string(),
+    keyframes: z.array(KeyframeDSLSchema),
+  }),
+]);
 
-export interface KeyframeDSL {
-  time: number;
-  value: any;
-  easing?: string;
-}
+export const TimelineEventDSLSchema = z.object({
+  beat: z.number(),
+  duration: z.number().optional(),
+  action: TimelineActionDefDSLSchema,
+});
 
-export interface TimelineDSL {
-  events: TimelineEventDSL[];
-}
+export const TimelineDSLSchema = z.object({
+  events: z.array(TimelineEventDSLSchema),
+});
+
+export const ShowDSLSchema = z.object({
+  meta: z.object({
+    name: z.string(),
+  }),
+  patch: z.array(PatchDSLSchema),
+  layout: LayoutDSLSchema,
+  groups: z.array(GroupDSLSchema),
+  phasers: z.array(PhaserDSLSchema),
+  timeline: TimelineDSLSchema.optional(),
+});
+
+// -----------------------------------------------------------------------------
+// Inferred Types
+// -----------------------------------------------------------------------------
+
+export type PatchDSL = z.infer<typeof PatchDSLSchema>;
+export type FormulaDef = z.infer<typeof FormulaDefSchema>;
+export type SvgPathDef = z.infer<typeof SvgPathDefSchema>;
+export type CustomFixturePos = z.infer<typeof CustomFixturePosSchema>;
+export type GeneratorDSL = z.infer<typeof GeneratorDSLSchema>;
+export type LayoutDSL = z.infer<typeof LayoutDSLSchema>;
+export type GroupDSL = z.infer<typeof GroupDSLSchema>;
+export type PhaserStepDSL = z.infer<typeof PhaserStepDSLSchema>;
+export type PhaseConfigDSL = z.infer<typeof PhaseConfigDSLSchema>;
+export type PhaserDSL = z.infer<typeof PhaserDSLSchema>;
+export type KeyframeDSL = z.infer<typeof KeyframeDSLSchema>;
+export type TimelineActionDefDSL = z.infer<typeof TimelineActionDefDSLSchema>;
+export type TimelineEventDSL = z.infer<typeof TimelineEventDSLSchema>;
+export type TimelineDSL = z.infer<typeof TimelineDSLSchema>;
+export type ShowDSL = z.infer<typeof ShowDSLSchema>;
