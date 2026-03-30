@@ -24,9 +24,10 @@ impl FixtureOutput {
 }
 
 pub fn compute_frame(
-    global_beat: f64,
+    _global_beat: f64, // we now rely on active.accumulated_beat instead for accurate phase
     active_phasers: &[ActivePhaser],
     compiled_show: &CompiledShow,
+    parameter_context: &animation::ParameterContext,
 ) -> Vec<FixtureOutput> {
     compiled_show.fixtures.par_iter().map(|fixture| {
         let mut output = FixtureOutput::black(fixture.id);
@@ -51,11 +52,8 @@ pub fn compute_frame(
                     let total_width: f64 = phaser.steps.iter().map(|s| s.width).sum();
                     if total_width <= 0.0 { continue; }
 
-                    let multiplier = phaser.multiplier.unwrap_or(1.0) * active.multiplier;
-                    // Cycle position calculation based on global_beat and multiplier
-                    // A global_beat of 1.0 represents one quarter note in standard 4/4 time.
-                    // A multiplier of 1.0 means the phaser completes exactly one full cycle (360 degrees) per beat.
-                    let cycle_position = ((global_beat * multiplier * 360.0)
+                    // We compute the phase directly from the accumulated_beat, which correctly accounts for changing speeds over time
+                    let cycle_position = ((active.accumulated_beat * 360.0)
                         + phase_offset) % 360.0;
                     
                     // to prevent negative module issues
@@ -63,9 +61,14 @@ pub fn compute_frame(
 
                     let normalized = cycle_position / 360.0 * total_width;
 
-                    let (color, dimmer) = phaser::evaluate_phaser_at(
+                    let (mut color, dimmer) = phaser::evaluate_phaser_at(
                         normalized, &phaser.steps, total_width
                     );
+                    
+                    // Apply dynamic color override if present in parameter_context
+                    if let Some((r, g, b)) = parameter_context.get_color(&format!("phaser:{}.color", active.name)) {
+                        color = (r, g, b);
+                    }
 
                     output.r = output.r.max(color.0);
                     output.g = output.g.max(color.1);
@@ -73,6 +76,11 @@ pub fn compute_frame(
                     output.dimmer = output.dimmer.max(dimmer);
                 }
             }
+        }
+        
+        // Apply global master dimmer if present
+        if let Some(global_dimmer) = parameter_context.get_float("global.master_dimmer") {
+            output.dimmer *= global_dimmer as f32;
         }
 
         output
@@ -89,3 +97,4 @@ pub fn compute_frame_diff(
         .map(|(c, _)| c.clone())
         .collect()
 }
+pub mod animation;

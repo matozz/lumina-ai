@@ -1,12 +1,13 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { useUiStore } from '../stores/uiStore';
-import { DroppableTrack } from './DroppableTrack';
+import { DroppableTrack, TimelineTrackData, UITimelineEvent } from './DroppableTrack';
 import { TimelineToolbar } from './TimelineToolbar';
 import { TimelineResourcePanel } from './TimelineResourcePanel';
 import { TimelineTrackHeaders } from './TimelineTrackHeaders';
 import { TimelineGrid } from './TimelineGrid';
 import { TimelinePlayhead } from './TimelinePlayhead';
 import { cn } from '@/lib/utils';
+import type { TimelineEventDSL } from '../bridge/types';
 
 export function TimelineView() {
   const { parsedDsl, globalBeat, compileResult, currentDslCode, setCurrentDslCode } = useUiStore();
@@ -26,6 +27,7 @@ export function TimelineView() {
   };
   
   const [selectedPhaser, setSelectedPhaser] = useState<string | null>(null);
+  const [expandedTracks, setExpandedTracks] = useState<Record<string, boolean>>({});
   
   useEffect(() => {
     if (selectedPhaser && compileResult?.phaser_names) {
@@ -57,18 +59,23 @@ export function TimelineView() {
   const BEAT_WIDTH = 40; 
   const interactionState = useRef<{ isInteracting: boolean }>({ isInteracting: false });
   
-  const resolveOverlaps = useCallback((events: any[]) => {
-    const tracks = new Map<string, any[]>();
+  const resolveOverlaps = useCallback((events: TimelineEventDSL[]) => {
+    const tracks = new Map<string, TimelineEventDSL[]>();
+
     events.forEach(e => {
       let trackName = 'Global';
       if (e.action?.type === 'phaser') trackName = `Phaser: ${e.action.phaser}`;
       else if (e.action?.type === 'preset') trackName = `Preset: ${e.action.preset}`;
+      else if (e.action?.type === 'animate') {
+        // Animate events have their own tracks defined by their targets
+        trackName = `Animate: ${e.action.target}`;
+      }
       
       if (!tracks.has(trackName)) tracks.set(trackName, []);
       tracks.get(trackName)?.push(e);
     });
     
-    const resolvedEvents: any[] = [];
+    const resolvedEvents: TimelineEventDSL[] = [];
     
     tracks.forEach((trackEvents) => {
       trackEvents.sort((a, b) => a.beat - b.beat);
@@ -141,24 +148,33 @@ export function TimelineView() {
           if (dslObj.timeline?.events?.[moving.originalIndex]) {
             const ev = dslObj.timeline.events[moving.originalIndex];
             
-            const isDifferentTrack = moving.activeTrackName && (
-              (ev.action.type === 'phaser' && moving.activeTrackName !== `Phaser: ${ev.action.phaser}`) ||
-              (ev.action.type === 'preset' && moving.activeTrackName !== `Preset: ${ev.action.preset}`)
-            );
-
-            if (ev.beat !== newBeat || isDifferentTrack) {
-              ev.beat = newBeat;
-              
-              if (isDifferentTrack && moving.activeTrackName) {
-                 if (moving.activeTrackName.startsWith('Phaser: ')) {
-                  ev.action = { type: 'phaser', phaser: moving.activeTrackName.replace('Phaser: ', '') };
-                } else if (moving.activeTrackName.startsWith('Preset: ')) {
-                  ev.action = { type: 'preset', preset: moving.activeTrackName.replace('Preset: ', '') };
-                }
+            // Do not process cross-track dropping for animate blocks right now, just beat movement
+            if (ev.action.type === 'animate') {
+              if (ev.beat !== newBeat) {
+                ev.beat = newBeat;
+                dslObj.timeline.events = resolveOverlaps(dslObj.timeline.events);
+                setCurrentDslCode(JSON.stringify(dslObj, null, 2));
               }
+            } else {
+              const isDifferentTrack = moving.activeTrackName && (
+                (ev.action.type === 'phaser' && moving.activeTrackName !== `Phaser: ${ev.action.phaser}`) ||
+                (ev.action.type === 'preset' && moving.activeTrackName !== `Preset: ${ev.action.preset}`)
+              );
 
-              dslObj.timeline.events = resolveOverlaps(dslObj.timeline.events);
-              setCurrentDslCode(JSON.stringify(dslObj, null, 2));
+              if (ev.beat !== newBeat || isDifferentTrack) {
+                ev.beat = newBeat;
+                
+                if (isDifferentTrack && moving.activeTrackName) {
+                   if (moving.activeTrackName.startsWith('Phaser: ')) {
+                    ev.action = { type: 'phaser', phaser: moving.activeTrackName.replace('Phaser: ', '') };
+                  } else if (moving.activeTrackName.startsWith('Preset: ')) {
+                    ev.action = { type: 'preset', preset: moving.activeTrackName.replace('Preset: ', '') };
+                  }
+                }
+
+                dslObj.timeline.events = resolveOverlaps(dslObj.timeline.events);
+                setCurrentDslCode(JSON.stringify(dslObj, null, 2));
+              }
             }
           }
         } catch(err) {}
@@ -220,13 +236,57 @@ export function TimelineView() {
   const timelineEvents = parsedDsl?.timeline?.events || [];
 
   const tracks = useMemo(() => {
-    const trackMap = new Map<string, any[]>();
+    const trackMap = new Map<string, UITimelineEvent[]>();
+    const animationsMap = new Map<string, UITimelineEvent[]>();
     
-    timelineEvents.forEach((event: any, index: number) => {
+    timelineEvents.forEach((event: TimelineEventDSL, index: number) => {
       let displayBeat = event.beat;
       let displayDuration = event.duration || 4;
       let displayType = event.action?.type;
-      let displayTarget = event.action?.type === 'phaser' ? event.action.phaser : event.action?.preset;
+      
+      // Handle Animate Actions differently
+      if (displayType === 'animate' && event.action.type === 'animate') {
+        const target = event.action.target; // e.g. "phaser:Circle Ripple.multiplier"
+        
+        let parentTrackName = 'Global';
+        if (target.startsWith('phaser:')) {
+            const parts = target.replace('phaser:', '').split('.');
+            parentTrackName = `Phaser: ${parts[0]}`;
+        } else if (target.startsWith('global.')) {
+            parentTrackName = 'Global';
+        }
+        
+        if (moving && moving.originalIndex === index) {
+          const deltaBeats = moving.currentDeltaX / BEAT_WIDTH;
+          displayBeat = Math.max(0, Math.floor((moving.startBeat + deltaBeats) * 2) / 2);
+        }
+
+        if (resizing && resizing.originalIndex === index) {
+          const deltaBeats = resizing.currentDeltaX / BEAT_WIDTH;
+          displayDuration = Math.max(0.5, Math.round((resizing.startDuration + deltaBeats) * 2) / 2);
+        }
+
+        const e: UITimelineEvent = { 
+          ...event, 
+          _id: `timeline-anim-${index}`, 
+          _originalIndex: index,
+          beat: displayBeat,
+          duration: displayDuration,
+        };
+
+        if (!animationsMap.has(parentTrackName)) {
+            animationsMap.set(parentTrackName, []);
+        }
+        animationsMap.get(parentTrackName)?.push(e);
+        return; // Skip normal track processing for animations
+      }
+
+      let displayTarget = '';
+      if (displayType === 'phaser' && event.action.type === 'phaser') {
+        displayTarget = event.action.phaser;
+      } else if (displayType === 'preset' && event.action.type === 'preset') {
+        displayTarget = event.action.preset;
+      }
       
       if (moving && moving.originalIndex === index) {
         const deltaBeats = moving.currentDeltaX / BEAT_WIDTH;
@@ -252,13 +312,13 @@ export function TimelineView() {
       if (displayType === 'phaser') trackName = `Phaser: ${displayTarget}`;
       else if (displayType === 'preset') trackName = `Preset: ${displayTarget}`;
 
-      const e = { 
+      const e: UITimelineEvent = { 
         ...event, 
         _id: `timeline-${index}`, 
-        originalIndex: index,
+        _originalIndex: index,
         beat: displayBeat,
         duration: displayDuration,
-        action: { type: displayType, phaser: displayTarget, preset: displayTarget }
+        action: { type: displayType, phaser: displayTarget, preset: displayTarget } as any
       };
       
       if (!trackMap.has(trackName)) {
@@ -267,15 +327,49 @@ export function TimelineView() {
       trackMap.get(trackName)?.push(e);
     });
     
-    if (trackMap.size === 0) {
-      trackMap.set('Track 1', []);
-    }
+    // Create final array with animations attached to tracks
+    const result: TimelineTrackData[] = [];
     
-    return Array.from(trackMap.entries()).map(([name, events]) => ({ name, events }));
+    // Collect all unique track names
+    const allTrackNames = new Set([...trackMap.keys(), ...animationsMap.keys()]);
+    if (allTrackNames.size === 0) {
+      allTrackNames.add('Track 1');
+    }
+
+    allTrackNames.forEach(name => {
+        const trackEvents = trackMap.get(name) || [];
+        const animEvents = animationsMap.get(name) || [];
+        
+        // Group animations by specific property (e.g. "multiplier", "color")
+        const subTracksMap = new Map<string, UITimelineEvent[]>();
+        animEvents.forEach(e => {
+            if (e.action.type === 'animate') {
+              const parts = e.action.target.split('.');
+              const propName = parts[parts.length - 1]; // "multiplier"
+              if (!subTracksMap.has(propName)) subTracksMap.set(propName, []);
+              subTracksMap.get(propName)?.push(e);
+            }
+        });
+
+        const subTracks = Array.from(subTracksMap.entries())
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([propName, evs]) => ({
+                name: propName,
+                events: evs
+            }));
+
+        result.push({
+            name,
+            events: trackEvents,
+            subTracks
+        });
+    });
+    
+    return result.sort((a, b) => a.name.localeCompare(b.name));
   }, [timelineEvents, moving, resizing]);
 
   const maxBeatFromEvents = tracks.flatMap(t => t.events).length > 0 
-    ? Math.max(...tracks.flatMap(t => t.events).map((e: any) => e.beat + (e.duration || 4)))
+    ? Math.max(...tracks.flatMap(t => t.events).map((e) => e.beat + (e.duration || 4)))
     : 0;
     
   const maxBeat = Math.max(32, maxBeatFromEvents, globalBeat + 8);
@@ -300,7 +394,7 @@ export function TimelineView() {
 
   return (
     <div className={cn(
-      "h-75 border-t border-zinc-800 bg-zinc-950 flex flex-col relative shrink-0 z-20 shadow-[0_-8px_20px_rgba(0,0,0,0.5)] select-none"
+      "h-96 border-t border-zinc-800 bg-zinc-950 flex flex-col relative shrink-0 z-20 shadow-[0_-8px_20px_rgba(0,0,0,0.5)] select-none"
     )}>
       <TimelineToolbar globalBeat={globalBeat} />
       
@@ -316,6 +410,8 @@ export function TimelineView() {
           activeTrackName={moving?.activeTrackName}
           scrollRef={trackHeadersScrollRef}
           globalBeat={globalBeat}
+          expandedTracks={expandedTracks}
+          setExpandedTracks={setExpandedTracks}
         />
         
         <div 
@@ -331,6 +427,7 @@ export function TimelineView() {
                 <DroppableTrack
                   key={t.name}
                   track={t}
+                  isExpanded={expandedTracks[t.name]}
                   beatWidth={BEAT_WIDTH}
                   selectedPhaser={selectedPhaser}
                   onGridClick={handleGridClick}
