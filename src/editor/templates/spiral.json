@@ -1,6 +1,17 @@
 {
-  "meta": { "name": "Golden Spiral" },
-  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 150] }],
+  "meta": {
+    "name": "Golden Spiral"
+  },
+  "patch": [
+    {
+      "type": "spot",
+      "color": "rgb",
+      "idRange": [
+        1,
+        150
+      ]
+    }
+  ],
   "layout": {
     "type": "generator",
     "generator": {
@@ -8,39 +19,116 @@
       "formula": {
         "x": "0.5 * t * cos(t)",
         "y": "0.5 * t * sin(t)",
-        "tRange": [0, 31.4159],
+        "tRange": [
+          0,
+          31.4159
+        ],
         "count": 150,
         "scale": 15
       }
     }
   },
   "groups": [
-    { "name": "Path", "fixtures": { "range": [1, 150] }, "sortBy": "none" },
-    { "name": "ByAngle", "fixtures": { "range": [1, 150] }, "sortBy": "angle_center" }
+    {
+      "name": "Path",
+      "fixtures": {
+        "range": [
+          1,
+          150
+        ]
+      },
+      "sortBy": "none"
+    },
+    {
+      "name": "ByAngle",
+      "fixtures": {
+        "range": [
+          1,
+          150
+        ]
+      },
+      "sortBy": "angle_center"
+    }
   ],
   "presets": [],
   "phasers": [
     {
+      "id": "inward_flow",
       "name": "Inward Flow",
       "target": "Path",
-      "multiplier": 2.0,
+      "multiplier": 2,
       "steps": [
-        { "values": { "color": "#ffffff", "dimmer": 1.0 }, "width": 5, "transition": 0 },
-        { "values": { "color": "#ffaa00", "dimmer": 0.6 }, "width": 15, "transition": 100 },
-        { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 80, "transition": 100 }
+        {
+          "values": {
+            "color": "#ffffff",
+            "dimmer": 1
+          },
+          "width": 5,
+          "transition": 0
+        },
+        {
+          "values": {
+            "color": "#ffaa00",
+            "dimmer": 0.6
+          },
+          "width": 15,
+          "transition": 100
+        },
+        {
+          "values": {
+            "color": "#000000",
+            "dimmer": 0
+          },
+          "width": 80,
+          "transition": 100
+        }
       ],
-      "phase": { "mode": "spread", "spread": { "from": 360, "to": 0 } }
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 360,
+          "to": 0
+        }
+      }
     },
     {
+      "id": "windmill",
       "name": "Windmill",
       "target": "ByAngle",
-      "multiplier": 1.0,
+      "multiplier": 1,
       "steps": [
-        { "values": { "color": "#00ff44", "dimmer": 0.8 }, "width": 33.3, "transition": 100 },
-        { "values": { "color": "#0044ff", "dimmer": 0.8 }, "width": 33.3, "transition": 100 },
-        { "values": { "color": "#4400ff", "dimmer": 0.8 }, "width": 33.4, "transition": 100 }
+        {
+          "values": {
+            "color": "#00ff44",
+            "dimmer": 0.8
+          },
+          "width": 33.3,
+          "transition": 100
+        },
+        {
+          "values": {
+            "color": "#0044ff",
+            "dimmer": 0.8
+          },
+          "width": 33.3,
+          "transition": 100
+        },
+        {
+          "values": {
+            "color": "#4400ff",
+            "dimmer": 0.8
+          },
+          "width": 33.4,
+          "transition": 100
+        }
       ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 1080 } }
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 0,
+          "to": 1080
+        }
+      }
     }
   ],
   "sequences": []

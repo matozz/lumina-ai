@@ -1,6 +1,17 @@
 {
-  "meta": { "name": "Rainbow Wave" },
-  "patch": [{ "type": "wash", "color": "rgb", "idRange": [1, 30] }],
+  "meta": {
+    "name": "Rainbow Wave"
+  },
+  "patch": [
+    {
+      "type": "wash",
+      "color": "rgb",
+      "idRange": [
+        1,
+        30
+      ]
+    }
+  ],
   "layout": {
     "type": "generator",
     "generator": {
@@ -8,37 +19,113 @@
       "rows": 1,
       "columns": 30,
       "spacing": 20,
-      "origin": [0, 0]
+      "origin": [
+        0,
+        0
+      ]
     }
   },
   "groups": [
-    { "name": "All", "fixtures": { "range": [1, 30] }, "sortBy": "x" }
+    {
+      "name": "All",
+      "fixtures": {
+        "range": [
+          1,
+          30
+        ]
+      },
+      "sortBy": "x"
+    }
   ],
   "presets": [],
   "phasers": [
     {
+      "id": "rainbow_colors",
       "name": "Rainbow Colors",
       "target": "All",
       "multiplier": 0.5,
       "steps": [
-        { "values": { "color": "#ff0000" }, "width": 16.6, "transition": 100 },
-        { "values": { "color": "#ffff00" }, "width": 16.6, "transition": 100 },
-        { "values": { "color": "#00ff00" }, "width": 16.6, "transition": 100 },
-        { "values": { "color": "#00ffff" }, "width": 16.6, "transition": 100 },
-        { "values": { "color": "#0000ff" }, "width": 16.6, "transition": 100 },
-        { "values": { "color": "#ff00ff" }, "width": 17, "transition": 100 }
+        {
+          "values": {
+            "color": "#ff0000"
+          },
+          "width": 16.6,
+          "transition": 100
+        },
+        {
+          "values": {
+            "color": "#ffff00"
+          },
+          "width": 16.6,
+          "transition": 100
+        },
+        {
+          "values": {
+            "color": "#00ff00"
+          },
+          "width": 16.6,
+          "transition": 100
+        },
+        {
+          "values": {
+            "color": "#00ffff"
+          },
+          "width": 16.6,
+          "transition": 100
+        },
+        {
+          "values": {
+            "color": "#0000ff"
+          },
+          "width": 16.6,
+          "transition": 100
+        },
+        {
+          "values": {
+            "color": "#ff00ff"
+          },
+          "width": 17,
+          "transition": 100
+        }
       ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 0,
+          "to": 360
+        }
+      }
     },
     {
+      "id": "dimmer_sweep",
       "name": "Dimmer Sweep",
       "target": "All",
-      "multiplier": 1.0,
+      "multiplier": 1,
       "steps": [
-        { "values": { "dimmer": 1.0, "color": "#ffffff" }, "width": 30, "transition": 100 },
-        { "values": { "dimmer": 0.0, "color": "#000000" }, "width": 70, "transition": 100 }
+        {
+          "values": {
+            "dimmer": 1,
+            "color": "#ffffff"
+          },
+          "width": 30,
+          "transition": 100
+        },
+        {
+          "values": {
+            "dimmer": 0,
+            "color": "#000000"
+          },
+          "width": 70,
+          "transition": 100
+        }
       ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 0,
+          "to": 360
+        }
+      }
     }
   ],
   "sequences": [],

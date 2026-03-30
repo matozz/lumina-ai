@@ -1,6 +1,17 @@
 {
-  "meta": { "name": "Concentric Circles" },
-  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 100] }],
+  "meta": {
+    "name": "Concentric Circles"
+  },
+  "patch": [
+    {
+      "type": "spot",
+      "color": "rgb",
+      "idRange": [
+        1,
+        100
+      ]
+    }
+  ],
   "layout": {
     "type": "generator",
     "generator": {
@@ -8,35 +19,107 @@
       "rings": 4,
       "increment": 8,
       "gap": 40,
-      "center": [0, 0]
+      "center": [
+        0,
+        0
+      ]
     }
   },
   "groups": [
-    { "name": "All", "fixtures": { "range": [1, 100] }, "sortBy": "none" },
-    { "name": "ByAngle", "fixtures": { "range": [1, 100] }, "sortBy": "angle_center" },
-    { "name": "ByDist", "fixtures": { "range": [1, 100] }, "sortBy": "distance_center" }
+    {
+      "name": "All",
+      "fixtures": {
+        "range": [
+          1,
+          100
+        ]
+      },
+      "sortBy": "none"
+    },
+    {
+      "name": "ByAngle",
+      "fixtures": {
+        "range": [
+          1,
+          100
+        ]
+      },
+      "sortBy": "angle_center"
+    },
+    {
+      "name": "ByDist",
+      "fixtures": {
+        "range": [
+          1,
+          100
+        ]
+      },
+      "sortBy": "distance_center"
+    }
   ],
   "presets": [],
   "phasers": [
     {
+      "id": "radar_scanner",
       "name": "Radar Scanner",
       "target": "ByAngle",
-      "multiplier": 1.0,
+      "multiplier": 1,
       "steps": [
-        { "values": { "color": "#00ffcc", "dimmer": 1.0 }, "width": 10, "transition": 100 },
-        { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 90, "transition": 100 }
+        {
+          "values": {
+            "color": "#00ffcc",
+            "dimmer": 1
+          },
+          "width": 10,
+          "transition": 100
+        },
+        {
+          "values": {
+            "color": "#000000",
+            "dimmer": 0
+          },
+          "width": 90,
+          "transition": 100
+        }
       ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 0,
+          "to": 360
+        }
+      }
     },
     {
+      "id": "zoom_in",
       "name": "Zoom In",
       "target": "ByDist",
-      "multiplier": 1.0,
+      "multiplier": 1,
       "steps": [
-        { "values": { "color": "#ffcc00", "dimmer": 1.0 }, "width": 30, "transition": 100 },
-        { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 70, "transition": 50 }
+        {
+          "values": {
+            "color": "#ffcc00",
+            "dimmer": 1
+          },
+          "width": 30,
+          "transition": 100
+        },
+        {
+          "values": {
+            "color": "#000000",
+            "dimmer": 0
+          },
+          "width": 70,
+          "transition": 50
+        }
       ],
-      "phase": { "mode": "spread", "spread": { "from": 360, "to": 0 } }
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 360,
+          "to": 0
+        }
+      }
     }
   ],
   "sequences": []

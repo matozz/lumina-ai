@@ -1,6 +1,17 @@
 {
-  "meta": { "name": "Sine Wave Fly" },
-  "patch": [{ "type": "moving_head", "color": "rgb", "idRange": [1, 24] }],
+  "meta": {
+    "name": "Sine Wave Fly"
+  },
+  "patch": [
+    {
+      "type": "moving_head",
+      "color": "rgb",
+      "idRange": [
+        1,
+        24
+      ]
+    }
+  ],
   "layout": {
     "type": "generator",
     "generator": {
@@ -8,23 +19,62 @@
       "rows": 1,
       "columns": 24,
       "spacing": 30,
-      "origin": [0, 0]
+      "origin": [
+        0,
+        0
+      ]
     }
   },
   "groups": [
-    { "name": "All", "fixtures": { "range": [1, 24] }, "sortBy": "x" }
+    {
+      "name": "All",
+      "fixtures": {
+        "range": [
+          1,
+          24
+        ]
+      },
+      "sortBy": "x"
+    }
   ],
   "presets": [],
   "phasers": [
     {
+      "id": "sine_fly",
       "name": "Sine Fly",
       "target": "All",
-      "multiplier": 1.0,
+      "multiplier": 1,
       "steps": [
-        { "values": { "tilt": -60.0, "dimmer": 1.0, "color": "#00aaff" }, "width": 50, "transition": 100, "accel": 30, "decel": -30 },
-        { "values": { "tilt": 60.0, "dimmer": 0.2, "color": "#001144" }, "width": 50, "transition": 100, "accel": -30, "decel": 30 }
+        {
+          "values": {
+            "tilt": -60,
+            "dimmer": 1,
+            "color": "#00aaff"
+          },
+          "width": 50,
+          "transition": 100,
+          "accel": 30,
+          "decel": -30
+        },
+        {
+          "values": {
+            "tilt": 60,
+            "dimmer": 0.2,
+            "color": "#001144"
+          },
+          "width": 50,
+          "transition": 100,
+          "accel": -30,
+          "decel": 30
+        }
       ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 720 } }
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 0,
+          "to": 720
+        }
+      }
     }
   ],
   "sequences": [],

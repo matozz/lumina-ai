@@ -1,6 +1,17 @@
 {
-  "meta": { "name": "Color Bump" },
-  "patch": [{ "type": "par", "color": "rgb", "idRange": [1, 13] }],
+  "meta": {
+    "name": "Color Bump"
+  },
+  "patch": [
+    {
+      "type": "par",
+      "color": "rgb",
+      "idRange": [
+        1,
+        13
+      ]
+    }
+  ],
   "layout": {
     "type": "generator",
     "generator": {
@@ -8,45 +19,136 @@
       "rings": 1,
       "increment": 12,
       "gap": 150,
-      "center": [0, 0]
+      "center": [
+        0,
+        0
+      ]
     }
   },
   "groups": [
-    { "name": "All", "fixtures": { "range": [1, 13] }, "sortBy": "angle_center" },
-    { "name": "Odd", "fixtures": [2, 4, 6, 8, 10, 12], "sortBy": "none" },
-    { "name": "Even", "fixtures": [3, 5, 7, 9, 11, 13], "sortBy": "none" }
+    {
+      "name": "All",
+      "fixtures": {
+        "range": [
+          1,
+          13
+        ]
+      },
+      "sortBy": "angle_center"
+    },
+    {
+      "name": "Odd",
+      "fixtures": [
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "sortBy": "none"
+    },
+    {
+      "name": "Even",
+      "fixtures": [
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "sortBy": "none"
+    }
   ],
   "presets": [],
   "phasers": [
     {
+      "id": "odd_bump",
       "name": "Odd Bump",
       "target": "Odd",
-      "multiplier": 2.0,
+      "multiplier": 2,
       "steps": [
-        { "values": { "color": "#00ffff", "dimmer": 1.0 }, "width": 10, "transition": 0 },
-        { "values": { "color": "#000033", "dimmer": 0.2 }, "width": 90, "transition": 50 }
+        {
+          "values": {
+            "color": "#00ffff",
+            "dimmer": 1
+          },
+          "width": 10,
+          "transition": 0
+        },
+        {
+          "values": {
+            "color": "#000033",
+            "dimmer": 0.2
+          },
+          "width": 90,
+          "transition": 50
+        }
       ],
-      "phase": { "mode": "constant", "value": 0 }
+      "phase": {
+        "mode": "constant",
+        "value": 0
+      }
     },
     {
+      "id": "even_bump",
       "name": "Even Bump",
       "target": "Even",
-      "multiplier": 2.0,
+      "multiplier": 2,
       "steps": [
-        { "values": { "color": "#ff00ff", "dimmer": 1.0 }, "width": 10, "transition": 0 },
-        { "values": { "color": "#330000", "dimmer": 0.2 }, "width": 90, "transition": 50 }
+        {
+          "values": {
+            "color": "#ff00ff",
+            "dimmer": 1
+          },
+          "width": 10,
+          "transition": 0
+        },
+        {
+          "values": {
+            "color": "#330000",
+            "dimmer": 0.2
+          },
+          "width": 90,
+          "transition": 50
+        }
       ],
-      "phase": { "mode": "constant", "value": 180 }
+      "phase": {
+        "mode": "constant",
+        "value": 180
+      }
     },
     {
+      "id": "sweep_flash",
       "name": "Sweep Flash",
       "target": "All",
       "multiplier": 0.5,
       "steps": [
-        { "values": { "color": "#ffffff", "dimmer": 1.0 }, "width": 5, "transition": 0 },
-        { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 95, "transition": 100 }
+        {
+          "values": {
+            "color": "#ffffff",
+            "dimmer": 1
+          },
+          "width": 5,
+          "transition": 0
+        },
+        {
+          "values": {
+            "color": "#000000",
+            "dimmer": 0
+          },
+          "width": 95,
+          "transition": 100
+        }
       ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 0,
+          "to": 360
+        }
+      }
     }
   ],
   "sequences": [],
