@@ -18,12 +18,10 @@ export function DraggableBlock({ event, beatWidth, isSubTrack, onDragStart, onRe
   const width = Math.max(beatWidth * 0.5, (event.duration || 4) * beatWidth);
   
   const isPhaser = event.action.type === 'phaser';
-  const isPreset = event.action.type === 'preset';
   const isAnimate = event.action.type === 'animate';
   
   let label = event.action.type as string;
   if (event.action.type === 'phaser') label = event.action.phaser;
-  else if (event.action.type === 'preset') label = event.action.preset;
   else if (event.action.type === 'animate') {
     const parts = event.action.target.split('.');
     label = parts[parts.length - 1]; // e.g. "multiplier"
@@ -41,9 +39,8 @@ export function DraggableBlock({ event, beatWidth, isSubTrack, onDragStart, onRe
         !isSubTrack && "backdrop-blur-md",
         
         isPhaser && "bg-indigo-600/80 hover:bg-indigo-500/90 border-indigo-400",
-        isPreset && "bg-emerald-600/80 hover:bg-emerald-500/90 border-emerald-400",
         isAnimate && "bg-amber-600/50 hover:bg-amber-500/70 border-amber-500/50",
-        !isPhaser && !isPreset && !isAnimate && "bg-zinc-700/80 border-zinc-500"
+        !isPhaser && !isAnimate && "bg-zinc-700/80 border-zinc-500"
       )}
       style={{ 
         left, 
@@ -55,13 +52,13 @@ export function DraggableBlock({ event, beatWidth, isSubTrack, onDragStart, onRe
       onClick={(ev) => ev.stopPropagation()}
       onDoubleClick={(ev) => {
         ev.stopPropagation();
-        onDelete(event._originalIndex);
+        onDelete(event.originalIndex);
       }}
       onPointerDown={(ev) => {
         ev.preventDefault();
         ev.stopPropagation();
         (ev.target as HTMLElement).setPointerCapture(ev.pointerId);
-        onDragStart(ev, event._originalIndex, event.beat);
+        onDragStart(ev, event.originalIndex, event.beat);
       }}
     >
       {!isAnimate && (
@@ -94,7 +91,7 @@ export function DraggableBlock({ event, beatWidth, isSubTrack, onDragStart, onRe
           ev.preventDefault(); 
           ev.stopPropagation();
           (ev.target as HTMLElement).setPointerCapture(ev.pointerId);
-          onResizeStart(ev, event._originalIndex, event.duration || 4);
+          onResizeStart(ev, event.originalIndex, event.duration || 4);
         }}
       />
     </div>

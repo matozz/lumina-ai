@@ -1,6 +1,16 @@
 {
-  "meta": { "name": "Heart Show" },
-  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 80] }],
+  "meta": {
+    "name": "Heart Show"
+  },
+  "patch": [
+    {
+      "type": "spot",
+      "id_range": [
+        1,
+        80
+      ]
+    }
+  ],
   "layout": {
     "type": "generator",
     "generator": {
@@ -8,39 +18,110 @@
       "formula": {
         "x": "16 * pow(sin(t), 3)",
         "y": "-(13*cos(t) - 5*cos(2*t) - 2*cos(3*t) - cos(4*t))",
-        "tRange": [0, 6.283185],
+        "t_range": [
+          0,
+          6.283185
+        ],
         "count": 80,
         "scale": 10
       }
     }
   },
   "groups": [
-    { "name": "All", "fixtures": { "range": [1, 80] }, "sortBy": "none" },
-    { "name": "ByX", "fixtures": { "range": [1, 80] }, "sortBy": "x" },
-    { "name": "ByAngle", "fixtures": { "range": [1, 80] }, "sortBy": "angle_center" }
-  ],
-  "presets": [],
-  "phasers": [
     {
-      "name": "Heart Beat",
-      "target": "All",
-      "speed": 72,
-      "steps": [
-        { "values": { "color": "#ff0055", "dimmer": 1.0 }, "width": 30, "transition": 100, "accel": -100, "decel": -100 },
-        { "values": { "color": "#330011", "dimmer": 0.2 }, "width": 70, "transition": 80 }
-      ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 0 } }
+      "name": "All",
+      "fixtures": {
+        "range": [
+          1,
+          80
+        ]
+      },
+      "sort_by": "none"
     },
     {
-      "name": "Chase",
-      "target": "ByAngle",
-      "multiplier": 2.0,
-      "steps": [
-        { "values": { "color": "#ff0000", "dimmer": 1.0 }, "width": 20, "transition": 0 },
-        { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 80, "transition": 0 }
-      ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+      "name": "ByX",
+      "fixtures": {
+        "range": [
+          1,
+          80
+        ]
+      },
+      "sort_by": "x"
+    },
+    {
+      "name": "ByAngle",
+      "fixtures": {
+        "range": [
+          1,
+          80
+        ]
+      },
+      "sort_by": "angle_center"
     }
   ],
-  "sequences": []
+  "phasers": [
+    {
+      "id": "heart_beat",
+      "name": "Heart Beat",
+      "target": "All",
+      "steps": [
+        {
+          "values": {
+            "color": "#ff0055",
+            "dimmer": 1
+          },
+          "width": 30,
+          "transition": 100,
+          "accel": -100,
+          "decel": -100
+        },
+        {
+          "values": {
+            "color": "#330011",
+            "dimmer": 0.2
+          },
+          "width": 70,
+          "transition": 80
+        }
+      ],
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 0,
+          "to": 0
+        }
+      }
+    },
+    {
+      "id": "chase",
+      "name": "Chase",
+      "target": "ByAngle",
+      "multiplier": 2,
+      "steps": [
+        {
+          "values": {
+            "color": "#ff0000",
+            "dimmer": 1
+          },
+          "width": 20,
+          "transition": 0
+        },
+        {
+          "values": {
+            "color": "#000000",
+            "dimmer": 0
+          },
+          "width": 80,
+          "transition": 0
+        }
+      ],
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 0,
+          "to": 360
+        }
+      }
+    }
+  ]
 }

@@ -16,6 +16,7 @@ export interface LayoutCoord {
   id: number;
   x: number;
   y: number;
+  type: string;
 }
 
 export interface CompileResult {
@@ -23,7 +24,7 @@ export interface CompileResult {
   fixture_count: number;
   layout_coords: LayoutCoord[];
   group_names: string[];
-  phaser_names: string[];
+  phasers: { id: string; name: string }[];
   sequence_names: string[];
   errors: CompileError[];
   warnings: CompileError[];
@@ -39,59 +40,87 @@ export interface EngineStatePayload {
   is_playing: boolean;
   tempo: number;
   global_beat: number;
-  active_phasers: { name: string; multiplier: number }[];
-  current_cue: { sequence: string; cue_id: number; cue_name?: string } | null;
+  active_phasers: { id: string; multiplier: number }[];
 }
 
 export interface ShowDSL {
   meta: {
     name: string;
-    version: string;
-    tempo: number;
   };
   patch: PatchDSL[];
   layout: LayoutDSL;
   groups: GroupDSL[];
-  presets: PresetDSL[];
   phasers: PhaserDSL[];
-  sequences: SequenceDSL[];
   timeline?: TimelineDSL;
 }
 
 export interface PatchDSL {
-  type: "spot" | "wash" | "pixel";
-  color: "rgb" | "rgbw";
-  idRange: [number, number];
+  type: "spot" | "pixel";
+  id_range: [number, number];
 }
 
 export interface LayoutDSL {
   type: "generator";
-  generator: any;
+  generator: GeneratorDSL;
+}
+
+export type GeneratorDSL = 
+  | { shape: "matrix"; rows: number; columns: number; spacing: number; origin?: [number, number] }
+  | { shape: "circle"; rings: number; increment: number; gap: number; center?: [number, number] }
+  | { shape: "formula"; formula: FormulaDef }
+  | { shape: "svg_path"; svgPath: SvgPathDef }
+  | { shape: "custom"; fixtures: CustomFixturePos[] };
+
+export interface FormulaDef {
+  x: string;
+  y: string;
+  t_range: [number, number];
+  count: number;
+  scale?: number;
+}
+
+export interface SvgPathDef {
+  d: string;
+  sample_count: number;
+  scale?: number;
+}
+
+export interface CustomFixturePos {
+  id: number;
+  x: number;
+  y: number;
 }
 
 export interface GroupDSL {
   name: string;
-  fixtures: any;
-  sortBy?: string;
-}
-
-export interface PresetDSL {
-  name: string;
-  type: "color" | "dimmer" | "composite";
-  values: any;
+  fixtures: number[] | { range: [number, number] };
+  sort_by?: string;
 }
 
 export interface PhaserDSL {
+  id: string;
   name: string;
   target: string;
   multiplier?: number;
-  steps: any[];
-  phase: any;
+  steps: PhaserStepDSL[];
+  phase: PhaseConfigDSL;
 }
 
-export interface SequenceDSL {
-  name: string;
-  cues: any[];
+export interface PhaserStepDSL {
+  values: {
+    color?: string;
+    dimmer?: number;
+  };
+  width?: number;
+  transition?: number;
+  accel?: number;
+  decel?: number;
+}
+
+export interface PhaseConfigDSL {
+  mode: "spread" | "grouped";
+  spread?: { from: number; to: number };
+  grouped?: { group_size: number; spread: [number, number] };
 }
 
 export interface TimelineEventDSL {
@@ -102,9 +131,6 @@ export interface TimelineEventDSL {
 
 export type TimelineActionDefDSL = 
   | { type: "phaser"; phaser: string }
-  | { type: "preset"; preset: string; target?: string; fade?: number }
-  | { type: "tempo"; bpm: number }
-  | { type: "stop_all" }
   | { type: "animate"; target: string; keyframes: KeyframeDSL[] };
 
 export interface KeyframeDSL {
@@ -114,6 +140,5 @@ export interface KeyframeDSL {
 }
 
 export interface TimelineDSL {
-  bpm: number;
   events: TimelineEventDSL[];
 }

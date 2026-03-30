@@ -2,6 +2,69 @@
 
 Lumina AI uses a custom JSON-based DSL to define lighting shows, phasers, and sequences. This allows for programmatic generation and precise control over the show engine.
 
+## DSL Structure and Sections
+
+A complete Show DSL contains several major top-level sections, each responsible for configuring different parts of the lighting engine:
+
+### 1. `meta` (Metadata)
+Defines basic information about the show.
+- `name`: String, the name of the show.
+
+### 2. `patch` (Fixture Patching)
+Defines the physical lighting fixtures in the show and assigns them ID ranges.
+- `type`: String, the type of fixture (`"spot"` or `"pixel"`). Spot draws as a circle, while Pixel draws as a square in the timeline canvas.
+- `id_range`: Array of two integers `[start_id, end_id]`, defining the inclusive range of fixture IDs.
+
+Example:
+```json
+"patch": [
+  { "type": "pixel", "id_range": [1, 100] }
+]
+```
+
+### 3. `layout` (Spatial Layout Generator)
+Defines how fixtures are physically arranged in 2D space. The engine uses this layout for spatial effects (like sweeps and gradients).
+- `type`: String, usually `"generator"`.
+- `generator`: Object, defines the shape. Supported shapes:
+  - `"matrix"`: Grid layout (`rows`, `columns`, `spacing`, `origin`).
+  - `"circle"`: Circular layout (`rings`, `increment`, `gap`, `center`). Note: ID 1 is always placed at the center point.
+  - `"formula"`: Mathematical formula for layout (`x` and `y` equations, `t_range`, `count`).
+  - `"svg_path"`: Generate fixtures along an SVG path (`svg_path` string, `sample_count`).
+  - `"custom"`: Manual coordinate placement (`fixtures` array with `id`, `x`, `y`).
+
+### 4. `groups` (Fixture Grouping)
+Organizes patched fixtures into logical groups for easy targeting by effects.
+- `name`: String, the unique name of the group.
+- `fixtures`: Defines which fixtures belong to the group. Can be:
+  - An array of specific IDs: `[1, 2, 5, 8]`
+  - A range: `{"range": [1, 50]}`
+  - A spatial filter: `{"filter": {"spatial": {"region": "left"}}}`
+- `sort_by`: (Optional) String, how the fixtures are ordered within the group (affects how Phase spread is applied). Valid values: `"none"`, `"x"`, `"-x"`, `"y"`, `"-y"`, `"distance_center"`, `"-distance_center"`, `"angle_center"`, `"random"`, `"x+y"`, `"-(x+y)"`.
+
+### 5. `phasers` (Dynamic Effects)
+Defines continuous, looped animations (Phasers) that target specific groups.
+- `id`: String, unique identifier for the phaser (used by timeline to reference it).
+- `name`: String, human-readable display name.
+- `target`: String, the name of the Group this phaser applies to.
+- `multiplier`: (Optional) Float, speed multiplier relative to the global tempo (default: 1.0).
+- `steps`: Array of step objects defining the keyframes of the loop.
+  - `values`: Object containing target parameters (e.g., `{"dimmer": 1.0, "color": "#ff0000"}`).
+  - `width`: (Optional) Float, the percentage of the phase this step occupies (default: 100).
+  - `transition`: (Optional) Float, crossfade percentage to the next step (0 = snap, 100 = smooth fade).
+  - `accel` / `decel`: (Optional) Integer, acceleration/deceleration curves.
+- `phase`: Object, defines how the effect spreads across multiple fixtures.
+  - `mode`: `"spread"` (distributed evenly) or `"grouped"` (distributed in chunks).
+  - `spread`: Object with `{"from": 0.0, "to": 360.0}` (degrees).
+
+### 6. `timeline` (Show Sequencing)
+Defines the sequence of events and animations over time.
+- `events`: Array of timeline blocks.
+  - `beat`: Float, start time in beats.
+  - `duration`: (Optional) Float, length in beats.
+  - `action`: Object defining what happens. Types include:
+    - `"phaser"`: Triggers a phaser (requires `"phaser": "phaser_id"`).
+    - `"animate"`: Executes keyframe animations on specific properties.
+
 ## DSL Architecture
 
 The DSL is written as JSON in the frontend's Monaco Editor and is parsed/executed by the Rust backend. 
@@ -10,7 +73,7 @@ The DSL is written as JSON in the frontend's Monaco Editor and is parsed/execute
 
 1. **JSON Parser / Deserializer (`src-tauri/src/compiler/mod.rs`)**: 
    - Reads the JSON string payload.
-   - Uses `serde_json` to map JSON fields to internal Rust engine structures (e.g., `Phaser`, `Sequence`).
+   - Uses `serde_json` to map JSON fields to internal Rust engine structures (e.g., `Phaser`, `Timeline`).
 2. **Execution Engine (`src-tauri/src/engine/`)**:
    - Takes the compiled structures and schedules them for output.
 
@@ -21,7 +84,7 @@ The DSL is written as JSON in the frontend's Monaco Editor and is parsed/execute
 When a user modifies the DSL in the editor (`src/editor/DslEditor.tsx`):
 1. The text is captured via Monaco Editor's `onChange`.
 2. A debounced call is made to the Tauri backend using `invoke('compile_dsl', { script: text })`.
-3. If successful, the UI updates to show the generated Phasers or Presets.
+3. If successful, the UI updates to show the generated Phasers.
 4. If there's a JSON syntax error, the backend returns the error, which can be mapped to Monaco Editor markers.
 
 ### Timeline to DSL
@@ -73,8 +136,8 @@ When tasked with generating or modifying DSL effects, follow these core principl
 - **Orderly Execution**: Choose between sharp, synchronized hits across all fixtures, or use `spread` (e.g., `from: 0, to: 360`) to make the effect roll through the array like an organized wave.
 
 ### 2. Timeline and Keyframe Animations
-- **Timeline Integration**: You can schedule `phaser` triggers or continuous `animate` tracks in the `timeline` section.
-- **Keyframe Interpolation**: Use `{"type": "animate", "target": "phaser:Name.color", "keyframes": [...]}` to drive parameter changes over time. Keyframes support `Float` and `Color` (#RRGGBB) values, and various `easing` curves (`linear`, `ease_in_out`, etc.).
+- **Timeline Integration**: You can schedule `phaser` triggers or continuous `animate` tracks in the `timeline` section. **Note**: When targeting a phaser via the timeline (either to start it or animate its properties), always use the phaser's **`id`**, not its display `name`.
+- **Keyframe Interpolation**: Use `{"type": "animate", "target": "phaser:id_here.color", "keyframes": [...]}` to drive parameter changes over time. Keyframes support `Float` and `Color` (#RRGGBB) values, and various `easing` curves (`linear`, `ease_in_out`, etc.).
 
 ### 3. Utilizing Spatial Layouts
 - **Embrace the Array**: When using layouts like `matrix` or complex shapes like `lissajous`, avoid keeping all fixtures at `dimmer: 1.0` constantly. Use tight `width` values (e.g., `width: 10` for on, `width: 90` for off) paired with `spread` to create radar sweeps, ripples, or moving trails.

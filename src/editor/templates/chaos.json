@@ -1,6 +1,16 @@
 {
-  "meta": { "name": "Chaos Random" },
-  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 17] }],
+  "meta": {
+    "name": "Chaos Random"
+  },
+  "patch": [
+    {
+      "type": "spot",
+      "id_range": [
+        1,
+        17
+      ]
+    }
+  ],
   "layout": {
     "type": "generator",
     "generator": {
@@ -8,39 +18,102 @@
       "rings": 1,
       "increment": 16,
       "gap": 120,
-      "center": [0, 0]
+      "center": [
+        0,
+        0
+      ]
     }
   },
   "groups": [
-    { "name": "All", "fixtures": { "range": [1, 17] }, "sortBy": "none" },
-    { "name": "ByAngle", "fixtures": { "range": [1, 17] }, "sortBy": "angle_center" }
+    {
+      "name": "All",
+      "fixtures": {
+        "range": [
+          1,
+          17
+        ]
+      },
+      "sort_by": "none"
+    },
+    {
+      "name": "ByAngle",
+      "fixtures": {
+        "range": [
+          1,
+          17
+        ]
+      },
+      "sort_by": "angle_center"
+    }
   ],
-  "presets": [],
   "phasers": [
     {
+      "id": "sync_flyout",
       "name": "Sync Flyout",
       "target": "All",
       "multiplier": 0.5,
       "steps": [
-        { "values": { "tilt": -60.0, "color": "#002244" }, "width": 50, "transition": 100, "accel": 50, "decel": -50 },
-        { "values": { "tilt": 0.0, "color": "#00ffcc" }, "width": 50, "transition": 100, "accel": -50, "decel": 50 }
+        {
+          "values": {
+            "tilt": -60,
+            "color": "#002244"
+          },
+          "width": 50,
+          "transition": 100,
+          "accel": 50,
+          "decel": -50
+        },
+        {
+          "values": {
+            "tilt": 0,
+            "color": "#00ffcc"
+          },
+          "width": 50,
+          "transition": 100,
+          "accel": -50,
+          "decel": 50
+        }
       ],
-      "phase": { "mode": "constant", "value": 0 }
+      "phase": {
+        "mode": "constant",
+        "value": 0
+      }
     },
     {
+      "id": "chaos_snap",
       "name": "Chaos Snap",
       "target": "ByAngle",
-      "multiplier": 2.0,
+      "multiplier": 2,
       "steps": [
-        { "values": { "dimmer": 1.0, "pan": 45.0, "color": "#ffffff" }, "width": 10, "transition": 0 },
-        { "values": { "dimmer": 0.0, "pan": -45.0, "color": "#000000" }, "width": 90, "transition": 0 }
+        {
+          "values": {
+            "dimmer": 1,
+            "pan": 45,
+            "color": "#ffffff"
+          },
+          "width": 10,
+          "transition": 0
+        },
+        {
+          "values": {
+            "dimmer": 0,
+            "pan": -45,
+            "color": "#000000"
+          },
+          "width": 90,
+          "transition": 0
+        }
       ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 720 } }
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 0,
+          "to": 720
+        }
+      }
     }
   ],
-  "sequences": [],
   "timeline": {
-    "bpm": 120,
     "events": []
   }
 }

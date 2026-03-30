@@ -1,6 +1,16 @@
 {
-  "meta": { "name": "Pulse Engine" },
-  "patch": [{ "type": "wash", "color": "rgb", "idRange": [1, 40] }],
+  "meta": {
+    "name": "Pulse Engine"
+  },
+  "patch": [
+    {
+      "type": "spot",
+      "id_range": [
+        1,
+        40
+      ]
+    }
+  ],
   "layout": {
     "type": "generator",
     "generator": {
@@ -8,39 +18,95 @@
       "rings": 4,
       "increment": 10,
       "gap": 100,
-      "center": [0, 0]
+      "center": [
+        0,
+        0
+      ]
     }
   },
   "groups": [
-    { "name": "All", "fixtures": { "range": [1, 40] }, "sortBy": "distance_center" }
-  ],
-  "presets": [],
-  "phasers": [
     {
-      "name": "Engine Shockwave",
-      "target": "All",
-      "multiplier": 1.0,
-      "steps": [
-        { "values": { "dimmer": 1.0, "color": "#ffffff" }, "width": 10, "transition": 100 },
-        { "values": { "dimmer": 0.5, "color": "#0088ff" }, "width": 30, "transition": 100 },
-        { "values": { "dimmer": 0.0, "color": "#0000ff" }, "width": 60, "transition": 100 }
-      ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
-    },
-    {
-      "name": "Core Burn",
-      "target": "All",
-      "multiplier": 2.0,
-      "steps": [
-        { "values": { "color": "#ffaa00" }, "width": 20, "transition": 0 },
-        { "values": { "color": "#000000" }, "width": 80, "transition": 0 }
-      ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 720 } }
+      "name": "All",
+      "fixtures": {
+        "range": [
+          1,
+          40
+        ]
+      },
+      "sort_by": "distance_center"
     }
   ],
-  "sequences": [],
+  "phasers": [
+    {
+      "id": "engine_shockwave",
+      "name": "Engine Shockwave",
+      "target": "All",
+      "multiplier": 1,
+      "steps": [
+        {
+          "values": {
+            "dimmer": 1,
+            "color": "#ffffff"
+          },
+          "width": 10,
+          "transition": 100
+        },
+        {
+          "values": {
+            "dimmer": 0.5,
+            "color": "#0088ff"
+          },
+          "width": 30,
+          "transition": 100
+        },
+        {
+          "values": {
+            "dimmer": 0,
+            "color": "#0000ff"
+          },
+          "width": 60,
+          "transition": 100
+        }
+      ],
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 0,
+          "to": 360
+        }
+      }
+    },
+    {
+      "id": "core_burn",
+      "name": "Core Burn",
+      "target": "All",
+      "multiplier": 2,
+      "steps": [
+        {
+          "values": {
+            "color": "#ffaa00"
+          },
+          "width": 20,
+          "transition": 0
+        },
+        {
+          "values": {
+            "color": "#000000"
+          },
+          "width": 80,
+          "transition": 0
+        }
+      ],
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 0,
+          "to": 720
+        }
+      }
+    }
+  ],
   "timeline": {
-    "bpm": 120,
     "events": []
   }
 }

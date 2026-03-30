@@ -2,7 +2,8 @@ export class FixtureVisual {
   readonly id: number;
   readonly x: number;
   readonly y: number;
-  readonly radius: number = 8;
+  readonly type: string;
+  readonly radius: number;
 
   currentColor: { r: number; g: number; b: number } = { r: 0, g: 0, b: 0 };
   private targetColor: { r: number; g: number; b: number } = { r: 0, g: 0, b: 0 };
@@ -10,10 +11,19 @@ export class FixtureVisual {
   private progress: number = 1;     // [0, 1]
   private duration: number = 80;    // ms
 
-  constructor(id: number, x: number, y: number) {
+  constructor(id: number, x: number, y: number, type: string = "spot") {
     this.id = id;
     this.x = x;
     this.y = y;
+    this.type = type;
+    
+    // Determine size based on fixture type
+    if (this.type === "pixel") {
+      this.radius = 4;
+    } else {
+      // spot and default
+      this.radius = 8;
+    }
   }
 
   setTarget(r: number, g: number, b: number, dimmer: number): void {

@@ -1,6 +1,16 @@
 {
-  "meta": { "name": "Zig Zag Split" },
-  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 16] }],
+  "meta": {
+    "name": "Zig Zag Split"
+  },
+  "patch": [
+    {
+      "type": "spot",
+      "id_range": [
+        1,
+        16
+      ]
+    }
+  ],
   "layout": {
     "type": "generator",
     "generator": {
@@ -8,40 +18,113 @@
       "rows": 2,
       "columns": 8,
       "spacing": 40,
-      "origin": [0, 0]
+      "origin": [
+        0,
+        0
+      ]
     }
   },
   "groups": [
-    { "name": "TopRow", "fixtures": { "range": [1, 8] }, "sortBy": "x" },
-    { "name": "BottomRow", "fixtures": { "range": [9, 16] }, "sortBy": "x" },
-    { "name": "All", "fixtures": { "range": [1, 16] }, "sortBy": "x" }
-  ],
-  "presets": [],
-  "phasers": [
     {
-      "name": "Top Fire",
-      "target": "TopRow",
-      "multiplier": 1.0,
-      "steps": [
-        { "values": { "dimmer": 1.0, "color": "#00ffcc", "tilt": 30.0 }, "width": 20, "transition": 0 },
-        { "values": { "dimmer": 0.0, "color": "#000000", "tilt": 0.0 }, "width": 80, "transition": 50 }
-      ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+      "name": "TopRow",
+      "fixtures": {
+        "range": [
+          1,
+          8
+        ]
+      },
+      "sort_by": "x"
     },
     {
-      "name": "Bottom Fire",
-      "target": "BottomRow",
-      "multiplier": 1.0,
-      "steps": [
-        { "values": { "dimmer": 1.0, "color": "#ff00cc", "tilt": -30.0 }, "width": 20, "transition": 0 },
-        { "values": { "dimmer": 0.0, "color": "#000000", "tilt": 0.0 }, "width": 80, "transition": 50 }
-      ],
-      "phase": { "mode": "spread", "spread": { "from": 180, "to": 540 } }
+      "name": "BottomRow",
+      "fixtures": {
+        "range": [
+          9,
+          16
+        ]
+      },
+      "sort_by": "x"
+    },
+    {
+      "name": "All",
+      "fixtures": {
+        "range": [
+          1,
+          16
+        ]
+      },
+      "sort_by": "x"
     }
   ],
-  "sequences": [],
+  "phasers": [
+    {
+      "id": "top_fire",
+      "name": "Top Fire",
+      "target": "TopRow",
+      "multiplier": 1,
+      "steps": [
+        {
+          "values": {
+            "dimmer": 1,
+            "color": "#00ffcc",
+            "tilt": 30
+          },
+          "width": 20,
+          "transition": 0
+        },
+        {
+          "values": {
+            "dimmer": 0,
+            "color": "#000000",
+            "tilt": 0
+          },
+          "width": 80,
+          "transition": 50
+        }
+      ],
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 0,
+          "to": 360
+        }
+      }
+    },
+    {
+      "id": "bottom_fire",
+      "name": "Bottom Fire",
+      "target": "BottomRow",
+      "multiplier": 1,
+      "steps": [
+        {
+          "values": {
+            "dimmer": 1,
+            "color": "#ff00cc",
+            "tilt": -30
+          },
+          "width": 20,
+          "transition": 0
+        },
+        {
+          "values": {
+            "dimmer": 0,
+            "color": "#000000",
+            "tilt": 0
+          },
+          "width": 80,
+          "transition": 50
+        }
+      ],
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 180,
+          "to": 540
+        }
+      }
+    }
+  ],
   "timeline": {
-    "bpm": 130,
     "events": []
   }
 }

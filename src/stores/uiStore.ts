@@ -6,7 +6,7 @@ export type SequencerMode = 'live' | 'timeline';
 export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error';
 
 interface ActivePhaserState {
-  name: string;
+  id: string;
   multiplier: number;
 }
 

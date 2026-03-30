@@ -1,9 +1,10 @@
 import { Plus, ChevronDown, ChevronRight, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from "@/components/ui/button";
+import type { TimelineTrackData } from "./DroppableTrack";
 
 interface TrackHeadersProps {
-  tracks: { name: string; events: any[]; subTracks?: { name: string, events: any[] }[] }[];
+  tracks: TimelineTrackData[];
   activeTrackName?: string;
   scrollRef?: React.RefObject<HTMLDivElement | null>;
   globalBeat?: number;
@@ -13,11 +14,11 @@ interface TrackHeadersProps {
 
 export function TimelineTrackHeaders({ tracks, activeTrackName, scrollRef, globalBeat = 0, expandedTracks, setExpandedTracks }: TrackHeadersProps) {
 
-  const toggleTrack = (trackName: string, e: React.MouseEvent) => {
+  const toggleTrack = (trackId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setExpandedTracks(prev => ({
       ...prev,
-      [trackName]: !prev[trackName]
+      [trackId]: !prev[trackId]
     }));
   };
 
@@ -31,16 +32,16 @@ export function TimelineTrackHeaders({ tracks, activeTrackName, scrollRef, globa
           );
           
           const hasSubTracks = t.subTracks && t.subTracks.length > 0;
-          const isExpanded = expandedTracks[t.name] || false;
+          const isExpanded = expandedTracks[t.id] || false;
 
           return (
-            <div key={t.name} className="flex flex-col">
+            <div key={t.id} className="flex flex-col">
               <div 
                 className={cn(
                   "h-10 border-b border-zinc-800/40 flex items-center px-2 group relative transition-colors box-border cursor-pointer"
                 )}
-                onClick={(e) => hasSubTracks && toggleTrack(t.name, e)}
-                style={{ backgroundColor: activeTrackName === t.name ? 'rgba(99, 102, 241, 0.08)' : 'transparent' }}
+                onClick={(e) => hasSubTracks && toggleTrack(t.id, e)}
+                style={{ backgroundColor: activeTrackName === t.id ? 'rgba(99, 102, 241, 0.08)' : 'transparent' }}
               >
                 <div className="w-4 h-4 flex items-center justify-center mr-1 text-zinc-500 hover:text-zinc-300 transition-colors">
                   {hasSubTracks ? (
@@ -58,9 +59,9 @@ export function TimelineTrackHeaders({ tracks, activeTrackName, scrollRef, globa
                   "text-xs font-medium transition-colors truncate flex-1",
                   isTrackPlaying ? "text-emerald-400" : "text-zinc-400 group-hover:text-zinc-100"
                 )} title={t.name}>
-                  {t.name.replace('Phaser: ', '').replace('Preset: ', '')}
+                  {t.name}
                 </span>
-                {t.name === 'Global' && (
+                {t.id === 'global' && (
                   <span className="ml-2 px-1.5 py-0.5 rounded bg-zinc-800 text-[9px] font-bold text-zinc-500 uppercase tracking-wider shrink-0">
                     Master
                   </span>
@@ -70,7 +71,7 @@ export function TimelineTrackHeaders({ tracks, activeTrackName, scrollRef, globa
               {/* Render Animation Sub-tracks */}
               {isExpanded && hasSubTracks && t.subTracks!.map(st => (
                 <div 
-                  key={`${t.name}-${st.name}`}
+                  key={`${t.id}-${st.name}`}
                   className={cn(
                     "h-8 border-b border-zinc-800/20 flex items-center pl-8 pr-2 group relative transition-colors box-border bg-black/20"
                   )}

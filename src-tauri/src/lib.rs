@@ -5,8 +5,8 @@ pub mod scheduler;
 pub mod state;
 
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use tauri::Manager;
+use tokio::sync::RwLock;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -14,7 +14,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let app_handle = app.handle().clone();
-            
+
             let engine_state = Arc::new(state::EngineState {
                 app_handle: app_handle.clone(),
                 scheduler: scheduler::Scheduler::new(),
@@ -24,16 +24,14 @@ pub fn run() {
                     is_playing: false,
                     active_phasers: Vec::new(),
                     sequencer_mode: state::SequencerMode::Live,
-                    sequence_executor: None,
                     timeline_executor: None,
                     prev_frame: Vec::new(),
-                    current_cue: None,
                     parameter_context: engine::animation::ParameterContext::new(),
                 })),
             });
-            
+
             app.manage(engine_state);
-            
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -45,8 +43,6 @@ pub fn run() {
             commands::set_tempo,
             commands::trigger_phaser,
             commands::stop_phaser,
-            commands::trigger_cue,
-            commands::go_next_cue,
             commands::save_show,
             commands::load_show,
             commands::set_sequencer_mode,

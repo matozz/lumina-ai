@@ -42,7 +42,7 @@ export function ControlPanel() {
     }
   };
 
-  const handlePhaserToggle = async (name: string, multiplier: number = 1.0) => {
+  const handlePhaserToggle = async (id: string, multiplier: number = 1.0) => {
     if (!isPlaying) {
       await engine.play();
       useUiStore.getState().setIsPlaying(true);
@@ -52,16 +52,16 @@ export function ControlPanel() {
       await handleModeChange('live');
     }
     
-    const activePhaser = activePhasers.find(p => p.name === name);
+    const activePhaser = activePhasers.find(p => p.id === id);
     
     if (activePhaser) {
       if (activePhaser.multiplier === multiplier) {
-        await engine.stopPhaser(name);
+        await engine.stopPhaser(id);
       } else {
-        await engine.triggerPhaser(name, multiplier);
+        await engine.triggerPhaser(id, multiplier);
       }
     } else {
-      await engine.triggerPhaser(name, multiplier);
+      await engine.triggerPhaser(id, multiplier);
     }
   };
 
@@ -182,16 +182,16 @@ export function ControlPanel() {
               <span className="text-[10px] font-bold tracking-widest uppercase">Live Pads</span>
             </div>
             <div className={cn("grid grid-cols-2 gap-2")}>
-              {compileResult?.phaser_names.map(name => {
-                const activePhaser = activePhasers.find(p => p.name === name);
+              {compileResult?.phasers.map(phaserInfo => {
+                const activePhaser = activePhasers.find(p => p.id === phaserInfo.id);
                 const isActive = !!activePhaser;
                 const currentMultiplier = activePhaser?.multiplier ?? 1.0;
                 
                 return (
-                  <div key={name} className="flex flex-col gap-1">
+                  <div key={phaserInfo.id} className="flex flex-col gap-1">
                     <Button 
                       variant="outline"
-                      onClick={() => handlePhaserToggle(name, currentMultiplier)}
+                      onClick={() => handlePhaserToggle(phaserInfo.id, currentMultiplier)}
                       className={cn(
                         "rounded-lg text-[11px] font-medium transition-all flex flex-col items-center justify-center gap-2 p-2 border",
                         isActive ? "h-14" : "h-20",
@@ -204,14 +204,14 @@ export function ControlPanel() {
                         "w-2 h-2 rounded-full transition-all shrink-0",
                         isActive ? "bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]" : "bg-zinc-800"
                       )} />
-                      <span className="text-center leading-tight line-clamp-2 px-1 whitespace-normal wrap-break-word w-full">{name}</span>
+                      <span className="text-center leading-tight line-clamp-2 px-1 whitespace-normal wrap-break-word w-full">{phaserInfo.name}</span>
                     </Button>
                     
                     {isActive && (
                       <div className="flex gap-1 h-5">
                         <Button
                           variant="outline"
-                          onClick={(e) => { e.stopPropagation(); handlePhaserToggle(name, Math.max(0.125, currentMultiplier * 0.5)); }}
+                          onClick={(e) => { e.stopPropagation(); handlePhaserToggle(phaserInfo.id, Math.max(0.125, currentMultiplier * 0.5)); }}
                           className={cn(
                             "flex-1 rounded text-[9px] font-bold px-0 transition-colors h-full min-h-0",
                             currentMultiplier < 1.0
@@ -223,7 +223,7 @@ export function ControlPanel() {
                         </Button>
                         <Button
                           variant="outline"
-                          onClick={(e) => { e.stopPropagation(); handlePhaserToggle(name, Math.min(8.0, currentMultiplier * 2)); }}
+                          onClick={(e) => { e.stopPropagation(); handlePhaserToggle(phaserInfo.id, Math.min(8.0, currentMultiplier * 2)); }}
                           className={cn(
                             "flex-1 rounded text-[9px] font-bold px-0 transition-colors h-full min-h-0",
                             currentMultiplier > 1.0
@@ -238,7 +238,7 @@ export function ControlPanel() {
                   </div>
                 );
               })}
-              {(!compileResult || compileResult.phaser_names.length === 0) && (
+              {(!compileResult || compileResult.phasers.length === 0) && (
                 <div className={cn("col-span-2 flex flex-col items-center justify-center h-20 rounded-lg border border-dashed border-zinc-800 bg-zinc-900/30 gap-2 text-zinc-600")}>
                   <Square size={14} className="opacity-50" />
                   <span className="text-[10px] font-bold tracking-widest uppercase">Empty</span>

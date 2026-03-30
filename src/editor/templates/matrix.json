@@ -1,6 +1,16 @@
 {
-  "meta": { "name": "Matrix Dynamics" },
-  "patch": [{ "type": "wash", "color": "rgb", "idRange": [1, 64] }],
+  "meta": {
+    "name": "Matrix Dynamics"
+  },
+  "patch": [
+    {
+      "type": "spot",
+      "id_range": [
+        1,
+        64
+      ]
+    }
+  ],
   "layout": {
     "type": "generator",
     "generator": {
@@ -8,58 +18,188 @@
       "rows": 8,
       "columns": 8,
       "spacing": 40,
-      "origin": [0, 0]
+      "origin": [
+        0,
+        0
+      ]
     }
   },
   "groups": [
-    { "name": "All", "fixtures": { "range": [1, 64] }, "sortBy": "none" },
-    { "name": "ByX", "fixtures": { "range": [1, 64] }, "sortBy": "x" },
-    { "name": "ByY", "fixtures": { "range": [1, 64] }, "sortBy": "y" },
-    { "name": "ByCenter", "fixtures": { "range": [1, 64] }, "sortBy": "distance_center" },
-    { "name": "ByDiag", "fixtures": { "range": [1, 64] }, "sortBy": "x+y" }
-  ],
-  "presets": [],
-  "phasers": [
     {
-      "name": "Diagonal Sweep",
-      "target": "ByDiag",
-      "multiplier": 1.0,
-      "steps": [
-        { "values": { "color": "#00ffff", "dimmer": 1.0 }, "width": 20, "transition": 100 },
-        { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 80, "transition": 100 }
-      ],
-      "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+      "name": "All",
+      "fixtures": {
+        "range": [
+          1,
+          64
+        ]
+      },
+      "sort_by": "none"
     },
     {
-      "name": "Crosshair Scan X",
-      "target": "ByX",
-      "multiplier": 2.0,
-      "steps": [
-        { "values": { "color": "#ff0088", "dimmer": 1.0 }, "width": 10, "transition": 0 },
-        { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 90, "transition": 50 }
-      ],
-      "phase": { "mode": "mirror", "spread": { "from": 0, "to": 180 } }
+      "name": "ByX",
+      "fixtures": {
+        "range": [
+          1,
+          64
+        ]
+      },
+      "sort_by": "x"
     },
     {
-      "name": "Crosshair Scan Y",
-      "target": "ByY",
-      "multiplier": 2.0,
-      "steps": [
-        { "values": { "color": "#ff8800", "dimmer": 1.0 }, "width": 10, "transition": 0 },
-        { "values": { "color": "#000000", "dimmer": 0.0 }, "width": 90, "transition": 50 }
-      ],
-      "phase": { "mode": "mirror", "spread": { "from": 0, "to": 180 } }
+      "name": "ByY",
+      "fixtures": {
+        "range": [
+          1,
+          64
+        ]
+      },
+      "sort_by": "y"
     },
     {
-      "name": "Implosion",
-      "target": "ByCenter",
-      "multiplier": 1.0,
-      "steps": [
-        { "values": { "color": "#ffffff", "dimmer": 1.0 }, "width": 15, "transition": 0 },
-        { "values": { "color": "#220044", "dimmer": 0.2 }, "width": 85, "transition": 100 }
-      ],
-      "phase": { "mode": "spread", "spread": { "from": 360, "to": 0 } }
+      "name": "ByCenter",
+      "fixtures": {
+        "range": [
+          1,
+          64
+        ]
+      },
+      "sort_by": "distance_center"
+    },
+    {
+      "name": "ByDiag",
+      "fixtures": {
+        "range": [
+          1,
+          64
+        ]
+      },
+      "sort_by": "x+y"
     }
   ],
-  "sequences": []
+  "phasers": [
+    {
+      "id": "diagonal_sweep",
+      "name": "Diagonal Sweep",
+      "target": "ByDiag",
+      "multiplier": 1,
+      "steps": [
+        {
+          "values": {
+            "color": "#00ffff",
+            "dimmer": 1
+          },
+          "width": 20,
+          "transition": 100
+        },
+        {
+          "values": {
+            "color": "#000000",
+            "dimmer": 0
+          },
+          "width": 80,
+          "transition": 100
+        }
+      ],
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 0,
+          "to": 360
+        }
+      }
+    },
+    {
+      "id": "crosshair_scan_x",
+      "name": "Crosshair Scan X",
+      "target": "ByX",
+      "multiplier": 2,
+      "steps": [
+        {
+          "values": {
+            "color": "#ff0088",
+            "dimmer": 1
+          },
+          "width": 10,
+          "transition": 0
+        },
+        {
+          "values": {
+            "color": "#000000",
+            "dimmer": 0
+          },
+          "width": 90,
+          "transition": 50
+        }
+      ],
+      "phase": {
+        "mode": "mirror",
+        "spread": {
+          "from": 0,
+          "to": 180
+        }
+      }
+    },
+    {
+      "id": "crosshair_scan_y",
+      "name": "Crosshair Scan Y",
+      "target": "ByY",
+      "multiplier": 2,
+      "steps": [
+        {
+          "values": {
+            "color": "#ff8800",
+            "dimmer": 1
+          },
+          "width": 10,
+          "transition": 0
+        },
+        {
+          "values": {
+            "color": "#000000",
+            "dimmer": 0
+          },
+          "width": 90,
+          "transition": 50
+        }
+      ],
+      "phase": {
+        "mode": "mirror",
+        "spread": {
+          "from": 0,
+          "to": 180
+        }
+      }
+    },
+    {
+      "id": "implosion",
+      "name": "Implosion",
+      "target": "ByCenter",
+      "multiplier": 1,
+      "steps": [
+        {
+          "values": {
+            "color": "#ffffff",
+            "dimmer": 1
+          },
+          "width": 15,
+          "transition": 0
+        },
+        {
+          "values": {
+            "color": "#220044",
+            "dimmer": 0.2
+          },
+          "width": 85,
+          "transition": 100
+        }
+      ],
+      "phase": {
+        "mode": "spread",
+        "spread": {
+          "from": 360,
+          "to": 0
+        }
+      }
+    }
+  ]
 }

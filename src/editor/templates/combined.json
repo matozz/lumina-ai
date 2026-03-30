@@ -1,14 +1,11 @@
 {
   "meta": {
-    "name": "4 Rects + Circle",
-    
-    "tempo": 120
+    "name": "4 Rects + Circle"
   },
   "patch": [
     {
       "type": "spot",
-      "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         200
       ]
@@ -1031,7 +1028,7 @@
           200
         ]
       },
-      "sortBy": "none"
+      "sort_by": "none"
     },
     {
       "name": "CenterCircle",
@@ -1041,7 +1038,7 @@
           40
         ]
       },
-      "sortBy": "distance_center"
+      "sort_by": "distance_center"
     },
     {
       "name": "RectTopLeft",
@@ -1051,7 +1048,7 @@
           80
         ]
       },
-      "sortBy": "distance_center"
+      "sort_by": "distance_center"
     },
     {
       "name": "RectTopRight",
@@ -1061,7 +1058,7 @@
           120
         ]
       },
-      "sortBy": "distance_center"
+      "sort_by": "distance_center"
     },
     {
       "name": "RectBottomLeft",
@@ -1071,7 +1068,7 @@
           160
         ]
       },
-      "sortBy": "distance_center"
+      "sort_by": "distance_center"
     },
     {
       "name": "RectBottomRight",
@@ -1081,15 +1078,15 @@
           200
         ]
       },
-      "sortBy": "distance_center"
+      "sort_by": "distance_center"
     }
   ],
-  "presets": [],
   "phasers": [
     {
+      "id": "circle_ripple",
       "name": "Circle Ripple",
       "target": "CenterCircle",
-      "multiplier": 1.0,
+      "multiplier": 1,
       "steps": [
         {
           "values": {
@@ -1117,9 +1114,10 @@
       }
     },
     {
+      "id": "tl_spread",
       "name": "TL Spread",
       "target": "RectTopLeft",
-      "multiplier": 1.0,
+      "multiplier": 1,
       "steps": [
         {
           "values": {
@@ -1147,9 +1145,10 @@
       }
     },
     {
+      "id": "tr_spread",
       "name": "TR Spread",
       "target": "RectTopRight",
-      "multiplier": 1.0,
+      "multiplier": 1,
       "steps": [
         {
           "values": {
@@ -1177,9 +1176,10 @@
       }
     },
     {
+      "id": "bl_spread",
       "name": "BL Spread",
       "target": "RectBottomLeft",
-      "multiplier": 1.0,
+      "multiplier": 1,
       "steps": [
         {
           "values": {
@@ -1207,9 +1207,10 @@
       }
     },
     {
+      "id": "br_spread",
       "name": "BR Spread",
       "target": "RectBottomRight",
-      "multiplier": 1.0,
+      "multiplier": 1,
       "steps": [
         {
           "values": {
@@ -1237,16 +1238,14 @@
       }
     }
   ],
-  "sequences": [],
   "timeline": {
-    "bpm": 120,
     "events": [
       {
         "beat": 0,
         "duration": 32,
         "action": {
           "type": "phaser",
-          "phaser": "Circle Ripple"
+          "phaser": "circle_ripple"
         }
       },
       {
@@ -1254,11 +1253,23 @@
         "duration": 32,
         "action": {
           "type": "animate",
-          "target": "phaser:Circle Ripple.multiplier",
+          "target": "phaser:circle_ripple.multiplier",
           "keyframes": [
-            { "time": 0, "value": 0.5, "easing": "linear" },
-            { "time": 16, "value": 4.0, "easing": "ease_in_out" },
-            { "time": 32, "value": 0.5, "easing": "linear" }
+            {
+              "time": 0,
+              "value": 0.5,
+              "easing": "linear"
+            },
+            {
+              "time": 16,
+              "value": 4,
+              "easing": "ease_in_out"
+            },
+            {
+              "time": 32,
+              "value": 0.5,
+              "easing": "linear"
+            }
           ]
         }
       },
@@ -1267,11 +1278,23 @@
         "duration": 32,
         "action": {
           "type": "animate",
-          "target": "phaser:Circle Ripple.color",
+          "target": "phaser:circle_ripple.color",
           "keyframes": [
-            { "time": 0, "value": "#ff0000", "easing": "linear" },
-            { "time": 16, "value": "#00ff00", "easing": "linear" },
-            { "time": 32, "value": "#0000ff", "easing": "linear" }
+            {
+              "time": 0,
+              "value": "#ff0000",
+              "easing": "linear"
+            },
+            {
+              "time": 16,
+              "value": "#00ff00",
+              "easing": "linear"
+            },
+            {
+              "time": 32,
+              "value": "#0000ff",
+              "easing": "linear"
+            }
           ]
         }
       },
@@ -1280,7 +1303,7 @@
         "duration": 28,
         "action": {
           "type": "phaser",
-          "phaser": "TL Spread"
+          "phaser": "tl_spread"
         }
       },
       {
@@ -1288,11 +1311,23 @@
         "duration": 28,
         "action": {
           "type": "animate",
-          "target": "phaser:TL Spread.multiplier",
+          "target": "phaser:tl_spread.multiplier",
           "keyframes": [
-            { "time": 0, "value": 0.5, "easing": "ease_in" },
-            { "time": 14, "value": 2.0, "easing": "ease_out" },
-            { "time": 28, "value": 0.5, "easing": "linear" }
+            {
+              "time": 0,
+              "value": 0.5,
+              "easing": "ease_in"
+            },
+            {
+              "time": 14,
+              "value": 2,
+              "easing": "ease_out"
+            },
+            {
+              "time": 28,
+              "value": 0.5,
+              "easing": "linear"
+            }
           ]
         }
       },
@@ -1301,7 +1336,7 @@
         "duration": 24,
         "action": {
           "type": "phaser",
-          "phaser": "TR Spread"
+          "phaser": "tr_spread"
         }
       },
       {
@@ -1309,11 +1344,23 @@
         "duration": 24,
         "action": {
           "type": "animate",
-          "target": "phaser:TR Spread.multiplier",
+          "target": "phaser:tr_spread.multiplier",
           "keyframes": [
-            { "time": 0, "value": 0.5, "easing": "ease_in" },
-            { "time": 12, "value": 2.0, "easing": "ease_out" },
-            { "time": 24, "value": 0.5, "easing": "linear" }
+            {
+              "time": 0,
+              "value": 0.5,
+              "easing": "ease_in"
+            },
+            {
+              "time": 12,
+              "value": 2,
+              "easing": "ease_out"
+            },
+            {
+              "time": 24,
+              "value": 0.5,
+              "easing": "linear"
+            }
           ]
         }
       },
@@ -1322,7 +1369,7 @@
         "duration": 20,
         "action": {
           "type": "phaser",
-          "phaser": "BL Spread"
+          "phaser": "bl_spread"
         }
       },
       {
@@ -1330,11 +1377,23 @@
         "duration": 20,
         "action": {
           "type": "animate",
-          "target": "phaser:BL Spread.multiplier",
+          "target": "phaser:bl_spread.multiplier",
           "keyframes": [
-            { "time": 0, "value": 0.5, "easing": "ease_in" },
-            { "time": 10, "value": 2.0, "easing": "ease_out" },
-            { "time": 20, "value": 0.5, "easing": "linear" }
+            {
+              "time": 0,
+              "value": 0.5,
+              "easing": "ease_in"
+            },
+            {
+              "time": 10,
+              "value": 2,
+              "easing": "ease_out"
+            },
+            {
+              "time": 20,
+              "value": 0.5,
+              "easing": "linear"
+            }
           ]
         }
       },
@@ -1343,7 +1402,7 @@
         "duration": 16,
         "action": {
           "type": "phaser",
-          "phaser": "BR Spread"
+          "phaser": "br_spread"
         }
       },
       {
@@ -1351,11 +1410,23 @@
         "duration": 16,
         "action": {
           "type": "animate",
-          "target": "phaser:BR Spread.multiplier",
+          "target": "phaser:br_spread.multiplier",
           "keyframes": [
-            { "time": 0, "value": 0.5, "easing": "ease_in" },
-            { "time": 8, "value": 2.0, "easing": "ease_out" },
-            { "time": 16, "value": 0.5, "easing": "linear" }
+            {
+              "time": 0,
+              "value": 0.5,
+              "easing": "ease_in"
+            },
+            {
+              "time": 8,
+              "value": 2,
+              "easing": "ease_out"
+            },
+            {
+              "time": 16,
+              "value": 0.5,
+              "easing": "linear"
+            }
           ]
         }
       },
@@ -1366,9 +1437,21 @@
           "type": "animate",
           "target": "global.master_dimmer",
           "keyframes": [
-            { "time": 0, "value": 1.0, "easing": "linear" },
-            { "time": 8, "value": 0.2, "easing": "ease_in_out" },
-            { "time": 16, "value": 1.0, "easing": "linear" }
+            {
+              "time": 0,
+              "value": 1,
+              "easing": "linear"
+            },
+            {
+              "time": 8,
+              "value": 0.2,
+              "easing": "ease_in_out"
+            },
+            {
+              "time": 16,
+              "value": 1,
+              "easing": "linear"
+            }
           ]
         }
       }

@@ -18,7 +18,13 @@ impl AnimatableValue {
                 AnimatableValue::Color(r, g, b)
             }
             // Fallback: If types don't match, just snap to the target if we are halfway there
-            _ => if t >= 0.5 { other.clone() } else { self.clone() },
+            _ => {
+                if t >= 0.5 {
+                    other.clone()
+                } else {
+                    self.clone()
+                }
+            }
         }
     }
 }
@@ -72,7 +78,7 @@ impl ParameterContext {
             None
         }
     }
-    
+
     pub fn clear(&mut self) {
         self.global_params.clear();
     }
