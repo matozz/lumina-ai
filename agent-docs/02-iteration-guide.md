@@ -5,7 +5,7 @@ When you are asked to add features or fix bugs in Lumina AI, follow these guidel
 ## 1. Frontend UI Modifications
 
 ### Component Styling
-- **Always use `cn()`**: When combining Tailwind classes, especially with conditions, use the `cn` utility from `src/utils/cn.ts`.
+- **Always use `cn()`**: When combining Tailwind classes, especially with conditions, use the `cn` utility from `src/lib/utils.ts`.
   - *Correct*: `className={cn("base-class", condition && "active-class")}`
   - *Incorrect*: `className={\`base-class ${condition ? 'active-class' : ''}\`}`
 - **Maintain Component Granularity**: If a component exceeds 200-300 lines, consider breaking it down. For example, `TimelineView` was split into several smaller components to manage complexity.
@@ -22,10 +22,10 @@ When you are asked to add features or fix bugs in Lumina AI, follow these guidel
 
 ## 3. Workflow for Adding a Feature
 1. **Plan**: Understand if the feature requires just Frontend state, or if it needs Backend support.
-2. **Draft Types**: Define the TypeScript interfaces (`src/types/`) and Rust `struct`s (`src-tauri/src/...`) first.
+2. **Draft Types**: Define the TypeScript interfaces (`src/bridge/types.ts`) and Rust `struct`s (`src-tauri/src/...`) first.
 3. **Implement Backend**: Write the Rust logic and expose the Tauri `#[command]`.
 4. **Implement Frontend**: Build the React components and wire them up to the Tauri command using `@tauri-apps/api/core` `invoke`.
 5. **Test**: Run `pnpm run build` to ensure types align and no compilation errors exist in the frontend, and `cargo build` for the backend.
 6. **Self-Review & Commit**:
    - Review your changes to ensure no useless comments, debugging logs, or redundant logic were generated.
-   - Commit with an appropriate Gitmoji (e.g., ✨ `feat:`, 🐛 `fix:`, ♻️ `refactor:`).
+   - Commit with the format specified in `CONTRIBUTING.md` (e.g., `feat(ui): ✨ description`, `fix(tauri): 🐛 description`, `refactor(dsl): ♻️ description`).

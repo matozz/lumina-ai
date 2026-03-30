@@ -10,14 +10,16 @@ Lumina AI is a specialized lighting show engine combining a React-based frontend
 
 ### Frontend (React + TypeScript)
 - **State Management**: Uses `zustand` for global state (UI mode, execution state).
-- **Styling**: Tailwind CSS with `clsx` and `tailwind-merge` (via `src/utils/cn.ts`).
+- **Styling**: Tailwind CSS with `clsx` and `tailwind-merge` (via `src/lib/utils.ts`).
 - **Timeline Engine**: Custom-built using native Pointer Events API for 60fps drag-and-drop. It bypasses React's render cycle during drag/resize operations by manipulating DOM `ref`s directly.
 - **Component Design**: Highly modular. The `TimelineView` is composed of smaller subcomponents (`TimelineToolbar`, `TimelineResourcePanel`, `TimelineGrid`, `TimelinePlayhead`, `TimelineTrackHeaders`).
 
 ### Backend (Rust + Tauri)
-- **Core Engine**: Handles the actual execution of lighting states.
-- **DSL Compiler**: Parses and compiles custom JSON-based DSL payloads into executable sequences.
-- **Scheduler**: Tokio-based asynchronous scheduler for precise timing and playback execution.
+- **Core Engine**: Handles the actual execution of lighting states, evaluating phasers, and rendering the final fixture output per frame.
+- **Timeline Executor**: Drives timeline playback, checks events against the global beat, and manages start/stop triggers.
+- **Animation System (Keyframes)**: Supports continuous interpolations between keyframes (`AnimatableValue::Float`, `AnimatableValue::Color`) over time using different easing curves. It uses a `ParameterContext` to allow dynamic overrides of properties (e.g. `phaser:Name.color`).
+- **DSL Compiler**: Parses and compiles custom JSON-based DSL payloads into executable sequences, generating layouts, parsing timeline events, and extracting keyframes.
+- **Scheduler**: Tokio-based asynchronous scheduler for precise timing and playback execution. Tick loop computes differences (`compute_frame_diff`) and streams updates to the frontend at ~60fps.
 
 ## Data Flow
 1. User interacts with the React UI (e.g., placing a phaser on the timeline).
