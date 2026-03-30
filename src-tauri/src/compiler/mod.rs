@@ -70,6 +70,7 @@ pub struct CompiledPreset {
 
 #[derive(Clone, Debug)]
 pub struct CompiledPhaser {
+    pub id: String,
     pub name: String,
     pub target: String,
     pub multiplier: Option<f64>,
@@ -548,7 +549,8 @@ impl Compiler {
                 }
             }).collect();
 
-            map.insert(p.name.clone(), CompiledPhaser {
+            map.insert(p.id.clone(), CompiledPhaser {
+                id: p.id.clone(),
                 name: p.name.clone(),
                 target: p.target.clone(),
                 multiplier: p.multiplier,

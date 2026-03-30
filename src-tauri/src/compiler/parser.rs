@@ -144,6 +144,7 @@ pub struct GradientDef {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PhaserDSL {
+    pub id: String,
     pub name: String,
     pub target: String,
     pub multiplier: Option<f64>, // defaults to 1.0

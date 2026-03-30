@@ -73,8 +73,8 @@ When tasked with generating or modifying DSL effects, follow these core principl
 - **Orderly Execution**: Choose between sharp, synchronized hits across all fixtures, or use `spread` (e.g., `from: 0, to: 360`) to make the effect roll through the array like an organized wave.
 
 ### 2. Timeline and Keyframe Animations
-- **Timeline Integration**: You can schedule `phaser` triggers or continuous `animate` tracks in the `timeline` section.
-- **Keyframe Interpolation**: Use `{"type": "animate", "target": "phaser:Name.color", "keyframes": [...]}` to drive parameter changes over time. Keyframes support `Float` and `Color` (#RRGGBB) values, and various `easing` curves (`linear`, `ease_in_out`, etc.).
+- **Timeline Integration**: You can schedule `phaser` triggers or continuous `animate` tracks in the `timeline` section. **Note**: When targeting a phaser via the timeline (either to start it or animate its properties), always use the phaser's **`id`**, not its display `name`.
+- **Keyframe Interpolation**: Use `{"type": "animate", "target": "phaser:id_here.color", "keyframes": [...]}` to drive parameter changes over time. Keyframes support `Float` and `Color` (#RRGGBB) values, and various `easing` curves (`linear`, `ease_in_out`, etc.).
 
 ### 3. Utilizing Spatial Layouts
 - **Embrace the Array**: When using layouts like `matrix` or complex shapes like `lissajous`, avoid keeping all fixtures at `dimmer: 1.0` constantly. Use tight `width` values (e.g., `width: 10` for on, `width: 90` for off) paired with `spread` to create radar sweeps, ripples, or moving trails.

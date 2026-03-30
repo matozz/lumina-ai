@@ -4,13 +4,19 @@ use crate::state::{EngineState, ActivePhaser};
 use crate::compiler::parser::ShowDSL;
 use crate::compiler::{Compiler, error::CompileError, LayoutCoord};
 
+#[derive(serde::Serialize, Clone)]
+pub struct PhaserInfo {
+    pub id: String,
+    pub name: String,
+}
+
 #[derive(serde::Serialize)]
 pub struct CompileResult {
     pub success: bool,
     pub fixture_count: usize,
     pub layout_coords: Vec<LayoutCoord>,
     pub group_names: Vec<String>,
-    pub phaser_names: Vec<String>,
+    pub phasers: Vec<PhaserInfo>,
     pub sequence_names: Vec<String>,
     pub errors: Vec<CompileError>,
     pub warnings: Vec<CompileError>,
@@ -26,10 +32,13 @@ pub async fn load_dsl(dsl_json: String, state: State<'_, Arc<EngineState>>) -> R
         }
     }
     
-    let mut phaser_names: Vec<String> = Vec::new();
+    let mut phasers: Vec<PhaserInfo> = Vec::new();
     for p in &dsl.phasers {
-        if !phaser_names.contains(&p.name) {
-            phaser_names.push(p.name.clone());
+        if !phasers.iter().any(|info| info.id == p.id) {
+            phasers.push(PhaserInfo {
+                id: p.id.clone(),
+                name: p.name.clone(),
+            });
         }
     }
     
@@ -47,7 +56,7 @@ pub async fn load_dsl(dsl_json: String, state: State<'_, Arc<EngineState>>) -> R
         fixture_count: 0,
         layout_coords: vec![],
         group_names: vec![],
-        phaser_names: vec![],
+        phasers: vec![],
         sequence_names: vec![],
         errors: vec![],
         warnings: vec![],
@@ -59,7 +68,7 @@ pub async fn load_dsl(dsl_json: String, state: State<'_, Arc<EngineState>>) -> R
             result.fixture_count = c.fixtures.len();
             result.layout_coords = c.coords.clone();
             result.group_names = group_names;
-            result.phaser_names = phaser_names;
+            result.phasers = phasers;
             result.sequence_names = sequence_names;
             
             let mut show_guard = state.compiled_show.write().await;
@@ -159,14 +168,14 @@ pub async fn set_tempo(bpm: u32, state: State<'_, Arc<EngineState>>) -> Result<(
 }
 
 #[tauri::command]
-pub async fn trigger_phaser(phaser_name: String, multiplier: f64, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
+pub async fn trigger_phaser(phaser_id: String, multiplier: f64, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
     let mut r_state = state.runtime.write().await;
-    if let Some(phaser) = r_state.active_phasers.iter_mut().find(|p| p.name == phaser_name) {
+    if let Some(phaser) = r_state.active_phasers.iter_mut().find(|p| p.id == phaser_id) {
         phaser.multiplier = multiplier;
     } else {
         let beat = r_state.global_beat;
         r_state.active_phasers.push(ActivePhaser { 
-            name: phaser_name, 
+            id: phaser_id, 
             start_beat: beat, 
             instance_id: None, 
             multiplier,
@@ -177,9 +186,9 @@ pub async fn trigger_phaser(phaser_name: String, multiplier: f64, state: State<'
 }
 
 #[tauri::command]
-pub async fn stop_phaser(phaser_name: String, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
+pub async fn stop_phaser(phaser_id: String, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
     let mut r_state = state.runtime.write().await;
-    r_state.active_phasers.retain(|p| p.name != phaser_name);
+    r_state.active_phasers.retain(|p| p.id != phaser_id);
     Ok(())
 }
 

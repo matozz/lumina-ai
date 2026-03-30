@@ -13,11 +13,11 @@ export const engine = {
   resetBeat: () => invoke("reset_beat"),
   setTempo: (bpm: number) => invoke("set_tempo", { bpm }),
 
-  triggerPhaser: (name: string, multiplier?: number) =>
-    invoke("trigger_phaser", { phaserName: name, multiplier: multiplier ?? 1.0 }),
+  triggerPhaser: (id: string, multiplier?: number) =>
+    invoke("trigger_phaser", { phaserId: id, multiplier: multiplier ?? 1.0 }),
 
-  stopPhaser: (name: string) =>
-    invoke("stop_phaser", { phaserName: name }),
+  stopPhaser: (id: string) =>
+    invoke("stop_phaser", { phaserId: id }),
 
   triggerCue: (seq: string, cueId: number) =>
     invoke("trigger_cue", { seq, cueId }),

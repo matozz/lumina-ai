@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 interface ResourcePanelProps {
   compileResult: CompileResult | null;
   selectedPhaser: string | null;
-  onSelectPhaser: (name: string | null) => void;
+  onSelectPhaser: (id: string | null) => void;
 }
 
 export function TimelineResourcePanel({ compileResult, selectedPhaser, onSelectPhaser }: ResourcePanelProps) {
-  const phaserNames = compileResult?.phaser_names || [];
+  const phasers = compileResult?.phasers || [];
 
   return (
     <div className={cn("w-48 border-r border-zinc-800 bg-zinc-900/40 flex flex-col shrink-0 z-10")}>
@@ -25,28 +25,28 @@ export function TimelineResourcePanel({ compileResult, selectedPhaser, onSelectP
             PHASERS
           </div>
           <div className="flex flex-col gap-1">
-            {phaserNames.map(name => (
+            {phasers.map(p => (
               <Button
-                key={`res-phaser-${name}`}
+                key={`res-phaser-${p.id}`}
                 variant="ghost"
-                onClick={() => onSelectPhaser(name)}
+                onClick={() => onSelectPhaser(p.id)}
                 className={cn(
                   "text-left px-2.5 py-1.5 text-xs rounded-md border transition-all duration-150 flex items-center justify-between group h-auto",
-                  selectedPhaser === name 
+                  selectedPhaser === p.id 
                     ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-300 shadow-sm hover:bg-indigo-500/30 hover:text-indigo-200" 
                     : "bg-zinc-800/30 border-transparent text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
                 )}
               >
-                <span className="truncate">{name}</span>
+                <span className="truncate">{p.name}</span>
                 <span className={cn(
                   "text-[10px] opacity-0 group-hover:opacity-100 transition-opacity",
-                  selectedPhaser === name ? "text-indigo-400" : "text-zinc-500"
+                  selectedPhaser === p.id ? "text-indigo-400" : "text-zinc-500"
                 )}>
                   Select
                 </span>
               </Button>
             ))}
-            {phaserNames.length === 0 && (
+            {phasers.length === 0 && (
               <div className="text-xs text-zinc-600 italic px-2">No phasers found in DSL</div>
             )}
           </div>

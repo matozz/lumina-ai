@@ -30,11 +30,11 @@ export function TimelineView() {
   const [expandedTracks, setExpandedTracks] = useState<Record<string, boolean>>({});
   
   useEffect(() => {
-    if (selectedPhaser && compileResult?.phaser_names) {
-      if (!compileResult.phaser_names.includes(selectedPhaser)) {
+    if (selectedPhaser && compileResult?.phasers) {
+      if (!compileResult.phasers.some(p => p.id === selectedPhaser)) {
         setSelectedPhaser(null);
       }
-    } else if (!compileResult?.phaser_names || compileResult.phaser_names.length === 0) {
+    } else if (!compileResult?.phasers || compileResult.phasers.length === 0) {
       setSelectedPhaser(null);
     }
   }, [compileResult, selectedPhaser]);

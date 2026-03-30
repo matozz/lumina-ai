@@ -74,7 +74,7 @@ impl Scheduler {
                     let mut updates: Vec<(usize, f64)> = Vec::new();
                     for (i, active) in r_state.active_phasers.iter().enumerate() {
                         let dynamic_multiplier = r_state.parameter_context
-                            .get_float(&format!("phaser:{}.multiplier", active.name))
+                            .get_float(&format!("phaser:{}.multiplier", active.id))
                             .unwrap_or(active.multiplier);
                         updates.push((i, delta_beat * dynamic_multiplier));
                     }
@@ -92,9 +92,9 @@ impl Scheduler {
                                         match def {
                                             crate::compiler::parser::TimelineActionDefDSL::Phaser { phaser } => {
                                                 // Only add if this specific instance isn't already active
-                                                if !r_state.active_phasers.iter().any(|p| p.name == phaser && p.instance_id == Some(instance_id)) {
+                                                if !r_state.active_phasers.iter().any(|p| p.id == phaser && p.instance_id == Some(instance_id)) {
                                                     r_state.active_phasers.push(crate::state::ActivePhaser {
-                                                        name: phaser,
+                                                        id: phaser,
                                                         start_beat: global_beat,
                                                         instance_id: Some(instance_id),
                                                         multiplier: 1.0,
@@ -109,7 +109,7 @@ impl Scheduler {
                                         match def {
                                             crate::compiler::parser::TimelineActionDefDSL::Phaser { phaser } => {
                                                 // Only remove this specific instance
-                                                r_state.active_phasers.retain(|p| !(p.name == phaser && p.instance_id == Some(instance_id)));
+                                                r_state.active_phasers.retain(|p| !(p.id == phaser && p.instance_id == Some(instance_id)));
                                             }
                                             _ => {}
                                         }

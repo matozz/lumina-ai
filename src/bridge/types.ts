@@ -23,7 +23,7 @@ export interface CompileResult {
   fixture_count: number;
   layout_coords: LayoutCoord[];
   group_names: string[];
-  phaser_names: string[];
+  phasers: { id: string; name: string }[];
   sequence_names: string[];
   errors: CompileError[];
   warnings: CompileError[];
@@ -39,7 +39,7 @@ export interface EngineStatePayload {
   is_playing: boolean;
   tempo: number;
   global_beat: number;
-  active_phasers: { name: string; multiplier: number }[];
+  active_phasers: { id: string; multiplier: number }[];
   current_cue: { sequence: string; cue_id: number; cue_name?: string } | null;
 }
 
@@ -82,6 +82,7 @@ export interface PresetDSL {
 }
 
 export interface PhaserDSL {
+  id: string;
   name: string;
   target: string;
   multiplier?: number;

@@ -33,7 +33,7 @@ pub fn compute_frame(
         let mut output = FixtureOutput::black(fixture.id);
 
         for active in active_phasers {
-            if let Some(phaser) = compiled_show.phasers.get(&active.name) {
+            if let Some(phaser) = compiled_show.phasers.get(&active.id) {
                 if let Some(group) = compiled_show.groups.get(&phaser.target) {
                     let fixture_index = match group.index_of(fixture.id) {
                         Some(idx) => idx,
@@ -66,7 +66,7 @@ pub fn compute_frame(
                     );
                     
                     // Apply dynamic color override if present in parameter_context
-                    if let Some((r, g, b)) = parameter_context.get_color(&format!("phaser:{}.color", active.name)) {
+                    if let Some((r, g, b)) = parameter_context.get_color(&format!("phaser:{}.color", active.id)) {
                         color = (r, g, b);
                     }
 

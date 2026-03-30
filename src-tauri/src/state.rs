@@ -35,7 +35,7 @@ pub struct RuntimeState {
 
 #[derive(Clone, serde::Serialize)]
 pub struct ActivePhaser {
-    pub name: String,
+    pub id: String,
     pub start_beat: f64,
     pub instance_id: Option<usize>, // used by timeline to uniquely identify blocks
     pub multiplier: f64,
