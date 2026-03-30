@@ -6,7 +6,7 @@
     {
       "type": "spot",
       "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         100
       ]
@@ -34,7 +34,7 @@
           100
         ]
       },
-      "sortBy": "none"
+      "sort_by": "none"
     },
     {
       "name": "ByCenter",
@@ -44,7 +44,7 @@
           100
         ]
       },
-      "sortBy": "distance_center"
+      "sort_by": "distance_center"
     },
     {
       "name": "ByAngle",
@@ -54,10 +54,9 @@
           100
         ]
       },
-      "sortBy": "angle_center"
+      "sort_by": "angle_center"
     }
   ],
-  "presets": [],
   "phasers": [
     {
       "id": "target_lock",
@@ -122,7 +121,6 @@
       }
     }
   ],
-  "sequences": [],
   "timeline": {
     "bpm": 120,
     "events": []

@@ -65,7 +65,6 @@ export function TimelineView() {
     events.forEach(e => {
       let trackName = 'Global';
       if (e.action?.type === 'phaser') trackName = `Phaser: ${e.action.phaser}`;
-      else if (e.action?.type === 'preset') trackName = `Preset: ${e.action.preset}`;
       else if (e.action?.type === 'animate') {
         // Animate events have their own tracks defined by their targets
         trackName = `Animate: ${e.action.target}`;
@@ -157,8 +156,7 @@ export function TimelineView() {
               }
             } else {
               const isDifferentTrack = moving.activeTrackName && (
-                (ev.action.type === 'phaser' && moving.activeTrackName !== `Phaser: ${ev.action.phaser}`) ||
-                (ev.action.type === 'preset' && moving.activeTrackName !== `Preset: ${ev.action.preset}`)
+                (ev.action.type === 'phaser' && moving.activeTrackName !== `Phaser: ${ev.action.phaser}`)
               );
 
               if (ev.beat !== newBeat || isDifferentTrack) {
@@ -167,8 +165,6 @@ export function TimelineView() {
                 if (isDifferentTrack && moving.activeTrackName) {
                    if (moving.activeTrackName.startsWith('Phaser: ')) {
                     ev.action = { type: 'phaser', phaser: moving.activeTrackName.replace('Phaser: ', '') };
-                  } else if (moving.activeTrackName.startsWith('Preset: ')) {
-                    ev.action = { type: 'preset', preset: moving.activeTrackName.replace('Preset: ', '') };
                   }
                 }
 
@@ -284,8 +280,6 @@ export function TimelineView() {
       let displayTarget = '';
       if (displayType === 'phaser' && event.action.type === 'phaser') {
         displayTarget = event.action.phaser;
-      } else if (displayType === 'preset' && event.action.type === 'preset') {
-        displayTarget = event.action.preset;
       }
       
       if (moving && moving.originalIndex === index) {
@@ -296,9 +290,6 @@ export function TimelineView() {
            if (moving.activeTrackName.startsWith('Phaser: ')) {
              displayType = 'phaser';
              displayTarget = moving.activeTrackName.replace('Phaser: ', '');
-           } else if (moving.activeTrackName.startsWith('Preset: ')) {
-             displayType = 'preset';
-             displayTarget = moving.activeTrackName.replace('Preset: ', '');
            }
         }
       }
@@ -310,7 +301,6 @@ export function TimelineView() {
 
       let trackName = 'Global';
       if (displayType === 'phaser') trackName = `Phaser: ${displayTarget}`;
-      else if (displayType === 'preset') trackName = `Preset: ${displayTarget}`;
 
       const e: UITimelineEvent = { 
         ...event, 
@@ -318,7 +308,7 @@ export function TimelineView() {
         _originalIndex: index,
         beat: displayBeat,
         duration: displayDuration,
-        action: { type: displayType, phaser: displayTarget, preset: displayTarget } as any
+        action: { type: displayType, phaser: displayTarget } as any
       };
       
       if (!trackMap.has(trackName)) {

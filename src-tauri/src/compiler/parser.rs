@@ -6,9 +6,7 @@ pub struct ShowDSL {
     pub patch: Vec<PatchDSL>,
     pub layout: LayoutDSL,
     pub groups: Vec<GroupDSL>,
-    pub presets: Vec<PresetDSL>,
     pub phasers: Vec<PhaserDSL>,
-    pub sequences: Vec<SequenceDSL>,
     pub timeline: Option<TimelineDSL>,
 }
 
@@ -24,7 +22,6 @@ pub struct PatchDSL {
     #[serde(rename = "type")]
     pub type_: String, // "spot" | "wash" | "pixel"
     pub color: String, // "rgb" | "rgbw"
-    #[serde(rename = "idRange")]
     pub id_range: (u32, u32),
 }
 
@@ -53,25 +50,20 @@ pub enum GeneratorDSL {
         center: Option<(f64, f64)>,
     },
     #[serde(rename = "formula")]
-    Formula {
-        formula: FormulaDef,
-    },
+    Formula { formula: FormulaDef },
     #[serde(rename = "svg_path")]
     SvgPath {
         #[serde(rename = "svgPath")]
         svg_path: SvgPathDef,
     },
     #[serde(rename = "custom")]
-    Custom {
-        fixtures: Vec<CustomFixturePos>,
-    },
+    Custom { fixtures: Vec<CustomFixturePos> },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FormulaDef {
     pub x: String,
     pub y: String,
-    #[serde(rename = "tRange")]
     pub t_range: (f64, f64),
     pub count: u32,
     pub scale: Option<f64>,
@@ -80,7 +72,6 @@ pub struct FormulaDef {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SvgPathDef {
     pub d: String,
-    #[serde(rename = "sampleCount")]
     pub sample_count: u32,
     pub scale: Option<f64>,
 }
@@ -96,7 +87,6 @@ pub struct CustomFixturePos {
 pub struct GroupDSL {
     pub name: String,
     pub fixtures: GroupFixturesDSL,
-    #[serde(rename = "sortBy")]
     pub sort_by: Option<String>, // "none" | "x" | "-x" | "y" | "-y" | "distance_center" | "-distance_center" | "angle_center" | "random" | "x+y" | "-(x+y)"
 }
 
@@ -120,29 +110,6 @@ pub struct SpatialFilterDSL {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct PresetDSL {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub type_: String, // "color" | "dimmer" | "composite"
-    pub values: PresetValuesDSL,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(untagged)]
-pub enum PresetValuesDSL {
-    ColorAndDimmer { color: String, dimmer: f32 },
-    Color { color: String },
-    Dimmer { dimmer: f32 },
-    Gradient { gradient: GradientDef },
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct GradientDef {
-    pub colors: Vec<String>,
-    pub direction: String, // "horizontal" | "vertical" | "radial"
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PhaserDSL {
     pub id: String,
     pub name: String,
@@ -155,10 +122,10 @@ pub struct PhaserDSL {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PhaserStepDSL {
     pub values: StepValuesDSL,
-    pub width: Option<f64>, // default 100
+    pub width: Option<f64>,      // default 100
     pub transition: Option<f64>, // default 100
-    pub accel: Option<i32>, // default 0
-    pub decel: Option<i32>, // default 0
+    pub accel: Option<i32>,      // default 0
+    pub decel: Option<i32>,      // default 0
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -182,46 +149,8 @@ pub struct PhaseSpreadDSL {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PhaseGroupedDSL {
-    #[serde(rename = "groupSize")]
     pub group_size: u32,
     pub spread: (f64, f64),
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct SequenceDSL {
-    pub name: String,
-    pub cues: Vec<CueDSL>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct CueDSL {
-    pub id: u32,
-    pub name: Option<String>,
-    pub trigger: TriggerDSL,
-    pub fade: Option<f64>, // default 0
-    pub actions: Vec<CueActionDSL>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TriggerDSL {
-    #[serde(rename = "type")]
-    pub type_: String, // "go" | "follow" | "time"
-    pub delay: Option<f64>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(tag = "type")]
-pub enum CueActionDSL {
-    #[serde(rename = "preset")]
-    Preset { preset: String, target: Option<String>, fade: Option<f64> },
-    #[serde(rename = "phaser")]
-    Phaser { phaser: String },
-    #[serde(rename = "stop_phaser")]
-    StopPhaser { target: Option<String> },
-    #[serde(rename = "master")]
-    Master { dimmer: f64, target: Option<String> },
-    #[serde(rename = "tempo")]
-    Tempo { bpm: u32 },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -242,14 +171,15 @@ pub struct TimelineEventDSL {
 pub enum TimelineActionDefDSL {
     #[serde(rename = "phaser")]
     Phaser { phaser: String },
-    #[serde(rename = "preset")]
-    Preset { preset: String, target: Option<String>, fade: Option<f64> },
     #[serde(rename = "tempo")]
     Tempo { bpm: u32 },
     #[serde(rename = "stop_all")]
     StopAll,
     #[serde(rename = "animate")]
-    Animate { target: String, keyframes: Vec<KeyframeDSL> },
+    Animate {
+        target: String,
+        keyframes: Vec<KeyframeDSL>,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

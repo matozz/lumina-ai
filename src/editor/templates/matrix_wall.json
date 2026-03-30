@@ -6,7 +6,7 @@
     {
       "type": "wash",
       "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         96
       ]
@@ -34,7 +34,7 @@
           96
         ]
       },
-      "sortBy": "x"
+      "sort_by": "x"
     },
     {
       "name": "ByY",
@@ -44,7 +44,7 @@
           96
         ]
       },
-      "sortBy": "y"
+      "sort_by": "y"
     },
     {
       "name": "ByCenter",
@@ -54,10 +54,9 @@
           96
         ]
       },
-      "sortBy": "distance_center"
+      "sort_by": "distance_center"
     }
   ],
-  "presets": [],
   "phasers": [
     {
       "id": "horizontal_color_band",
@@ -153,7 +152,6 @@
       }
     }
   ],
-  "sequences": [],
   "timeline": {
     "bpm": 120,
     "events": []

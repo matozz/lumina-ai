@@ -42,13 +42,6 @@ pub async fn load_dsl(dsl_json: String, state: State<'_, Arc<EngineState>>) -> R
         }
     }
     
-    let mut sequence_names: Vec<String> = Vec::new();
-    for s in &dsl.sequences {
-        if !sequence_names.contains(&s.name) {
-            sequence_names.push(s.name.clone());
-        }
-    }
-    
     let compiled = Compiler::compile(dsl);
     
     let mut result = CompileResult {
@@ -69,7 +62,6 @@ pub async fn load_dsl(dsl_json: String, state: State<'_, Arc<EngineState>>) -> R
             result.layout_coords = c.coords.clone();
             result.group_names = group_names;
             result.phasers = phasers;
-            result.sequence_names = sequence_names;
             
             let mut show_guard = state.compiled_show.write().await;
             
@@ -189,23 +181,6 @@ pub async fn trigger_phaser(phaser_id: String, multiplier: f64, state: State<'_,
 pub async fn stop_phaser(phaser_id: String, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
     let mut r_state = state.runtime.write().await;
     r_state.active_phasers.retain(|p| p.id != phaser_id);
-    Ok(())
-}
-
-#[tauri::command]
-pub async fn trigger_cue(seq: String, cue_id: u32, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
-    let mut r_state = state.runtime.write().await;
-    r_state.current_cue = Some(crate::state::CueInfo {
-        sequence: seq,
-        cue_id,
-        cue_name: None,
-    });
-    Ok(())
-}
-
-#[tauri::command]
-pub async fn go_next_cue(_seq: String, _state: State<'_, Arc<EngineState>>) -> Result<(), String> {
-    // Basic impl for go next
     Ok(())
 }
 

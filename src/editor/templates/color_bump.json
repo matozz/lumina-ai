@@ -6,7 +6,7 @@
     {
       "type": "par",
       "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         13
       ]
@@ -34,7 +34,7 @@
           13
         ]
       },
-      "sortBy": "angle_center"
+      "sort_by": "angle_center"
     },
     {
       "name": "Odd",
@@ -46,7 +46,7 @@
         10,
         12
       ],
-      "sortBy": "none"
+      "sort_by": "none"
     },
     {
       "name": "Even",
@@ -58,10 +58,9 @@
         11,
         13
       ],
-      "sortBy": "none"
+      "sort_by": "none"
     }
   ],
-  "presets": [],
   "phasers": [
     {
       "id": "odd_bump",
@@ -151,7 +150,6 @@
       }
     }
   ],
-  "sequences": [],
   "timeline": {
     "bpm": 128,
     "events": []

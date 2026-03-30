@@ -11,9 +11,7 @@ pub struct CompiledShow {
     pub fixtures: Vec<Fixture>,
     pub coords: Vec<LayoutCoord>,
     pub groups: HashMap<String, CompiledGroup>,
-    pub presets: HashMap<String, CompiledPreset>,
     pub phasers: HashMap<String, CompiledPhaser>,
-    pub sequences: Vec<CompiledSequence>,
     pub timeline: Option<CompiledTimeline>,
 }
 
@@ -63,12 +61,6 @@ impl CompiledGroup {
 }
 
 #[derive(Clone, Debug)]
-pub struct CompiledPreset {
-    // Basic representation
-    pub values: PresetValuesDSL,
-}
-
-#[derive(Clone, Debug)]
 pub struct CompiledPhaser {
     pub id: String,
     pub name: String,
@@ -95,21 +87,6 @@ pub enum PhaseConfig {
 }
 
 #[derive(Clone, Debug)]
-pub struct CompiledSequence {
-    pub name: String,
-    pub cues: Vec<CompiledCue>,
-}
-
-#[derive(Clone, Debug)]
-pub struct CompiledCue {
-    pub id: u32,
-    pub name: Option<String>,
-    pub trigger: TriggerDSL,
-    pub fade: f64,
-    pub actions: Vec<CueActionDSL>,
-}
-
-#[derive(Clone, Debug)]
 pub struct CompiledTimeline {
     pub bpm: f64,
     pub events: Vec<TimelineEventDSL>,
@@ -124,9 +101,7 @@ impl Compiler {
         let fixtures = Self::compile_patch(&dsl.patch, &mut errors);
         let coords = Self::compile_layout(&dsl.layout, &fixtures, &mut errors);
         let groups = Self::compile_groups(&dsl.groups, &fixtures, &coords, &mut errors);
-        let presets = Self::compile_presets(&dsl.presets, &groups, &coords, &mut errors);
         let phasers = Self::compile_phasers(&dsl.phasers, &groups, &mut errors);
-        let sequences = Self::compile_sequences(&dsl.sequences, &presets, &phasers, &mut errors);
         
         let timeline = dsl.timeline.map(|tl| {
             CompiledTimeline {
@@ -143,9 +118,7 @@ impl Compiler {
             fixtures,
             coords,
             groups,
-            presets,
             phasers,
-            sequences,
             timeline,
         })
     }
@@ -500,14 +473,6 @@ impl Compiler {
         groups
     }
 
-    fn compile_presets(presets: &[PresetDSL], _groups: &HashMap<String, CompiledGroup>, _coords: &[LayoutCoord], _errors: &mut Vec<CompileError>) -> HashMap<String, CompiledPreset> {
-        let mut p = HashMap::new();
-        for dsl in presets {
-            p.insert(dsl.name.clone(), CompiledPreset { values: dsl.values.clone() });
-        }
-        p
-    }
-
     fn compile_phasers(phasers: &[PhaserDSL], groups: &HashMap<String, CompiledGroup>, errors: &mut Vec<CompileError>) -> HashMap<String, CompiledPhaser> {
         let mut map = HashMap::new();
         for p in phasers {
@@ -559,18 +524,5 @@ impl Compiler {
             });
         }
         map
-    }
-
-    fn compile_sequences(seqs: &[SequenceDSL], _presets: &HashMap<String, CompiledPreset>, _phasers: &HashMap<String, CompiledPhaser>, _errors: &mut Vec<CompileError>) -> Vec<CompiledSequence> {
-        seqs.iter().map(|s| CompiledSequence {
-            name: s.name.clone(),
-            cues: s.cues.iter().map(|c| CompiledCue {
-                id: c.id,
-                name: c.name.clone(),
-                trigger: c.trigger.clone(),
-                fade: c.fade.unwrap_or(0.0),
-                actions: c.actions.clone(),
-            }).collect()
-        }).collect()
     }
 }

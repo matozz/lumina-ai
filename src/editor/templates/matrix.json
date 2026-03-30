@@ -6,7 +6,7 @@
     {
       "type": "wash",
       "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         64
       ]
@@ -34,7 +34,7 @@
           64
         ]
       },
-      "sortBy": "none"
+      "sort_by": "none"
     },
     {
       "name": "ByX",
@@ -44,7 +44,7 @@
           64
         ]
       },
-      "sortBy": "x"
+      "sort_by": "x"
     },
     {
       "name": "ByY",
@@ -54,7 +54,7 @@
           64
         ]
       },
-      "sortBy": "y"
+      "sort_by": "y"
     },
     {
       "name": "ByCenter",
@@ -64,7 +64,7 @@
           64
         ]
       },
-      "sortBy": "distance_center"
+      "sort_by": "distance_center"
     },
     {
       "name": "ByDiag",
@@ -74,10 +74,9 @@
           64
         ]
       },
-      "sortBy": "x+y"
+      "sort_by": "x+y"
     }
   ],
-  "presets": [],
   "phasers": [
     {
       "id": "diagonal_sweep",
@@ -203,6 +202,5 @@
         }
       }
     }
-  ],
-  "sequences": []
+  ]
 }

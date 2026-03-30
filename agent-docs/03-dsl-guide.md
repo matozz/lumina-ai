@@ -10,7 +10,7 @@ The DSL is written as JSON in the frontend's Monaco Editor and is parsed/execute
 
 1. **JSON Parser / Deserializer (`src-tauri/src/compiler/mod.rs`)**: 
    - Reads the JSON string payload.
-   - Uses `serde_json` to map JSON fields to internal Rust engine structures (e.g., `Phaser`, `Sequence`).
+   - Uses `serde_json` to map JSON fields to internal Rust engine structures (e.g., `Phaser`, `Timeline`).
 2. **Execution Engine (`src-tauri/src/engine/`)**:
    - Takes the compiled structures and schedules them for output.
 
@@ -21,7 +21,7 @@ The DSL is written as JSON in the frontend's Monaco Editor and is parsed/execute
 When a user modifies the DSL in the editor (`src/editor/DslEditor.tsx`):
 1. The text is captured via Monaco Editor's `onChange`.
 2. A debounced call is made to the Tauri backend using `invoke('compile_dsl', { script: text })`.
-3. If successful, the UI updates to show the generated Phasers or Presets.
+3. If successful, the UI updates to show the generated Phasers.
 4. If there's a JSON syntax error, the backend returns the error, which can be mapped to Monaco Editor markers.
 
 ### Timeline to DSL

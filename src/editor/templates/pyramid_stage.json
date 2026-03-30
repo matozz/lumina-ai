@@ -6,7 +6,7 @@
     {
       "type": "spot",
       "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         64
       ]
@@ -349,7 +349,7 @@
           64
         ]
       },
-      "sortBy": "none"
+      "sort_by": "none"
     },
     {
       "name": "ByYDesc",
@@ -359,7 +359,7 @@
           64
         ]
       },
-      "sortBy": "-y"
+      "sort_by": "-y"
     },
     {
       "name": "ByX",
@@ -369,10 +369,9 @@
           64
         ]
       },
-      "sortBy": "x"
+      "sort_by": "x"
     }
   ],
-  "presets": [],
   "phasers": [
     {
       "id": "pyramid_climb",
@@ -437,7 +436,6 @@
       }
     }
   ],
-  "sequences": [],
   "timeline": {
     "bpm": 120,
     "events": []

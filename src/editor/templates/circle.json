@@ -6,7 +6,7 @@
     {
       "type": "spot",
       "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         100
       ]
@@ -34,7 +34,7 @@
           100
         ]
       },
-      "sortBy": "none"
+      "sort_by": "none"
     },
     {
       "name": "ByAngle",
@@ -44,7 +44,7 @@
           100
         ]
       },
-      "sortBy": "angle_center"
+      "sort_by": "angle_center"
     },
     {
       "name": "ByDist",
@@ -54,10 +54,9 @@
           100
         ]
       },
-      "sortBy": "distance_center"
+      "sort_by": "distance_center"
     }
   ],
-  "presets": [],
   "phasers": [
     {
       "id": "radar_scanner",
@@ -121,6 +120,5 @@
         }
       }
     }
-  ],
-  "sequences": []
+  ]
 }

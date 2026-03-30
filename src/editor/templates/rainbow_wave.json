@@ -6,7 +6,7 @@
     {
       "type": "wash",
       "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         30
       ]
@@ -34,10 +34,9 @@
           30
         ]
       },
-      "sortBy": "x"
+      "sort_by": "x"
     }
   ],
-  "presets": [],
   "phasers": [
     {
       "id": "rainbow_colors",
@@ -128,7 +127,6 @@
       }
     }
   ],
-  "sequences": [],
   "timeline": {
     "bpm": 120,
     "events": []

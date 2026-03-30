@@ -6,7 +6,7 @@
     {
       "type": "spot",
       "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         16
       ]
@@ -34,7 +34,7 @@
           8
         ]
       },
-      "sortBy": "x"
+      "sort_by": "x"
     },
     {
       "name": "BottomRow",
@@ -44,7 +44,7 @@
           16
         ]
       },
-      "sortBy": "x"
+      "sort_by": "x"
     },
     {
       "name": "All",
@@ -54,10 +54,9 @@
           16
         ]
       },
-      "sortBy": "x"
+      "sort_by": "x"
     }
   ],
-  "presets": [],
   "phasers": [
     {
       "id": "top_fire",
@@ -126,7 +125,6 @@
       }
     }
   ],
-  "sequences": [],
   "timeline": {
     "bpm": 130,
     "events": []

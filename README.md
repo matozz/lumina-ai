@@ -15,10 +15,10 @@ Lumina AI leverages a hybrid architecture for optimal performance:
 
 - **Professional Sequencer UI**: Inspired by industry-standard DAWs like Ableton Live, featuring a fluid timeline with precise beat-grid snapping.
 - **Dual Operating Modes**:
-  - `Live Mode`: Real-time triggering of lighting presets and phasers.
+  - `Live Mode`: Real-time triggering of lighting phasers.
   - `Timeline Mode`: Non-linear editing and sequencing with multi-track support.
 - **Advanced Timeline Interactions**:
-  - Drag-and-drop sequencing of presets and phasers.
+  - Drag-and-drop sequencing of phasers.
   - Edge-dragging for precise block resizing and duration adjustments.
   - Auto-overlap resolution (blocks automatically trim when colliding).
   - Multi-track selection and deletion.
@@ -34,9 +34,9 @@ Here is an example of defining a set of lights and creating a "Blink" phaser eff
 ```json
 {
   "meta": { "name": "Basic Show", "version": "1.0", "tempo": 120 },
-  "patch": [{ "type": "spot", "color": "rgb", "idRange": [1, 10] }],
+  "patch": [{ "type": "spot", "color": "rgb", "id_range": [1, 10] }],
   "groups": [
-    { "name": "All Spots", "fixtures": { "range": [1, 10] }, "sortBy": "none" }
+    { "name": "All Spots", "fixtures": { "range": [1, 10] }, "sort_by": "none" }
   ],
   "phasers": [
     {

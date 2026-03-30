@@ -58,7 +58,7 @@ export function TimelineTrackHeaders({ tracks, activeTrackName, scrollRef, globa
                   "text-xs font-medium transition-colors truncate flex-1",
                   isTrackPlaying ? "text-emerald-400" : "text-zinc-400 group-hover:text-zinc-100"
                 )} title={t.name}>
-                  {t.name.replace('Phaser: ', '').replace('Preset: ', '')}
+                  {t.name.replace('Phaser: ', '')}
                 </span>
                 {t.name === 'Global' && (
                   <span className="ml-2 px-1.5 py-0.5 rounded bg-zinc-800 text-[9px] font-bold text-zinc-500 uppercase tracking-wider shrink-0">

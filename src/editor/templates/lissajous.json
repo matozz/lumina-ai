@@ -6,7 +6,7 @@
     {
       "type": "spot",
       "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         120
       ]
@@ -19,7 +19,7 @@
       "formula": {
         "x": "sin(3 * t + 1.5708)",
         "y": "sin(2 * t)",
-        "tRange": [
+        "t_range": [
           0,
           6.283185
         ],
@@ -37,7 +37,7 @@
           120
         ]
       },
-      "sortBy": "none"
+      "sort_by": "none"
     },
     {
       "name": "ByY",
@@ -47,10 +47,9 @@
           120
         ]
       },
-      "sortBy": "y"
+      "sort_by": "y"
     }
   ],
-  "presets": [],
   "phasers": [
     {
       "id": "snake_run",
@@ -122,6 +121,5 @@
         }
       }
     }
-  ],
-  "sequences": []
+  ]
 }

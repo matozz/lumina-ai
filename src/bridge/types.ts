@@ -40,7 +40,6 @@ export interface EngineStatePayload {
   tempo: number;
   global_beat: number;
   active_phasers: { id: string; multiplier: number }[];
-  current_cue: { sequence: string; cue_id: number; cue_name?: string } | null;
 }
 
 export interface ShowDSL {
@@ -52,16 +51,14 @@ export interface ShowDSL {
   patch: PatchDSL[];
   layout: LayoutDSL;
   groups: GroupDSL[];
-  presets: PresetDSL[];
   phasers: PhaserDSL[];
-  sequences: SequenceDSL[];
   timeline?: TimelineDSL;
 }
 
 export interface PatchDSL {
   type: "spot" | "wash" | "pixel";
   color: "rgb" | "rgbw";
-  idRange: [number, number];
+  id_range: [number, number];
 }
 
 export interface LayoutDSL {
@@ -72,13 +69,7 @@ export interface LayoutDSL {
 export interface GroupDSL {
   name: string;
   fixtures: any;
-  sortBy?: string;
-}
-
-export interface PresetDSL {
-  name: string;
-  type: "color" | "dimmer" | "composite";
-  values: any;
+  sort_by?: string;
 }
 
 export interface PhaserDSL {
@@ -90,11 +81,6 @@ export interface PhaserDSL {
   phase: any;
 }
 
-export interface SequenceDSL {
-  name: string;
-  cues: any[];
-}
-
 export interface TimelineEventDSL {
   beat: number;
   duration?: number;
@@ -103,7 +89,6 @@ export interface TimelineEventDSL {
 
 export type TimelineActionDefDSL = 
   | { type: "phaser"; phaser: string }
-  | { type: "preset"; preset: string; target?: string; fade?: number }
   | { type: "tempo"; bpm: number }
   | { type: "stop_all" }
   | { type: "animate"; target: string; keyframes: KeyframeDSL[] };

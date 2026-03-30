@@ -6,7 +6,7 @@
     {
       "type": "spot",
       "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         150
       ]
@@ -19,7 +19,7 @@
       "formula": {
         "x": "0.5 * t * cos(t)",
         "y": "0.5 * t * sin(t)",
-        "tRange": [
+        "t_range": [
           0,
           31.4159
         ],
@@ -37,7 +37,7 @@
           150
         ]
       },
-      "sortBy": "none"
+      "sort_by": "none"
     },
     {
       "name": "ByAngle",
@@ -47,10 +47,9 @@
           150
         ]
       },
-      "sortBy": "angle_center"
+      "sort_by": "angle_center"
     }
   ],
-  "presets": [],
   "phasers": [
     {
       "id": "inward_flow",
@@ -130,6 +129,5 @@
         }
       }
     }
-  ],
-  "sequences": []
+  ]
 }

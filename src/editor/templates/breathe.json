@@ -6,7 +6,7 @@
     {
       "type": "wash",
       "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         16
       ]
@@ -34,7 +34,7 @@
           16
         ]
       },
-      "sortBy": "none"
+      "sort_by": "none"
     },
     {
       "name": "ByCenter",
@@ -44,10 +44,9 @@
           16
         ]
       },
-      "sortBy": "distance_center"
+      "sort_by": "distance_center"
     }
   ],
-  "presets": [],
   "phasers": [
     {
       "id": "global_breathe",
@@ -113,7 +112,6 @@
       }
     }
   ],
-  "sequences": [],
   "timeline": {
     "bpm": 120,
     "events": []

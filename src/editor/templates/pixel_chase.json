@@ -6,7 +6,7 @@
     {
       "type": "bar",
       "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         40
       ]
@@ -34,10 +34,9 @@
           40
         ]
       },
-      "sortBy": "x"
+      "sort_by": "x"
     }
   ],
-  "presets": [],
   "phasers": [
     {
       "id": "knight_rider",
@@ -102,7 +101,6 @@
       }
     }
   ],
-  "sequences": [],
   "timeline": {
     "bpm": 140,
     "events": []

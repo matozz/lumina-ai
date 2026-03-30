@@ -24,7 +24,6 @@ pub struct EngineStatePayload {
     pub tempo: u32,
     pub global_beat: f64,
     pub active_phasers: Vec<crate::state::ActivePhaser>,
-    pub current_cue: Option<crate::state::CueInfo>,
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -158,7 +157,6 @@ impl Scheduler {
                             tempo: tempo.load(Ordering::Relaxed),
                             global_beat,
                             active_phasers: r_state.active_phasers.clone(),
-                            current_cue: r_state.current_cue.clone(),
                         };
 
                         (Some(payload), Some(state_payload))
@@ -205,7 +203,6 @@ impl Scheduler {
                     tempo: tempo.load(Ordering::Relaxed),
                     global_beat: r_state.global_beat,
                     active_phasers: r_state.active_phasers.clone(),
-                    current_cue: r_state.current_cue.clone(),
                 };
                 let _ = app.emit("engine:state-change", sp);
             });

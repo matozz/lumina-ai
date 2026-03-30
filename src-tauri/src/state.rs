@@ -3,7 +3,6 @@ use tauri::AppHandle;
 use tokio::sync::RwLock;
 use crate::engine::FixtureOutput;
 use crate::compiler::CompiledShow;
-use crate::engine::sequence::SequenceExecutor;
 use crate::engine::timeline::TimelineExecutor;
 use crate::scheduler::Scheduler;
 use crate::engine::animation::ParameterContext;
@@ -26,10 +25,8 @@ pub struct RuntimeState {
     pub is_playing: bool,
     pub active_phasers: Vec<ActivePhaser>,
     pub sequencer_mode: SequencerMode,
-    pub sequence_executor: Option<SequenceExecutor>,
     pub timeline_executor: Option<TimelineExecutor>,
     pub prev_frame: Vec<FixtureOutput>,
-    pub current_cue: Option<CueInfo>,
     pub parameter_context: ParameterContext,
 }
 
@@ -41,11 +38,4 @@ pub struct ActivePhaser {
     pub multiplier: f64,
     // Add accumulated_beat to calculate phase consistently during speed changes
     pub accumulated_beat: f64, 
-}
-
-#[derive(Clone, serde::Serialize)]
-pub struct CueInfo {
-    pub sequence: String,
-    pub cue_id: u32,
-    pub cue_name: Option<String>,
 }

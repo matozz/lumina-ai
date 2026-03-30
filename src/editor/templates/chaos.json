@@ -6,7 +6,7 @@
     {
       "type": "spot",
       "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         17
       ]
@@ -34,7 +34,7 @@
           17
         ]
       },
-      "sortBy": "none"
+      "sort_by": "none"
     },
     {
       "name": "ByAngle",
@@ -44,10 +44,9 @@
           17
         ]
       },
-      "sortBy": "angle_center"
+      "sort_by": "angle_center"
     }
   ],
-  "presets": [],
   "phasers": [
     {
       "id": "sync_flyout",
@@ -115,7 +114,6 @@
       }
     }
   ],
-  "sequences": [],
   "timeline": {
     "bpm": 120,
     "events": []

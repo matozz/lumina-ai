@@ -19,12 +19,6 @@ export const engine = {
   stopPhaser: (id: string) =>
     invoke("stop_phaser", { phaserId: id }),
 
-  triggerCue: (seq: string, cueId: number) =>
-    invoke("trigger_cue", { seq, cueId }),
-
-  goNextCue: (seq: string) =>
-    invoke("go_next_cue", { seq }),
-
   saveShow: (path: string, dsl: ShowDSL) =>
     invoke("save_show", { path, dslJson: JSON.stringify(dsl) }),
 

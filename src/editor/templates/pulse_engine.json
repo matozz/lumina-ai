@@ -6,7 +6,7 @@
     {
       "type": "wash",
       "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         40
       ]
@@ -34,10 +34,9 @@
           40
         ]
       },
-      "sortBy": "distance_center"
+      "sort_by": "distance_center"
     }
   ],
-  "presets": [],
   "phasers": [
     {
       "id": "engine_shockwave",
@@ -108,7 +107,6 @@
       }
     }
   ],
-  "sequences": [],
   "timeline": {
     "bpm": 120,
     "events": []

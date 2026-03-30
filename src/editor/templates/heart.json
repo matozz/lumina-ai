@@ -6,7 +6,7 @@
     {
       "type": "spot",
       "color": "rgb",
-      "idRange": [
+      "id_range": [
         1,
         80
       ]
@@ -19,7 +19,7 @@
       "formula": {
         "x": "16 * pow(sin(t), 3)",
         "y": "-(13*cos(t) - 5*cos(2*t) - 2*cos(3*t) - cos(4*t))",
-        "tRange": [
+        "t_range": [
           0,
           6.283185
         ],
@@ -37,7 +37,7 @@
           80
         ]
       },
-      "sortBy": "none"
+      "sort_by": "none"
     },
     {
       "name": "ByX",
@@ -47,7 +47,7 @@
           80
         ]
       },
-      "sortBy": "x"
+      "sort_by": "x"
     },
     {
       "name": "ByAngle",
@@ -57,10 +57,9 @@
           80
         ]
       },
-      "sortBy": "angle_center"
+      "sort_by": "angle_center"
     }
   ],
-  "presets": [],
   "phasers": [
     {
       "id": "heart_beat",
@@ -125,6 +124,5 @@
         }
       }
     }
-  ],
-  "sequences": []
+  ]
 }
