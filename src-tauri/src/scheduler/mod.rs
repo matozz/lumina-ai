@@ -58,9 +58,10 @@ impl Scheduler {
             while running.load(Ordering::SeqCst) {
                 let bpm = tempo.load(Ordering::Relaxed) as f64;
                 let tick_interval = Duration::from_secs_f64(60.0 / (bpm * subdivision as f64));
+                let delta_beat = 1.0 / subdivision as f64;
 
                 next_tick += tick_interval;
-                global_beat += 1.0 / subdivision as f64;
+                global_beat += delta_beat;
 
                 let (payload, state_payload) = rt.block_on(async {
                     let mut r_state = state.runtime.write().await;
@@ -68,6 +69,18 @@ impl Scheduler {
                     
                     r_state.global_beat = global_beat;
                     r_state.is_playing = true;
+                    
+                    // Accumulate phase for active phasers based on current multiplier
+                    let mut updates: Vec<(usize, f64)> = Vec::new();
+                    for (i, active) in r_state.active_phasers.iter().enumerate() {
+                        let dynamic_multiplier = r_state.parameter_context
+                            .get_float(&format!("phaser:{}.multiplier", active.name))
+                            .unwrap_or(active.multiplier);
+                        updates.push((i, delta_beat * dynamic_multiplier));
+                    }
+                    for (i, amt) in updates {
+                        r_state.active_phasers[i].accumulated_beat += amt;
+                    }
 
                     // Tick timeline and sequence
                     if r_state.sequencer_mode == crate::state::SequencerMode::Timeline {
@@ -85,6 +98,7 @@ impl Scheduler {
                                                         start_beat: global_beat,
                                                         instance_id: Some(instance_id),
                                                         multiplier: 1.0,
+                                                        accumulated_beat: 0.0,
                                                     });
                                                 }
                                             }
@@ -100,6 +114,9 @@ impl Scheduler {
                                             _ => {}
                                         }
                                     }
+                                    crate::engine::timeline::TimelineAction::UpdateParameter(target, value) => {
+                                        r_state.parameter_context.write_value(&target, value);
+                                    }
                                 }
                             }
                         }
@@ -114,7 +131,12 @@ impl Scheduler {
                     let full;
 
                     if let Some(show) = &*show_guard {
-                        let frame = compute_frame(global_beat, &r_state.active_phasers, show);
+                        let frame = compute_frame(
+                            global_beat, 
+                            &r_state.active_phasers, 
+                            show,
+                            &r_state.parameter_context
+                        );
                         
                         // we can send diffs
                         let diff = compute_frame_diff(&r_state.prev_frame, &frame);

@@ -1,15 +1,17 @@
 import React, { useRef } from 'react';
 import { cn } from '@/lib/utils';
+import type { UITimelineEvent } from './DroppableTrack';
 
 interface BlockProps {
-  event: any;
+  event: UITimelineEvent;
   beatWidth: number;
+  isSubTrack?: boolean;
   onDragStart: (e: React.PointerEvent, originalIndex: number, startBeat: number) => void;
   onResizeStart: (e: React.PointerEvent, originalIndex: number, startDuration: number) => void;
   onDelete: (originalIndex: number) => void;
 }
 
-export function DraggableBlock({ event, beatWidth, onDragStart, onResizeStart, onDelete }: BlockProps) {
+export function DraggableBlock({ event, beatWidth, isSubTrack, onDragStart, onResizeStart, onDelete }: BlockProps) {
   const ref = useRef<HTMLDivElement>(null);
   
   const left = event.beat * beatWidth;
@@ -17,40 +19,69 @@ export function DraggableBlock({ event, beatWidth, onDragStart, onResizeStart, o
   
   const isPhaser = event.action.type === 'phaser';
   const isPreset = event.action.type === 'preset';
+  const isAnimate = event.action.type === 'animate';
   
-  const label = isPhaser ? event.action.phaser : isPreset ? event.action.preset : event.action.type;
+  let label = event.action.type as string;
+  if (event.action.type === 'phaser') label = event.action.phaser;
+  else if (event.action.type === 'preset') label = event.action.preset;
+  else if (event.action.type === 'animate') {
+    const parts = event.action.target.split('.');
+    label = parts[parts.length - 1]; // e.g. "multiplier"
+  }
+
+  // Calculate keyframe positions if it's an animation block
+  const keyframes = event.action.type === 'animate' ? event.action.keyframes : [];
 
   return (
     <div 
       ref={ref}
       className={cn(
-        "group absolute top-1.5 bottom-1.5 rounded border flex items-center px-2 overflow-hidden shadow-sm backdrop-blur-md transition-colors cursor-grab active:cursor-grabbing",
+        "group absolute rounded border flex items-center overflow-hidden shadow-sm transition-colors cursor-grab active:cursor-grabbing",
+        isSubTrack ? "top-1 bottom-1 px-1.5" : "top-1.5 bottom-1.5 px-2",
+        !isSubTrack && "backdrop-blur-md",
+        
         isPhaser && "bg-indigo-600/80 hover:bg-indigo-500/90 border-indigo-400",
         isPreset && "bg-emerald-600/80 hover:bg-emerald-500/90 border-emerald-400",
-        !isPhaser && !isPreset && "bg-zinc-700/80 border-zinc-500"
+        isAnimate && "bg-amber-600/50 hover:bg-amber-500/70 border-amber-500/50",
+        !isPhaser && !isPreset && !isAnimate && "bg-zinc-700/80 border-zinc-500"
       )}
       style={{ 
         left, 
         width,
-        zIndex: 10,
+        zIndex: isSubTrack ? 5 : 10,
         touchAction: 'none'
       }}
       title={`${label} (Beat ${event.beat} - ${event.beat + (event.duration||4)})`}
       onClick={(ev) => ev.stopPropagation()}
       onDoubleClick={(ev) => {
         ev.stopPropagation();
-        onDelete(event.originalIndex);
+        onDelete(event._originalIndex);
       }}
       onPointerDown={(ev) => {
         ev.preventDefault();
         ev.stopPropagation();
         (ev.target as HTMLElement).setPointerCapture(ev.pointerId);
-        onDragStart(ev, event.originalIndex, event.beat);
+        onDragStart(ev, event._originalIndex, event.beat);
       }}
     >
-      <span className="text-[11px] font-medium text-white whitespace-nowrap text-ellipsis drop-shadow-md pointer-events-none">
-        {label}
-      </span>
+      {!isAnimate && (
+        <span className="text-[11px] font-medium text-white whitespace-nowrap text-ellipsis drop-shadow-md pointer-events-none">
+          {label}
+        </span>
+      )}
+      
+      {/* Keyframe visualizers */}
+      {isAnimate && keyframes.map((kf, i) => {
+        const kfLeft = (kf.time / (event.duration || 4)) * 100;
+        return (
+          <div 
+            key={i}
+            className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-amber-200 rounded-full shadow-[0_0_4px_rgba(251,191,36,0.8)] pointer-events-none"
+            style={{ left: `calc(${kfLeft}% - 3px)` }}
+            title={`Value: ${String(kf.value)} @ +${kf.time}b`}
+          />
+        );
+      })}
       
       {/* Resize handle */}
       <div 
@@ -63,7 +94,7 @@ export function DraggableBlock({ event, beatWidth, onDragStart, onResizeStart, o
           ev.preventDefault(); 
           ev.stopPropagation();
           (ev.target as HTMLElement).setPointerCapture(ev.pointerId);
-          onResizeStart(ev, event.originalIndex, event.duration || 4);
+          onResizeStart(ev, event._originalIndex, event.duration || 4);
         }}
       />
     </div>

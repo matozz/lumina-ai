@@ -28,6 +28,7 @@ pub fn run() {
                     timeline_executor: None,
                     prev_frame: Vec::new(),
                     current_cue: None,
+                    parameter_context: engine::animation::ParameterContext::new(),
                 })),
             });
             

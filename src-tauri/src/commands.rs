@@ -19,6 +19,27 @@ pub struct CompileResult {
 #[tauri::command]
 pub async fn load_dsl(dsl_json: String, state: State<'_, Arc<EngineState>>) -> Result<CompileResult, String> {
     let dsl: ShowDSL = serde_json::from_str(&dsl_json).map_err(|e| format!("JSON parsing error: {}", e))?;
+    let mut group_names: Vec<String> = Vec::new();
+    for g in &dsl.groups {
+        if !group_names.contains(&g.name) {
+            group_names.push(g.name.clone());
+        }
+    }
+    
+    let mut phaser_names: Vec<String> = Vec::new();
+    for p in &dsl.phasers {
+        if !phaser_names.contains(&p.name) {
+            phaser_names.push(p.name.clone());
+        }
+    }
+    
+    let mut sequence_names: Vec<String> = Vec::new();
+    for s in &dsl.sequences {
+        if !sequence_names.contains(&s.name) {
+            sequence_names.push(s.name.clone());
+        }
+    }
+    
     let compiled = Compiler::compile(dsl);
     
     let mut result = CompileResult {
@@ -37,9 +58,9 @@ pub async fn load_dsl(dsl_json: String, state: State<'_, Arc<EngineState>>) -> R
             result.success = true;
             result.fixture_count = c.fixtures.len();
             result.layout_coords = c.coords.clone();
-            result.group_names = c.groups.keys().cloned().collect();
-            result.phaser_names = c.phasers.keys().cloned().collect();
-            result.sequence_names = c.sequences.iter().map(|s| s.name.clone()).collect();
+            result.group_names = group_names;
+            result.phaser_names = phaser_names;
+            result.sequence_names = sequence_names;
             
             let mut show_guard = state.compiled_show.write().await;
             
@@ -92,7 +113,12 @@ pub async fn stop(app_handle: AppHandle, state: State<'_, Arc<EngineState>>) -> 
     // Clear the canvas by computing a blackout frame
     let show_guard = state.compiled_show.read().await;
     if let Some(show) = &*show_guard {
-        let black_frame = crate::engine::compute_frame(r_state.global_beat, &[], show);
+        let black_frame = crate::engine::compute_frame(
+            r_state.global_beat, 
+            &[], 
+            show,
+            &r_state.parameter_context
+        );
         r_state.prev_frame = black_frame.clone();
 
         let payload = crate::scheduler::FramePayload {
@@ -139,7 +165,13 @@ pub async fn trigger_phaser(phaser_name: String, multiplier: f64, state: State<'
         phaser.multiplier = multiplier;
     } else {
         let beat = r_state.global_beat;
-        r_state.active_phasers.push(ActivePhaser { name: phaser_name, start_beat: beat, instance_id: None, multiplier });
+        r_state.active_phasers.push(ActivePhaser { 
+            name: phaser_name, 
+            start_beat: beat, 
+            instance_id: None, 
+            multiplier,
+            accumulated_beat: 0.0,
+        });
     }
     Ok(())
 }

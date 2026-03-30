@@ -94,7 +94,26 @@ export interface SequenceDSL {
   cues: any[];
 }
 
+export interface TimelineEventDSL {
+  beat: number;
+  duration?: number;
+  action: TimelineActionDefDSL;
+}
+
+export type TimelineActionDefDSL = 
+  | { type: "phaser"; phaser: string }
+  | { type: "preset"; preset: string; target?: string; fade?: number }
+  | { type: "tempo"; bpm: number }
+  | { type: "stop_all" }
+  | { type: "animate"; target: string; keyframes: KeyframeDSL[] };
+
+export interface KeyframeDSL {
+  time: number;
+  value: any;
+  easing?: string;
+}
+
 export interface TimelineDSL {
   bpm: number;
-  events: any[];
+  events: TimelineEventDSL[];
 }
