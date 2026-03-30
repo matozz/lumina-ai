@@ -306,16 +306,10 @@ impl Compiler {
         }
 
         for g in group_dsl {
-            let mut ids = Vec::new();
-            match &g.fixtures {
-                GroupFixturesDSL::List(list) => {
-                    ids = list.clone();
-                }
-                GroupFixturesDSL::Range { range } => {
-                    ids = (range.0..=range.1).collect();
-                }
-                _ => {}
-            }
+            let mut ids = match &g.fixtures {
+                GroupFixturesDSL::List(list) => list.clone(),
+                GroupFixturesDSL::Range { range } => (range.0..=range.1).collect(),
+            };
 
             let mut blocks = Vec::new();
 

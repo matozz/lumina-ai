@@ -63,8 +63,6 @@ Defines the sequence of events and animations over time.
   - `duration`: (Optional) Float, length in beats.
   - `action`: Object defining what happens. Types include:
     - `"phaser"`: Triggers a phaser (requires `"phaser": "phaser_id"`).
-    - `"tempo"`: Changes global tempo.
-    - `"stop_all"`: Stops running effects.
     - `"animate"`: Executes keyframe animations on specific properties.
 
 ## DSL Architecture

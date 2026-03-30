@@ -52,13 +52,13 @@ export function DraggableBlock({ event, beatWidth, isSubTrack, onDragStart, onRe
       onClick={(ev) => ev.stopPropagation()}
       onDoubleClick={(ev) => {
         ev.stopPropagation();
-        onDelete(event._originalIndex);
+        onDelete(event.originalIndex);
       }}
       onPointerDown={(ev) => {
         ev.preventDefault();
         ev.stopPropagation();
         (ev.target as HTMLElement).setPointerCapture(ev.pointerId);
-        onDragStart(ev, event._originalIndex, event.beat);
+        onDragStart(ev, event.originalIndex, event.beat);
       }}
     >
       {!isAnimate && (
@@ -91,7 +91,7 @@ export function DraggableBlock({ event, beatWidth, isSubTrack, onDragStart, onRe
           ev.preventDefault(); 
           ev.stopPropagation();
           (ev.target as HTMLElement).setPointerCapture(ev.pointerId);
-          onResizeStart(ev, event._originalIndex, event.duration || 4);
+          onResizeStart(ev, event.originalIndex, event.duration || 4);
         }}
       />
     </div>

@@ -4,11 +4,12 @@ import { cn } from '@/lib/utils';
 import type { TimelineEventDSL } from '../bridge/types';
 
 export interface UITimelineEvent extends TimelineEventDSL {
-  _id: string;
-  _originalIndex: number;
+  id: string;
+  originalIndex: number;
 }
 
 export interface TimelineTrackData {
+  id: string;
   name: string;
   events: UITimelineEvent[];
   subTracks?: { 
@@ -36,8 +37,8 @@ export function DroppableTrack({ track, isExpanded, beatWidth, selectedPhaser, o
           "h-10 border-b border-zinc-800/30 relative hover:bg-zinc-900/30 transition-colors group box-border",
           selectedPhaser && "cursor-crosshair"
         )}
-        onClick={(e) => onGridClick(e, track.name)}
-        data-track-name={track.name}
+        onClick={(e) => onGridClick(e, track.id)}
+        data-track-name={track.id}
       >
         {selectedPhaser && (
           <div className="absolute inset-0 opacity-0 group-hover:opacity-10 bg-indigo-500 transition-opacity pointer-events-none" />
@@ -45,7 +46,7 @@ export function DroppableTrack({ track, isExpanded, beatWidth, selectedPhaser, o
         
         {track.events.map((e) => (
           <DraggableBlock 
-            key={e._id} 
+            key={e.id} 
             event={e} 
             beatWidth={beatWidth} 
             onDragStart={onDragStart}
@@ -66,7 +67,7 @@ export function DroppableTrack({ track, isExpanded, beatWidth, selectedPhaser, o
                For now just show them as blocks */}
            {st.events.map((e) => (
               <DraggableBlock 
-                key={e._id} 
+                key={e.id} 
                 event={e} 
                 beatWidth={beatWidth} 
                 isSubTrack={true}

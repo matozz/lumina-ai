@@ -92,18 +92,6 @@ pub struct GroupDSL {
 pub enum GroupFixturesDSL {
     List(Vec<u32>),
     Range { range: (u32, u32) },
-    Filter { filter: GroupFilterDSL },
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct GroupFilterDSL {
-    pub spatial: Option<SpatialFilterDSL>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct SpatialFilterDSL {
-    pub region: String, // "top" | "bottom" | "left" | "right" | "center"
-    pub threshold: Option<f64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -167,10 +155,6 @@ pub struct TimelineEventDSL {
 pub enum TimelineActionDefDSL {
     #[serde(rename = "phaser")]
     Phaser { phaser: String },
-    #[serde(rename = "tempo")]
-    Tempo { bpm: u32 },
-    #[serde(rename = "stop_all")]
-    StopAll,
     #[serde(rename = "animate")]
     Animate {
         target: String,

@@ -61,12 +61,39 @@ export interface PatchDSL {
 
 export interface LayoutDSL {
   type: "generator";
-  generator: any;
+  generator: GeneratorDSL;
+}
+
+export type GeneratorDSL = 
+  | { shape: "matrix"; rows: number; columns: number; spacing: number; origin?: [number, number] }
+  | { shape: "circle"; rings: number; increment: number; gap: number; center?: [number, number] }
+  | { shape: "formula"; formula: FormulaDef }
+  | { shape: "svg_path"; svgPath: SvgPathDef }
+  | { shape: "custom"; fixtures: CustomFixturePos[] };
+
+export interface FormulaDef {
+  x: string;
+  y: string;
+  t_range: [number, number];
+  count: number;
+  scale?: number;
+}
+
+export interface SvgPathDef {
+  d: string;
+  sample_count: number;
+  scale?: number;
+}
+
+export interface CustomFixturePos {
+  id: number;
+  x: number;
+  y: number;
 }
 
 export interface GroupDSL {
   name: string;
-  fixtures: any;
+  fixtures: number[] | { range: [number, number] };
   sort_by?: string;
 }
 
@@ -75,8 +102,25 @@ export interface PhaserDSL {
   name: string;
   target: string;
   multiplier?: number;
-  steps: any[];
-  phase: any;
+  steps: PhaserStepDSL[];
+  phase: PhaseConfigDSL;
+}
+
+export interface PhaserStepDSL {
+  values: {
+    color?: string;
+    dimmer?: number;
+  };
+  width?: number;
+  transition?: number;
+  accel?: number;
+  decel?: number;
+}
+
+export interface PhaseConfigDSL {
+  mode: "spread" | "grouped";
+  spread?: { from: number; to: number };
+  grouped?: { group_size: number; spread: [number, number] };
 }
 
 export interface TimelineEventDSL {
@@ -87,8 +131,6 @@ export interface TimelineEventDSL {
 
 export type TimelineActionDefDSL = 
   | { type: "phaser"; phaser: string }
-  | { type: "tempo"; bpm: number }
-  | { type: "stop_all" }
   | { type: "animate"; target: string; keyframes: KeyframeDSL[] };
 
 export interface KeyframeDSL {
