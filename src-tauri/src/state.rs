@@ -1,11 +1,11 @@
+use crate::compiler::CompiledShow;
+use crate::engine::animation::ParameterContext;
+use crate::engine::timeline::TimelineExecutor;
+use crate::engine::FixtureOutput;
+use crate::scheduler::Scheduler;
 use std::sync::Arc;
 use tauri::AppHandle;
 use tokio::sync::RwLock;
-use crate::engine::FixtureOutput;
-use crate::compiler::CompiledShow;
-use crate::engine::timeline::TimelineExecutor;
-use crate::scheduler::Scheduler;
-use crate::engine::animation::ParameterContext;
 
 pub struct EngineState {
     pub app_handle: AppHandle,
@@ -37,5 +37,5 @@ pub struct ActivePhaser {
     pub instance_id: Option<usize>, // used by timeline to uniquely identify blocks
     pub multiplier: f64,
     // Add accumulated_beat to calculate phase consistently during speed changes
-    pub accumulated_beat: f64, 
+    pub accumulated_beat: f64,
 }

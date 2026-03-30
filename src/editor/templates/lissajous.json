@@ -5,7 +5,6 @@
   "patch": [
     {
       "type": "spot",
-      "color": "rgb",
       "id_range": [
         1,
         120

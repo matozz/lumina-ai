@@ -4,8 +4,7 @@
   },
   "patch": [
     {
-      "type": "par",
-      "color": "rgb",
+      "type": "spot",
       "id_range": [
         1,
         13
@@ -151,7 +150,6 @@
     }
   ],
   "timeline": {
-    "bpm": 128,
     "events": []
   }
 }

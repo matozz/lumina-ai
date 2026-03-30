@@ -20,8 +20,8 @@ export class CanvasRenderer {
 
   initFromLayout(coords: LayoutCoord[]): void {
     this.fixtures.clear();
-    for (const { id, x, y } of coords) {
-      this.fixtures.set(id, new FixtureVisual(id, x, y));
+    for (const { id, x, y, type } of coords) {
+      this.fixtures.set(id, new FixtureVisual(id, x, y, type));
     }
     this.camera.fitToContent(coords);
   }
@@ -95,8 +95,14 @@ export class CanvasRenderer {
       ctx.fillStyle = color;
       ctx.beginPath();
       for (const v of batch) {
-        ctx.moveTo(v.x + v.radius, v.y);
-        ctx.arc(v.x, v.y, v.radius, 0, Math.PI * 2);
+        if (v.type === "pixel") {
+          // Draw square for pixels
+          ctx.rect(v.x - v.radius, v.y - v.radius, v.radius * 2, v.radius * 2);
+        } else {
+          // Draw circle for wash and spot
+          ctx.moveTo(v.x + v.radius, v.y);
+          ctx.arc(v.x, v.y, v.radius, 0, Math.PI * 2);
+        }
       }
       ctx.fill();
     }

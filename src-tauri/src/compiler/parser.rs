@@ -13,15 +13,12 @@ pub struct ShowDSL {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MetaDSL {
     pub name: String,
-    pub version: Option<String>,
-    pub tempo: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PatchDSL {
     #[serde(rename = "type")]
-    pub type_: String, // "spot" | "wash" | "pixel"
-    pub color: String, // "rgb" | "rgbw"
+    pub type_: String, // "spot" | "pixel"
     pub id_range: (u32, u32),
 }
 
@@ -155,7 +152,6 @@ pub struct PhaseGroupedDSL {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TimelineDSL {
-    pub bpm: f64,
     pub events: Vec<TimelineEventDSL>,
 }
 

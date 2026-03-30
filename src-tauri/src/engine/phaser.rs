@@ -11,25 +11,38 @@ pub fn calculate_phase(
         PhaseConfig::Spread { from, to } => {
             // If block info is provided, use discrete logical steps instead of individual fixtures
             if let Some((b_idx, total_blocks)) = block_info {
-                if total_blocks <= 1 { return *from; }
+                if total_blocks <= 1 {
+                    return *from;
+                }
                 from + (to - from) * b_idx as f64 / (total_blocks - 1) as f64
             } else {
-                if group_size <= 1 { return *from; }
+                if group_size <= 1 {
+                    return *from;
+                }
                 from + (to - from) * fixture_index as f64 / (group_size - 1) as f64
             }
         }
-        PhaseConfig::Grouped { group_size: gs, spread } => {
-            if *gs == 0 { return spread.0; }
-            
+        PhaseConfig::Grouped {
+            group_size: gs,
+            spread,
+        } => {
+            if *gs == 0 {
+                return spread.0;
+            }
+
             if let Some((b_idx, total_blocks)) = block_info {
                 let group_index = b_idx / gs;
                 let total_groups = (total_blocks + gs - 1) / gs;
-                if total_groups <= 1 { return spread.0; }
+                if total_groups <= 1 {
+                    return spread.0;
+                }
                 spread.0 + (spread.1 - spread.0) * group_index as f64 / (total_groups - 1) as f64
             } else {
                 let group_index = fixture_index / gs;
                 let total_groups = (group_size + gs - 1) / gs;
-                if total_groups <= 1 { return spread.0; }
+                if total_groups <= 1 {
+                    return spread.0;
+                }
                 spread.0 + (spread.1 - spread.0) * group_index as f64 / (total_groups - 1) as f64
             }
         }
@@ -42,9 +55,9 @@ pub fn evaluate_phaser_at(
     _total_width: f64,
 ) -> ((u8, u8, u8), f32) {
     if steps.is_empty() {
-        return ((0,0,0), 0.0);
+        return ((0, 0, 0), 0.0);
     }
-    
+
     let mut accumulated = 0.0;
 
     for (i, step) in steps.iter().enumerate() {
@@ -56,7 +69,7 @@ pub fn evaluate_phaser_at(
             } else {
                 0.0
             };
-            
+
             let prev_step = &steps[(i + steps.len() - 1) % steps.len()];
             let transition_ratio = step.transition / 100.0;
 
@@ -88,7 +101,11 @@ fn cubic_bezier_y(t: f64, cp1x: f64, cp1y: f64, cp2x: f64, cp2y: f64) -> f64 {
     for _ in 0..16 {
         let mid = (low + high) / 2.0;
         let x = bezier_component(mid, cp1x, cp2x);
-        if x < t { low = mid; } else { high = mid; }
+        if x < t {
+            low = mid;
+        } else {
+            high = mid;
+        }
     }
     let t_prime = (low + high) / 2.0;
     bezier_component(t_prime, cp1y, cp2y)

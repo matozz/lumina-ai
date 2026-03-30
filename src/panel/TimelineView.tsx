@@ -208,7 +208,7 @@ export function TimelineView() {
     
     try {
       const dslObj = JSON.parse(currentDslCode);
-      if (!dslObj.timeline) dslObj.timeline = { bpm: 120, events: [] };
+      if (!dslObj.timeline) dslObj.timeline = { events: [] };
       if (!dslObj.timeline.events) dslObj.timeline.events = [];
       
       dslObj.timeline.events.push(newEvent);

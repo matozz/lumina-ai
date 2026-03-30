@@ -4,8 +4,7 @@
   },
   "patch": [
     {
-      "type": "wash",
-      "color": "rgb",
+      "type": "spot",
       "id_range": [
         1,
         30
@@ -128,7 +127,6 @@
     }
   ],
   "timeline": {
-    "bpm": 120,
     "events": []
   }
 }

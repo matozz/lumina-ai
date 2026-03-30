@@ -16,6 +16,7 @@ export interface LayoutCoord {
   id: number;
   x: number;
   y: number;
+  type: string;
 }
 
 export interface CompileResult {
@@ -45,8 +46,6 @@ export interface EngineStatePayload {
 export interface ShowDSL {
   meta: {
     name: string;
-    version: string;
-    tempo: number;
   };
   patch: PatchDSL[];
   layout: LayoutDSL;
@@ -56,8 +55,7 @@ export interface ShowDSL {
 }
 
 export interface PatchDSL {
-  type: "spot" | "wash" | "pixel";
-  color: "rgb" | "rgbw";
+  type: "spot" | "pixel";
   id_range: [number, number];
 }
 
@@ -100,6 +98,5 @@ export interface KeyframeDSL {
 }
 
 export interface TimelineDSL {
-  bpm: number;
   events: TimelineEventDSL[];
 }

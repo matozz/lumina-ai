@@ -4,8 +4,7 @@
   },
   "patch": [
     {
-      "type": "wash",
-      "color": "rgb",
+      "type": "spot",
       "id_range": [
         1,
         64

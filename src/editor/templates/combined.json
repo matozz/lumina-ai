@@ -1,12 +1,10 @@
 {
   "meta": {
-    "name": "4 Rects + Circle",
-    "tempo": 120
+    "name": "4 Rects + Circle"
   },
   "patch": [
     {
       "type": "spot",
-      "color": "rgb",
       "id_range": [
         1,
         200
@@ -1241,7 +1239,6 @@
     }
   ],
   "timeline": {
-    "bpm": 120,
     "events": [
       {
         "beat": 0,

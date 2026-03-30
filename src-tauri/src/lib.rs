@@ -5,8 +5,8 @@ pub mod scheduler;
 pub mod state;
 
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use tauri::Manager;
+use tokio::sync::RwLock;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -14,7 +14,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let app_handle = app.handle().clone();
-            
+
             let engine_state = Arc::new(state::EngineState {
                 app_handle: app_handle.clone(),
                 scheduler: scheduler::Scheduler::new(),
@@ -29,9 +29,9 @@ pub fn run() {
                     parameter_context: engine::animation::ParameterContext::new(),
                 })),
             });
-            
+
             app.manage(engine_state);
-            
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
