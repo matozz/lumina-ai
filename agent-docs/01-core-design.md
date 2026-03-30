@@ -10,7 +10,7 @@ Lumina AI is a specialized lighting show engine combining a React-based frontend
 
 ### Frontend (React + TypeScript)
 - **State Management**: Uses `zustand` for global state (UI mode, execution state).
-- **Styling**: Tailwind CSS with `clsx` and `tailwind-merge` (via `src/utils/cn.ts`).
+- **Styling**: Tailwind CSS with `clsx` and `tailwind-merge` (via `src/lib/utils.ts`).
 - **Timeline Engine**: Custom-built using native Pointer Events API for 60fps drag-and-drop. It bypasses React's render cycle during drag/resize operations by manipulating DOM `ref`s directly.
 - **Component Design**: Highly modular. The `TimelineView` is composed of smaller subcomponents (`TimelineToolbar`, `TimelineResourcePanel`, `TimelineGrid`, `TimelinePlayhead`, `TimelineTrackHeaders`).
 

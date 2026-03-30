@@ -101,8 +101,8 @@ pnpm tauri build
   - `/components`: Reusable UI components
   - `/panel`: Timeline and Sequencer UI components
   - `/editor`: Monaco editor integration for DSL
-  - `/store`: Zustand state management
-  - `/utils`: Utility functions (e.g., `cn` for Tailwind)
+  - `/stores`: Zustand state management
+  - `/lib`: Utility functions (e.g., `cn` for Tailwind)
 - `/src-tauri`: Rust backend application
   - `/src/engine`: Core playback and timeline execution engine
   - `/src/compiler`: DSL parsing and compilation

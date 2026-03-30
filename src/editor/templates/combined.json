@@ -1240,6 +1240,138 @@
   "sequences": [],
   "timeline": {
     "bpm": 120,
-    "events": []
+    "events": [
+      {
+        "beat": 0,
+        "duration": 32,
+        "action": {
+          "type": "phaser",
+          "phaser": "Circle Ripple"
+        }
+      },
+      {
+        "beat": 0,
+        "duration": 32,
+        "action": {
+          "type": "animate",
+          "target": "phaser:Circle Ripple.multiplier",
+          "keyframes": [
+            { "time": 0, "value": 0.5, "easing": "linear" },
+            { "time": 16, "value": 4.0, "easing": "ease_in_out" },
+            { "time": 32, "value": 0.5, "easing": "linear" }
+          ]
+        }
+      },
+      {
+        "beat": 0,
+        "duration": 32,
+        "action": {
+          "type": "animate",
+          "target": "phaser:Circle Ripple.color",
+          "keyframes": [
+            { "time": 0, "value": "#ff0000", "easing": "linear" },
+            { "time": 16, "value": "#00ff00", "easing": "linear" },
+            { "time": 32, "value": "#0000ff", "easing": "linear" }
+          ]
+        }
+      },
+      {
+        "beat": 4,
+        "duration": 28,
+        "action": {
+          "type": "phaser",
+          "phaser": "TL Spread"
+        }
+      },
+      {
+        "beat": 4,
+        "duration": 28,
+        "action": {
+          "type": "animate",
+          "target": "phaser:TL Spread.multiplier",
+          "keyframes": [
+            { "time": 0, "value": 0.5, "easing": "ease_in" },
+            { "time": 14, "value": 2.0, "easing": "ease_out" },
+            { "time": 28, "value": 0.5, "easing": "linear" }
+          ]
+        }
+      },
+      {
+        "beat": 8,
+        "duration": 24,
+        "action": {
+          "type": "phaser",
+          "phaser": "TR Spread"
+        }
+      },
+      {
+        "beat": 8,
+        "duration": 24,
+        "action": {
+          "type": "animate",
+          "target": "phaser:TR Spread.multiplier",
+          "keyframes": [
+            { "time": 0, "value": 0.5, "easing": "ease_in" },
+            { "time": 12, "value": 2.0, "easing": "ease_out" },
+            { "time": 24, "value": 0.5, "easing": "linear" }
+          ]
+        }
+      },
+      {
+        "beat": 12,
+        "duration": 20,
+        "action": {
+          "type": "phaser",
+          "phaser": "BL Spread"
+        }
+      },
+      {
+        "beat": 12,
+        "duration": 20,
+        "action": {
+          "type": "animate",
+          "target": "phaser:BL Spread.multiplier",
+          "keyframes": [
+            { "time": 0, "value": 0.5, "easing": "ease_in" },
+            { "time": 10, "value": 2.0, "easing": "ease_out" },
+            { "time": 20, "value": 0.5, "easing": "linear" }
+          ]
+        }
+      },
+      {
+        "beat": 16,
+        "duration": 16,
+        "action": {
+          "type": "phaser",
+          "phaser": "BR Spread"
+        }
+      },
+      {
+        "beat": 16,
+        "duration": 16,
+        "action": {
+          "type": "animate",
+          "target": "phaser:BR Spread.multiplier",
+          "keyframes": [
+            { "time": 0, "value": 0.5, "easing": "ease_in" },
+            { "time": 8, "value": 2.0, "easing": "ease_out" },
+            { "time": 16, "value": 0.5, "easing": "linear" }
+          ]
+        }
+      },
+      {
+        "beat": 16,
+        "duration": 16,
+        "action": {
+          "type": "animate",
+          "target": "global.master_dimmer",
+          "keyframes": [
+            { "time": 0, "value": 1.0, "easing": "linear" },
+            { "time": 8, "value": 0.2, "easing": "ease_in_out" },
+            { "time": 16, "value": 1.0, "easing": "linear" }
+          ]
+        }
+      }
+    ]
   }
 }

@@ -247,4 +247,13 @@ pub enum TimelineActionDefDSL {
     Tempo { bpm: u32 },
     #[serde(rename = "stop_all")]
     StopAll,
+    #[serde(rename = "animate")]
+    Animate { target: String, keyframes: Vec<KeyframeDSL> },
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct KeyframeDSL {
+    pub time: f64, // Relative beat to event start
+    pub value: serde_json::Value,
+    pub easing: Option<String>,
 }
