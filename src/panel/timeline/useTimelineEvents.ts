@@ -92,6 +92,60 @@ export function useTimelineEvents() {
     } catch (err) {}
   }, [currentDslCode, setCurrentDslCode]);
 
+  const addKeyframe = useCallback((eventIndex: number, time: number) => {
+    try {
+      const dslObj = JSON.parse(currentDslCode);
+      const ev = dslObj.timeline?.events?.[eventIndex];
+      if (ev && ev.action.type === 'animate') {
+        const keyframes = ev.action.keyframes || [];
+        // Guess a value based on type of animation, for now default to 1.0 or 0
+        const newValue = 1.0; 
+        keyframes.push({ time, value: newValue });
+        // Sort by time
+        keyframes.sort((a: any, b: any) => a.time - b.time);
+        ev.action.keyframes = keyframes;
+        setCurrentDslCode(JSON.stringify(dslObj, null, 2));
+      }
+    } catch (err) {
+      console.error("Failed to add keyframe", err);
+    }
+  }, [currentDslCode, setCurrentDslCode]);
+
+  const removeKeyframe = useCallback((eventIndex: number, keyframeIndex: number) => {
+    try {
+      const dslObj = JSON.parse(currentDslCode);
+      const ev = dslObj.timeline?.events?.[eventIndex];
+      if (ev && ev.action.type === 'animate' && ev.action.keyframes) {
+        ev.action.keyframes.splice(keyframeIndex, 1);
+        setCurrentDslCode(JSON.stringify(dslObj, null, 2));
+      }
+    } catch (err) {
+      console.error("Failed to remove keyframe", err);
+    }
+  }, [currentDslCode, setCurrentDslCode]);
+
+  const updateKeyframe = useCallback((eventIndex: number, keyframeIndex: number, updates: Partial<{time: number, value: any, easing: string}>) => {
+    try {
+      const dslObj = JSON.parse(currentDslCode);
+      const ev = dslObj.timeline?.events?.[eventIndex];
+      if (ev && ev.action.type === 'animate' && ev.action.keyframes) {
+        const kf = ev.action.keyframes[keyframeIndex];
+        if (kf) {
+          if (updates.time !== undefined) kf.time = updates.time;
+          if (updates.value !== undefined) kf.value = updates.value;
+          if (updates.easing !== undefined) kf.easing = updates.easing;
+          
+          if (updates.time !== undefined) {
+             ev.action.keyframes.sort((a: any, b: any) => a.time - b.time);
+          }
+          setCurrentDslCode(JSON.stringify(dslObj, null, 2));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to update keyframe", err);
+    }
+  }, [currentDslCode, setCurrentDslCode]);
+
   useEffect(() => {
     if (!resizing && !moving) return;
     
@@ -198,6 +252,9 @@ export function useTimelineEvents() {
     setResizing,
     interactionState,
     addEvent,
-    deleteEvent
+    deleteEvent,
+    addKeyframe,
+    removeKeyframe,
+    updateKeyframe
   };
 }

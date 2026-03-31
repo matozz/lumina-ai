@@ -27,9 +27,24 @@ interface TrackProps {
   onDragStart: (e: React.PointerEvent, originalIndex: number, startBeat: number) => void;
   onResizeStart: (e: React.PointerEvent, originalIndex: number, startDuration: number) => void;
   onDelete: (originalIndex: number) => void;
+  onAddKeyframe?: (eventIndex: number, time: number) => void;
+  onUpdateKeyframe?: (eventIndex: number, keyframeIndex: number, updates: any) => void;
+  onDeleteKeyframe?: (eventIndex: number, keyframeIndex: number) => void;
 }
 
-export function DroppableTrack({ track, isExpanded, beatWidth, selectedPhaser, onGridClick, onDragStart, onResizeStart, onDelete }: TrackProps) {
+export function DroppableTrack({ 
+  track, 
+  isExpanded, 
+  beatWidth, 
+  selectedPhaser, 
+  onGridClick, 
+  onDragStart, 
+  onResizeStart, 
+  onDelete,
+  onAddKeyframe,
+  onUpdateKeyframe,
+  onDeleteKeyframe
+}: TrackProps) {
   return (
     <div className="flex flex-col">
       <div 
@@ -52,6 +67,9 @@ export function DroppableTrack({ track, isExpanded, beatWidth, selectedPhaser, o
             onDragStart={onDragStart}
             onResizeStart={onResizeStart}
             onDelete={onDelete}
+            onAddKeyframe={onAddKeyframe}
+            onUpdateKeyframe={onUpdateKeyframe}
+            onDeleteKeyframe={onDeleteKeyframe}
           />
         ))}
       </div>
@@ -74,6 +92,9 @@ export function DroppableTrack({ track, isExpanded, beatWidth, selectedPhaser, o
                 onDragStart={onDragStart}
                 onResizeStart={onResizeStart}
                 onDelete={onDelete}
+                onAddKeyframe={onAddKeyframe}
+                onUpdateKeyframe={onUpdateKeyframe}
+                onDeleteKeyframe={onDeleteKeyframe}
               />
             ))}
         </div>

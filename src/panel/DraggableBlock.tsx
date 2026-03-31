@@ -1,6 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { UITimelineEvent } from './DroppableTrack';
+import { KeyframeDot } from './KeyframeDot';
+import { KeyframeEditorPopover } from './KeyframeEditorPopover';
+import type { KeyframeDSL } from '../bridge/types';
 
 interface BlockProps {
   event: UITimelineEvent;
@@ -9,10 +12,24 @@ interface BlockProps {
   onDragStart: (e: React.PointerEvent, originalIndex: number, startBeat: number) => void;
   onResizeStart: (e: React.PointerEvent, originalIndex: number, startDuration: number) => void;
   onDelete: (originalIndex: number) => void;
+  onAddKeyframe?: (eventIndex: number, time: number) => void;
+  onUpdateKeyframe?: (eventIndex: number, keyframeIndex: number, updates: any) => void;
+  onDeleteKeyframe?: (eventIndex: number, keyframeIndex: number) => void;
 }
 
-export function DraggableBlock({ event, beatWidth, isSubTrack, onDragStart, onResizeStart, onDelete }: BlockProps) {
+export function DraggableBlock({ 
+  event, 
+  beatWidth, 
+  isSubTrack, 
+  onDragStart, 
+  onResizeStart, 
+  onDelete,
+  onAddKeyframe,
+  onUpdateKeyframe,
+  onDeleteKeyframe
+}: BlockProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const [selectedKeyframe, setSelectedKeyframe] = useState<{kf: KeyframeDSL, eventIndex: number, keyframeIndex: number, x: number, y: number} | null>(null);
   
   const left = event.beat * beatWidth;
   const width = Math.max(beatWidth * 0.5, (event.duration || 4) * beatWidth);
@@ -30,7 +47,41 @@ export function DraggableBlock({ event, beatWidth, isSubTrack, onDragStart, onRe
   // Calculate keyframe positions if it's an animation block
   const keyframes = event.action.type === 'animate' ? event.action.keyframes : [];
 
+  const handleDoubleClick = (ev: React.MouseEvent) => {
+    ev.stopPropagation();
+    
+    if (isAnimate && onAddKeyframe && ref.current) {
+        // Double click to add keyframe
+        const rect = ref.current.getBoundingClientRect();
+        const offsetX = ev.clientX - rect.left;
+        const relativeTime = (offsetX / width) * (event.duration || 4);
+        
+        // Snap to nearest 0.1 beat
+        const snappedTime = Math.round(relativeTime * 10) / 10;
+        
+        // Make sure it's within bounds
+        if (snappedTime >= 0 && snappedTime <= (event.duration || 4)) {
+           onAddKeyframe(event.originalIndex, snappedTime);
+           return;
+        }
+    }
+    
+    // Otherwise, normal double click behavior (delete block)
+    onDelete(event.originalIndex);
+  };
+
+  const handleKeyframeClick = (e: React.MouseEvent, kf: KeyframeDSL, eventIndex: number, keyframeIndex: number) => {
+     setSelectedKeyframe({
+        kf,
+        eventIndex,
+        keyframeIndex,
+        x: e.clientX,
+        y: e.clientY
+     });
+  };
+
   return (
+    <>
     <div 
       ref={ref}
       className={cn(
@@ -48,13 +99,20 @@ export function DraggableBlock({ event, beatWidth, isSubTrack, onDragStart, onRe
         zIndex: isSubTrack ? 5 : 10,
         touchAction: 'none'
       }}
-      title={`${label} (Beat ${event.beat} - ${event.beat + (event.duration||4)})`}
+      title={isAnimate ? `${label} (Double click to add keyframe)` : `${label} (Beat ${event.beat} - ${event.beat + (event.duration||4)})`}
       onClick={(ev) => ev.stopPropagation()}
-      onDoubleClick={(ev) => {
-        ev.stopPropagation();
-        onDelete(event.originalIndex);
+      onDoubleClick={handleDoubleClick}
+      onContextMenu={(ev) => {
+         // Prevent context menu from appearing when double clicking / right clicking to manage keyframes
+         if (isAnimate) {
+             ev.preventDefault();
+             ev.stopPropagation();
+         }
       }}
       onPointerDown={(ev) => {
+        // Only drag if we didn't click on a keyframe
+        if ((ev.target as HTMLElement).closest('.bg-amber-200')) return;
+        
         ev.preventDefault();
         ev.stopPropagation();
         (ev.target as HTMLElement).setPointerCapture(ev.pointerId);
@@ -68,17 +126,18 @@ export function DraggableBlock({ event, beatWidth, isSubTrack, onDragStart, onRe
       )}
       
       {/* Keyframe visualizers */}
-      {isAnimate && keyframes.map((kf, i) => {
-        const kfLeft = (kf.time / (event.duration || 4)) * 100;
-        return (
-          <div 
-            key={i}
-            className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-amber-200 rounded-full shadow-[0_0_4px_rgba(251,191,36,0.8)] pointer-events-none"
-            style={{ left: `calc(${kfLeft}% - 3px)` }}
-            title={`Value: ${String(kf.value)} @ +${kf.time}b`}
-          />
-        );
-      })}
+      {isAnimate && keyframes.map((kf, i) => (
+        <KeyframeDot
+           key={i}
+           keyframe={kf}
+           index={i}
+           eventDuration={event.duration || 4}
+           originalEventIndex={event.originalIndex}
+           onUpdate={(ei, ki, up) => onUpdateKeyframe && onUpdateKeyframe(ei, ki, up)}
+           onDelete={(ei, ki) => onDeleteKeyframe && onDeleteKeyframe(ei, ki)}
+           onClick={handleKeyframeClick}
+        />
+      ))}
       
       {/* Resize handle */}
       <div 
@@ -95,5 +154,27 @@ export function DraggableBlock({ event, beatWidth, isSubTrack, onDragStart, onRe
         }}
       />
     </div>
+    
+    {selectedKeyframe && (
+        <KeyframeEditorPopover
+            isOpen={true}
+            onClose={() => setSelectedKeyframe(null)}
+            x={selectedKeyframe.x}
+            y={selectedKeyframe.y}
+            keyframe={selectedKeyframe.kf}
+            onUpdate={(updates) => {
+                if (onUpdateKeyframe) {
+                    onUpdateKeyframe(selectedKeyframe.eventIndex, selectedKeyframe.keyframeIndex, updates);
+                }
+            }}
+            onDelete={() => {
+                if (onDeleteKeyframe) {
+                    onDeleteKeyframe(selectedKeyframe.eventIndex, selectedKeyframe.keyframeIndex);
+                }
+                setSelectedKeyframe(null);
+            }}
+        />
+    )}
+    </>
   );
 }
