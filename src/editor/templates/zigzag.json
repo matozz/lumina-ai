@@ -86,7 +86,7 @@
         "mode": "spread",
         "spread": {
           "from": 0,
-          "to": 360
+          "to": 100
         }
       }
     },
@@ -118,8 +118,8 @@
       "phase": {
         "mode": "spread",
         "spread": {
-          "from": 180,
-          "to": 540
+          "from": 0,
+          "to": 100
         }
       }
     }

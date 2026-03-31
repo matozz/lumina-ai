@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "name": "Matrix Grouped"
+  },
+  "patch": [
+    {
+      "type": "spot",
+      "id_range": [1, 64]
+    }
+  ],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "matrix",
+      "rows": 8,
+      "columns": 8,
+      "spacing": 40,
+      "origin": [0, 0]
+    }
+  },
+  "groups": [
+    {
+      "name": "All",
+      "fixtures": {
+        "range": [1, 64]
+      },
+      "sort_by": "none"
+    },
+    {
+      "name": "ByX",
+      "fixtures": {
+        "range": [1, 64]
+      },
+      "sort_by": "x"
+    },
+    {
+      "name": "ByY",
+      "fixtures": {
+        "range": [1, 64]
+      },
+      "sort_by": "y"
+    }
+  ],
+  "phasers": [
+    {
+      "id": "chunky_scan_x",
+      "name": "Chunky Scan X (Grouped: 2)",
+      "target": "ByX",
+      "multiplier": 1,
+      "steps": [
+        {
+          "values": {
+            "color": "#ff0088",
+            "dimmer": 1
+          },
+          "width": 20,
+          "transition": 0
+        },
+        {
+          "values": {
+            "color": "#000000",
+            "dimmer": 0
+          },
+          "width": 80,
+          "transition": 50
+        }
+      ],
+      "phase": {
+        "mode": "grouped",
+        "grouped": {
+          "group_size": 2,
+          "spread": [0, 100]
+        }
+      }
+    },
+    {
+      "id": "block_drop_y",
+      "name": "Block Drop Y (Grouped: 4)",
+      "target": "ByY",
+      "multiplier": 1,
+      "steps": [
+        {
+          "values": {
+            "color": "#00ffcc",
+            "dimmer": 1
+          },
+          "width": 25,
+          "transition": 100
+        },
+        {
+          "values": {
+            "color": "#002244",
+            "dimmer": 0
+          },
+          "width": 75,
+          "transition": 100
+        }
+      ],
+      "phase": {
+        "mode": "grouped",
+        "grouped": {
+          "group_size": 4,
+          "spread": [0, 100]
+        }
+      }
+    },
+    {
+      "id": "binary_flash",
+      "name": "Binary Flash (Grouped: 32)",
+      "target": "All",
+      "multiplier": 2,
+      "steps": [
+        {
+          "values": {
+            "color": "#ffffff",
+            "dimmer": 1
+          },
+          "width": 50,
+          "transition": 0
+        },
+        {
+          "values": {
+            "color": "#000000",
+            "dimmer": 0
+          },
+          "width": 50,
+          "transition": 0
+        }
+      ],
+      "phase": {
+        "mode": "grouped",
+        "grouped": {
+          "group_size": 32,
+          "spread": [0, 100]
+        }
+      }
+    }
+  ],
+  "timeline": {
+    "events": []
+  }
+}

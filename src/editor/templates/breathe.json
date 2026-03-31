@@ -75,8 +75,11 @@
         }
       ],
       "phase": {
-        "mode": "constant",
-        "value": 0
+        "mode": "grouped",
+        "grouped": {
+          "group_size": 1,
+          "spread": [0, 100]
+        }
       }
     },
     {
@@ -106,7 +109,7 @@
         "mode": "spread",
         "spread": {
           "from": 0,
-          "to": 180
+          "to": 50
         }
       }
     }

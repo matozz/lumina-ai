@@ -1109,7 +1109,7 @@
         "mode": "spread",
         "spread": {
           "from": 0,
-          "to": 360
+          "to": 100
         }
       }
     },
@@ -1140,7 +1140,7 @@
         "mode": "spread",
         "spread": {
           "from": 0,
-          "to": 360
+          "to": 100
         }
       }
     },
@@ -1171,7 +1171,7 @@
         "mode": "spread",
         "spread": {
           "from": 0,
-          "to": 360
+          "to": 100
         }
       }
     },
@@ -1202,7 +1202,7 @@
         "mode": "spread",
         "spread": {
           "from": 0,
-          "to": 360
+          "to": 100
         }
       }
     },
@@ -1233,7 +1233,7 @@
         "mode": "spread",
         "spread": {
           "from": 0,
-          "to": 360
+          "to": 100
         }
       }
     }

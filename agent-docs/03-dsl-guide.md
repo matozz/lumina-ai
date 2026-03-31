@@ -54,7 +54,7 @@ Defines continuous, looped animations (Phasers) that target specific groups.
   - `accel` / `decel`: (Optional) Integer, acceleration/deceleration curves.
 - `phase`: Object, defines how the effect spreads across multiple fixtures.
   - `mode`: `"spread"` (distributed evenly) or `"grouped"` (distributed in chunks).
-  - `spread`: Object with `{"from": 0.0, "to": 360.0}` (degrees).
+  - `spread`: Object with `{"from": 0.0, "to": 100}` (percentage).
 
 ### 6. `timeline` (Show Sequencing)
 Defines the sequence of events and animations over time.
@@ -114,6 +114,7 @@ Phasers use a `multiplier` instead of an absolute speed (BPM) value to ensure th
 Example of a Phaser:
 ```json
 {
+  "id": "hard_chase",
   "name": "Hard Chase",
   "target": "Circle",
   "multiplier": 2.0,
@@ -121,7 +122,7 @@ Example of a Phaser:
     { "values": { "dimmer": 1.0, "color": "#ffffff" }, "width": 10, "transition": 0 },
     { "values": { "dimmer": 0.0 }, "width": 90, "transition": 0 }
   ],
-  "phase": { "mode": "spread", "spread": { "from": 0, "to": 360 } }
+  "phase": { "mode": "spread", "spread": { "from": 0, "to": 100 } }
 }
 ```
 

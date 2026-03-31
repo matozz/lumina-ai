@@ -2,8 +2,8 @@ import Editor from "@monaco-editor/react";
 import { useEffect, useRef, useState } from "react";
 import { engine } from "../bridge/commands";
 import { useUiStore } from "../stores/uiStore";
-import { TEMPLATES } from "./templates";
-import { XCircle, FileCode2, AlertTriangle } from "lucide-react";
+import { getTemplates, DslTemplate } from "./templates";
+import { XCircle, FileCode2, AlertTriangle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -19,17 +19,20 @@ export function DslEditor() {
   const { currentDslCode: code, setCurrentDslCode: setCode } = useUiStore();
   const { compileErrors, setCompileResult, setCompileErrors, setCompileStatus } = useUiStore();
 
+  const [templates, setTemplates] = useState<DslTemplate[]>(getTemplates);
   const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>("combined");
 
   const latestCodeRef = useRef(code);
   latestCodeRef.current = code;
 
   useEffect(() => {
-    if (!code) {
+    if (!code && templates.length > 0) {
       // Find the first valid template to set as default
-      const firstValidTemplate = TEMPLATES.find(t => !t.disabled) || TEMPLATES[0];
-      setCode(firstValidTemplate.dsl);
-      setSelectedTemplateKey(firstValidTemplate.key);
+      const firstValidTemplate = templates.find(t => !t.disabled) || templates[0];
+      if (firstValidTemplate) {
+        setCode(firstValidTemplate.dsl);
+        setSelectedTemplateKey(firstValidTemplate.key);
+      }
     }
   }, []); // Run only on mount
 
@@ -62,9 +65,13 @@ export function DslEditor() {
     return () => clearTimeout(handler);
   }, [code]); 
 
+  const reloadTemplates = () => {
+    setTemplates(getTemplates());
+  };
+
   const loadTemplate = (key: string | null) => {
     if (!key || key === "custom") return;
-    const template = TEMPLATES.find(t => t.key === key);
+    const template = templates.find(t => t.key === key);
     if (template && !template.disabled) {
       setCode(template.dsl);
       setSelectedTemplateKey(key);
@@ -76,7 +83,7 @@ export function DslEditor() {
     
     // If the user types something that matches a template exactly, select it
     // Otherwise, mark it as custom
-    const matchedTemplate = TEMPLATES.find(t => t.dsl === val);
+    const matchedTemplate = templates.find(t => t.dsl === val);
     if (matchedTemplate) {
       setSelectedTemplateKey(matchedTemplate.key);
     } else {
@@ -98,7 +105,14 @@ export function DslEditor() {
           <span className="text-xs font-semibold text-zinc-200 tracking-wide">DSL EDITOR</span>
         </div>
         
-        <div className="flex gap-2 justify-end">
+        <div className="flex gap-2 justify-end items-center">
+          <button 
+            onClick={reloadTemplates}
+            className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded transition-colors"
+            title="Reload Templates"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
           <Select value={selectedTemplateKey} onValueChange={loadTemplate}>
             <SelectTrigger size="sm">
               <SelectValue placeholder="Select a template..." />
@@ -110,7 +124,7 @@ export function DslEditor() {
                     Custom...
                   </SelectItem>
                 )}
-                {TEMPLATES.map(t => (
+                {templates.map(t => (
                   <SelectItem 
                     key={t.key} 
                     value={t.key} 

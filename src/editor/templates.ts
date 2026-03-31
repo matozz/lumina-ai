@@ -8,9 +8,11 @@ export interface DslTemplate {
   errorMessage?: string;
 }
 
-const templateModules = import.meta.glob('./templates/*.json', { eager: true });
-
-function getTemplates(): DslTemplate[] {
+export function getTemplates(): DslTemplate[] {
+  // Use import.meta.glob with eager: true inside the function, 
+  // though Vite will static analyze this, we do it here so it evaluates when called
+  const templateModules = import.meta.glob('./templates/*.json', { eager: true });
+  
   const templates: DslTemplate[] = [];
   const seenNames = new Set<string>();
 
@@ -56,5 +58,3 @@ function getTemplates(): DslTemplate[] {
 
   return templates;
 }
-
-export const TEMPLATES = getTemplates();

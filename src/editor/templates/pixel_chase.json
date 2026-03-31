@@ -61,10 +61,10 @@
         }
       ],
       "phase": {
-        "mode": "mirror",
+        "mode": "spread",
         "spread": {
           "from": 0,
-          "to": 180
+          "to": 0
         }
       }
     },
@@ -72,7 +72,7 @@
       "id": "matrix_rain",
       "name": "Matrix Rain",
       "target": "All",
-      "multiplier": 1.5,
+      "multiplier": 2,
       "steps": [
         {
           "values": {
@@ -95,7 +95,7 @@
         "mode": "spread",
         "spread": {
           "from": 0,
-          "to": 720
+          "to": 100
         }
       }
     }

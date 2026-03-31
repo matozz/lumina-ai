@@ -130,8 +130,8 @@ export const PhaserStepDSLSchema = z.object({
 
 export const PhaseConfigDSLSchema = z.object({
   mode: z.enum(["spread", "grouped"]),
-  spread: z.object({ from: z.number(), to: z.number() }).optional(),
-  grouped: z.object({ group_size: z.number(), spread: z.tuple([z.number(), z.number()]) }).optional(),
+  spread: z.object({ from: z.number().min(0).max(100), to: z.number().min(0).max(100) }).optional(),
+  grouped: z.object({ group_size: z.number(), spread: z.tuple([z.number().min(0).max(100), z.number().min(0).max(100)]) }).optional(),
 });
 
 export const PhaserDSLSchema = z.object({
