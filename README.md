@@ -21,34 +21,80 @@ Lumina AI leverages a hybrid architecture for optimal performance:
   - Drag-and-drop sequencing of phasers.
   - Edge-dragging for precise block resizing and duration adjustments.
   - Auto-overlap resolution (blocks automatically trim when colliding).
-  - Multi-track selection and deletion.
+  - Keyframe-based animation parameters directly in the timeline.
 - **High-Performance Rendering**: Utilizes direct DOM manipulation via Refs to bypass React's render cycle during drag operations, achieving perfectly smooth 60fps UI updates.
 - **Custom DSL Engine**: A robust Rust backend that parses and executes custom JSON-based DSL payloads in real-time.
 
 ## Custom JSON DSL Example
 
-Lumina AI uses a powerful JSON-based Domain Specific Language (DSL) to define fixtures, layouts, and dynamic lighting effects (Phasers). This allows for precise, programmable control over the entire show.
+Lumina AI uses a powerful JSON-based Domain Specific Language (DSL) to define fixtures, layouts, groups, and dynamic lighting effects (Phasers). This allows for precise, programmable control over the entire show.
 
-Here is an example of defining a set of lights and creating a "Blink" phaser effect:
+Here is an example of defining a matrix of lights and creating a "Blink" phaser effect:
 
 ```json
 {
-  "meta": { "name": "Basic Show", "version": "1.0", "tempo": 120 },
-  "patch": [{ "type": "spot", "color": "rgb", "id_range": [1, 10] }],
+  "meta": {
+    "name": "Matrix Demo"
+  },
+  "patch": [
+    {
+      "type": "spot",
+      "id_range": [1, 64]
+    }
+  ],
+  "layout": {
+    "type": "generator",
+    "generator": {
+      "shape": "matrix",
+      "rows": 8,
+      "columns": 8,
+      "spacing": 40,
+      "origin": [0, 0]
+    }
+  },
   "groups": [
-    { "name": "All Spots", "fixtures": { "range": [1, 10] }, "sort_by": "none" }
+    {
+      "name": "All Spots",
+      "fixtures": { "range": [1, 64] },
+      "sort_by": "none"
+    }
   ],
   "phasers": [
     {
+      "id": "blink",
       "name": "Blink",
+      "target": "All Spots",
+      "multiplier": 1,
       "steps": [
-        { "values": { "dimmer": 100 }, "transition": 0.0, "delay": 0.0 },
-        { "values": { "dimmer": 0 }, "transition": 0.5, "delay": 0.0 }
+        {
+          "values": { "color": "#ffffff", "dimmer": 1 },
+          "width": 50,
+          "transition": 0
+        },
+        {
+          "values": { "color": "#000000", "dimmer": 0 },
+          "width": 50,
+          "transition": 0
+        }
       ],
-      "speed": 1.0,
-      "phase": "0..360"
+      "phase": {
+        "mode": "spread",
+        "spread": { "from": 0, "to": 100 }
+      }
     }
-  ]
+  ],
+  "timeline": {
+    "events": [
+      {
+        "beat": 0,
+        "duration": 4,
+        "action": {
+          "type": "phaser",
+          "phaser": "blink"
+        }
+      }
+    ]
+  }
 }
 ```
 
