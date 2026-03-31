@@ -1,7 +1,7 @@
 use crate::compiler::{CompiledStep, PhaseConfig};
 use crate::engine::color::lerp_color_lab;
 
-pub fn calculate_phase(
+pub fn calculate_progress_delay(
     fixture_index: usize,
     group_size: usize,
     config: &PhaseConfig,
@@ -9,41 +9,70 @@ pub fn calculate_phase(
 ) -> f64 {
     match config {
         PhaseConfig::Spread { from, to } => {
-            // If block info is provided, use discrete logical steps instead of individual fixtures
+            let from_val = from / 100.0;
+            let to_val = to / 100.0;
+            
             if let Some((b_idx, total_blocks)) = block_info {
                 if total_blocks <= 1 {
-                    return *from;
+                    return 0.0;
                 }
-                from + (to - from) * b_idx as f64 / (total_blocks - 1) as f64
+                let raw_delay = from_val + (to_val - from_val) * (b_idx as f64 / total_blocks as f64);
+                let min_delay = if from_val <= to_val {
+                    from_val
+                } else {
+                    from_val + (to_val - from_val) * ((total_blocks - 1) as f64 / total_blocks as f64)
+                };
+                raw_delay - min_delay
             } else {
                 if group_size <= 1 {
-                    return *from;
+                    return 0.0;
                 }
-                from + (to - from) * fixture_index as f64 / (group_size - 1) as f64
+                let raw_delay = from_val + (to_val - from_val) * (fixture_index as f64 / group_size as f64);
+                let min_delay = if from_val <= to_val {
+                    from_val
+                } else {
+                    from_val + (to_val - from_val) * ((group_size - 1) as f64 / group_size as f64)
+                };
+                raw_delay - min_delay
             }
         }
         PhaseConfig::Grouped {
             group_size: gs,
             spread,
         } => {
+            let from_val = spread.0 / 100.0;
+            let to_val = spread.1 / 100.0;
+
             if *gs == 0 {
-                return spread.0;
+                return 0.0;
             }
 
             if let Some((b_idx, total_blocks)) = block_info {
                 let group_index = b_idx / gs;
                 let total_groups = (total_blocks + gs - 1) / gs;
                 if total_groups <= 1 {
-                    return spread.0;
+                    return 0.0;
                 }
-                spread.0 + (spread.1 - spread.0) * group_index as f64 / (total_groups - 1) as f64
+                let raw_delay = from_val + (to_val - from_val) * (group_index as f64 / total_groups as f64);
+                let min_delay = if from_val <= to_val {
+                    from_val
+                } else {
+                    from_val + (to_val - from_val) * ((total_groups - 1) as f64 / total_groups as f64)
+                };
+                raw_delay - min_delay
             } else {
                 let group_index = fixture_index / gs;
                 let total_groups = (group_size + gs - 1) / gs;
                 if total_groups <= 1 {
-                    return spread.0;
+                    return 0.0;
                 }
-                spread.0 + (spread.1 - spread.0) * group_index as f64 / (total_groups - 1) as f64
+                let raw_delay = from_val + (to_val - from_val) * (group_index as f64 / total_groups as f64);
+                let min_delay = if from_val <= to_val {
+                    from_val
+                } else {
+                    from_val + (to_val - from_val) * ((total_groups - 1) as f64 / total_groups as f64)
+                };
+                raw_delay - min_delay
             }
         }
     }

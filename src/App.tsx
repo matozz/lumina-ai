@@ -5,6 +5,7 @@ import { DslEditor } from "./editor/DslEditor";
 import { TimelineView } from "./panel/TimelineView";
 import { onStateChange } from "./bridge/events";
 import { useUiStore } from "./stores/uiStore";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./App.css";
 
 function App() {
@@ -24,16 +25,18 @@ function App() {
   }, [setIsPlaying, setTempo, setGlobalBeat, setActivePhasers]);
 
   return (
-    <div className="flex flex-col w-screen h-screen bg-black overflow-hidden font-sans text-zinc-50 relative">
-      <div className="flex flex-1 overflow-hidden">
-        <DslEditor />
-        <div className="flex-1 flex flex-col relative z-0">
-          <CanvasView />
+    <TooltipProvider delay={200}>
+      <div className="flex flex-col w-screen h-screen bg-black overflow-hidden font-sans text-zinc-50 relative">
+        <div className="flex flex-1 overflow-hidden">
+          <DslEditor />
+          <div className="flex-1 flex flex-col relative z-0">
+            <CanvasView />
+          </div>
+          <ControlPanel />
         </div>
-        <ControlPanel />
+        {sequencerMode === 'timeline' && <TimelineView />}
       </div>
-      {sequencerMode === 'timeline' && <TimelineView />}
-    </div>
+    </TooltipProvider>
   );
 }
 

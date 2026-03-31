@@ -104,7 +104,7 @@
         "mode": "spread",
         "spread": {
           "from": 0,
-          "to": 360
+          "to": 100
         }
       }
     },
@@ -132,10 +132,10 @@
         }
       ],
       "phase": {
-        "mode": "mirror",
+        "mode": "spread",
         "spread": {
-          "from": 0,
-          "to": 180
+          "from": 100,
+          "to": 0
         }
       }
     },
@@ -163,10 +163,10 @@
         }
       ],
       "phase": {
-        "mode": "mirror",
+        "mode": "spread",
         "spread": {
           "from": 0,
-          "to": 180
+          "to": 50
         }
       }
     },
@@ -196,7 +196,7 @@
       "phase": {
         "mode": "spread",
         "spread": {
-          "from": 360,
+          "from": 100,
           "to": 0
         }
       }

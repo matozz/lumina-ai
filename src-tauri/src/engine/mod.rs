@@ -51,7 +51,7 @@ pub fn compute_frame(
 
                         let block_info = group.block_index_of(fixture.id);
 
-                        let phase_offset = phaser::calculate_phase(
+                        let progress_delay = phaser::calculate_progress_delay(
                             fixture_index,
                             group.len(),
                             &phaser.phase,
@@ -63,18 +63,20 @@ pub fn compute_frame(
                             continue;
                         }
 
-                        // We compute the phase directly from the accumulated_beat, which correctly accounts for changing speeds over time
-                        let cycle_position =
-                            ((active.accumulated_beat * 360.0) + phase_offset) % 360.0;
+                        // Calculate the raw cycle position based on beat and delay.
+                        // By subtracting delay, we shift fixtures backwards in time.
+                        let raw_cycle = active.accumulated_beat - progress_delay;
+                        
+                        // If raw_cycle is negative, the fixture hasn't reached its first start time yet.
+                        // This prevents wrapping artifacts on the very first frame so the wave physically enters.
+                        if raw_cycle < 0.0 {
+                            continue;
+                        }
 
-                        // to prevent negative module issues
-                        let cycle_position = if cycle_position < 0.0 {
-                            cycle_position + 360.0
-                        } else {
-                            cycle_position
-                        };
+                        // Get the fractional part (0.0 to 1.0) which represents the position in the current loop cycle.
+                        let cycle_progress = raw_cycle % 1.0;
 
-                        let normalized = cycle_position / 360.0 * total_width;
+                        let normalized = cycle_progress * total_width;
 
                         let (mut color, dimmer) =
                             phaser::evaluate_phaser_at(normalized, &phaser.steps, total_width);

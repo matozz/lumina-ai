@@ -1,12 +1,18 @@
+import { ShowDSLSchema } from "@/bridge/types";
+
 export interface DslTemplate {
   key: string;
   name: string;
   dsl: string;
+  disabled?: boolean;
+  errorMessage?: string;
 }
 
-const templateModules = import.meta.glob('./templates/*.json', { eager: true });
-
-function getTemplates(): DslTemplate[] {
+export function getTemplates(): DslTemplate[] {
+  // Use import.meta.glob with eager: true inside the function, 
+  // though Vite will static analyze this, we do it here so it evaluates when called
+  const templateModules = import.meta.glob('./templates/*.json', { eager: true });
+  
   const templates: DslTemplate[] = [];
   const seenNames = new Set<string>();
 
@@ -16,7 +22,27 @@ function getTemplates(): DslTemplate[] {
     const json = module as any;
     // For default exports in JSON
     const content = json.default || json;
-    const name = content.meta?.name || key;
+
+    // Validate the template against ShowDSL schema
+    const result = ShowDSLSchema.safeParse(content);
+    
+    if (!result.success) {
+      const errorMsg = result.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join('\n');
+      console.error(`[Template Error] Invalid DSL in template: ${path}`, result.error);
+      
+      const name = content.meta?.name || key;
+      templates.push({
+        key,
+        name,
+        dsl: JSON.stringify(content, null, 2),
+        disabled: true,
+        errorMessage: errorMsg
+      });
+      continue;
+    }
+
+    const validContent = result.data;
+    const name = validContent.meta?.name || key;
 
     if (seenNames.has(name)) {
       console.warn(`[Template Warning] Duplicate template name found: "${name}" in file ${path}`);
@@ -26,11 +52,9 @@ function getTemplates(): DslTemplate[] {
     templates.push({
       key,
       name,
-      dsl: JSON.stringify(content, null, 2),
+      dsl: JSON.stringify(validContent, null, 2),
     });
   }
 
   return templates;
 }
-
-export const TEMPLATES = getTemplates();
