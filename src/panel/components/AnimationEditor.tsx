@@ -1,31 +1,27 @@
-import { useState } from 'react';
-import { Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useState } from "react";
+import { Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { FromTo } from '@/bridge/types';
+} from "@/components/ui/select";
+import { FromTo } from "@/bridge/types";
 
-interface AnimationBlockEditorProps {
+interface AnimationEditorProps {
   fromValue: FromTo;
   toValue: FromTo;
   easing: string;
   onSave: (from: FromTo, to: FromTo, easing: string) => void;
-  onClose: () => void;
 }
 
-export function AnimationBlockEditor({
-  fromValue,
-  toValue,
-  easing: initialEasing,
-  onSave
-}: AnimationBlockEditorProps) {
+export const AnimationEditor = (props: AnimationEditorProps) => {
+  const { fromValue, toValue, easing: initialEasing, onSave } = props;
+
   const [fromInput, setFromInput] = useState(String(fromValue));
   const [toInput, setToInput] = useState(String(toValue));
   const [easingInput, setEasingInput] = useState(initialEasing);
@@ -42,38 +38,30 @@ export function AnimationBlockEditor({
   };
 
   return (
-    <div 
-      onMouseDown={(e) => e.stopPropagation()} 
-      onPointerDown={(e) => e.stopPropagation()}
-    >
-      <div className="flex justify-between items-center border-zinc-800">
-        <h3 className="font-semibold text-zinc-300 text-sm">Animation Properties</h3>
+    <div onMouseDown={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-between border-zinc-800">
+        <h3 className="text-sm font-semibold text-zinc-300">Animation Properties</h3>
       </div>
 
       <div className="flex flex-col gap-3 py-3">
         <div className="flex flex-col gap-1.5">
           <Label className="text-xs text-zinc-400">From Value</Label>
-          <Input 
-             type="text"
-             value={fromInput}
-             onChange={(e) => setFromInput(e.target.value)}
-          />
+          <Input type="text" value={fromInput} onChange={(e) => setFromInput(e.target.value)} />
         </div>
 
         <div className="flex flex-col gap-1.5">
           <Label className="text-xs text-zinc-400">To Value</Label>
-          <Input 
-             type="text"
-             value={toInput}
-             onChange={(e) => setToInput(e.target.value)}
-          />
+          <Input type="text" value={toInput} onChange={(e) => setToInput(e.target.value)} />
         </div>
 
         <div className="flex flex-col gap-1.5">
           <Label className="text-xs text-zinc-400">Easing</Label>
-          <Select value={easingInput} onValueChange={(v) => {
-            if (v) setEasingInput(v);
-          }}>
+          <Select
+            value={easingInput}
+            onValueChange={(v) => {
+              if (v) setEasingInput(v);
+            }}
+          >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select easing" />
             </SelectTrigger>
@@ -87,15 +75,11 @@ export function AnimationBlockEditor({
         </div>
       </div>
 
-      <div className="flex justify-end pt-2 border-t border-zinc-800">
-         <Button 
-           onClick={handleSave}
-           className="w-full h-8"
-           size="sm"
-         >
-           <Check size={12} /> Apply Changes
-         </Button>
+      <div className="flex justify-end border-t border-zinc-800 pt-2">
+        <Button onClick={handleSave} className="h-8 w-full" size="sm">
+          <Check size={12} /> Apply Changes
+        </Button>
       </div>
     </div>
   );
-}
+};

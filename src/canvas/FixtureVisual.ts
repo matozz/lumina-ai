@@ -8,15 +8,15 @@ export class FixtureVisual {
   currentColor: { r: number; g: number; b: number } = { r: 0, g: 0, b: 0 };
   private targetColor: { r: number; g: number; b: number } = { r: 0, g: 0, b: 0 };
   private fromColor: { r: number; g: number; b: number } = { r: 0, g: 0, b: 0 };
-  private progress: number = 1;     // [0, 1]
-  private duration: number = 80;    // ms
+  private progress: number = 1; // [0, 1]
+  private duration: number = 80; // ms
 
   constructor(id: number, x: number, y: number, type: string = "spot") {
     this.id = id;
     this.x = x;
     this.y = y;
     this.type = type;
-    
+
     // Determine size based on fixture type
     if (this.type === "pixel") {
       this.radius = 4;
@@ -46,9 +46,15 @@ export class FixtureVisual {
     this.progress = Math.min(1, this.progress + dt / this.duration);
     const t = 1 - Math.pow(1 - this.progress, 3);
 
-    this.currentColor.r = Math.round(this.fromColor.r + (this.targetColor.r - this.fromColor.r) * t);
-    this.currentColor.g = Math.round(this.fromColor.g + (this.targetColor.g - this.fromColor.g) * t);
-    this.currentColor.b = Math.round(this.fromColor.b + (this.targetColor.b - this.fromColor.b) * t);
+    this.currentColor.r = Math.round(
+      this.fromColor.r + (this.targetColor.r - this.fromColor.r) * t,
+    );
+    this.currentColor.g = Math.round(
+      this.fromColor.g + (this.targetColor.g - this.fromColor.g) * t,
+    );
+    this.currentColor.b = Math.round(
+      this.fromColor.b + (this.targetColor.b - this.fromColor.b) * t,
+    );
   }
 
   get currentColorHex(): string {
