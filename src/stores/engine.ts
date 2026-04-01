@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import type { CompileError, CompileResult, FullDSL } from "../bridge/types";
 
-export type SequencerMode = 'live' | 'timeline';
-export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error';
+export type SequencerMode = "live" | "timeline";
+export type CompileStatus = "idle" | "compiling" | "success" | "error";
 
 interface ActivePhaserState {
   id: string;
@@ -29,10 +29,10 @@ export const useEngineStore = create<EngineState>()(() => ({
   activePhasers: [],
   compileResult: null,
   compileErrors: [],
-  compileStatus: 'idle',
+  compileStatus: "idle",
   currentDslCode: "",
   parsedDsl: null,
-  sequencerMode: 'live',
+  sequencerMode: "live",
 }));
 
 // Actions

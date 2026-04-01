@@ -65,7 +65,7 @@ export class CanvasRenderer {
     // Fix DPI scaling
     const rect = canvas.getBoundingClientRect();
     const isResized = canvas.width !== rect.width || canvas.height !== rect.height;
-    
+
     if (isResized) {
       canvas.width = rect.width;
       canvas.height = rect.height;
@@ -74,7 +74,7 @@ export class CanvasRenderer {
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     // dark background
     ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, canvas.width, canvas.height);

@@ -1,23 +1,25 @@
-import { useRef, useEffect } from 'react';
-import { useEngineStore, engineSelectors } from '../stores/engineStore';
-import { useTimelineStore, timelineActions, timelineSelectors } from '../stores/timelineStore';
-import { DroppableTrack } from './DroppableTrack';
-import { TimelineToolbar } from './TimelineToolbar';
-import { TimelineResourcePanel } from './TimelineResourcePanel';
-import { TimelineTrackHeaders } from './TimelineTrackHeaders';
-import { TimelineGrid } from './TimelineGrid';
-import { TimelinePlayhead } from './TimelinePlayhead';
-import { cn } from '@/lib/utils';
-import { useTimelineEvents, BEAT_WIDTH } from './timeline/useTimelineEvents';
-import { useTimelineTracks } from './timeline/useTimelineTracks';
+import { useRef, useEffect } from "react";
+import { useEngineStore, engineSelectors } from "@/stores/engine";
+import { useTimelineStore, timelineActions, timelineSelectors } from "@/stores/timeline";
+import { DroppableTrack } from "./components/timeline/DroppableTrack";
+import { TimelineToolbar } from "./components/timeline/TimelineToolbar";
+import { TimelineResourcePanel } from "./components/timeline/TimelineResourcePanel";
+import { TimelineTrackHeaders } from "./components/timeline/TimelineTrackHeaders";
+import { TimelineGrid } from "./components/timeline/TimelineGrid";
+import { TimelinePlayhead } from "./components/timeline/TimelinePlayhead";
+import { cn } from "@/lib/utils";
+import { useTimelineEvents } from "./hooks/useTimelineEvents";
+import { useTimelineTracks } from "./hooks/useTimelineTracks";
+import { TimelineActionContext, BEAT_WIDTH } from "./context/TimelineContext";
+import { calculateTimelineDimensions } from "./utils";
 
-export function TimelineView() {
+export const TimelineView = () => {
   const globalBeat = useEngineStore(engineSelectors.globalBeat);
   const compileResult = useEngineStore(engineSelectors.compileResult);
-  
+
   const selectedPhaser = useTimelineStore(timelineSelectors.selectedPhaser);
   const expandedTracks = useTimelineStore(timelineSelectors.expandedTracks);
-  
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackHeadersScrollRef = useRef<HTMLDivElement>(null);
 
@@ -30,7 +32,7 @@ export function TimelineView() {
     interactionState,
     addEvent,
     deleteEvent,
-    updateAnimationBlock
+    updateAnimationBlock,
   } = useTimelineEvents();
 
   const tracks = useTimelineTracks(timelineEvents, moving, resizing);
@@ -41,11 +43,11 @@ export function TimelineView() {
       const target = e.currentTarget;
       const maxScrollTop = target.scrollHeight - target.clientHeight;
       const safeScrollTop = Math.max(0, Math.min(target.scrollTop, maxScrollTop));
-      
+
       trackHeadersScrollRef.current.scrollTop = safeScrollTop;
     }
   };
-  
+
   useEffect(() => {
     if (selectedPhaser && compileResult?.phasers) {
       if (!compileResult.phasers.some((p) => p.id === selectedPhaser)) {
@@ -59,125 +61,128 @@ export function TimelineView() {
   const handleGridClick = (e: React.MouseEvent<HTMLDivElement>, _trackName: string) => {
     if (interactionState.current.isInteracting) return;
     if (!selectedPhaser) return;
-    
+
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const scrollLeft = scrollRef.current?.scrollLeft || 0;
-    
+
     const rawBeat = (x + scrollLeft) / BEAT_WIDTH;
     const snappedBeat = Math.floor(rawBeat);
-    
-    addEvent({ 
-      beat: snappedBeat, 
-      duration: 4, 
-      action: { type: 'phaser', phaser: selectedPhaser } 
+
+    addEvent({
+      beat: snappedBeat,
+      duration: 4,
+      action: { type: "phaser", phaser: selectedPhaser },
     });
   };
 
-  const maxBeatFromEvents = tracks.flatMap((t) => t.events).length > 0 
-    ? Math.max(...tracks.flatMap((t) => t.events).map((e) => e.beat + (e.duration || 4)))
-    : 0;
-    
-  const maxBeat = Math.max(32, maxBeatFromEvents, globalBeat + 8);
-  const TOTAL_BEATS = Math.ceil(maxBeat / 4) * 4 + 4; 
-  const SCROLL_WIDTH = TOTAL_BEATS * BEAT_WIDTH;
-  const playheadX = globalBeat * BEAT_WIDTH;
+  const timelineActionsValue = {
+    onDragStart: (e: React.PointerEvent, originalIndex: number, startBeat: number) => {
+      setMoving({
+        originalIndex,
+        startClientX: e.clientX,
+        startClientY: e.clientY,
+        startBeat,
+        currentDeltaX: 0,
+        currentDeltaY: 0,
+        activeTrackName: tracks.find((t) =>
+          t.events.some((ev) => ev.originalIndex === originalIndex),
+        )?.id,
+      });
+    },
+    onResizeStart: (e: React.PointerEvent, originalIndex: number, startDuration: number) => {
+      setResizing({
+        originalIndex,
+        startClientX: e.clientX,
+        startDuration,
+        currentDeltaX: 0,
+      });
+    },
+    onDelete: deleteEvent,
+    onUpdateAnimation: updateAnimationBlock,
+    onGridClick: handleGridClick,
+  };
+
+  const {
+    totalBeats: TOTAL_BEATS,
+    scrollWidth: SCROLL_WIDTH,
+    playheadX,
+  } = calculateTimelineDimensions(tracks, globalBeat);
 
   useEffect(() => {
     if (scrollRef.current) {
       const container = scrollRef.current;
       const scrollLeft = container.scrollLeft;
       const containerWidth = container.clientWidth;
-      
+
       // Auto-scroll when playhead moves out of view
       if (playheadX > scrollLeft + containerWidth - 100) {
-        container.scrollTo({ left: Math.max(0, playheadX - 100), behavior: 'auto' });
+        container.scrollTo({ left: Math.max(0, playheadX - 100), behavior: "auto" });
       } else if (playheadX < scrollLeft) {
-        container.scrollTo({ left: Math.max(0, playheadX - 100), behavior: 'auto' });
+        container.scrollTo({ left: Math.max(0, playheadX - 100), behavior: "auto" });
       }
     }
   }, [playheadX]);
 
   return (
-    <div className={cn(
-      "h-96 border-t border-zinc-800 bg-zinc-950 flex flex-col relative shrink-0 z-20 shadow-[0_-8px_20px_rgba(0,0,0,0.5)] select-none"
-    )}>
+    <div
+      className={cn(
+        "relative z-20 flex h-96 shrink-0 flex-col border-t border-zinc-800 bg-zinc-950 shadow-[0_-8px_20px_rgba(0,0,0,0.5)] select-none",
+      )}
+    >
       <TimelineToolbar globalBeat={globalBeat} />
-      
-      <div className="flex-1 flex overflow-hidden">
-        <TimelineResourcePanel 
-          compileResult={compileResult} 
-          selectedPhaser={selectedPhaser} 
-          onSelectPhaser={timelineActions.setSelectedPhaser} 
+
+      <div className="flex flex-1 overflow-hidden">
+        <TimelineResourcePanel
+          compileResult={compileResult}
+          selectedPhaser={selectedPhaser}
+          onSelectPhaser={timelineActions.setSelectedPhaser}
         />
 
-        <TimelineTrackHeaders 
-          tracks={tracks} 
+        <TimelineTrackHeaders
+          tracks={tracks}
           activeTrackName={moving?.activeTrackName}
           scrollRef={trackHeadersScrollRef}
           globalBeat={globalBeat}
           expandedTracks={expandedTracks}
           setExpandedTracks={timelineActions.setExpandedTracks}
         />
-        
-        <div 
-          ref={scrollRef} 
-          onScroll={handleScroll}
-          className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar relative bg-[#0a0a0c] overscroll-none"
-        >
-          <div style={{ width: SCROLL_WIDTH, height: '100%', position: 'relative' }}>
-            <TimelineGrid totalBeats={TOTAL_BEATS} beatWidth={BEAT_WIDTH} />
-            
-            <div className="flex flex-col relative z-0">
-              {tracks.map((t) => (
-                <DroppableTrack
-                  key={t.name}
-                  track={t}
-                  isExpanded={expandedTracks[t.name]}
-                  beatWidth={BEAT_WIDTH}
-                  selectedPhaser={selectedPhaser}
-                  onGridClick={handleGridClick}
-                  onDragStart={(e: React.PointerEvent, originalIndex: number, startBeat: number) => {
-                    setMoving({
-                      originalIndex,
-                      startClientX: e.clientX,
-                      startClientY: e.clientY,
-                      startBeat,
-                      currentDeltaX: 0,
-                      currentDeltaY: 0,
-                      activeTrackName: t.name
-                    });
+
+        <TimelineActionContext.Provider value={timelineActionsValue}>
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="custom-scrollbar relative flex-1 overflow-x-auto overflow-y-auto overscroll-none bg-[#0a0a0c]"
+          >
+            <div style={{ width: SCROLL_WIDTH, height: "100%", position: "relative" }}>
+              <TimelineGrid totalBeats={TOTAL_BEATS} beatWidth={BEAT_WIDTH} />
+
+              <div className="relative z-0 flex flex-col">
+                {tracks.map((t) => (
+                  <DroppableTrack
+                    key={t.name}
+                    track={t}
+                    isExpanded={expandedTracks[t.name]}
+                    selectedPhaser={selectedPhaser}
+                  />
+                ))}
+                {/* Spacer matching the extra padding in TrackHeaders */}
+                <div className="h-10 w-full border-b border-zinc-800/30" />
+                <div
+                  className="min-h-25 flex-1"
+                  onClick={() => {
+                    if (!interactionState.current.isInteracting) {
+                      timelineActions.setSelectedPhaser(null);
+                    }
                   }}
-                  onResizeStart={(e: React.PointerEvent, originalIndex: number, startDuration: number) => {
-                    setResizing({
-                      originalIndex,
-                      startClientX: e.clientX,
-                      startDuration,
-                      currentDeltaX: 0
-                    });
-                  }}
-                  onDelete={deleteEvent}
-                  onUpdateAnimation={updateAnimationBlock}
                 />
-              ))}
-              {/* Spacer matching the extra padding in TrackHeaders */}
-              <div 
-                className="w-full h-10 border-b border-zinc-800/30" 
-              />
-              <div 
-                className="flex-1 min-h-25" 
-                onClick={() => {
-                  if (!interactionState.current.isInteracting) {
-                    timelineActions.setSelectedPhaser(null);
-                  }
-                }}
-              />
+              </div>
+
+              <TimelinePlayhead playheadX={playheadX} />
             </div>
-            
-            <TimelinePlayhead playheadX={playheadX} />
           </div>
-        </div>
+        </TimelineActionContext.Provider>
       </div>
     </div>
   );
-}
+};

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export interface FixtureOutput {
   id: number;
-  r: number;    // 0-255
+  r: number; // 0-255
   g: number;
   b: number;
   dimmer: number; // 0-1
@@ -75,6 +75,7 @@ export const CustomFixturePosSchema = z.object({
 });
 
 export const FromToSchema = z.union([z.string(), z.number()]);
+export const EasingSchema = z.enum(["linear", "ease_in", "ease_out", "ease_in_out"]);
 
 export const GeneratorDSLSchema = z.discriminatedUnion("shape", [
   z.object({
@@ -112,10 +113,7 @@ export const LayoutDSLSchema = z.object({
 
 export const GroupDSLSchema = z.object({
   name: z.string(),
-  fixtures: z.union([
-    z.array(z.number()),
-    z.object({ range: z.tuple([z.number(), z.number()]) }),
-  ]),
+  fixtures: z.union([z.array(z.number()), z.object({ range: z.tuple([z.number(), z.number()]) })]),
   sort_by: z.string().optional(),
 });
 
@@ -133,7 +131,12 @@ export const PhaserStepDSLSchema = z.object({
 export const PhaseConfigDSLSchema = z.object({
   mode: z.enum(["spread", "grouped"]),
   spread: z.object({ from: z.number().min(0).max(100), to: z.number().min(0).max(100) }).optional(),
-  grouped: z.object({ group_size: z.number(), spread: z.tuple([z.number().min(0).max(100), z.number().min(0).max(100)]) }).optional(),
+  grouped: z
+    .object({
+      group_size: z.number(),
+      spread: z.tuple([z.number().min(0).max(100), z.number().min(0).max(100)]),
+    })
+    .optional(),
 });
 
 export const PhaserDSLSchema = z.object({
@@ -155,7 +158,7 @@ export const TimelineActionDefDSLSchema = z.discriminatedUnion("type", [
     target: z.string(),
     from: FromToSchema,
     to: FromToSchema,
-    easing: z.enum(["linear", "ease_in", "ease_out", "ease_in_out"]).optional(),
+    easing: EasingSchema.optional(),
   }),
 ]);
 
@@ -189,6 +192,7 @@ export type FormulaDef = z.infer<typeof FormulaDefSchema>;
 export type SvgPathDef = z.infer<typeof SvgPathDefSchema>;
 export type CustomFixturePos = z.infer<typeof CustomFixturePosSchema>;
 export type FromTo = z.infer<typeof FromToSchema>;
+export type Easing = z.infer<typeof EasingSchema>;
 export type GeneratorDSL = z.infer<typeof GeneratorDSLSchema>;
 export type LayoutDSL = z.infer<typeof LayoutDSLSchema>;
 export type GroupDSL = z.infer<typeof GroupDSLSchema>;

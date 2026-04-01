@@ -19,27 +19,28 @@ export const useTimelineStore = create<TimelineState>()(() => ({
 export const timelineActions = {
   setEvents: (events: UITimelineEvent[]) => useTimelineStore.setState({ events }),
   setSelectedPhaser: (id: string | null) => useTimelineStore.setState({ selectedPhaser: id }),
-  setExpandedTracks: (expandedTracks: Record<string, boolean>) => useTimelineStore.setState({ expandedTracks }),
+  setExpandedTracks: (expandedTracks: Record<string, boolean>) =>
+    useTimelineStore.setState({ expandedTracks }),
   toggleTrackExpanded: (trackName: string) => {
     useTimelineStore.setState((state) => ({
       expandedTracks: {
         ...state.expandedTracks,
-        [trackName]: !state.expandedTracks[trackName]
-      }
+        [trackName]: !state.expandedTracks[trackName],
+      },
     }));
   },
   addEvent: (event: TimelineEventDSL) => {
     // Note: We might need to rethink how to sync this back to DSL
     // For now, it will be handled by the UI component orchestrator
     useTimelineStore.setState((state) => ({
-      events: [...state.events, { ...event, originalIndex: state.events.length }]
+      events: [...state.events, { ...event, originalIndex: state.events.length }],
     }));
   },
   deleteEvent: (originalIndex: number) => {
     useTimelineStore.setState((state) => ({
-      events: state.events.filter(e => e.originalIndex !== originalIndex)
+      events: state.events.filter((e) => e.originalIndex !== originalIndex),
     }));
-  }
+  },
 };
 
 export const timelineSelectors = {
