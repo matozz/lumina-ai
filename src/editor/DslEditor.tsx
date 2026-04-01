@@ -1,7 +1,7 @@
 import Editor from "@monaco-editor/react";
 import { useEffect, useRef, useState } from "react";
 import { engine } from "../bridge/commands";
-import { useUiStore } from "../stores/uiStore";
+import { useEngineStore, engineActions, engineSelectors } from "../stores/engineStore";
 import { getTemplates, DslTemplate } from "./templates";
 import { XCircle, FileCode2, AlertTriangle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -16,8 +16,8 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function DslEditor() {
-  const { currentDslCode: code, setCurrentDslCode: setCode } = useUiStore();
-  const { compileErrors, setCompileResult, setCompileErrors, setCompileStatus } = useUiStore();
+  const code = useEngineStore(engineSelectors.currentDslCode);
+  const compileErrors = useEngineStore(engineSelectors.compileErrors);
 
   const [templates, setTemplates] = useState<DslTemplate[]>(getTemplates);
   const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>("combined");
@@ -30,28 +30,28 @@ export function DslEditor() {
       // Find the first valid template to set as default
       const firstValidTemplate = templates.find(t => !t.disabled) || templates[0];
       if (firstValidTemplate) {
-        setCode(firstValidTemplate.dsl);
+        engineActions.setCurrentDslCode(firstValidTemplate.dsl);
         setSelectedTemplateKey(firstValidTemplate.key);
       }
     }
   }, []); // Run only on mount
 
   const compileCode = async (codeToCompile: string) => {
-    setCompileStatus('compiling');
+    engineActions.setCompileStatus('compiling');
     try {
       const res = await engine.loadDSL(codeToCompile);
       if (res.success) {
-        setCompileResult(res);
-        setCompileErrors([]);
-        setCompileStatus('success');
+        engineActions.setCompileResult(res);
+        engineActions.setCompileErrors([]);
+        engineActions.setCompileStatus('success');
         window.dispatchEvent(new CustomEvent("engine:layout-ready"));
       } else {
-        setCompileErrors(res.errors);
-        setCompileStatus('error');
+        engineActions.setCompileErrors(res.errors);
+        engineActions.setCompileStatus('error');
       }
     } catch (e: any) {
       console.error(e);
-      setCompileStatus('error');
+      engineActions.setCompileStatus('error');
     }
   };
 
@@ -73,13 +73,13 @@ export function DslEditor() {
     if (!key || key === "custom") return;
     const template = templates.find(t => t.key === key);
     if (template && !template.disabled) {
-      setCode(template.dsl);
+      engineActions.setCurrentDslCode(template.dsl);
       setSelectedTemplateKey(key);
     }
   };
 
   const handleEditorChange = (val: string | undefined) => {
-    setCode(val || "");
+    engineActions.setCurrentDslCode(val || "");
     
     // If the user types something that matches a template exactly, select it
     // Otherwise, mark it as custom

@@ -1,7 +1,7 @@
 import React from 'react';
 import { DraggableBlock } from './DraggableBlock';
 import { cn } from '@/lib/utils';
-import type { TimelineEventDSL } from '../bridge/types';
+import type { FromTo, TimelineEventDSL } from '../bridge/types';
 
 export interface UITimelineEvent extends TimelineEventDSL {
   id: string;
@@ -27,7 +27,7 @@ interface TrackProps {
   onDragStart: (e: React.PointerEvent, originalIndex: number, startBeat: number) => void;
   onResizeStart: (e: React.PointerEvent, originalIndex: number, startDuration: number) => void;
   onDelete: (originalIndex: number) => void;
-  onUpdateAnimation?: (eventIndex: number, fromValue: any, toValue: any, easing: string) => void;
+  onUpdateAnimation?: (eventIndex: number, fromValue: FromTo, toValue: FromTo, easing: string) => void;
 }
 
 export function DroppableTrack({ 

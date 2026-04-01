@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CompileResult, CompileError, LayoutCoord, ShowDSL } from "./types";
+import type { CompileResult, CompileError, LayoutCoord, FullDSL } from "./types";
 
 export const engine = {
   loadDSL: (json: string) =>
@@ -19,11 +19,11 @@ export const engine = {
   stopPhaser: (id: string) =>
     invoke("stop_phaser", { phaserId: id }),
 
-  saveShow: (path: string, dsl: ShowDSL) =>
+  saveShow: (path: string, dsl: FullDSL) =>
     invoke("save_show", { path, dslJson: JSON.stringify(dsl) }),
 
   loadShow: (path: string) =>
-    invoke<string>("load_show", { path }).then(json => JSON.parse(json) as ShowDSL),
+    invoke<string>("load_show", { path }).then(json => JSON.parse(json) as FullDSL),
 
   setSequencerMode: (mode: "live" | "timeline") => 
     invoke("set_sequencer_mode", { mode }),

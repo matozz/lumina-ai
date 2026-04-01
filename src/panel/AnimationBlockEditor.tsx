@@ -10,12 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { FromTo } from '@/bridge/types';
 
 interface AnimationBlockEditorProps {
-  fromValue: any;
-  toValue: any;
+  fromValue: FromTo;
+  toValue: FromTo;
   easing: string;
-  onSave: (from: any, to: any, easing: string) => void;
+  onSave: (from: FromTo, to: FromTo, easing: string) => void;
   onClose: () => void;
 }
 

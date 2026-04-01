@@ -7,7 +7,7 @@ export function useTimelineTracks(
   timelineEvents: TimelineEventDSL[],
   moving: MovingState | null,
   resizing: ResizingState | null
-) {
+): TimelineTrackData[] {
   return useMemo(() => {
     const trackMap = new Map<string, UITimelineEvent[]>();
     const animationsMap = new Map<string, UITimelineEvent[]>();
@@ -15,7 +15,7 @@ export function useTimelineTracks(
     timelineEvents.forEach((event: TimelineEventDSL, index: number) => {
       let displayBeat = event.beat;
       let displayDuration = event.duration || 4;
-      let displayType = event.action?.type;
+      let displayType = event.action.type;
       
       // Handle Animate Actions differently
       if (displayType === 'animate' && event.action.type === 'animate') {
@@ -81,7 +81,9 @@ export function useTimelineTracks(
         originalIndex: index,
         beat: displayBeat,
         duration: displayDuration,
-        action: { type: displayType, phaser: displayTarget } as any
+        action: displayType === 'phaser' 
+          ? { type: 'phaser', phaser: displayTarget }
+          : event.action
       };
       
       if (!trackMap.has(trackId)) {

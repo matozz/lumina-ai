@@ -9,17 +9,17 @@ interface TrackHeadersProps {
   scrollRef?: React.RefObject<HTMLDivElement | null>;
   globalBeat?: number;
   expandedTracks: Record<string, boolean>;
-  setExpandedTracks: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  setExpandedTracks: (tracks: Record<string, boolean>) => void;
 }
 
 export function TimelineTrackHeaders({ tracks, activeTrackName, scrollRef, globalBeat = 0, expandedTracks, setExpandedTracks }: TrackHeadersProps) {
 
   const toggleTrack = (trackId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setExpandedTracks(prev => ({
-      ...prev,
-      [trackId]: !prev[trackId]
-    }));
+    setExpandedTracks({
+      ...expandedTracks,
+      [trackId]: !expandedTracks[trackId]
+    });
   };
 
   return (

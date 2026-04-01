@@ -1,4 +1,4 @@
-import { ShowDSLSchema } from "@/bridge/types";
+import { FullDSLSchema } from "@/bridge/types";
 
 export interface DslTemplate {
   key: string;
@@ -24,7 +24,7 @@ export function getTemplates(): DslTemplate[] {
     const content = json.default || json;
 
     // Validate the template against ShowDSL schema
-    const result = ShowDSLSchema.safeParse(content);
+    const result = FullDSLSchema.safeParse(content);
     
     if (!result.success) {
       const errorMsg = result.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join('\n');

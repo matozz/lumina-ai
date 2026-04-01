@@ -1,11 +1,15 @@
-import { useUiStore, SequencerMode } from "../stores/uiStore";
+import { useEngineStore, engineActions, engineSelectors, SequencerMode } from "../stores/engineStore";
 import { engine } from "../bridge/commands";
 import { Play, Pause, Square, Activity, Clock, Settings2, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 export function ControlPanel() {
-  const { isPlaying, tempo, compileResult, activePhasers, sequencerMode, setSequencerMode } = useUiStore();
+  const isPlaying = useEngineStore(engineSelectors.isPlaying);
+  const tempo = useEngineStore(engineSelectors.tempo);
+  const compileResult = useEngineStore(engineSelectors.compileResult);
+  const activePhasers = useEngineStore(engineSelectors.activePhasers);
+  const sequencerMode = useEngineStore(engineSelectors.sequencerMode);
 
   const handlePlay = async () => {
     if (isPlaying) {
@@ -18,13 +22,13 @@ export function ControlPanel() {
   const handleStop = async () => {
     await engine.stop();
     await engine.resetBeat();
-    useUiStore.getState().setGlobalBeat(0);
+    engineActions.setGlobalBeat(0);
   };
 
   const handleTempoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTempo = parseInt(e.target.value, 10);
     await engine.setTempo(newTempo);
-    useUiStore.getState().setTempo(newTempo);
+    engineActions.setTempo(newTempo);
   };
 
   const handleModeChange = async (mode: SequencerMode) => {
@@ -32,11 +36,11 @@ export function ControlPanel() {
       if (mode !== sequencerMode) {
         await engine.stop();
         await engine.resetBeat();
-        useUiStore.getState().setGlobalBeat(0);
-        useUiStore.getState().setActivePhasers([]); // Explicitly clear UI state
+        engineActions.setGlobalBeat(0);
+        engineActions.setActivePhasers([]); // Explicitly clear UI state
       }
       await engine.setSequencerMode(mode);
-      setSequencerMode(mode);
+      engineActions.setSequencerMode(mode);
     } catch (e) {
       console.error("Failed to change sequencer mode", e);
     }
@@ -45,7 +49,7 @@ export function ControlPanel() {
   const handlePhaserToggle = async (id: string, multiplier: number = 1.0) => {
     if (!isPlaying) {
       await engine.play();
-      useUiStore.getState().setIsPlaying(true);
+      engineActions.setIsPlaying(true);
     }
     
     if (sequencerMode !== 'live') {
@@ -65,7 +69,8 @@ export function ControlPanel() {
     }
   };
 
-  const currentBeatInBar = Math.floor(useUiStore(state => state.globalBeat)) % 4;
+  const globalBeat = useEngineStore(engineSelectors.globalBeat);
+  const currentBeatInBar = Math.floor(globalBeat) % 4;
 
   return (
     <div className={cn("flex flex-col w-64 border-l border-zinc-800 bg-zinc-950 text-zinc-100 shadow-xl z-10 shrink-0")}>

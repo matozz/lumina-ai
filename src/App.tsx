@@ -4,25 +4,25 @@ import { ControlPanel } from "./panel/ControlPanel";
 import { DslEditor } from "./editor/DslEditor";
 import { TimelineView } from "./panel/TimelineView";
 import { onStateChange } from "./bridge/events";
-import { useUiStore } from "./stores/uiStore";
+import { useEngineStore, engineActions, engineSelectors } from "./stores/engineStore";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./App.css";
 
 function App() {
-  const { setIsPlaying, setTempo, setGlobalBeat, setActivePhasers, sequencerMode } = useUiStore();
+  const sequencerMode = useEngineStore(engineSelectors.sequencerMode);
 
   useEffect(() => {
     const unlisten = onStateChange((state) => {
-      setIsPlaying(state.is_playing);
-      setTempo(state.tempo);
-      setGlobalBeat(state.global_beat);
-      setActivePhasers(state.active_phasers);
+      engineActions.setIsPlaying(state.is_playing);
+      engineActions.setTempo(state.tempo);
+      engineActions.setGlobalBeat(state.global_beat);
+      engineActions.setActivePhasers(state.active_phasers);
     });
 
     return () => {
       unlisten.then(fn => fn());
     };
-  }, [setIsPlaying, setTempo, setGlobalBeat, setActivePhasers]);
+  }, []);
 
   return (
     <TooltipProvider delay={200}>

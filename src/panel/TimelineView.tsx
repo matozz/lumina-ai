@@ -1,5 +1,6 @@
-import { useRef, useEffect, useState } from 'react';
-import { useUiStore } from '../stores/uiStore';
+import { useRef, useEffect } from 'react';
+import { useEngineStore, engineSelectors } from '../stores/engineStore';
+import { useTimelineStore, timelineActions, timelineSelectors } from '../stores/timelineStore';
 import { DroppableTrack } from './DroppableTrack';
 import { TimelineToolbar } from './TimelineToolbar';
 import { TimelineResourcePanel } from './TimelineResourcePanel';
@@ -11,13 +12,14 @@ import { useTimelineEvents, BEAT_WIDTH } from './timeline/useTimelineEvents';
 import { useTimelineTracks } from './timeline/useTimelineTracks';
 
 export function TimelineView() {
-  const { globalBeat, compileResult } = useUiStore();
+  const globalBeat = useEngineStore(engineSelectors.globalBeat);
+  const compileResult = useEngineStore(engineSelectors.compileResult);
+  
+  const selectedPhaser = useTimelineStore(timelineSelectors.selectedPhaser);
+  const expandedTracks = useTimelineStore(timelineSelectors.expandedTracks);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackHeadersScrollRef = useRef<HTMLDivElement>(null);
-  
-  const [selectedPhaser, setSelectedPhaser] = useState<string | null>(null);
-  const [expandedTracks, setExpandedTracks] = useState<Record<string, boolean>>({});
 
   const {
     timelineEvents,
@@ -46,11 +48,11 @@ export function TimelineView() {
   
   useEffect(() => {
     if (selectedPhaser && compileResult?.phasers) {
-      if (!compileResult.phasers.some((p: any) => p.id === selectedPhaser)) {
-        setSelectedPhaser(null);
+      if (!compileResult.phasers.some((p) => p.id === selectedPhaser)) {
+        timelineActions.setSelectedPhaser(null);
       }
     } else if (!compileResult?.phasers || compileResult.phasers.length === 0) {
-      setSelectedPhaser(null);
+      timelineActions.setSelectedPhaser(null);
     }
   }, [compileResult, selectedPhaser]);
 
@@ -72,8 +74,8 @@ export function TimelineView() {
     });
   };
 
-  const maxBeatFromEvents = tracks.flatMap((t: any) => t.events).length > 0 
-    ? Math.max(...tracks.flatMap((t: any) => t.events).map((e: any) => e.beat + (e.duration || 4)))
+  const maxBeatFromEvents = tracks.flatMap((t) => t.events).length > 0 
+    ? Math.max(...tracks.flatMap((t) => t.events).map((e) => e.beat + (e.duration || 4)))
     : 0;
     
   const maxBeat = Math.max(32, maxBeatFromEvents, globalBeat + 8);
@@ -106,7 +108,7 @@ export function TimelineView() {
         <TimelineResourcePanel 
           compileResult={compileResult} 
           selectedPhaser={selectedPhaser} 
-          onSelectPhaser={setSelectedPhaser} 
+          onSelectPhaser={timelineActions.setSelectedPhaser} 
         />
 
         <TimelineTrackHeaders 
@@ -115,7 +117,7 @@ export function TimelineView() {
           scrollRef={trackHeadersScrollRef}
           globalBeat={globalBeat}
           expandedTracks={expandedTracks}
-          setExpandedTracks={setExpandedTracks}
+          setExpandedTracks={timelineActions.setExpandedTracks}
         />
         
         <div 
@@ -127,7 +129,7 @@ export function TimelineView() {
             <TimelineGrid totalBeats={TOTAL_BEATS} beatWidth={BEAT_WIDTH} />
             
             <div className="flex flex-col relative z-0">
-              {tracks.map((t: any) => (
+              {tracks.map((t) => (
                 <DroppableTrack
                   key={t.name}
                   track={t}
@@ -166,7 +168,7 @@ export function TimelineView() {
                 className="flex-1 min-h-25" 
                 onClick={() => {
                   if (!interactionState.current.isInteracting) {
-                    setSelectedPhaser(null);
+                    timelineActions.setSelectedPhaser(null);
                   }
                 }}
               />

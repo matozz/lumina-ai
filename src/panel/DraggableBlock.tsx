@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import type { UITimelineEvent } from './DroppableTrack';
 import { AnimationBlockEditor } from './AnimationBlockEditor';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { FromTo } from '@/bridge/types';
 
 interface BlockProps {
   event: UITimelineEvent;
@@ -11,7 +12,7 @@ interface BlockProps {
   onDragStart: (e: React.PointerEvent, originalIndex: number, startBeat: number) => void;
   onResizeStart: (e: React.PointerEvent, originalIndex: number, startDuration: number) => void;
   onDelete: (originalIndex: number) => void;
-  onUpdateAnimation?: (eventIndex: number, fromValue: any, toValue: any, easing: string) => void;
+  onUpdateAnimation?: (eventIndex: number, fromValue: FromTo, toValue: FromTo, easing: string) => void;
 }
 
 export function DraggableBlock({ 
@@ -41,8 +42,8 @@ export function DraggableBlock({
   }
 
   // Extract from/to from keyframes. Default to 0 -> 1
-  let fromValue: any = 0;
-  let toValue: any = 1;
+  let fromValue: FromTo = 0;
+  let toValue: FromTo = 1;
   let easing = 'linear';
   
   if (isAnimate && event.action.type === 'animate') {
@@ -126,7 +127,7 @@ export function DraggableBlock({
               fromValue={fromValue}
               toValue={toValue}
               easing={easing}
-              onSave={(newFrom: any, newTo: any, newEasing: string) => {
+              onSave={(newFrom: FromTo, newTo: FromTo, newEasing: string) => {
                   onUpdateAnimation(event.originalIndex, newFrom, newTo, newEasing);
                   setIsEditorOpen(false);
               }}

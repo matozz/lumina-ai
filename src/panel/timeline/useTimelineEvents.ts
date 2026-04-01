@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { TimelineEventDSL } from "../../bridge/types";
-import { useUiStore } from "../../stores/uiStore";
+import type { FromTo, TimelineEventDSL } from "../../bridge/types";
+import { useEngineStore, engineActions, engineSelectors } from "../../stores/engineStore";
 
 export const BEAT_WIDTH = 40;
 
@@ -22,7 +22,8 @@ export interface ResizingState {
 }
 
 export function useTimelineEvents() {
-  const { parsedDsl, currentDslCode, setCurrentDslCode } = useUiStore();
+  const parsedDsl = useEngineStore(engineSelectors.parsedDsl);
+  const currentDslCode = useEngineStore(engineSelectors.currentDslCode);
   
   const [moving, setMoving] = useState<MovingState | null>(null);
   const [resizing, setResizing] = useState<ResizingState | null>(null);
@@ -86,23 +87,23 @@ export function useTimelineEvents() {
       
       dslObj.timeline.events.push(newEvent);
       dslObj.timeline.events = resolveOverlaps(dslObj.timeline.events);
-      setCurrentDslCode(JSON.stringify(dslObj, null, 2));
+      engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
     } catch (err) {
       console.error("Failed to update DSL", err);
     }
-  }, [currentDslCode, setCurrentDslCode, resolveOverlaps]);
+  }, [currentDslCode, resolveOverlaps]);
 
   const deleteEvent = useCallback((originalIndex: number) => {
     try {
       const dslObj = JSON.parse(currentDslCode);
       if (dslObj.timeline?.events) {
         dslObj.timeline.events.splice(originalIndex, 1);
-        setCurrentDslCode(JSON.stringify(dslObj, null, 2));
+        engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
       }
     } catch (err) {}
-  }, [currentDslCode, setCurrentDslCode]);
+  }, [currentDslCode]);
 
-  const updateAnimationBlock = useCallback((eventIndex: number, fromValue: any, toValue: any, easing: string) => {
+  const updateAnimationBlock = useCallback((eventIndex: number, fromValue: FromTo, toValue: FromTo, easing: string) => {
     try {
       const dslObj = JSON.parse(currentDslCode);
       const ev = dslObj.timeline?.events?.[eventIndex];
@@ -116,12 +117,12 @@ export function useTimelineEvents() {
            delete ev.action.keyframes;
         }
 
-        setCurrentDslCode(JSON.stringify(dslObj, null, 2));
+        engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
       }
     } catch (err) {
       console.error("Failed to update animation block", err);
     }
-  }, [currentDslCode, setCurrentDslCode]);
+  }, [currentDslCode]);
 
   useEffect(() => {
     if (!resizing && !moving) return;
@@ -161,7 +162,7 @@ export function useTimelineEvents() {
             if (dslObj.timeline.events[resizing.originalIndex].duration !== newDuration) {
               dslObj.timeline.events[resizing.originalIndex].duration = newDuration;
               dslObj.timeline.events = resolveOverlaps(dslObj.timeline.events);
-              setCurrentDslCode(JSON.stringify(dslObj, null, 2));
+              engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
             }
           }
         } catch (err) {}
@@ -180,7 +181,7 @@ export function useTimelineEvents() {
               if (ev.beat !== newBeat) {
                 ev.beat = newBeat;
                 dslObj.timeline.events = resolveOverlaps(dslObj.timeline.events);
-                setCurrentDslCode(JSON.stringify(dslObj, null, 2));
+                engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
               }
             } else if (ev.action.type === 'phaser') {
               // Extract the target phaser ID if dragging onto a specific track
@@ -197,7 +198,7 @@ export function useTimelineEvents() {
                 ev.action.phaser = targetPhaserId;
 
                 dslObj.timeline.events = resolveOverlaps(dslObj.timeline.events);
-                setCurrentDslCode(JSON.stringify(dslObj, null, 2));
+                engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
               }
             }
           }
@@ -219,7 +220,7 @@ export function useTimelineEvents() {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };
-  }, [resizing, moving, currentDslCode, setCurrentDslCode, resolveOverlaps]);
+  }, [resizing, moving, currentDslCode, resolveOverlaps]);
 
   return {
     timelineEvents,
