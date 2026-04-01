@@ -41,6 +41,9 @@ export function useTimelineEvents() {
       if (e.action.type === 'phaser') {
         groupKey = `phaser:${e.action.phaser}`;
       } else if (e.action.type === 'animate') {
+        // We use a unique group key for each animate block if we want them to overlap freely, 
+        // OR we can keep them in the same target track but let them sit side-by-side without overriding each other completely.
+        // For animate events, we actually want to allow them on the same track sequentially.
         groupKey = `animate:${e.action.target}`;
       }
       
@@ -52,13 +55,20 @@ export function useTimelineEvents() {
     
     tracks.forEach((trackEvents) => {
       trackEvents.sort((a, b) => a.beat - b.beat);
+      
       for (let i = 0; i < trackEvents.length; i++) {
         const current = trackEvents[i];
+        
+        // For animations, we just cap the duration to the next block so they don't visually overlap
         if (i < trackEvents.length - 1) {
           const next = trackEvents[i + 1];
           const currentEnd = current.beat + (current.duration || 4);
+          
           if (currentEnd > next.beat) {
             current.duration = Math.max(0.5, next.beat - current.beat);
+            
+            // If it's an animate block, duration limits it
+            // No inner keyframes to update anymore
           }
         }
         resolvedEvents.push(current);
@@ -92,57 +102,24 @@ export function useTimelineEvents() {
     } catch (err) {}
   }, [currentDslCode, setCurrentDslCode]);
 
-  const addKeyframe = useCallback((eventIndex: number, time: number) => {
+  const updateAnimationBlock = useCallback((eventIndex: number, fromValue: any, toValue: any, easing: string) => {
     try {
       const dslObj = JSON.parse(currentDslCode);
       const ev = dslObj.timeline?.events?.[eventIndex];
       if (ev && ev.action.type === 'animate') {
-        const keyframes = ev.action.keyframes || [];
-        // Guess a value based on type of animation, for now default to 1.0 or 0
-        const newValue = 1.0; 
-        keyframes.push({ time, value: newValue });
-        // Sort by time
-        keyframes.sort((a: any, b: any) => a.time - b.time);
-        ev.action.keyframes = keyframes;
-        setCurrentDslCode(JSON.stringify(dslObj, null, 2));
-      }
-    } catch (err) {
-      console.error("Failed to add keyframe", err);
-    }
-  }, [currentDslCode, setCurrentDslCode]);
-
-  const removeKeyframe = useCallback((eventIndex: number, keyframeIndex: number) => {
-    try {
-      const dslObj = JSON.parse(currentDslCode);
-      const ev = dslObj.timeline?.events?.[eventIndex];
-      if (ev && ev.action.type === 'animate' && ev.action.keyframes) {
-        ev.action.keyframes.splice(keyframeIndex, 1);
-        setCurrentDslCode(JSON.stringify(dslObj, null, 2));
-      }
-    } catch (err) {
-      console.error("Failed to remove keyframe", err);
-    }
-  }, [currentDslCode, setCurrentDslCode]);
-
-  const updateKeyframe = useCallback((eventIndex: number, keyframeIndex: number, updates: Partial<{time: number, value: any, easing: string}>) => {
-    try {
-      const dslObj = JSON.parse(currentDslCode);
-      const ev = dslObj.timeline?.events?.[eventIndex];
-      if (ev && ev.action.type === 'animate' && ev.action.keyframes) {
-        const kf = ev.action.keyframes[keyframeIndex];
-        if (kf) {
-          if (updates.time !== undefined) kf.time = updates.time;
-          if (updates.value !== undefined) kf.value = updates.value;
-          if (updates.easing !== undefined) kf.easing = updates.easing;
-          
-          if (updates.time !== undefined) {
-             ev.action.keyframes.sort((a: any, b: any) => a.time - b.time);
-          }
-          setCurrentDslCode(JSON.stringify(dslObj, null, 2));
+        ev.action.from = fromValue;
+        ev.action.to = toValue;
+        ev.action.easing = easing;
+        
+        // Remove legacy keyframes if present
+        if (ev.action.keyframes !== undefined) {
+           delete ev.action.keyframes;
         }
+
+        setCurrentDslCode(JSON.stringify(dslObj, null, 2));
       }
     } catch (err) {
-      console.error("Failed to update keyframe", err);
+      console.error("Failed to update animation block", err);
     }
   }, [currentDslCode, setCurrentDslCode]);
 
@@ -253,8 +230,6 @@ export function useTimelineEvents() {
     interactionState,
     addEvent,
     deleteEvent,
-    addKeyframe,
-    removeKeyframe,
-    updateKeyframe
+    updateAnimationBlock
   };
 }

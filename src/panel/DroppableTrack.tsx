@@ -27,9 +27,7 @@ interface TrackProps {
   onDragStart: (e: React.PointerEvent, originalIndex: number, startBeat: number) => void;
   onResizeStart: (e: React.PointerEvent, originalIndex: number, startDuration: number) => void;
   onDelete: (originalIndex: number) => void;
-  onAddKeyframe?: (eventIndex: number, time: number) => void;
-  onUpdateKeyframe?: (eventIndex: number, keyframeIndex: number, updates: any) => void;
-  onDeleteKeyframe?: (eventIndex: number, keyframeIndex: number) => void;
+  onUpdateAnimation?: (eventIndex: number, fromValue: any, toValue: any, easing: string) => void;
 }
 
 export function DroppableTrack({ 
@@ -41,9 +39,7 @@ export function DroppableTrack({
   onDragStart, 
   onResizeStart, 
   onDelete,
-  onAddKeyframe,
-  onUpdateKeyframe,
-  onDeleteKeyframe
+  onUpdateAnimation
 }: TrackProps) {
   return (
     <div className="flex flex-col">
@@ -67,9 +63,7 @@ export function DroppableTrack({
             onDragStart={onDragStart}
             onResizeStart={onResizeStart}
             onDelete={onDelete}
-            onAddKeyframe={onAddKeyframe}
-            onUpdateKeyframe={onUpdateKeyframe}
-            onDeleteKeyframe={onDeleteKeyframe}
+            onUpdateAnimation={onUpdateAnimation}
           />
         ))}
       </div>
@@ -92,9 +86,7 @@ export function DroppableTrack({
                 onDragStart={onDragStart}
                 onResizeStart={onResizeStart}
                 onDelete={onDelete}
-                onAddKeyframe={onAddKeyframe}
-                onUpdateKeyframe={onUpdateKeyframe}
-                onDeleteKeyframe={onDeleteKeyframe}
+                onUpdateAnimation={onUpdateAnimation}
               />
             ))}
         </div>

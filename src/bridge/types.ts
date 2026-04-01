@@ -143,12 +143,6 @@ export const PhaserDSLSchema = z.object({
   phase: PhaseConfigDSLSchema,
 });
 
-export const KeyframeDSLSchema = z.object({
-  time: z.number(),
-  value: z.any(),
-  easing: z.string().optional(),
-});
-
 export const TimelineActionDefDSLSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("phaser"),
@@ -157,7 +151,9 @@ export const TimelineActionDefDSLSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("animate"),
     target: z.string(),
-    keyframes: z.array(KeyframeDSLSchema),
+    from: z.any(),
+    to: z.any(),
+    easing: z.enum(["linear", "ease_in", "ease_out", "ease_in_out"]).optional(),
   }),
 ]);
 
@@ -196,7 +192,6 @@ export type GroupDSL = z.infer<typeof GroupDSLSchema>;
 export type PhaserStepDSL = z.infer<typeof PhaserStepDSLSchema>;
 export type PhaseConfigDSL = z.infer<typeof PhaseConfigDSLSchema>;
 export type PhaserDSL = z.infer<typeof PhaserDSLSchema>;
-export type KeyframeDSL = z.infer<typeof KeyframeDSLSchema>;
 export type TimelineActionDefDSL = z.infer<typeof TimelineActionDefDSLSchema>;
 export type TimelineEventDSL = z.infer<typeof TimelineEventDSLSchema>;
 export type TimelineDSL = z.infer<typeof TimelineDSLSchema>;

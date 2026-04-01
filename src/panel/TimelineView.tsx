@@ -28,9 +28,7 @@ export function TimelineView() {
     interactionState,
     addEvent,
     deleteEvent,
-    addKeyframe,
-    removeKeyframe,
-    updateKeyframe
+    updateAnimationBlock
   } = useTimelineEvents();
 
   const tracks = useTimelineTracks(timelineEvents, moving, resizing);
@@ -157,9 +155,7 @@ export function TimelineView() {
                     });
                   }}
                   onDelete={deleteEvent}
-                  onAddKeyframe={addKeyframe}
-                  onUpdateKeyframe={updateKeyframe}
-                  onDeleteKeyframe={removeKeyframe}
+                  onUpdateAnimation={updateAnimationBlock}
                 />
               ))}
               {/* Spacer matching the extra padding in TrackHeaders */}

@@ -1250,52 +1250,46 @@
       },
       {
         "beat": 0,
-        "duration": 32,
+        "duration": 16,
         "action": {
           "type": "animate",
           "target": "phaser:circle_ripple.multiplier",
-          "keyframes": [
-            {
-              "time": 0,
-              "value": 0.5,
-              "easing": "linear"
-            },
-            {
-              "time": 16,
-              "value": 4,
-              "easing": "ease_in_out"
-            },
-            {
-              "time": 32,
-              "value": 0.5,
-              "easing": "linear"
-            }
-          ]
+          "from": 0.5,
+          "to": 4,
+          "easing": "ease_in_out"
+        }
+      },
+      {
+        "beat": 16,
+        "duration": 16,
+        "action": {
+          "type": "animate",
+          "target": "phaser:circle_ripple.multiplier",
+          "from": 4,
+          "to": 0.5,
+          "easing": "linear"
         }
       },
       {
         "beat": 0,
-        "duration": 32,
+        "duration": 16,
         "action": {
           "type": "animate",
           "target": "phaser:circle_ripple.color",
-          "keyframes": [
-            {
-              "time": 0,
-              "value": "#ff0000",
-              "easing": "linear"
-            },
-            {
-              "time": 16,
-              "value": "#00ff00",
-              "easing": "linear"
-            },
-            {
-              "time": 32,
-              "value": "#0000ff",
-              "easing": "linear"
-            }
-          ]
+          "from": "#ff0000",
+          "to": "#00ff00",
+          "easing": "linear"
+        }
+      },
+      {
+        "beat": 16,
+        "duration": 16,
+        "action": {
+          "type": "animate",
+          "target": "phaser:circle_ripple.color",
+          "from": "#00ff00",
+          "to": "#0000ff",
+          "easing": "linear"
         }
       },
       {
@@ -1308,27 +1302,24 @@
       },
       {
         "beat": 4,
-        "duration": 28,
+        "duration": 14,
         "action": {
           "type": "animate",
           "target": "phaser:tl_spread.multiplier",
-          "keyframes": [
-            {
-              "time": 0,
-              "value": 0.5,
-              "easing": "ease_in"
-            },
-            {
-              "time": 14,
-              "value": 2,
-              "easing": "ease_out"
-            },
-            {
-              "time": 28,
-              "value": 0.5,
-              "easing": "linear"
-            }
-          ]
+          "from": 0.5,
+          "to": 2,
+          "easing": "ease_out"
+        }
+      },
+      {
+        "beat": 18,
+        "duration": 14,
+        "action": {
+          "type": "animate",
+          "target": "phaser:tl_spread.multiplier",
+          "from": 2,
+          "to": 0.5,
+          "easing": "linear"
         }
       },
       {
@@ -1341,27 +1332,24 @@
       },
       {
         "beat": 8,
-        "duration": 24,
+        "duration": 12,
         "action": {
           "type": "animate",
           "target": "phaser:tr_spread.multiplier",
-          "keyframes": [
-            {
-              "time": 0,
-              "value": 0.5,
-              "easing": "ease_in"
-            },
-            {
-              "time": 12,
-              "value": 2,
-              "easing": "ease_out"
-            },
-            {
-              "time": 24,
-              "value": 0.5,
-              "easing": "linear"
-            }
-          ]
+          "from": 0.5,
+          "to": 2,
+          "easing": "ease_out"
+        }
+      },
+      {
+        "beat": 20,
+        "duration": 12,
+        "action": {
+          "type": "animate",
+          "target": "phaser:tr_spread.multiplier",
+          "from": 2,
+          "to": 0.5,
+          "easing": "linear"
         }
       },
       {
@@ -1374,27 +1362,24 @@
       },
       {
         "beat": 12,
-        "duration": 20,
+        "duration": 10,
         "action": {
           "type": "animate",
           "target": "phaser:bl_spread.multiplier",
-          "keyframes": [
-            {
-              "time": 0,
-              "value": 0.5,
-              "easing": "ease_in"
-            },
-            {
-              "time": 10,
-              "value": 2,
-              "easing": "ease_out"
-            },
-            {
-              "time": 20,
-              "value": 0.5,
-              "easing": "linear"
-            }
-          ]
+          "from": 0.5,
+          "to": 2,
+          "easing": "ease_out"
+        }
+      },
+      {
+        "beat": 22,
+        "duration": 10,
+        "action": {
+          "type": "animate",
+          "target": "phaser:bl_spread.multiplier",
+          "from": 2,
+          "to": 0.5,
+          "easing": "linear"
         }
       },
       {
@@ -1407,52 +1392,46 @@
       },
       {
         "beat": 16,
-        "duration": 16,
+        "duration": 8,
         "action": {
           "type": "animate",
           "target": "phaser:br_spread.multiplier",
-          "keyframes": [
-            {
-              "time": 0,
-              "value": 0.5,
-              "easing": "ease_in"
-            },
-            {
-              "time": 8,
-              "value": 2,
-              "easing": "ease_out"
-            },
-            {
-              "time": 16,
-              "value": 0.5,
-              "easing": "linear"
-            }
-          ]
+          "from": 0.5,
+          "to": 2,
+          "easing": "ease_out"
+        }
+      },
+      {
+        "beat": 24,
+        "duration": 8,
+        "action": {
+          "type": "animate",
+          "target": "phaser:br_spread.multiplier",
+          "from": 2,
+          "to": 0.5,
+          "easing": "linear"
         }
       },
       {
         "beat": 16,
-        "duration": 16,
+        "duration": 8,
         "action": {
           "type": "animate",
           "target": "global.master_dimmer",
-          "keyframes": [
-            {
-              "time": 0,
-              "value": 1,
-              "easing": "linear"
-            },
-            {
-              "time": 8,
-              "value": 0.2,
-              "easing": "ease_in_out"
-            },
-            {
-              "time": 16,
-              "value": 1,
-              "easing": "linear"
-            }
-          ]
+          "from": 1,
+          "to": 0.2,
+          "easing": "ease_in_out"
+        }
+      },
+      {
+        "beat": 24,
+        "duration": 8,
+        "action": {
+          "type": "animate",
+          "target": "global.master_dimmer",
+          "from": 0.2,
+          "to": 1,
+          "easing": "linear"
         }
       }
     ]

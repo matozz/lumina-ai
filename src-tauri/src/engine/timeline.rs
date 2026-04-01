@@ -73,42 +73,25 @@ impl TimelineExecutor {
         // 3. Process running updates (interpolations for animation tracks)
         for (i, start) in &self.active_events {
             let event = &self.timeline.events[*i];
-            if let TimelineActionDefDSL::Animate { target, keyframes } = &event.action {
+            if let TimelineActionDefDSL::Animate { target, from, to, easing } = &event.action {
                 let local_time = global_beat - start;
+                let duration = event.duration.unwrap_or(4.0); // fallback duration if none provided, though animate events should have one
 
-                // Find current and next keyframe
-                if keyframes.is_empty() {
-                    continue;
-                }
-
-                let mut current_kf = &keyframes[0];
-                let mut next_kf = &keyframes[keyframes.len() - 1];
-
-                for kf in keyframes {
-                    if kf.time <= local_time {
-                        current_kf = kf;
-                    }
-                }
-
-                for kf in keyframes.iter().rev() {
-                    if kf.time > local_time {
-                        next_kf = kf;
-                    }
-                }
-
-                let val_start = parse_animatable_value(&current_kf.value);
-                let val_end = parse_animatable_value(&next_kf.value);
+                let val_start = parse_animatable_value(from);
+                let val_end = parse_animatable_value(to);
 
                 if let (Some(vs), Some(ve)) = (val_start, val_end) {
-                    if current_kf.time >= next_kf.time || local_time >= next_kf.time {
-                        // Beyond last frame or same frame
+                    if local_time >= duration {
+                        // Beyond last frame, hold the last value
+                        actions.push(TimelineAction::UpdateParameter(target.clone(), ve));
+                    } else if local_time <= 0.0 {
+                        // Before first frame (should not happen if beat > start, but for safety)
                         actions.push(TimelineAction::UpdateParameter(target.clone(), vs));
                     } else {
                         // Interpolate
-                        let progress =
-                            (local_time - current_kf.time) / (next_kf.time - current_kf.time);
-                        let easing = next_kf.easing.as_deref().unwrap_or("linear");
-                        let t = ease(progress, easing);
+                        let progress = local_time / duration;
+                        let easing_str = easing.as_deref().unwrap_or("linear");
+                        let t = ease(progress, easing_str);
                         let current_val = vs.lerp(&ve, t);
                         actions.push(TimelineAction::UpdateParameter(target.clone(), current_val));
                     }
