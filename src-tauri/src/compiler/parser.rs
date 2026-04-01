@@ -158,13 +158,8 @@ pub enum TimelineActionDefDSL {
     #[serde(rename = "animate")]
     Animate {
         target: String,
-        keyframes: Vec<KeyframeDSL>,
+        from: serde_json::Value,
+        to: serde_json::Value,
+        easing: Option<String>,
     },
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct KeyframeDSL {
-    pub time: f64, // Relative beat to event start
-    pub value: serde_json::Value,
-    pub easing: Option<String>,
 }

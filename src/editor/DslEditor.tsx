@@ -1,7 +1,7 @@
 import Editor from "@monaco-editor/react";
 import { useEffect, useRef, useState } from "react";
 import { engine } from "../bridge/commands";
-import { useUiStore } from "../stores/uiStore";
+import { useEngineStore, engineActions, engineSelectors } from "../stores/engine";
 import { getTemplates, DslTemplate } from "./templates";
 import { XCircle, FileCode2, AlertTriangle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,9 +15,9 @@ import {
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-export function DslEditor() {
-  const { currentDslCode: code, setCurrentDslCode: setCode } = useUiStore();
-  const { compileErrors, setCompileResult, setCompileErrors, setCompileStatus } = useUiStore();
+export const DslEditor = () => {
+  const code = useEngineStore(engineSelectors.currentDslCode);
+  const compileErrors = useEngineStore(engineSelectors.compileErrors);
 
   const [templates, setTemplates] = useState<DslTemplate[]>(getTemplates);
   const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>("combined");
@@ -28,42 +28,42 @@ export function DslEditor() {
   useEffect(() => {
     if (!code && templates.length > 0) {
       // Find the first valid template to set as default
-      const firstValidTemplate = templates.find(t => !t.disabled) || templates[0];
+      const firstValidTemplate = templates.find((t) => !t.disabled) || templates[0];
       if (firstValidTemplate) {
-        setCode(firstValidTemplate.dsl);
+        engineActions.setCurrentDslCode(firstValidTemplate.dsl);
         setSelectedTemplateKey(firstValidTemplate.key);
       }
     }
   }, []); // Run only on mount
 
   const compileCode = async (codeToCompile: string) => {
-    setCompileStatus('compiling');
+    engineActions.setCompileStatus("compiling");
     try {
       const res = await engine.loadDSL(codeToCompile);
       if (res.success) {
-        setCompileResult(res);
-        setCompileErrors([]);
-        setCompileStatus('success');
+        engineActions.setCompileResult(res);
+        engineActions.setCompileErrors([]);
+        engineActions.setCompileStatus("success");
         window.dispatchEvent(new CustomEvent("engine:layout-ready"));
       } else {
-        setCompileErrors(res.errors);
-        setCompileStatus('error');
+        engineActions.setCompileErrors(res.errors);
+        engineActions.setCompileStatus("error");
       }
     } catch (e: any) {
       console.error(e);
-      setCompileStatus('error');
+      engineActions.setCompileStatus("error");
     }
   };
 
   useEffect(() => {
     if (!code) return;
-    
+
     const handler = setTimeout(() => {
       compileCode(code);
-    }, 200); 
-    
+    }, 200);
+
     return () => clearTimeout(handler);
-  }, [code]); 
+  }, [code]);
 
   const reloadTemplates = () => {
     setTemplates(getTemplates());
@@ -71,19 +71,19 @@ export function DslEditor() {
 
   const loadTemplate = (key: string | null) => {
     if (!key || key === "custom") return;
-    const template = templates.find(t => t.key === key);
+    const template = templates.find((t) => t.key === key);
     if (template && !template.disabled) {
-      setCode(template.dsl);
+      engineActions.setCurrentDslCode(template.dsl);
       setSelectedTemplateKey(key);
     }
   };
 
   const handleEditorChange = (val: string | undefined) => {
-    setCode(val || "");
-    
+    engineActions.setCurrentDslCode(val || "");
+
     // If the user types something that matches a template exactly, select it
     // Otherwise, mark it as custom
-    const matchedTemplate = templates.find(t => t.dsl === val);
+    const matchedTemplate = templates.find((t) => t.dsl === val);
     if (matchedTemplate) {
       setSelectedTemplateKey(matchedTemplate.key);
     } else {
@@ -98,39 +98,50 @@ export function DslEditor() {
   };
 
   return (
-    <div className={cn("flex flex-col h-full w-112.5 border-r border-zinc-800 bg-zinc-950 shadow-xl z-10 shrink-0")}>
-      <div className={cn("h-10 border-b border-zinc-800 bg-zinc-900/80 flex items-center px-4 justify-between backdrop-blur-md shrink-0")}>
-        <div className="flex items-center gap-2 shrink-0">
-          <FileCode2 className="w-4 h-4 text-indigo-400" />
-          <span className="text-xs font-semibold text-zinc-200 tracking-wide">DSL EDITOR</span>
+    <div
+      className={cn(
+        "z-10 flex h-full w-112.5 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 shadow-xl",
+      )}
+    >
+      <div
+        className={cn(
+          "flex h-10 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/80 px-4 backdrop-blur-md",
+        )}
+      >
+        <div className="flex shrink-0 items-center gap-2">
+          <FileCode2 className="h-4 w-4 text-indigo-400" />
+          <span className="text-xs font-semibold tracking-wide text-zinc-200">DSL EDITOR</span>
         </div>
-        
-        <div className="flex gap-2 justify-end items-center">
-          <button 
+
+        <div className="flex items-center justify-end gap-2">
+          <button
             onClick={reloadTemplates}
-            className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded transition-colors"
+            className="rounded p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
             title="Reload Templates"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className="h-3.5 w-3.5" />
           </button>
           <Select value={selectedTemplateKey} onValueChange={loadTemplate}>
             <SelectTrigger size="sm">
               <SelectValue placeholder="Select a template..." />
             </SelectTrigger>
-            <SelectContent className="bg-zinc-950 border-zinc-800 w-45">
+            <SelectContent className="w-45 border-zinc-800 bg-zinc-950">
               <SelectGroup>
                 {selectedTemplateKey === "custom" && (
-                  <SelectItem value="custom" className="text-zinc-400 italic focus:bg-zinc-800 focus:text-zinc-300 pr-8">
+                  <SelectItem
+                    value="custom"
+                    className="pr-8 text-zinc-400 italic focus:bg-zinc-800 focus:text-zinc-300"
+                  >
                     Custom...
                   </SelectItem>
                 )}
-                {templates.map(t => (
-                  <SelectItem 
-                    key={t.key} 
-                    value={t.key} 
+                {templates.map((t) => (
+                  <SelectItem
+                    key={t.key}
+                    value={t.key}
                     className={cn(
-                      "flex items-center focus:bg-zinc-800 focus:text-zinc-100 pr-8",
-                      t.disabled ? "text-zinc-600 opacity-80" : "text-zinc-300"
+                      "flex items-center pr-8 focus:bg-zinc-800 focus:text-zinc-100",
+                      t.disabled ? "text-zinc-600 opacity-80" : "text-zinc-300",
                     )}
                   >
                     <div className="flex items-center gap-1.5">
@@ -139,11 +150,11 @@ export function DslEditor() {
                         <Tooltip>
                           <TooltipTrigger>
                             <div onClick={(e) => copyError(e, t.errorMessage!)}>
-                              <AlertTriangle className="w-3.5 h-3.5 text-red-500/80 shrink-0" />
+                              <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-500/80" />
                             </div>
                           </TooltipTrigger>
-                          <TooltipContent side="right" >
-                            <p className="text-[11px] font-mono whitespace-pre-wrap wrap-break-word opacity-80">
+                          <TooltipContent side="right">
+                            <p className="font-mono text-[11px] wrap-break-word whitespace-pre-wrap opacity-80">
                               {t.errorMessage}
                             </p>
                           </TooltipContent>
@@ -157,17 +168,28 @@ export function DslEditor() {
           </Select>
         </div>
       </div>
-      <div className="flex-1 overflow-hidden relative">
+      <div className="relative flex-1 overflow-hidden">
         {compileErrors.length > 0 && (
-          <div className={cn(
-            "absolute top-0 left-0 w-full z-10 bg-red-950/90 border-b border-red-900 p-3 max-h-40 overflow-y-auto backdrop-blur-sm shadow-md"
-          )}>
-            <h4 className={cn("text-red-400 text-[11px] font-bold mb-1.5 uppercase tracking-wider flex items-center gap-1.5")}>
-              <XCircle className="w-3.5 h-3.5" /> Compile Errors
+          <div
+            className={cn(
+              "absolute top-0 left-0 z-10 max-h-40 w-full overflow-y-auto border-b border-red-900 bg-red-950/90 p-3 shadow-md backdrop-blur-sm",
+            )}
+          >
+            <h4
+              className={cn(
+                "mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wider text-red-400 uppercase",
+              )}
+            >
+              <XCircle className="h-3.5 w-3.5" /> Compile Errors
             </h4>
             {compileErrors.map((e, i) => (
-              <div key={i} className={cn("text-red-300 text-xs font-mono break-all mb-1 last:mb-0 bg-red-900/20 p-1.5 rounded border border-red-900/50")}>
-                <span className="opacity-70 font-semibold">[{e.path}]</span> {e.message}
+              <div
+                key={i}
+                className={cn(
+                  "mb-1 rounded border border-red-900/50 bg-red-900/20 p-1.5 font-mono text-xs break-all text-red-300 last:mb-0",
+                )}
+              >
+                <span className="font-semibold opacity-70">[{e.path}]</span> {e.message}
               </div>
             ))}
           </div>
@@ -178,9 +200,16 @@ export function DslEditor() {
           theme="vs-dark"
           value={code}
           onChange={handleEditorChange}
-          options={{ minimap: { enabled: false }, tabSize: 2, wordWrap: "on", fontSize: 13, scrollBeyondLastLine: false, padding: { top: 12, bottom: 12 } }}
+          options={{
+            minimap: { enabled: false },
+            tabSize: 2,
+            wordWrap: "on",
+            fontSize: 13,
+            scrollBeyondLastLine: false,
+            padding: { top: 12, bottom: 12 },
+          }}
         />
       </div>
     </div>
   );
-}
+};

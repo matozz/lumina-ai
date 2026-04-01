@@ -1,42 +1,39 @@
 import { useEffect } from "react";
 import { CanvasView } from "./canvas/CanvasView";
-import { ControlPanel } from "./panel/ControlPanel";
 import { DslEditor } from "./editor/DslEditor";
-import { TimelineView } from "./panel/TimelineView";
+import { TimelinePanel } from "./panel/TimelinePanel";
+import { ControlPanel } from "./panel/ControlPanel";
 import { onStateChange } from "./bridge/events";
-import { useUiStore } from "./stores/uiStore";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { useEngineStore, engineActions, engineSelectors } from "./stores/engine";
 import "./App.css";
 
 function App() {
-  const { setIsPlaying, setTempo, setGlobalBeat, setActivePhasers, sequencerMode } = useUiStore();
+  const sequencerMode = useEngineStore(engineSelectors.sequencerMode);
 
   useEffect(() => {
     const unlisten = onStateChange((state) => {
-      setIsPlaying(state.is_playing);
-      setTempo(state.tempo);
-      setGlobalBeat(state.global_beat);
-      setActivePhasers(state.active_phasers);
+      engineActions.setIsPlaying(state.is_playing);
+      engineActions.setTempo(state.tempo);
+      engineActions.setGlobalBeat(state.global_beat);
+      engineActions.setActivePhasers(state.active_phasers);
     });
 
     return () => {
-      unlisten.then(fn => fn());
+      unlisten.then((fn) => fn());
     };
-  }, [setIsPlaying, setTempo, setGlobalBeat, setActivePhasers]);
+  }, []);
 
   return (
-    <TooltipProvider delay={200}>
-      <div className="flex flex-col w-screen h-screen bg-black overflow-hidden font-sans text-zinc-50 relative">
-        <div className="flex flex-1 overflow-hidden">
-          <DslEditor />
-          <div className="flex-1 flex flex-col relative z-0">
-            <CanvasView />
-          </div>
-          <ControlPanel />
+    <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-black font-sans text-zinc-50">
+      <div className="flex flex-1 overflow-hidden">
+        <DslEditor />
+        <div className="relative z-0 flex flex-1 flex-col">
+          <CanvasView />
         </div>
-        {sequencerMode === 'timeline' && <TimelineView />}
+        <ControlPanel />
       </div>
-    </TooltipProvider>
+      {sequencerMode === "timeline" && <TimelinePanel />}
+    </div>
   );
 }
 

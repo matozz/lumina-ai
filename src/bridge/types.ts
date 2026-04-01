@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export interface FixtureOutput {
   id: number;
-  r: number;    // 0-255
+  r: number; // 0-255
   g: number;
   b: number;
   dimmer: number; // 0-1
@@ -74,6 +74,9 @@ export const CustomFixturePosSchema = z.object({
   y: z.number(),
 });
 
+export const FromToSchema = z.union([z.string(), z.number()]);
+export const EasingSchema = z.enum(["linear", "ease_in", "ease_out", "ease_in_out"]);
+
 export const GeneratorDSLSchema = z.discriminatedUnion("shape", [
   z.object({
     shape: z.literal("matrix"),
@@ -110,10 +113,7 @@ export const LayoutDSLSchema = z.object({
 
 export const GroupDSLSchema = z.object({
   name: z.string(),
-  fixtures: z.union([
-    z.array(z.number()),
-    z.object({ range: z.tuple([z.number(), z.number()]) }),
-  ]),
+  fixtures: z.union([z.array(z.number()), z.object({ range: z.tuple([z.number(), z.number()]) })]),
   sort_by: z.string().optional(),
 });
 
@@ -131,7 +131,12 @@ export const PhaserStepDSLSchema = z.object({
 export const PhaseConfigDSLSchema = z.object({
   mode: z.enum(["spread", "grouped"]),
   spread: z.object({ from: z.number().min(0).max(100), to: z.number().min(0).max(100) }).optional(),
-  grouped: z.object({ group_size: z.number(), spread: z.tuple([z.number().min(0).max(100), z.number().min(0).max(100)]) }).optional(),
+  grouped: z
+    .object({
+      group_size: z.number(),
+      spread: z.tuple([z.number().min(0).max(100), z.number().min(0).max(100)]),
+    })
+    .optional(),
 });
 
 export const PhaserDSLSchema = z.object({
@@ -143,12 +148,6 @@ export const PhaserDSLSchema = z.object({
   phase: PhaseConfigDSLSchema,
 });
 
-export const KeyframeDSLSchema = z.object({
-  time: z.number(),
-  value: z.any(),
-  easing: z.string().optional(),
-});
-
 export const TimelineActionDefDSLSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("phaser"),
@@ -157,7 +156,9 @@ export const TimelineActionDefDSLSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("animate"),
     target: z.string(),
-    keyframes: z.array(KeyframeDSLSchema),
+    from: FromToSchema,
+    to: FromToSchema,
+    easing: EasingSchema.optional(),
   }),
 ]);
 
@@ -171,7 +172,7 @@ export const TimelineDSLSchema = z.object({
   events: z.array(TimelineEventDSLSchema),
 });
 
-export const ShowDSLSchema = z.object({
+export const FullDSLSchema = z.object({
   meta: z.object({
     name: z.string(),
   }),
@@ -190,14 +191,15 @@ export type PatchDSL = z.infer<typeof PatchDSLSchema>;
 export type FormulaDef = z.infer<typeof FormulaDefSchema>;
 export type SvgPathDef = z.infer<typeof SvgPathDefSchema>;
 export type CustomFixturePos = z.infer<typeof CustomFixturePosSchema>;
+export type FromTo = z.infer<typeof FromToSchema>;
+export type Easing = z.infer<typeof EasingSchema>;
 export type GeneratorDSL = z.infer<typeof GeneratorDSLSchema>;
 export type LayoutDSL = z.infer<typeof LayoutDSLSchema>;
 export type GroupDSL = z.infer<typeof GroupDSLSchema>;
 export type PhaserStepDSL = z.infer<typeof PhaserStepDSLSchema>;
 export type PhaseConfigDSL = z.infer<typeof PhaseConfigDSLSchema>;
 export type PhaserDSL = z.infer<typeof PhaserDSLSchema>;
-export type KeyframeDSL = z.infer<typeof KeyframeDSLSchema>;
 export type TimelineActionDefDSL = z.infer<typeof TimelineActionDefDSLSchema>;
 export type TimelineEventDSL = z.infer<typeof TimelineEventDSLSchema>;
 export type TimelineDSL = z.infer<typeof TimelineDSLSchema>;
-export type ShowDSL = z.infer<typeof ShowDSLSchema>;
+export type FullDSL = z.infer<typeof FullDSLSchema>;

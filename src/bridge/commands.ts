@@ -1,12 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CompileResult, CompileError, LayoutCoord, ShowDSL } from "./types";
+import type { CompileResult, CompileError, LayoutCoord, FullDSL } from "./types";
 
 export const engine = {
-  loadDSL: (json: string) =>
-    invoke<CompileResult>("load_dsl", { dslJson: json }),
+  loadDSL: (json: string) => invoke<CompileResult>("load_dsl", { dslJson: json }),
 
-  validateDSL: (json: string) =>
-    invoke<CompileError[]>("validate_dsl", { dslJson: json }),
+  validateDSL: (json: string) => invoke<CompileError[]>("validate_dsl", { dslJson: json }),
 
   play: () => invoke("play"),
   stop: () => invoke("stop"),
@@ -16,18 +14,15 @@ export const engine = {
   triggerPhaser: (id: string, multiplier?: number) =>
     invoke("trigger_phaser", { phaserId: id, multiplier: multiplier ?? 1.0 }),
 
-  stopPhaser: (id: string) =>
-    invoke("stop_phaser", { phaserId: id }),
+  stopPhaser: (id: string) => invoke("stop_phaser", { phaserId: id }),
 
-  saveShow: (path: string, dsl: ShowDSL) =>
+  saveShow: (path: string, dsl: FullDSL) =>
     invoke("save_show", { path, dslJson: JSON.stringify(dsl) }),
 
   loadShow: (path: string) =>
-    invoke<string>("load_show", { path }).then(json => JSON.parse(json) as ShowDSL),
+    invoke<string>("load_show", { path }).then((json) => JSON.parse(json) as FullDSL),
 
-  setSequencerMode: (mode: "live" | "timeline") => 
-    invoke("set_sequencer_mode", { mode }),
+  setSequencerMode: (mode: "live" | "timeline") => invoke("set_sequencer_mode", { mode }),
 
-  getLayoutCoords: () =>
-    invoke<LayoutCoord[]>("get_layout_coords"),
+  getLayoutCoords: () => invoke<LayoutCoord[]>("get_layout_coords"),
 };
