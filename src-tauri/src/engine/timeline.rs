@@ -14,25 +14,6 @@ pub struct TimelineExecutor {
     active_events: Vec<(usize, f64)>, // (index, start_beat)
 }
 
-fn parse_animatable_value(val: &serde_json::Value) -> Option<AnimatableValue> {
-    if let Some(f) = val.as_f64() {
-        return Some(AnimatableValue::Float(f));
-    }
-    if let Some(s) = val.as_str() {
-        // Very basic color parsing for "#RRGGBB"
-        if s.starts_with('#') && s.len() == 7 {
-            if let (Ok(r), Ok(g), Ok(b)) = (
-                u8::from_str_radix(&s[1..3], 16),
-                u8::from_str_radix(&s[3..5], 16),
-                u8::from_str_radix(&s[5..7], 16),
-            ) {
-                return Some(AnimatableValue::Color(r, g, b));
-            }
-        }
-    }
-    None
-}
-
 impl TimelineExecutor {
     pub fn new(timeline: CompiledTimeline) -> Self {
         Self {
@@ -82,8 +63,8 @@ impl TimelineExecutor {
                 let local_time = global_beat - start;
                 let duration = event.duration.unwrap_or(4.0); // fallback duration if none provided, though animate events should have one
 
-                let val_start = parse_animatable_value(from);
-                let val_end = parse_animatable_value(to);
+                let val_start = AnimatableValue::from_json(from);
+                let val_end = AnimatableValue::from_json(to);
 
                 if let (Some(vs), Some(ve)) = (val_start, val_end) {
                     if local_time >= duration {

@@ -8,6 +8,22 @@ pub enum AnimatableValue {
 }
 
 impl AnimatableValue {
+    pub fn from_json(value: &serde_json::Value) -> Option<Self> {
+        if let Some(number) = value.as_f64() {
+            return Some(Self::Float(number));
+        }
+
+        let color = value.as_str()?;
+        if !color.starts_with('#') || color.len() != 7 {
+            return None;
+        }
+
+        let red = u8::from_str_radix(&color[1..3], 16).ok()?;
+        let green = u8::from_str_radix(&color[3..5], 16).ok()?;
+        let blue = u8::from_str_radix(&color[5..7], 16).ok()?;
+        Some(Self::Color(red, green, blue))
+    }
+
     pub fn lerp(&self, other: &Self, t: f64) -> Self {
         match (self, other) {
             (AnimatableValue::Float(a), AnimatableValue::Float(b)) => {

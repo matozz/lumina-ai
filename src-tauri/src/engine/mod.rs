@@ -2,12 +2,12 @@ pub mod animation;
 pub mod clock;
 pub mod color;
 pub mod phaser;
+pub mod render;
 pub mod timeline;
 pub mod transport;
 
 use crate::compiler::CompiledShow;
 use crate::state::ActivePhaser;
-use rayon::prelude::*;
 use serde::Serialize;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -37,75 +37,14 @@ pub fn compute_frame(
     compiled_show: &CompiledShow,
     parameter_context: &animation::ParameterContext,
 ) -> Vec<FixtureOutput> {
-    compiled_show
-        .fixtures
-        .par_iter()
-        .map(|fixture| {
-            let mut output = FixtureOutput::black(fixture.id);
-
-            for active in active_phasers {
-                if let Some(phaser) = compiled_show.phasers.get(&active.id) {
-                    if let Some(group) = compiled_show.groups.get(&phaser.target) {
-                        let fixture_index = match group.index_of(fixture.id) {
-                            Some(idx) => idx,
-                            None => continue,
-                        };
-
-                        let block_info = group.block_index_of(fixture.id);
-
-                        let progress_delay = phaser::calculate_progress_delay(
-                            fixture_index,
-                            group.len(),
-                            &phaser.phase,
-                            block_info,
-                        );
-
-                        let total_width: f64 = phaser.steps.iter().map(|s| s.width).sum();
-                        if total_width <= 0.0 {
-                            continue;
-                        }
-
-                        // Calculate the raw cycle position based on beat and delay.
-                        // By subtracting delay, we shift fixtures backwards in time.
-                        let raw_cycle = active.accumulated_beat - progress_delay;
-
-                        // If raw_cycle is negative, the fixture hasn't reached its first start time yet.
-                        // This prevents wrapping artifacts on the very first frame so the wave physically enters.
-                        if raw_cycle < 0.0 {
-                            continue;
-                        }
-
-                        // Get the fractional part (0.0 to 1.0) which represents the position in the current loop cycle.
-                        let cycle_progress = raw_cycle % 1.0;
-
-                        let normalized = cycle_progress * total_width;
-
-                        let (mut color, dimmer) =
-                            phaser::evaluate_phaser_at(normalized, &phaser.steps, total_width);
-
-                        // Apply dynamic color override if present in parameter_context
-                        if let Some((r, g, b)) =
-                            parameter_context.get_color(&format!("phaser:{}.color", active.id))
-                        {
-                            color = (r, g, b);
-                        }
-
-                        output.r = output.r.max(color.0);
-                        output.g = output.g.max(color.1);
-                        output.b = output.b.max(color.2);
-                        output.dimmer = output.dimmer.max(dimmer);
-                    }
-                }
-            }
-
-            // Apply global master dimmer if present
-            if let Some(global_dimmer) = parameter_context.get_float("global.master_dimmer") {
-                output.dimmer *= global_dimmer as f32;
-            }
-
-            output
+    let resolved: Vec<_> = active_phasers
+        .iter()
+        .map(|active| render::ResolvedPhaser {
+            id: active.id.clone(),
+            phase: active.accumulated_beat,
         })
-        .collect()
+        .collect();
+    render::render_resolved(compiled_show, &resolved, parameter_context)
 }
 
 pub fn compute_frame_diff(prev: &[FixtureOutput], curr: &[FixtureOutput]) -> Vec<FixtureOutput> {

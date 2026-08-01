@@ -65,4 +65,5 @@ Stage 1 需要建立可测试、单实例、无累计漂移的实时核心，同
 ## Related commits
 
 - Stage 0 characterization: `ac547bc`
-- Clock/Transport core: 本切片提交
+- Clock/Transport core: `aceef6a`
+- Deterministic `render_at`: 本切片提交
