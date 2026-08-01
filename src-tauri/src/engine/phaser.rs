@@ -11,23 +11,26 @@ pub fn calculate_progress_delay(
         PhaseConfig::Spread { from, to } => {
             let from_val = from / 100.0;
             let to_val = to / 100.0;
-            
+
             if let Some((b_idx, total_blocks)) = block_info {
                 if total_blocks <= 1 {
                     return 0.0;
                 }
-                let raw_delay = from_val + (to_val - from_val) * (b_idx as f64 / total_blocks as f64);
+                let raw_delay =
+                    from_val + (to_val - from_val) * (b_idx as f64 / total_blocks as f64);
                 let min_delay = if from_val <= to_val {
                     from_val
                 } else {
-                    from_val + (to_val - from_val) * ((total_blocks - 1) as f64 / total_blocks as f64)
+                    from_val
+                        + (to_val - from_val) * ((total_blocks - 1) as f64 / total_blocks as f64)
                 };
                 raw_delay - min_delay
             } else {
                 if group_size <= 1 {
                     return 0.0;
                 }
-                let raw_delay = from_val + (to_val - from_val) * (fixture_index as f64 / group_size as f64);
+                let raw_delay =
+                    from_val + (to_val - from_val) * (fixture_index as f64 / group_size as f64);
                 let min_delay = if from_val <= to_val {
                     from_val
                 } else {
@@ -49,28 +52,32 @@ pub fn calculate_progress_delay(
 
             if let Some((b_idx, total_blocks)) = block_info {
                 let group_index = b_idx / gs;
-                let total_groups = (total_blocks + gs - 1) / gs;
+                let total_groups = total_blocks.div_ceil(*gs);
                 if total_groups <= 1 {
                     return 0.0;
                 }
-                let raw_delay = from_val + (to_val - from_val) * (group_index as f64 / total_groups as f64);
+                let raw_delay =
+                    from_val + (to_val - from_val) * (group_index as f64 / total_groups as f64);
                 let min_delay = if from_val <= to_val {
                     from_val
                 } else {
-                    from_val + (to_val - from_val) * ((total_groups - 1) as f64 / total_groups as f64)
+                    from_val
+                        + (to_val - from_val) * ((total_groups - 1) as f64 / total_groups as f64)
                 };
                 raw_delay - min_delay
             } else {
                 let group_index = fixture_index / gs;
-                let total_groups = (group_size + gs - 1) / gs;
+                let total_groups = group_size.div_ceil(*gs);
                 if total_groups <= 1 {
                     return 0.0;
                 }
-                let raw_delay = from_val + (to_val - from_val) * (group_index as f64 / total_groups as f64);
+                let raw_delay =
+                    from_val + (to_val - from_val) * (group_index as f64 / total_groups as f64);
                 let min_delay = if from_val <= to_val {
                     from_val
                 } else {
-                    from_val + (to_val - from_val) * ((total_groups - 1) as f64 / total_groups as f64)
+                    from_val
+                        + (to_val - from_val) * ((total_groups - 1) as f64 / total_groups as f64)
                 };
                 raw_delay - min_delay
             }
@@ -147,4 +154,54 @@ fn bezier_component(t: f64, cp1: f64, cp2: f64) -> f64 {
     let mt2 = mt * mt;
     let mt3 = mt2 * mt;
     mt3 * 0.0 + 3.0 * mt2 * t * cp1 + 3.0 * mt * t2 * cp2 + t3 * 1.0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{calculate_progress_delay, evaluate_phaser_at};
+    use crate::compiler::{CompiledStep, PhaseConfig};
+
+    fn step(color: (u8, u8, u8), dimmer: f32) -> CompiledStep {
+        CompiledStep {
+            color,
+            dimmer,
+            width: 50.0,
+            transition: 0.0,
+            accel: 0,
+            decel: 0,
+        }
+    }
+
+    #[test]
+    fn spread_delay_tracks_fixture_and_sort_block_positions() {
+        let config = PhaseConfig::Spread {
+            from: 0.0,
+            to: 100.0,
+        };
+
+        assert_eq!(calculate_progress_delay(0, 3, &config, None), 0.0);
+        assert!((calculate_progress_delay(1, 3, &config, None) - 1.0 / 3.0).abs() < 1e-12);
+        assert!((calculate_progress_delay(2, 3, &config, Some((1, 2))) - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn grouped_delay_keeps_members_of_a_group_in_phase() {
+        let config = PhaseConfig::Grouped {
+            group_size: 2,
+            spread: (0.0, 100.0),
+        };
+
+        assert_eq!(calculate_progress_delay(0, 4, &config, None), 0.0);
+        assert_eq!(calculate_progress_delay(1, 4, &config, None), 0.0);
+        assert!((calculate_progress_delay(2, 4, &config, None) - 0.5).abs() < 1e-12);
+        assert!((calculate_progress_delay(3, 4, &config, None) - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn evaluates_step_color_and_dimmer_at_known_cycle_positions() {
+        let steps = vec![step((255, 0, 0), 1.0), step((0, 0, 255), 0.25)];
+
+        assert_eq!(evaluate_phaser_at(25.0, &steps, 100.0), ((255, 0, 0), 1.0));
+        assert_eq!(evaluate_phaser_at(75.0, &steps, 100.0), ((0, 0, 255), 0.25));
+    }
 }

@@ -1,9 +1,9 @@
+use crate::engine::{compute_frame, compute_frame_diff};
+use crate::state::EngineState;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
-use crate::state::EngineState;
-use crate::engine::{compute_frame, compute_frame_diff};
 
 #[derive(Clone)]
 pub struct Scheduler {
@@ -31,6 +31,12 @@ pub struct BeatPayload {
     pub beat: f64,
 }
 
+impl Default for Scheduler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Scheduler {
     pub fn new() -> Self {
         Self {
@@ -47,11 +53,9 @@ impl Scheduler {
         std::thread::spawn(move || {
             let mut next_tick = Instant::now();
             let rt = tokio::runtime::Runtime::new().unwrap();
-            
+
             // Read initial global_beat from state when starting/resuming
-            let mut global_beat = rt.block_on(async {
-                state.runtime.read().await.global_beat
-            });
+            let mut global_beat = rt.block_on(async { state.runtime.read().await.global_beat });
             let mut last_integer_beat: i64 = global_beat.floor() as i64;
 
             while running.load(Ordering::SeqCst) {
@@ -65,10 +69,10 @@ impl Scheduler {
                 let (payload, state_payload) = rt.block_on(async {
                     let mut r_state = state.runtime.write().await;
                     let show_guard = state.compiled_show.read().await;
-                    
+
                     r_state.global_beat = global_beat;
                     r_state.is_playing = true;
-                    
+
                     // Accumulate phase for active phasers based on current multiplier
                     let mut updates: Vec<(usize, f64)> = Vec::new();
                     for (i, active) in r_state.active_phasers.iter().enumerate() {
@@ -88,29 +92,23 @@ impl Scheduler {
                             for action in actions {
                                 match action {
                                     crate::engine::timeline::TimelineAction::Start(instance_id, def) => {
-                                        match def {
-                                            crate::compiler::parser::TimelineActionDefDSL::Phaser { phaser } => {
-                                                // Only add if this specific instance isn't already active
-                                                if !r_state.active_phasers.iter().any(|p| p.id == phaser && p.instance_id == Some(instance_id)) {
-                                                    r_state.active_phasers.push(crate::state::ActivePhaser {
-                                                        id: phaser,
-                                                        start_beat: global_beat,
-                                                        instance_id: Some(instance_id),
-                                                        multiplier: 1.0,
-                                                        accumulated_beat: 0.0,
-                                                    });
-                                                }
+                                        if let crate::compiler::parser::TimelineActionDefDSL::Phaser { phaser } = def {
+                                            // Only add if this specific instance isn't already active
+                                            if !r_state.active_phasers.iter().any(|p| p.id == phaser && p.instance_id == Some(instance_id)) {
+                                                r_state.active_phasers.push(crate::state::ActivePhaser {
+                                                    id: phaser,
+                                                    start_beat: global_beat,
+                                                    instance_id: Some(instance_id),
+                                                    multiplier: 1.0,
+                                                    accumulated_beat: 0.0,
+                                                });
                                             }
-                                            _ => {} // Other actions not fully implemented yet
                                         }
                                     }
                                     crate::engine::timeline::TimelineAction::Stop(instance_id, def) => {
-                                        match def {
-                                            crate::compiler::parser::TimelineActionDefDSL::Phaser { phaser } => {
-                                                // Only remove this specific instance
-                                                r_state.active_phasers.retain(|p| !(p.id == phaser && p.instance_id == Some(instance_id)));
-                                            }
-                                            _ => {}
+                                        if let crate::compiler::parser::TimelineActionDefDSL::Phaser { phaser } = def {
+                                            // Only remove this specific instance
+                                            r_state.active_phasers.retain(|p| !(p.id == phaser && p.instance_id == Some(instance_id)));
                                         }
                                     }
                                     crate::engine::timeline::TimelineAction::UpdateParameter(target, value) => {
@@ -131,17 +129,17 @@ impl Scheduler {
 
                     if let Some(show) = &*show_guard {
                         let frame = compute_frame(
-                            global_beat, 
-                            &r_state.active_phasers, 
+                            global_beat,
+                            &r_state.active_phasers,
                             show,
-                            &r_state.parameter_context
+                            &r_state.parameter_context,
                         );
-                        
+
                         // we can send diffs
                         let diff = compute_frame_diff(&r_state.prev_frame, &frame);
                         current_frame = frame.clone();
                         r_state.prev_frame = frame;
-                        
+
                         // For simplicity let's just say full = false if diff is small, but if there's an action full = true
                         full = false;
 
@@ -175,7 +173,12 @@ impl Scheduler {
 
                 let current_int_beat = global_beat.floor() as i64;
                 if current_int_beat > last_integer_beat {
-                    let _ = app.emit("engine:beat", BeatPayload { beat: current_int_beat as f64 });
+                    let _ = app.emit(
+                        "engine:beat",
+                        BeatPayload {
+                            beat: current_int_beat as f64,
+                        },
+                    );
                     last_integer_beat = current_int_beat;
                 }
 
@@ -212,10 +215,10 @@ impl Scheduler {
     pub fn stop(&self) {
         self.running.store(false, Ordering::SeqCst);
     }
-    
+
     pub fn reset_beat(&self) {
         // Only relevant if we have internal beat state in the scheduler thread
-        // For now, the global beat is entirely derived from `state.runtime.global_beat` 
+        // For now, the global beat is entirely derived from `state.runtime.global_beat`
         // but we manage our own local `global_beat` var inside the run loop.
         // We'll need to communicate this reset to the thread if it's running.
         // Since we modify r_state in `reset_beat` command, the next time `start` is called

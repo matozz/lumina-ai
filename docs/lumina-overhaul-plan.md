@@ -1,6 +1,6 @@
 # Lumina 分阶段改造与长期 Goal 执行计划
 
-> - 文档状态：Proposed
+> - 文档状态：Active
 > - 基线分支：`main`
 > - 基线提交：`d1d718e`
 > - 建立日期：2026-08-02
@@ -218,7 +218,7 @@ flowchart TD
 
 | Stage | 名称                                    | 状态        | 依赖 | 核心退出信号                                |
 | ----- | --------------------------------------- | ----------- | ---- | ------------------------------------------- |
-| 0     | Baseline 与质量护栏                     | not_started | 无   | 测试框架、基线和 CI 可用                    |
+| 0     | Baseline 与质量护栏                     | in_progress | 无   | 测试框架、基线和 CI 可用                    |
 | 1     | 实时内核与 Transport                    | not_started | 0    | Clock/Play/Pause/Stop/Seek 确定且无重复线程 |
 | 2     | Versioned Document 与统一 Schema        | not_started | 1    | 单一 schema 契约、migration、零 panic       |
 | 3     | Fixture Attribute、Mixer 与 Output 抽象 | not_started | 2    | 通用属性、HTP/LTP、Null/Preview Sink        |
@@ -241,11 +241,11 @@ flowchart TD
 
 #### 0.1 测试基础设施
 
-- [ ] 为 Rust compiler、phaser、timeline、frame diff 建立首批单元测试。
-- [ ] 加入至少一个端到端 golden show：DSL → compile → 指定 tick Frame。
+- [x] 为 Rust compiler、phaser、timeline、frame diff 建立首批单元测试。
+- [x] 加入至少一个端到端 golden show：DSL → compile → 指定 tick Frame。
 - [ ] 为前端加入测试命令和轻量组件/状态测试框架。
 - [ ] 为模板建立 contract test：所有模板必须通过同一 schema 和 Rust compile。
-- [ ] 测试禁止只断言“不崩溃”；必须断言 fixture/attribute/timing 输出。
+- [x] 测试禁止只断言“不崩溃”；必须断言 fixture/attribute/timing 输出。
 
 #### 0.2 基线数据
 
@@ -1076,6 +1076,18 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 - Recommended next slice:
 ```
 
+## Handoff
+
+- Current Stage: Stage 0 · Baseline 与质量护栏（in_progress）
+- Slice completed: Rust 可执行行为基线；新增 compiler/phaser/timeline/frame diff 单元测试与 DSL → compile → 指定 beat Frame golden test。
+- Commits: `chore(tauri): 🧪 establish Rust behavior baseline`（本切片提交）
+- Files changed: `src-tauri/src/compiler/mod.rs`、`src-tauri/src/engine/{mod,phaser,timeline}.rs`、`src-tauri/src/scheduler/mod.rs`、`src-tauri/tests/**`、本文档。
+- Validation: `pnpm build`；`cargo fmt -- --check`；`cargo clippy --all-targets -- -D warnings`；`cargo test`（10 passed）。
+- ADRs added/updated: 无；本切片只建立和清理质量基线，没有架构边界决策。
+- Risks opened/closed: 新增 R-009；严格 Clippy 首次发现的 13 个存量 lint 已用等价改写关闭。
+- Remaining exit criteria: 前端测试框架、18 模板 contract、性能/漂移基线、Transport 回归夹具、统一 check/CI、Diagnostic contract。
+- Recommended next slice: 加入前端轻量测试 runner，并让 18 个模板经过前端 schema 与 Rust compile contract。
+
 ## 19. ADR 规范
 
 重要架构决策写入 `docs/adr/NNNN-title.md`，至少包含：
@@ -1109,19 +1121,22 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | Date       | Stage    | Slice              | Status    | Commit(s)   | Validation                                           | Decisions/Risks                              | Next                                        |
 | ---------- | -------- | ------------------ | --------- | ----------- | ---------------------------------------------------- | -------------------------------------------- | ------------------------------------------- |
 | 2026-08-02 | Planning | 建立分阶段改造规格 | completed | docs commit | 基线审计：`pnpm build` 通过；`cargo test` 为 0 tests | 当前系统定位为 PoC；实时可信度优先于 AI 功能 | Stage 0：建立 Rust/Frontend 测试与 baseline |
+| 2026-08-02 | 0        | Rust 行为基线      | failed    | none        | 首次严格 Clippy 发现 13 个存量 lint                  | 等价机械清理，不改变 scheduler 行为          | 清理后复跑全部 Rust 门槛                    |
+| 2026-08-02 | 0        | Rust 行为基线      | completed | 本切片提交  | `pnpm build`；fmt；Clippy；`cargo test` 10 passed    | 新增 R-009；无 ADR                           | 前端测试 runner + 18 模板 contract          |
 
 ## 21. Open Risks
 
-| ID    | Risk                                   | Severity | Owner Stage | Mitigation                                       | Status |
-| ----- | -------------------------------------- | -------- | ----------- | ------------------------------------------------ | ------ |
-| R-001 | scheduler 重复线程或锁反转导致演出冻结 | critical | 1           | 单 worker、统一锁策略、压力测试                  | open   |
-| R-002 | schema 漂移导致用户/AI 字段静默丢失    | critical | 2           | 单一 schema、deny unknown、contract test         | open   |
-| R-003 | 所有属性使用 max 混合产生错误颜色/运动 | high     | 3           | 属性级 HTP/LTP/mix policy                        | open   |
-| R-004 | Preview 80ms 插值掩盖真实频闪输出      | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项             | open   |
-| R-005 | Raw DSL 热编译破坏 Live active show    | critical | 1/6         | Draft/Live immutable snapshot                    | open   |
-| R-006 | 没有歌曲时间模型导致 AI 编排不可复现   | high     | 5/7         | 整数 tick + TempoMap + SongAnalysis              | open   |
-| R-007 | AI 直接生成无效或不安全效果            | critical | 8           | typed plan、capability、validator、safety budget | open   |
-| R-008 | 硬件故障时无法自动 Blackout            | critical | 9           | 独立 safety controller 和 fail-safe tests        | open   |
+| ID    | Risk                                         | Severity | Owner Stage | Mitigation                                              | Status |
+| ----- | -------------------------------------------- | -------- | ----------- | ------------------------------------------------------- | ------ |
+| R-001 | scheduler 重复线程或锁反转导致演出冻结       | critical | 1           | 单 worker、统一锁策略、压力测试                         | open   |
+| R-002 | schema 漂移导致用户/AI 字段静默丢失          | critical | 2           | 单一 schema、deny unknown、contract test                | open   |
+| R-003 | 所有属性使用 max 混合产生错误颜色/运动       | high     | 3           | 属性级 HTP/LTP/mix policy                               | open   |
+| R-004 | Preview 80ms 插值掩盖真实频闪输出            | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                    | open   |
+| R-005 | Raw DSL 热编译破坏 Live active show          | critical | 1/6         | Draft/Live immutable snapshot                           | open   |
+| R-006 | 没有歌曲时间模型导致 AI 编排不可复现         | high     | 5/7         | 整数 tick + TempoMap + SongAnalysis                     | open   |
+| R-007 | AI 直接生成无效或不安全效果                  | critical | 8           | typed plan、capability、validator、safety budget        | open   |
+| R-008 | 硬件故障时无法自动 Blackout                  | critical | 9           | 独立 safety controller 和 fail-safe tests               | open   |
+| R-009 | 首帧或 fixture topology 变化被 zip diff 丢弃 | high     | 1           | revision/topology 强制 full frame，并按 fixture ID diff | open   |
 
 ## 22. Deferred Backlog
 

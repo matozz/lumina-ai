@@ -8,7 +8,7 @@ use crate::state::ActivePhaser;
 use rayon::prelude::*;
 use serde::Serialize;
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct FixtureOutput {
     pub id: u32,
     pub r: u8,
@@ -66,7 +66,7 @@ pub fn compute_frame(
                         // Calculate the raw cycle position based on beat and delay.
                         // By subtracting delay, we shift fixtures backwards in time.
                         let raw_cycle = active.accumulated_beat - progress_delay;
-                        
+
                         // If raw_cycle is negative, the fixture hasn't reached its first start time yet.
                         // This prevents wrapping artifacts on the very first frame so the wave physically enters.
                         if raw_cycle < 0.0 {
@@ -114,4 +114,43 @@ pub fn compute_frame_diff(prev: &[FixtureOutput], curr: &[FixtureOutput]) -> Vec
         })
         .map(|(c, _)| c.clone())
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{compute_frame_diff, FixtureOutput};
+
+    fn output(id: u32, color: (u8, u8, u8), dimmer: f32) -> FixtureOutput {
+        FixtureOutput {
+            id,
+            r: color.0,
+            g: color.1,
+            b: color.2,
+            dimmer,
+        }
+    }
+
+    #[test]
+    fn frame_diff_returns_only_changed_fixture_outputs() {
+        let previous = vec![output(1, (255, 0, 0), 1.0), output(2, (0, 0, 0), 0.0)];
+        let current = vec![output(1, (255, 0, 0), 1.0), output(2, (0, 0, 255), 0.75)];
+
+        assert_eq!(
+            compute_frame_diff(&previous, &current),
+            vec![current[1].clone()]
+        );
+    }
+
+    #[test]
+    fn frame_diff_applies_existing_dimmer_change_tolerance() {
+        let previous = vec![output(1, (255, 255, 255), 0.5)];
+        let below_tolerance = vec![output(1, (255, 255, 255), 0.504)];
+        let above_tolerance = vec![output(1, (255, 255, 255), 0.506)];
+
+        assert!(compute_frame_diff(&previous, &below_tolerance).is_empty());
+        assert_eq!(
+            compute_frame_diff(&previous, &above_tolerance),
+            above_tolerance
+        );
+    }
 }

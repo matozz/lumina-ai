@@ -59,6 +59,10 @@ impl CompiledGroup {
     pub fn len(&self) -> usize {
         self.sorted_fixture_ids.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.sorted_fixture_ids.is_empty()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -109,9 +113,9 @@ impl Compiler {
         let groups = Self::compile_groups(&dsl.groups, &fixtures, &coords, &mut errors);
         let phasers = Self::compile_phasers(&dsl.phasers, &groups, &mut errors);
 
-        let timeline = dsl.timeline.map(|tl| CompiledTimeline {
-            events: tl.events,
-        });
+        let timeline = dsl
+            .timeline
+            .map(|tl| CompiledTimeline { events: tl.events });
 
         if !errors.is_empty()
             && errors
@@ -136,7 +140,7 @@ impl Compiler {
             for id in p.id_range.0..=p.id_range.1 {
                 if fixtures.iter().any(|f: &Fixture| f.id == id) {
                     errors.push(CompileError {
-                        path: format!("patch.id_range"),
+                        path: "patch.id_range".to_string(),
                         message: format!("Duplicate fixture ID: {}", id),
                         severity: ErrorSeverity::Error,
                     });
@@ -246,11 +250,11 @@ impl Compiler {
                             if name == "t" {
                                 Some(t)
                             } else if name == "sin" {
-                                Some(_args.get(0)?.sin())
+                                Some(_args.first()?.sin())
                             } else if name == "cos" {
-                                Some(_args.get(0)?.cos())
+                                Some(_args.first()?.cos())
                             } else if name == "pow" {
-                                Some(_args.get(0)?.powf(*_args.get(1)?))
+                                Some(_args.first()?.powf(*_args.get(1)?))
                             } else {
                                 None
                             }
@@ -605,15 +609,15 @@ impl Compiler {
                 });
             }
 
-            let phase = match &p.phase.mode.as_str() {
-                &"spread" => {
+            let phase = match p.phase.mode.as_str() {
+                "spread" => {
                     let spread = p.phase.spread.as_ref().unwrap();
                     PhaseConfig::Spread {
                         from: spread.from,
                         to: spread.to,
                     }
                 }
-                &"grouped" => {
+                "grouped" => {
                     let g = p.phase.grouped.as_ref().unwrap();
                     PhaseConfig::Grouped {
                         group_size: g.group_size as usize,
@@ -658,5 +662,96 @@ impl Compiler {
             );
         }
         map
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parser::ShowDSL, Compiler, PhaseConfig};
+
+    const VALID_SHOW: &str = r##"
+    {
+      "meta": { "name": "Compiler baseline" },
+      "patch": [{ "type": "pixel", "id_range": [1, 2] }],
+      "layout": {
+        "type": "generator",
+        "generator": {
+          "shape": "matrix",
+          "rows": 1,
+          "columns": 2,
+          "spacing": 10.0,
+          "origin": [5.0, 6.0]
+        }
+      },
+      "groups": [{ "name": "Line", "fixtures": { "range": [1, 2] }, "sort_by": "x" }],
+      "phasers": [{
+        "id": "pulse",
+        "name": "Pulse",
+        "target": "Line",
+        "multiplier": 2.0,
+        "steps": [{
+          "values": { "color": "#ff0000", "dimmer": 0.5 },
+          "width": 25.0,
+          "transition": 0.0
+        }],
+        "phase": { "mode": "spread", "spread": { "from": 0.0, "to": 100.0 } }
+      }],
+      "timeline": {
+        "events": [{
+          "beat": 1.0,
+          "duration": 2.0,
+          "action": { "type": "phaser", "phaser": "pulse" }
+        }]
+      }
+    }
+    "##;
+
+    #[test]
+    fn compiles_fixture_group_phaser_and_timeline_outputs() {
+        let dsl: ShowDSL = serde_json::from_str(VALID_SHOW).expect("valid baseline DSL");
+        let show = Compiler::compile(dsl).expect("baseline show should compile");
+
+        assert_eq!(show.fixtures.len(), 2);
+        assert_eq!(show.fixtures[0].id, 1);
+        assert_eq!(show.coords.len(), 2);
+        assert_eq!((show.coords[1].x, show.coords[1].y), (15.0, 6.0));
+
+        let group = show.groups.get("Line").expect("compiled Line group");
+        assert_eq!(group.sorted_fixture_ids, vec![1, 2]);
+        assert_eq!(group.blocks, vec![1, 1]);
+
+        let phaser = show.phasers.get("pulse").expect("compiled pulse phaser");
+        assert_eq!(phaser.multiplier, Some(2.0));
+        assert_eq!(phaser.steps[0].color, (255, 0, 0));
+        assert_eq!(phaser.steps[0].dimmer, 0.5);
+        assert!(matches!(
+            phaser.phase,
+            PhaseConfig::Spread {
+                from: 0.0,
+                to: 100.0
+            }
+        ));
+        assert_eq!(show.timeline.expect("compiled timeline").events.len(), 1);
+    }
+
+    #[test]
+    fn reports_duplicate_fixture_and_missing_target_outputs() {
+        let invalid_show = VALID_SHOW
+            .replace(
+                "[{ \"type\": \"pixel\", \"id_range\": [1, 2] }]",
+                "[{ \"type\": \"pixel\", \"id_range\": [1, 2] }, { \"type\": \"pixel\", \"id_range\": [2, 3] }]",
+            )
+            .replace("\"target\": \"Line\"", "\"target\": \"Missing\"");
+        let dsl: ShowDSL = serde_json::from_str(&invalid_show).expect("syntactically valid DSL");
+        let errors = match Compiler::compile(dsl) {
+            Ok(_) => panic!("invalid show must not compile"),
+            Err(errors) => errors,
+        };
+
+        assert_eq!(errors.len(), 2);
+        assert_eq!(errors[0].path, "patch.id_range");
+        assert_eq!(errors[0].message, "Duplicate fixture ID: 2");
+        assert_eq!(errors[1].path, "phasers[name=Pulse]");
+        assert_eq!(errors[1].message, "Target group not found: Missing");
     }
 }
