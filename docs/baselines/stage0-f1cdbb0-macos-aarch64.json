@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "source_commit": "f1cdbb0",
+  "profile": "release",
+  "platform": {
+    "os": "macos",
+    "arch": "aarch64",
+    "available_parallelism": 12
+  },
+  "compute_frame": [
+    {
+      "fixture_count": 100,
+      "samples": 100,
+      "p50_us": 68.167,
+      "p95_us": 124.75,
+      "mean_us": 76.17419
+    },
+    {
+      "fixture_count": 500,
+      "samples": 50,
+      "p50_us": 101.958,
+      "p95_us": 153.792,
+      "mean_us": 103.37
+    },
+    {
+      "fixture_count": 1000,
+      "samples": 20,
+      "p50_us": 154.083,
+      "p95_us": 224.833,
+      "mean_us": 172.13124999999997
+    },
+    {
+      "fixture_count": 2000,
+      "samples": 10,
+      "p50_us": 383.83299999999997,
+      "p95_us": 445.66700000000003,
+      "mean_us": 387.1083
+    }
+  ],
+  "template_compile": {
+    "template_count": 18,
+    "samples": 20,
+    "suite_p50_us": 1132.5,
+    "suite_p95_us": 1338.084,
+    "per_template_mean_us": 61.632294444444454
+  },
+  "bundle": {
+    "asset_count": 8,
+    "total_bytes": 687032,
+    "javascript_bytes": 563495,
+    "css_bytes": 60584
+  },
+  "scheduler_drift": {
+    "duration_target_ms": 10000,
+    "elapsed_ms": 10003.189459,
+    "bpm": 120,
+    "subdivision": 8,
+    "tick_count": 160,
+    "update_hz": 15.994898492704836,
+    "logical_beats": 20.0,
+    "elapsed_beats": 20.006378918,
+    "drift_ms": -3.1894589999996725
+  }
+}

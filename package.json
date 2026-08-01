@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "baseline:stage0": "cargo run --release --manifest-path src-tauri/Cargo.toml --example stage0_baseline",
     "test": "vitest run",
     "test:watch": "vitest",
     "preview": "vite preview",
