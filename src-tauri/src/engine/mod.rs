@@ -1,7 +1,9 @@
 pub mod animation;
+pub mod clock;
 pub mod color;
 pub mod phaser;
 pub mod timeline;
+pub mod transport;
 
 use crate::compiler::CompiledShow;
 use crate::state::ActivePhaser;

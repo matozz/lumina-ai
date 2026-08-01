@@ -219,7 +219,7 @@ flowchart TD
 | Stage | 名称                                    | 状态        | 依赖 | 核心退出信号                                |
 | ----- | --------------------------------------- | ----------- | ---- | ------------------------------------------- |
 | 0     | Baseline 与质量护栏                     | completed   | 无   | 测试框架、基线和 CI 可用                    |
-| 1     | 实时内核与 Transport                    | not_started | 0    | Clock/Play/Pause/Stop/Seek 确定且无重复线程 |
+| 1     | 实时内核与 Transport                    | in_progress | 0    | Clock/Play/Pause/Stop/Seek 确定且无重复线程 |
 | 2     | Versioned Document 与统一 Schema        | not_started | 1    | 单一 schema 契约、migration、零 panic       |
 | 3     | Fixture Attribute、Mixer 与 Output 抽象 | not_started | 2    | 通用属性、HTP/LTP、Null/Preview Sink        |
 | 4     | 可扩展 Effect Engine                    | not_started | 3    | EffectGraph/参数/空间相位可确定性求值       |
@@ -1078,15 +1078,15 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 
 ## Handoff
 
-- Current Stage: Stage 0 · Baseline 与质量护栏（completed）
-- Slice completed: 用 Rust/TypeScript 共享字段的首版 `Diagnostic` 取代自由文本 compile error，为 JSON 解析、重复 fixture ID 和缺失 target group 分配稳定 code，并在 DSL 编辑器内呈现带路径、hint 和复制入口的可访问错误 Alert；Stage 0 全部退出条件关闭。
-- Commits: `a87014e`、`f1cdbb0`、`a86392f`、`ac547bc`、`d24e0f5`；`feat(dsl): 🩺 add structured compile diagnostics`（本切片提交）
-- Files changed: Rust compiler/command diagnostic contract，前端 bridge 类型、normalizer 与测试，engine store，`DslEditor`，shadcn Alert，本文档。
-- Validation: `RUSTUP_TOOLCHAIN=stable pnpm check:all` 通过（Vitest 5 tests、Rust 17 tests/contracts、fmt、TypeScript、Vite build、Clippy）；本地真实浏览器窗口确认 error Alert、稳定 code/path/message/hint、`alert` 语义及唯一键盘复制入口。
-- ADRs added/updated: 无；首版错误 envelope 不改变 Stage 1 实时内核架构。ADR-0001 仍为下一切片的前置决策。
-- Risks opened/closed: 新增并关闭 R-014；Stage 1 继续承接 R-001、R-004、R-009、R-011、R-012。
-- Remaining exit criteria: Stage 0 无；Stage 1 尚未开始。
-- Recommended next slice: 编写并接受 ADR-0001，固定 Clock、Transport 状态机、单 worker 和纯 `render_at` 边界，再实现最小可验证的 ManualClock/Transport 切片。
+- Current Stage: Stage 1 · 实时内核与 Transport（in_progress）
+- Slice completed: 接受 ADR-0001；实现可注入 monotonic/Manual Clock、由 elapsed time 求值的显式 Transport 状态机、revision、两阶段 Seek、重复 Play 拒绝语义，以及 30/60/120Hz 输出频率值对象。
+- Commits: Stage 0 `a87014e`、`f1cdbb0`、`a86392f`、`ac547bc`、`d24e0f5`、`acf5b81`；`feat(tauri): ⏱️ add deterministic transport core`（本切片提交）
+- Files changed: `docs/adr/0001-clock-transport-render-at.md`、Rust Clock/Transport core、engine module exports、本文档。
+- Validation: `cargo test` 通过（24 tests/contracts）；ManualClock 无真实等待验证 10 分钟为精确 1,200 beats，另覆盖重复 Play revision、Pause/Resume、Stop、Seek、tempo anchor 与三档输出率。
+- ADRs added/updated: 新增并接受 ADR-0001，固定 monotonic anchor time、单 Tokio worker、纯 `render_at`、immutable show snapshot 与 Frame revision 边界。
+- Risks opened/closed: 无状态变化；R-001/R-009/R-011/R-012 已有实现方向但仍保持 open，直到 app runtime 集成与压力测试通过。
+- Remaining exit criteria: Clock/Transport 尚未接入 scheduler；纯 `render_at`、单 worker join、snapshot/revision、Frame full/diff/resync、前端命令与 Stage 1 全部压力/漂移验证仍未完成。
+- Recommended next slice: 实现纯 `render_at(RenderTime)`，按目标 beat 重建 timeline phaser 与 automation，并用 Seek=顺序播放及 18 模板 runtime contract 验证。
 
 ## 19. ADR 规范
 
@@ -1102,35 +1102,37 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 
 预期 ADR：
 
-| ID       | 决策                                | Stage | 状态    |
-| -------- | ----------------------------------- | ----- | ------- |
-| ADR-0001 | Clock、Transport 与 render_at 边界  | 1     | pending |
-| ADR-0002 | Schema 权威来源与代码生成链         | 2     | pending |
-| ADR-0003 | MusicalTime PPQ 与 TempoMap         | 5     | pending |
-| ADR-0004 | Fixture Attribute 与 mix policy     | 3     | pending |
-| ADR-0005 | EffectGraph 节点和 typed ports      | 4     | pending |
-| ADR-0006 | Draft 与 Live Snapshot 发布模型     | 6     | pending |
-| ADR-0007 | Audio analysis 与缓存策略           | 7     | pending |
-| ADR-0008 | AI ArrangementPlan 与 provider 边界 | 8     | pending |
-| ADR-0009 | OutputSink fail-safe 与 Blackout    | 9     | pending |
+| ID       | 决策                                | Stage | 状态     |
+| -------- | ----------------------------------- | ----- | -------- |
+| ADR-0001 | Clock、Transport 与 render_at 边界  | 1     | accepted |
+| ADR-0002 | Schema 权威来源与代码生成链         | 2     | pending  |
+| ADR-0003 | MusicalTime PPQ 与 TempoMap         | 5     | pending  |
+| ADR-0004 | Fixture Attribute 与 mix policy     | 3     | pending  |
+| ADR-0005 | EffectGraph 节点和 typed ports      | 4     | pending  |
+| ADR-0006 | Draft 与 Live Snapshot 发布模型     | 6     | pending  |
+| ADR-0007 | Audio analysis 与缓存策略           | 7     | pending  |
+| ADR-0008 | AI ArrangementPlan 与 provider 边界 | 8     | pending  |
+| ADR-0009 | OutputSink fail-safe 与 Blackout    | 9     | pending  |
 
 ## 20. Progress Ledger
 
 每次追加一行，不删除历史记录。验证失败也应记录，并在后续行注明关闭。
 
-| Date       | Stage    | Slice               | Status    | Commit(s)   | Validation                                           | Decisions/Risks                              | Next                                        |
-| ---------- | -------- | ------------------- | --------- | ----------- | ---------------------------------------------------- | -------------------------------------------- | ------------------------------------------- |
-| 2026-08-02 | Planning | 建立分阶段改造规格  | completed | docs commit | 基线审计：`pnpm build` 通过；`cargo test` 为 0 tests | 当前系统定位为 PoC；实时可信度优先于 AI 功能 | Stage 0：建立 Rust/Frontend 测试与 baseline |
-| 2026-08-02 | 0        | Rust 行为基线       | failed    | none        | 首次严格 Clippy 发现 13 个存量 lint                  | 等价机械清理，不改变 scheduler 行为          | 清理后复跑全部 Rust 门槛                    |
-| 2026-08-02 | 0        | Rust 行为基线       | completed | 本切片提交  | `pnpm build`；fmt；Clippy；`cargo test` 10 passed    | 新增 R-009；无 ADR                           | 前端测试 runner + 18 模板 contract          |
-| 2026-08-02 | 0        | 前端 runner + 模板  | failed    | none        | jsdom 30 在 Node 20 无法启动 Vitest worker           | 记录 R-010；改用 Vitest 官方 happy-dom       | 复跑前端与 Rust template contract           |
-| 2026-08-02 | 0        | 前端 runner + 模板  | completed | 本切片提交  | `pnpm test` 3 passed；`cargo test` 11 passed；build  | R-010 closed；18/18 双侧 contract            | release benchmark + 10 秒 drift baseline    |
-| 2026-08-02 | 0        | release 基线        | completed | 本切片提交  | 4 档 fixture + 18 模板 + bundle + 10 秒 drift        | 新增 R-011；基线 source `f1cdbb0`            | Transport/topology 回归夹具                 |
-| 2026-08-02 | 0        | Transport 回归夹具  | completed | 本切片提交  | `cargo test` 16 passed；MockRuntime 生命周期可执行   | 确认 R-001/R-009；新增 R-012                 | toolchain + unified checks + CI             |
-| 2026-08-02 | 0        | toolchain + checks  | failed    | none        | 4 个存量 Prettier 文件；sandbox 阻止 rustup temp     | 纯格式化；记录 R-013                         | 复跑统一前端/Rust 门槛                      |
-| 2026-08-02 | 0        | toolchain + checks  | completed | 本切片提交  | `pnpm check`；同版本 stable `pnpm check:rust`        | R-013 closed；CI 调用同一命令                | Diagnostic contract + UI error              |
-| 2026-08-02 | 0        | Diagnostic contract | failed    | none        | serde 错误文本断言错误地假设固定措辞/列号            | 改为验证稳定 code、path、hint 与实际位置     | 修正断言并复跑统一门槛                      |
-| 2026-08-02 | 0        | Diagnostic contract | completed | 本切片提交  | `pnpm check:all`；真实窗口 error/keyboard/ARIA 验证  | R-014 closed；Stage 0 全部退出条件满足       | Stage 1：ADR-0001 + ManualClock/Transport   |
+| Date       | Stage    | Slice               | Status    | Commit(s)   | Validation                                            | Decisions/Risks                              | Next                                        |
+| ---------- | -------- | ------------------- | --------- | ----------- | ----------------------------------------------------- | -------------------------------------------- | ------------------------------------------- |
+| 2026-08-02 | Planning | 建立分阶段改造规格  | completed | docs commit | 基线审计：`pnpm build` 通过；`cargo test` 为 0 tests  | 当前系统定位为 PoC；实时可信度优先于 AI 功能 | Stage 0：建立 Rust/Frontend 测试与 baseline |
+| 2026-08-02 | 0        | Rust 行为基线       | failed    | none        | 首次严格 Clippy 发现 13 个存量 lint                   | 等价机械清理，不改变 scheduler 行为          | 清理后复跑全部 Rust 门槛                    |
+| 2026-08-02 | 0        | Rust 行为基线       | completed | 本切片提交  | `pnpm build`；fmt；Clippy；`cargo test` 10 passed     | 新增 R-009；无 ADR                           | 前端测试 runner + 18 模板 contract          |
+| 2026-08-02 | 0        | 前端 runner + 模板  | failed    | none        | jsdom 30 在 Node 20 无法启动 Vitest worker            | 记录 R-010；改用 Vitest 官方 happy-dom       | 复跑前端与 Rust template contract           |
+| 2026-08-02 | 0        | 前端 runner + 模板  | completed | 本切片提交  | `pnpm test` 3 passed；`cargo test` 11 passed；build   | R-010 closed；18/18 双侧 contract            | release benchmark + 10 秒 drift baseline    |
+| 2026-08-02 | 0        | release 基线        | completed | 本切片提交  | 4 档 fixture + 18 模板 + bundle + 10 秒 drift         | 新增 R-011；基线 source `f1cdbb0`            | Transport/topology 回归夹具                 |
+| 2026-08-02 | 0        | Transport 回归夹具  | completed | 本切片提交  | `cargo test` 16 passed；MockRuntime 生命周期可执行    | 确认 R-001/R-009；新增 R-012                 | toolchain + unified checks + CI             |
+| 2026-08-02 | 0        | toolchain + checks  | failed    | none        | 4 个存量 Prettier 文件；sandbox 阻止 rustup temp      | 纯格式化；记录 R-013                         | 复跑统一前端/Rust 门槛                      |
+| 2026-08-02 | 0        | toolchain + checks  | completed | 本切片提交  | `pnpm check`；同版本 stable `pnpm check:rust`         | R-013 closed；CI 调用同一命令                | Diagnostic contract + UI error              |
+| 2026-08-02 | 0        | Diagnostic contract | failed    | none        | serde 错误文本断言错误地假设固定措辞/列号             | 改为验证稳定 code、path、hint 与实际位置     | 修正断言并复跑统一门槛                      |
+| 2026-08-02 | 0        | Diagnostic contract | completed | 本切片提交  | `pnpm check:all`；真实窗口 error/keyboard/ARIA 验证   | R-014 closed；Stage 0 全部退出条件满足       | Stage 1：ADR-0001 + ManualClock/Transport   |
+| 2026-08-02 | 1        | Clock + Transport   | failed    | none        | Cargo 不接受两个位置测试过滤参数                      | 改为执行完整 Rust test suite                 | 全量验证 Clock/Transport 与存量契约         |
+| 2026-08-02 | 1        | Clock + Transport   | completed | 本切片提交  | `cargo test` 24 passed；ManualClock 10 分钟零累计误差 | ADR-0001 accepted；既有 Stage 1 风险仍 open  | 纯 `render_at` + Seek/template contract     |
 
 ## 21. Open Risks
 
