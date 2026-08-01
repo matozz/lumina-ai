@@ -219,7 +219,7 @@ flowchart TD
 | Stage | 名称                                    | 状态        | 依赖 | 核心退出信号                                |
 | ----- | --------------------------------------- | ----------- | ---- | ------------------------------------------- |
 | 0     | Baseline 与质量护栏                     | completed   | 无   | 测试框架、基线和 CI 可用                    |
-| 1     | 实时内核与 Transport                    | in_progress | 0    | Clock/Play/Pause/Stop/Seek 确定且无重复线程 |
+| 1     | 实时内核与 Transport                    | completed   | 0    | Clock/Play/Pause/Stop/Seek 确定且无重复线程 |
 | 2     | Versioned Document 与统一 Schema        | not_started | 1    | 单一 schema 契约、migration、零 panic       |
 | 3     | Fixture Attribute、Mixer 与 Output 抽象 | not_started | 2    | 通用属性、HTP/LTP、Null/Preview Sink        |
 | 4     | 可扩展 Effect Engine                    | not_started | 3    | EffectGraph/参数/空间相位可确定性求值       |
@@ -1013,18 +1013,20 @@ flowchart LR
 
 任何任务只有同时满足以下条件才可以在 Progress Ledger 标记完成：
 
-- [ ] 实现与当前 Stage 设计一致；若偏离，已有 ADR。
-- [ ] 没有无关重构、调试日志、死代码或生成噪音。
-- [ ] `pnpm build` 通过。
-- [ ] 当前阶段规定的前端测试通过。
-- [ ] `cargo fmt --check` 通过。
-- [ ] `cargo clippy --all-targets -- -D warnings` 通过，或例外已记录。
-- [ ] `cargo test` 通过且新增行为有测试。
-- [ ] 对实时路径的修改包含确定性、Seek/Replay 或性能验证。
-- [ ] 对 schema 的修改包含 migration、生成文件和模板检查。
-- [ ] 对 UI 的修改包含空态、错误态、键盘路径和真实窗口验证。
-- [ ] 相关文档、Stage checklist、ADR 和 Progress Ledger 已更新。
-- [ ] 已进行自审并形成符合仓库规范的增量 commit。
+以下勾选状态对应 2026-08-02 的 Stage 0+1 scoped Goal 收口；后续 Stage 必须重新验证并更新。
+
+- [x] 实现与当前 Stage 设计一致；若偏离，已有 ADR。
+- [x] 没有无关重构、调试日志、死代码或生成噪音。
+- [x] `pnpm build` 通过。
+- [x] 当前阶段规定的前端测试通过。
+- [x] `cargo fmt --check` 通过。
+- [x] `cargo clippy --all-targets -- -D warnings` 通过，或例外已记录。
+- [x] `cargo test` 通过且新增行为有测试。
+- [x] 对实时路径的修改包含确定性、Seek/Replay 或性能验证。
+- [x] 对 schema 的修改包含 migration、生成文件和模板检查（N/A：Stage 0+1 未修改 versioned document schema；18/18 模板 contract 已通过）。
+- [x] 对 UI 的修改包含空态、错误态、键盘路径和真实窗口验证。
+- [x] 相关文档、Stage checklist、ADR 和 Progress Ledger 已更新。
+- [x] 已进行自审并形成符合仓库规范的增量 commit。
 
 ## 18. 跨对话 Goal 执行协议
 
@@ -1078,15 +1080,15 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 
 ## Handoff
 
-- Current Stage: Stage 1 · 实时内核与 Transport（in_progress）
-- Slice completed: 真实启动 Tauri app，确认 800×600 原生窗口与默认模板经 IPC 编译为 revision 1，并通过 app 自身 Quit 菜单以 exit 0 结束；增加 ControlPanel 原生可聚焦按钮的 Play/Pause/Stop/Timeline command 回归，以及 active-worker shutdown cancel/join/reset 回归。
-- Commits: Stage 0 `a87014e`、`f1cdbb0`、`a86392f`、`ac547bc`、`d24e0f5`、`acf5b81`；Stage 1 `aceef6a`、`ce44617`、`55694a2`、`c73a54a`、`045cfce`、`9834158`；`test(app): 🧪 validate Stage 1 lifecycle UI`（本切片提交）
-- Files changed: scheduler shutdown regression、ControlPanel transport/mode/focus regression、ADR/计划文档。
-- Validation: `pnpm check:all` 通过（35 Rust tests/contracts、12 Vitest tests）；真实 Tauri launch/template IPC/Quit 通过；active-worker shutdown 完成 cancel/join/reset。
-- ADRs added/updated: ADR-0001 补充 UI command 与 app-shutdown 验证证据；决策无变化。
-- Risks opened/closed: 无新增产品风险；记录宿主锁屏导致桌面输入不可投递的验证环境失败，已由可重复自动化测试覆盖。
-- Remaining exit criteria: 最终统一门禁、自审并关闭 Stage 1/全局 Definition of Done。
-- Recommended next slice: 执行最终 Stage 0+1 验证矩阵，更新 Stage 状态与 Handoff 后停止，不进入 Stage 2。
+- Current Stage: Stage 1 · 实时内核与 Transport（completed）；本 scoped Goal 的 Stage 0+1 已完成，Stage 2 保持 `not_started`。
+- Slice completed: 逐项核对 Stage 0/1 退出条件和全局 Definition of Done；复跑 Stage 0 release baseline 与 Stage 1 loaded runtime validation；确认工作树无临时观测代码且未实施 Stage 2。
+- Commits: Stage 0 `a87014e`、`f1cdbb0`、`a86392f`、`ac547bc`、`d24e0f5`、`acf5b81`；Stage 1 `aceef6a`、`ce44617`、`55694a2`、`c73a54a`、`045cfce`、`9834158`、`0ca3e3f`；`docs(overhaul): ✅ complete Stage 0 and Stage 1`（本切片提交）
+- Files changed: Stage 状态、scoped Goal Definition of Done、Progress Ledger、Open Risks 归属、ADR/Handoff。
+- Validation: final `pnpm check:all` 与 `pnpm build` 通过（35 Rust tests/contracts、12 Vitest tests）；Stage 0 baseline 覆盖 18 templates/100–2,000 fixtures；Stage 1 release harness 完成 36,000 ticks/18,000,000 evaluations，0.012ms drift、136.48× realtime、checksum `14677128193208807216`。
+- ADRs added/updated: ADR-0001 保持 Accepted，并关联全部 Stage 1 实现/验证 commits。
+- Risks opened/closed: Stage 0/1 owned risks R-001/R-004/R-009–R-014 均 closed；R-005 的 Stage 1 immutable revision 基础已完成，剩余显式 Draft/Live 发布转交 Stage 6。
+- Remaining exit criteria: 无（仅限本 Goal 的 Stage 0+1 范围）。
+- Recommended next slice: 停止，不进入 Stage 2；若后续另启 Goal，从 ADR-0002 与 Stage 2 最早垂直切片开始。
 
 ## 19. ADR 规范
 
@@ -1146,25 +1148,26 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 1        | Preview raw Frame     | completed | 本切片提交  | `pnpm check:all`；34 Rust/10 frontend tests           | R-004 closed；移除隐式 80ms 插值              | 真实 Tauri 窗口验收                         |
 | 2026-08-02 | 1        | 真实 Tauri 窗口验收   | failed    | none        | 窗口/IPC 正常；宿主前台为 loginwindow，输入不可投递   | 属验证环境限制；不改变 runtime 架构           | 自动化 UI command + shutdown 回归           |
 | 2026-08-02 | 1        | UI + app lifecycle    | completed | 本切片提交  | native revision 1/Quit 0；35 Rust/12 frontend tests   | 临时观测日志已移除；无新产品风险              | 最终 Stage 0+1 验证与文档收口               |
+| 2026-08-02 | 0+1      | scoped Goal 收口      | completed | 本切片提交  | 35 Rust/12 frontend；build；S0/S1 release baselines   | 全局 DoD 通过；Stage 2 保持 not_started       | 停止，不进入 Stage 2                        |
 
 ## 21. Open Risks
 
-| ID    | Risk                                               | Severity | Owner Stage | Mitigation                                              | Status |
-| ----- | -------------------------------------------------- | -------- | ----------- | ------------------------------------------------------- | ------ |
-| R-001 | scheduler 重复线程或锁反转导致演出冻结             | critical | 1           | 单 worker、统一锁策略、压力测试                         | closed |
-| R-002 | schema 漂移导致用户/AI 字段静默丢失                | critical | 2           | 单一 schema、deny unknown、contract test                | open   |
-| R-003 | 所有属性使用 max 混合产生错误颜色/运动             | high     | 3           | 属性级 HTP/LTP/mix policy                               | open   |
-| R-004 | Preview 80ms 插值掩盖真实频闪输出                  | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                    | closed |
-| R-005 | Raw DSL 热编译破坏 Live active show                | critical | 1/6         | Draft/Live immutable snapshot                           | open   |
-| R-006 | 没有歌曲时间模型导致 AI 编排不可复现               | high     | 5/7         | 整数 tick + TempoMap + SongAnalysis                     | open   |
-| R-007 | AI 直接生成无效或不安全效果                        | critical | 8           | typed plan、capability、validator、safety budget        | open   |
-| R-008 | 硬件故障时无法自动 Blackout                        | critical | 9           | 独立 safety controller 和 fail-safe tests               | open   |
-| R-009 | 首帧或 fixture topology 变化被 zip diff 丢弃       | high     | 1           | revision/topology 强制 full frame，并按 fixture ID diff | closed |
-| R-010 | jsdom 30 无法在固定 Node 20 启动测试 worker        | medium   | 0           | 改用 Vitest 官方支持的 happy-dom                        | closed |
-| R-011 | timer-only 漂移基线未覆盖 Tauri/锁/render load     | medium   | 1           | ManualClock 确定性测试 + loaded runtime 压力测试        | closed |
-| R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失 | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command           | closed |
-| R-013 | managed sandbox 内精确 toolchain 恢复下载超时      | low      | 0           | 同版本 stable 完整验证；干净 CI 执行 pin                | closed |
-| R-014 | compile/bridge 异常只写 console，用户无法定位      | high     | 0           | 稳定 Diagnostic envelope、前端 normalizer 与错误 Alert  | closed |
+| ID    | Risk                                               | Severity | Owner Stage | Mitigation                                               | Status |
+| ----- | -------------------------------------------------- | -------- | ----------- | -------------------------------------------------------- | ------ |
+| R-001 | scheduler 重复线程或锁反转导致演出冻结             | critical | 1           | 单 worker、统一锁策略、压力测试                          | closed |
+| R-002 | schema 漂移导致用户/AI 字段静默丢失                | critical | 2           | 单一 schema、deny unknown、contract test                 | open   |
+| R-003 | 所有属性使用 max 混合产生错误颜色/运动             | high     | 3           | 属性级 HTP/LTP/mix policy                                | open   |
+| R-004 | Preview 80ms 插值掩盖真实频闪输出                  | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                     | closed |
+| R-005 | Raw DSL 热编译破坏 Live active show                | critical | 6           | Stage 1 immutable revision；Stage 6 显式 Draft/Live 发布 | open   |
+| R-006 | 没有歌曲时间模型导致 AI 编排不可复现               | high     | 5/7         | 整数 tick + TempoMap + SongAnalysis                      | open   |
+| R-007 | AI 直接生成无效或不安全效果                        | critical | 8           | typed plan、capability、validator、safety budget         | open   |
+| R-008 | 硬件故障时无法自动 Blackout                        | critical | 9           | 独立 safety controller 和 fail-safe tests                | open   |
+| R-009 | 首帧或 fixture topology 变化被 zip diff 丢弃       | high     | 1           | revision/topology 强制 full frame，并按 fixture ID diff  | closed |
+| R-010 | jsdom 30 无法在固定 Node 20 启动测试 worker        | medium   | 0           | 改用 Vitest 官方支持的 happy-dom                         | closed |
+| R-011 | timer-only 漂移基线未覆盖 Tauri/锁/render load     | medium   | 1           | ManualClock 确定性测试 + loaded runtime 压力测试         | closed |
+| R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失 | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command            | closed |
+| R-013 | managed sandbox 内精确 toolchain 恢复下载超时      | low      | 0           | 同版本 stable 完整验证；干净 CI 执行 pin                 | closed |
+| R-014 | compile/bridge 异常只写 console，用户无法定位      | high     | 0           | 稳定 Diagnostic envelope、前端 normalizer 与错误 Alert   | closed |
 
 ## 22. Deferred Backlog
 
