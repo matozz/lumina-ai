@@ -10,6 +10,8 @@ use tokio::sync::{watch, Mutex};
 use tokio::task::JoinHandle;
 use tokio::time::{interval, MissedTickBehavior};
 
+/// Lock order: scheduler lifecycle -> completed ShowStore operation -> runtime state.
+/// The worker never locks lifecycle, and no code awaits ShowStore while holding runtime state.
 pub struct Scheduler {
     lifecycle: Mutex<SchedulerLifecycle>,
 }
@@ -547,6 +549,83 @@ mod tests {
                 .pause(app.handle(), &state)
                 .await
                 .expect("pause");
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn concurrent_reload_transport_and_resync_finishes_without_deadlock() {
+        let app = tauri::test::mock_app();
+        let (state, clock) = engine_state(OutputRate::default());
+        state.shows.publish(show_with_fixture(1)).await;
+
+        let transport = async {
+            for iteration in 0..40 {
+                state
+                    .scheduler
+                    .play(app.handle().clone(), state.clone())
+                    .await
+                    .expect("stress play");
+                clock.advance(Duration::from_millis(16));
+                state
+                    .scheduler
+                    .seek(app.handle(), &state, f64::from(iteration))
+                    .await
+                    .expect("stress seek");
+                if iteration % 2 == 0 {
+                    state
+                        .scheduler
+                        .pause(app.handle(), &state)
+                        .await
+                        .expect("stress pause");
+                } else {
+                    state
+                        .scheduler
+                        .stop(app.handle(), &state)
+                        .await
+                        .expect("stress stop");
+                }
+            }
+        };
+        let reload = async {
+            for revision in 2..=101 {
+                state.shows.publish(show_with_fixture(revision)).await;
+                tokio::task::yield_now().await;
+            }
+        };
+        let resync = async {
+            for _ in 0..200 {
+                state.runtime.write().await.frame_publisher.request_full();
+                tokio::task::yield_now().await;
+            }
+        };
+
+        tokio::time::timeout(Duration::from_secs(10), async {
+            tokio::join!(transport, reload, resync);
+        })
+        .await
+        .expect("concurrent operations must not deadlock");
+
+        assert_eq!(state.shows.current().await.expect("show").revision, 101);
+        assert!(!state.scheduler.is_running().await);
+        assert_eq!(
+            state
+                .runtime
+                .read()
+                .await
+                .transport
+                .snapshot(clock.now())
+                .state,
+            TransportState::Stopped
+        );
+    }
+
+    fn show_with_fixture(id: u32) -> CompiledShow {
+        CompiledShow {
+            fixtures: vec![Fixture {
+                id,
+                type_: "pixel".to_string(),
+            }],
+            ..CompiledShow::default()
         }
     }
 }

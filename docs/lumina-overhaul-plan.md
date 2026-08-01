@@ -332,7 +332,7 @@ flowchart TD
 - [x] 消除 `compiled_show` 与 `runtime` 的嵌套反向锁。
 - [x] 优先使用短锁和 immutable `Arc<CompiledShow>` snapshot。
 - [x] 编辑态 compile 成功后生成新 revision，不在持锁时执行昂贵计算。
-- [ ] 明确锁顺序并添加并发回归测试。
+- [x] 明确锁顺序并添加并发回归测试。
 
 #### 1.5 Frame 发布
 
@@ -1079,14 +1079,14 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 ## Handoff
 
 - Current Stage: Stage 1 · 实时内核与 Transport（in_progress）
-- Slice completed: 用单 Tokio task 完整替换旧 OS thread/runtime/spin-loop；scheduler controller 串行管理 cancel/join 与 Play/Pause/Stop/Seek，runtime 直接持有 Transport/live snapshot，纯 renderer 在锁外按 monotonic elapsed 求值；Tauri Exit 走同一 shutdown join 路径。
-- Commits: Stage 0 `a87014e`、`f1cdbb0`、`a86392f`、`ac547bc`、`d24e0f5`、`acf5b81`；Stage 1 `aceef6a`、`ce44617`、`55694a2`；`refactor(tauri): ⚙️ run one joined scheduler worker`（本切片提交）
-- Files changed: Rust scheduler/state/commands/app lifecycle、Clock/Transport/live render integration、Tokio time feature，TypeScript transport event/commands/store 与 ControlPanel Pause/Stop 语义、ADR/计划文档。
-- Validation: `pnpm check:all` 与针对性 scheduler tests 通过（33 Rust tests/contracts、8 Vitest tests）；重复 Play 返回 `AlreadyPlaying`，Pause 保持 cursor/live phaser，Stop 清空并归零，Seek 两个 revision 后恢复唯一 worker，30/60/120Hz 在真实 timer 窗口内达到容差。
-- ADRs added/updated: ADR-0001 补充单 worker/Transport app integration；决策无变化。
-- Risks opened/closed: R-012 closed；R-001/R-011 仍 open，等待并发 reload/play/stop 与 loaded drift 压力测试。
-- Remaining exit criteria: 明确锁顺序并完成并发压力测试；10 分钟 loaded drift/频率 artifact；真实 Tauri 窗口验证新版 Play/Pause/Stop/Seek 与 shutdown。
-- Recommended next slice: 增加 concurrent reload/play/pause/stop/seek 压力回归和 loaded ManualClock/real-timer 验证，记录 Stage 1 benchmark artifact，再做真实窗口验收。
+- Slice completed: 固化 scheduler lifecycle → 已完成的 ShowStore 操作 → runtime state 的锁顺序；新增 40 轮 transport、100 次 reload、200 次 resync 并发压力回归；release harness 以 60Hz、500 fixtures 连续模拟 10 分钟 loaded render/publish。
+- Commits: Stage 0 `a87014e`、`f1cdbb0`、`a86392f`、`ac547bc`、`d24e0f5`、`acf5b81`；Stage 1 `aceef6a`、`ce44617`、`55694a2`、`c73a54a`；`perf(tauri): 📈 validate loaded runtime stability`（本切片提交）
+- Files changed: scheduler 锁顺序说明与并发压力测试、Stage 1 release validation harness、可复现 benchmark script/artifact、ADR/计划文档。
+- Validation: `pnpm check:all` 通过（34 Rust tests/contracts、8 Vitest tests）；并发压力测试在 10 秒 timeout 内结束；release harness 完成 36,000 ticks/18,000,000 fixture evaluations，逻辑漂移 0.012ms、平均 render/publish 112.277µs、148.44× realtime。
+- ADRs added/updated: ADR-0001 补充 lock-order/stress/loaded validation 证据；决策无变化。
+- Risks opened/closed: R-001/R-011 closed；R-004 的 Stage 1 preview 部分仍待处理。
+- Remaining exit criteria: 让 Preview 直接消费原始 Frame；真实 Tauri 窗口验证 Play/Pause/Stop、template reload、error/keyboard 与 shutdown；最终统一门禁。
+- Recommended next slice: 移除 Preview 隐式 80ms 插值并补前端回归，然后进行真实 Tauri 窗口验收。
 
 ## 19. ADR 规范
 
@@ -1137,12 +1137,18 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 1        | Snapshot + Frame      | completed | 本切片提交  | `pnpm check:all`；32 Rust/8 frontend tests            | R-009 closed；revision/sequence/full resync   | 单 Tokio worker + Transport integration     |
 | 2026-08-02 | 1        | 单 worker integration | failed    | none        | paused Tokio timer 每两次 advance 才调度 worker       | 测试调度假设错误；改用真实 30/60/120Hz 窗口   | 复跑实际发布频率与完整 checks               |
 | 2026-08-02 | 1        | 单 worker integration | completed | 本切片提交  | `pnpm check:all`；33 Rust/8 frontend tests            | R-012 closed；R-001/R-011 待压力验证          | concurrent stress + loaded drift artifact   |
+| 2026-08-02 | 1        | loaded runtime 验证   | failed    | none        | 精确 toolchain 受 managed sandbox 的 rustup temp 阻止 | 复用 R-013 缓解：以同版本 stable 执行         | stable release harness                      |
+| 2026-08-02 | 1        | loaded runtime 验证   | failed    | none        | 整数纳秒 tick 使零漂移断言产生 0.012ms 量化误差       | 基线容差定为 0.1ms，保留量化误差可观测值      | 复跑 release harness                        |
+| 2026-08-02 | 1        | 并发 + loaded runtime | completed | 本切片提交  | stress 通过；36k ticks/18m evaluations；0.012ms drift | R-001/R-011 closed；artifact source `c73a54a` | Preview raw Frame + 真实 Tauri 验收         |
+| 2026-08-02 | 1        | 并发 + loaded runtime | failed    | none        | Prettier 无 Rust parser，组合命令在 checks 前退出     | Rust 改由 Cargo fmt；前端/文档仍用 Prettier   | 分离格式化后复跑统一门禁                    |
+| 2026-08-02 | 1        | 并发 + loaded runtime | failed    | none        | 未覆盖环境的 Cargo fmt 再触发 rustup temp 权限错误    | 所有本地 Rust 命令统一显式使用同版本 stable   | stable fmt 后复跑统一门禁                   |
+| 2026-08-02 | 1        | 并发 + loaded runtime | completed | 本切片提交  | `pnpm check:all`；34 Rust/8 frontend tests            | 格式化/toolchain 执行问题均关闭               | Preview raw Frame + 真实 Tauri 验收         |
 
 ## 21. Open Risks
 
 | ID    | Risk                                               | Severity | Owner Stage | Mitigation                                              | Status |
 | ----- | -------------------------------------------------- | -------- | ----------- | ------------------------------------------------------- | ------ |
-| R-001 | scheduler 重复线程或锁反转导致演出冻结             | critical | 1           | 单 worker、统一锁策略、压力测试                         | open   |
+| R-001 | scheduler 重复线程或锁反转导致演出冻结             | critical | 1           | 单 worker、统一锁策略、压力测试                         | closed |
 | R-002 | schema 漂移导致用户/AI 字段静默丢失                | critical | 2           | 单一 schema、deny unknown、contract test                | open   |
 | R-003 | 所有属性使用 max 混合产生错误颜色/运动             | high     | 3           | 属性级 HTP/LTP/mix policy                               | open   |
 | R-004 | Preview 80ms 插值掩盖真实频闪输出                  | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                    | open   |
@@ -1152,7 +1158,7 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | R-008 | 硬件故障时无法自动 Blackout                        | critical | 9           | 独立 safety controller 和 fail-safe tests               | open   |
 | R-009 | 首帧或 fixture topology 变化被 zip diff 丢弃       | high     | 1           | revision/topology 强制 full frame，并按 fixture ID diff | closed |
 | R-010 | jsdom 30 无法在固定 Node 20 启动测试 worker        | medium   | 0           | 改用 Vitest 官方支持的 happy-dom                        | closed |
-| R-011 | timer-only 漂移基线未覆盖 Tauri/锁/render load     | medium   | 1           | ManualClock 确定性测试 + loaded runtime 压力测试        | open   |
+| R-011 | timer-only 漂移基线未覆盖 Tauri/锁/render load     | medium   | 1           | ManualClock 确定性测试 + loaded runtime 压力测试        | closed |
 | R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失 | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command           | closed |
 | R-013 | managed sandbox 内精确 toolchain 恢复下载超时      | low      | 0           | 同版本 stable 完整验证；干净 CI 执行 pin                | closed |
 | R-014 | compile/bridge 异常只写 console，用户无法定位      | high     | 0           | 稳定 Diagnostic envelope、前端 normalizer 与错误 Alert  | closed |

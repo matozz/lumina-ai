@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "source_commit": "c73a54a",
+  "profile": "release",
+  "platform": {
+    "os": "macos",
+    "arch": "aarch64",
+    "available_parallelism": 12
+  },
+  "loaded_runtime": {
+    "duration_target_ms": 600000,
+    "bpm": 120,
+    "output_hz": 60,
+    "tick_count": 36000,
+    "fixture_count": 500,
+    "fixture_evaluations": 18000000,
+    "expected_beats": 1200.0,
+    "actual_beats": 1200.000024,
+    "logical_drift_ms": 0.011999999969702912,
+    "wall_elapsed_ms": 4041.9584999999997,
+    "simulation_realtime_factor": 148.4428897525791,
+    "mean_render_publish_us": 112.276625,
+    "final_frame_sequence": 36000,
+    "final_frame_checksum": 14677128193208807216
+  }
+}

@@ -13,6 +13,7 @@
     "build": "tsc && vite build",
     "build:vite": "vite build",
     "baseline:stage0": "cargo run --release --manifest-path src-tauri/Cargo.toml --example stage0_baseline",
+    "baseline:stage1": "cargo run --release --manifest-path src-tauri/Cargo.toml --example stage1_runtime_validation",
     "check": "pnpm format:check && pnpm typecheck && pnpm test && pnpm build:vite",
     "check:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml -- --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings && cargo test --manifest-path src-tauri/Cargo.toml",
     "check:all": "pnpm check && pnpm check:rust",
