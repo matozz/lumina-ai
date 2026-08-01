@@ -218,7 +218,7 @@ flowchart TD
 
 | Stage | 名称                                    | 状态        | 依赖 | 核心退出信号                                |
 | ----- | --------------------------------------- | ----------- | ---- | ------------------------------------------- |
-| 0     | Baseline 与质量护栏                     | in_progress | 无   | 测试框架、基线和 CI 可用                    |
+| 0     | Baseline 与质量护栏                     | completed   | 无   | 测试框架、基线和 CI 可用                    |
 | 1     | 实时内核与 Transport                    | not_started | 0    | Clock/Play/Pause/Stop/Seek 确定且无重复线程 |
 | 2     | Versioned Document 与统一 Schema        | not_started | 1    | 单一 schema 契约、migration、零 panic       |
 | 3     | Fixture Attribute、Mixer 与 Output 抽象 | not_started | 2    | 通用属性、HTP/LTP、Null/Preview Sink        |
@@ -263,9 +263,9 @@ flowchart TD
 
 #### 0.4 诊断格式
 
-- [ ] 定义 `Diagnostic { code, severity, path, message, hint }`。
-- [ ] 为现有 compile error 分配稳定 code。
-- [ ] 前端不得只把异常写入 console；必须呈现可定位错误。
+- [x] 定义 `Diagnostic { code, severity, path, message, hint }`。
+- [x] 为现有 compile error 分配稳定 code。
+- [x] 前端不得只把异常写入 console；必须呈现可定位错误。
 
 ### 交付物
 
@@ -1078,15 +1078,15 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 
 ## Handoff
 
-- Current Stage: Stage 0 · Baseline 与质量护栏（in_progress）
-- Slice completed: 固定 Node 20.19.3、pnpm 10.33.0、Rust 1.94.1；新增统一 frontend/Rust checks 和执行同一门槛的 GitHub Actions workflow。
-- Commits: `a87014e`、`f1cdbb0`、`a86392f`、`ac547bc`；`chore(config): 🔧 add reproducible quality gates`（本切片提交）
-- Files changed: `.nvmrc`、`rust-toolchain.toml`、`.github/workflows/check.yml`、`package.json`、`src-tauri/Cargo.toml`、`docs/development.md`、README/贡献与 agent 文档及一个存量 TS 文件的纯格式化、本文档。
-- Validation: `pnpm check` 通过；`RUSTUP_TOOLCHAIN=stable pnpm check:rust` 通过（stable 实测 rustc/cargo 1.94.1，16 Rust tests）；workflow 经 Prettier YAML parser 校验并调用相同命令。精确命名 toolchain 在 managed sandbox 内恢复下载超时，记录为 R-013 closed-by-equivalent-validation。
-- ADRs added/updated: 无；版本 pin 与检查编排不改变产品架构。
-- Risks opened/closed: 新增并关闭 R-013；产品风险无状态变化。
-- Remaining exit criteria: Diagnostic contract、稳定 code 与前端可定位错误呈现。
-- Recommended next slice: 定义首版 `Diagnostic { code, severity, path, message, hint }`，迁移现有 compile errors，并在编辑器内呈现可定位错误。
+- Current Stage: Stage 0 · Baseline 与质量护栏（completed）
+- Slice completed: 用 Rust/TypeScript 共享字段的首版 `Diagnostic` 取代自由文本 compile error，为 JSON 解析、重复 fixture ID 和缺失 target group 分配稳定 code，并在 DSL 编辑器内呈现带路径、hint 和复制入口的可访问错误 Alert；Stage 0 全部退出条件关闭。
+- Commits: `a87014e`、`f1cdbb0`、`a86392f`、`ac547bc`、`d24e0f5`；`feat(dsl): 🩺 add structured compile diagnostics`（本切片提交）
+- Files changed: Rust compiler/command diagnostic contract，前端 bridge 类型、normalizer 与测试，engine store，`DslEditor`，shadcn Alert，本文档。
+- Validation: `RUSTUP_TOOLCHAIN=stable pnpm check:all` 通过（Vitest 5 tests、Rust 17 tests/contracts、fmt、TypeScript、Vite build、Clippy）；本地真实浏览器窗口确认 error Alert、稳定 code/path/message/hint、`alert` 语义及唯一键盘复制入口。
+- ADRs added/updated: 无；首版错误 envelope 不改变 Stage 1 实时内核架构。ADR-0001 仍为下一切片的前置决策。
+- Risks opened/closed: 新增并关闭 R-014；Stage 1 继续承接 R-001、R-004、R-009、R-011、R-012。
+- Remaining exit criteria: Stage 0 无；Stage 1 尚未开始。
+- Recommended next slice: 编写并接受 ADR-0001，固定 Clock、Transport 状态机、单 worker 和纯 `render_at` 边界，再实现最小可验证的 ManualClock/Transport 切片。
 
 ## 19. ADR 规范
 
@@ -1118,17 +1118,19 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 
 每次追加一行，不删除历史记录。验证失败也应记录，并在后续行注明关闭。
 
-| Date       | Stage    | Slice              | Status    | Commit(s)   | Validation                                           | Decisions/Risks                              | Next                                        |
-| ---------- | -------- | ------------------ | --------- | ----------- | ---------------------------------------------------- | -------------------------------------------- | ------------------------------------------- |
-| 2026-08-02 | Planning | 建立分阶段改造规格 | completed | docs commit | 基线审计：`pnpm build` 通过；`cargo test` 为 0 tests | 当前系统定位为 PoC；实时可信度优先于 AI 功能 | Stage 0：建立 Rust/Frontend 测试与 baseline |
-| 2026-08-02 | 0        | Rust 行为基线      | failed    | none        | 首次严格 Clippy 发现 13 个存量 lint                  | 等价机械清理，不改变 scheduler 行为          | 清理后复跑全部 Rust 门槛                    |
-| 2026-08-02 | 0        | Rust 行为基线      | completed | 本切片提交  | `pnpm build`；fmt；Clippy；`cargo test` 10 passed    | 新增 R-009；无 ADR                           | 前端测试 runner + 18 模板 contract          |
-| 2026-08-02 | 0        | 前端 runner + 模板 | failed    | none        | jsdom 30 在 Node 20 无法启动 Vitest worker           | 记录 R-010；改用 Vitest 官方 happy-dom       | 复跑前端与 Rust template contract           |
-| 2026-08-02 | 0        | 前端 runner + 模板 | completed | 本切片提交  | `pnpm test` 3 passed；`cargo test` 11 passed；build  | R-010 closed；18/18 双侧 contract            | release benchmark + 10 秒 drift baseline    |
-| 2026-08-02 | 0        | release 基线       | completed | 本切片提交  | 4 档 fixture + 18 模板 + bundle + 10 秒 drift        | 新增 R-011；基线 source `f1cdbb0`            | Transport/topology 回归夹具                 |
-| 2026-08-02 | 0        | Transport 回归夹具 | completed | 本切片提交  | `cargo test` 16 passed；MockRuntime 生命周期可执行   | 确认 R-001/R-009；新增 R-012                 | toolchain + unified checks + CI             |
-| 2026-08-02 | 0        | toolchain + checks | failed    | none        | 4 个存量 Prettier 文件；sandbox 阻止 rustup temp     | 纯格式化；记录 R-013                         | 复跑统一前端/Rust 门槛                      |
-| 2026-08-02 | 0        | toolchain + checks | completed | 本切片提交  | `pnpm check`；同版本 stable `pnpm check:rust`        | R-013 closed；CI 调用同一命令                | Diagnostic contract + UI error              |
+| Date       | Stage    | Slice               | Status    | Commit(s)   | Validation                                           | Decisions/Risks                              | Next                                        |
+| ---------- | -------- | ------------------- | --------- | ----------- | ---------------------------------------------------- | -------------------------------------------- | ------------------------------------------- |
+| 2026-08-02 | Planning | 建立分阶段改造规格  | completed | docs commit | 基线审计：`pnpm build` 通过；`cargo test` 为 0 tests | 当前系统定位为 PoC；实时可信度优先于 AI 功能 | Stage 0：建立 Rust/Frontend 测试与 baseline |
+| 2026-08-02 | 0        | Rust 行为基线       | failed    | none        | 首次严格 Clippy 发现 13 个存量 lint                  | 等价机械清理，不改变 scheduler 行为          | 清理后复跑全部 Rust 门槛                    |
+| 2026-08-02 | 0        | Rust 行为基线       | completed | 本切片提交  | `pnpm build`；fmt；Clippy；`cargo test` 10 passed    | 新增 R-009；无 ADR                           | 前端测试 runner + 18 模板 contract          |
+| 2026-08-02 | 0        | 前端 runner + 模板  | failed    | none        | jsdom 30 在 Node 20 无法启动 Vitest worker           | 记录 R-010；改用 Vitest 官方 happy-dom       | 复跑前端与 Rust template contract           |
+| 2026-08-02 | 0        | 前端 runner + 模板  | completed | 本切片提交  | `pnpm test` 3 passed；`cargo test` 11 passed；build  | R-010 closed；18/18 双侧 contract            | release benchmark + 10 秒 drift baseline    |
+| 2026-08-02 | 0        | release 基线        | completed | 本切片提交  | 4 档 fixture + 18 模板 + bundle + 10 秒 drift        | 新增 R-011；基线 source `f1cdbb0`            | Transport/topology 回归夹具                 |
+| 2026-08-02 | 0        | Transport 回归夹具  | completed | 本切片提交  | `cargo test` 16 passed；MockRuntime 生命周期可执行   | 确认 R-001/R-009；新增 R-012                 | toolchain + unified checks + CI             |
+| 2026-08-02 | 0        | toolchain + checks  | failed    | none        | 4 个存量 Prettier 文件；sandbox 阻止 rustup temp     | 纯格式化；记录 R-013                         | 复跑统一前端/Rust 门槛                      |
+| 2026-08-02 | 0        | toolchain + checks  | completed | 本切片提交  | `pnpm check`；同版本 stable `pnpm check:rust`        | R-013 closed；CI 调用同一命令                | Diagnostic contract + UI error              |
+| 2026-08-02 | 0        | Diagnostic contract | failed    | none        | serde 错误文本断言错误地假设固定措辞/列号            | 改为验证稳定 code、path、hint 与实际位置     | 修正断言并复跑统一门槛                      |
+| 2026-08-02 | 0        | Diagnostic contract | completed | 本切片提交  | `pnpm check:all`；真实窗口 error/keyboard/ARIA 验证  | R-014 closed；Stage 0 全部退出条件满足       | Stage 1：ADR-0001 + ManualClock/Transport   |
 
 ## 21. Open Risks
 
@@ -1147,6 +1149,7 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | R-011 | timer-only 漂移基线未覆盖 Tauri/锁/render load     | medium   | 1           | ManualClock 确定性测试 + loaded runtime 压力测试        | open   |
 | R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失 | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command           | open   |
 | R-013 | managed sandbox 内精确 toolchain 恢复下载超时      | low      | 0           | 同版本 stable 完整验证；干净 CI 执行 pin                | closed |
+| R-014 | compile/bridge 异常只写 console，用户无法定位      | high     | 0           | 稳定 Diagnostic envelope、前端 normalizer 与错误 Alert  | closed |
 
 ## 22. Deferred Backlog
 

@@ -28,14 +28,16 @@ export interface CompileResult {
   group_names: string[];
   phasers: { id: string; name: string }[];
   sequence_names: string[];
-  errors: CompileError[];
-  warnings: CompileError[];
+  errors: Diagnostic[];
+  warnings: Diagnostic[];
 }
 
-export interface CompileError {
+export interface Diagnostic {
+  code: string;
+  severity: "error" | "warning";
   path: string;
   message: string;
-  severity: "error" | "warning";
+  hint: string | null;
 }
 
 export interface EngineStatePayload {

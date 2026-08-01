@@ -1,10 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CompileResult, CompileError, LayoutCoord, FullDSL } from "./types";
+import type { CompileResult, Diagnostic, LayoutCoord, FullDSL } from "./types";
 
 export const engine = {
   loadDSL: (json: string) => invoke<CompileResult>("load_dsl", { dslJson: json }),
 
-  validateDSL: (json: string) => invoke<CompileError[]>("validate_dsl", { dslJson: json }),
+  validateDSL: (json: string) => invoke<Diagnostic[]>("validate_dsl", { dslJson: json }),
 
   play: () => invoke("play"),
   stop: () => invoke("stop"),

@@ -1,10 +1,13 @@
 import Editor from "@monaco-editor/react";
 import { useEffect, useRef, useState } from "react";
 import { engine } from "../bridge/commands";
+import { formatDiagnostic, normalizeDiagnostic } from "../bridge/diagnostics";
 import { useEngineStore, engineActions, engineSelectors } from "../stores/engine";
 import { getTemplates, DslTemplate } from "./templates";
-import { XCircle, FileCode2, AlertTriangle, RefreshCw } from "lucide-react";
+import { XCircle, FileCode2, AlertTriangle, RefreshCw, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -49,8 +52,8 @@ export const DslEditor = () => {
         engineActions.setCompileErrors(res.errors);
         engineActions.setCompileStatus("error");
       }
-    } catch (e: any) {
-      console.error(e);
+    } catch (error: unknown) {
+      engineActions.setCompileErrors([normalizeDiagnostic(error)]);
       engineActions.setCompileStatus("error");
     }
   };
@@ -114,13 +117,15 @@ export const DslEditor = () => {
         </div>
 
         <div className="flex items-center justify-end gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={reloadTemplates}
-            className="rounded p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
             title="Reload Templates"
+            aria-label="Reload templates"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
-          </button>
+            <RefreshCw />
+          </Button>
           <Select value={selectedTemplateKey} onValueChange={loadTemplate}>
             <SelectTrigger size="sm">
               <SelectValue placeholder="Select a template..." />
@@ -170,29 +175,39 @@ export const DslEditor = () => {
       </div>
       <div className="relative flex-1 overflow-hidden">
         {compileErrors.length > 0 && (
-          <div
-            className={cn(
-              "absolute top-0 left-0 z-10 max-h-40 w-full overflow-y-auto border-b border-red-900 bg-red-950/90 p-3 shadow-md backdrop-blur-sm",
-            )}
+          <Alert
+            variant="destructive"
+            className="absolute top-0 left-0 z-10 max-h-48 overflow-y-auto rounded-none border-x-0 border-t-0 shadow-md backdrop-blur-sm"
           >
-            <h4
-              className={cn(
-                "mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wider text-red-400 uppercase",
-              )}
-            >
-              <XCircle className="h-3.5 w-3.5" /> Compile Errors
-            </h4>
-            {compileErrors.map((e, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "mb-1 rounded border border-red-900/50 bg-red-900/20 p-1.5 font-mono text-xs break-all text-red-300 last:mb-0",
-                )}
-              >
-                <span className="font-semibold opacity-70">[{e.path}]</span> {e.message}
-              </div>
-            ))}
-          </div>
+            <XCircle />
+            <AlertTitle>Compile diagnostics</AlertTitle>
+            <AlertDescription className="flex flex-col gap-1.5 text-left text-xs text-pretty">
+              {compileErrors.map((diagnostic, index) => (
+                <div
+                  key={`${diagnostic.code}:${diagnostic.path}:${index}`}
+                  className="border-destructive/20 bg-destructive/5 relative rounded-md border p-2 pr-8 font-mono"
+                >
+                  <div className="font-semibold wrap-break-word">
+                    [{diagnostic.code}] {diagnostic.path}
+                  </div>
+                  <div className="wrap-break-word">{diagnostic.message}</div>
+                  {diagnostic.hint && (
+                    <div className="mt-1 wrap-break-word opacity-80">Hint: {diagnostic.hint}</div>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="absolute top-1 right-1"
+                    onClick={() => navigator.clipboard.writeText(formatDiagnostic(diagnostic))}
+                    title="Copy diagnostic"
+                    aria-label={`Copy ${diagnostic.code} diagnostic`}
+                  >
+                    <Copy />
+                  </Button>
+                </div>
+              ))}
+            </AlertDescription>
+          </Alert>
         )}
         <Editor
           height="100%"

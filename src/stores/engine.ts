@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { CompileError, CompileResult, FullDSL } from "../bridge/types";
+import type { CompileResult, Diagnostic, FullDSL } from "../bridge/types";
 
 export type SequencerMode = "live" | "timeline";
 export type CompileStatus = "idle" | "compiling" | "success" | "error";
@@ -15,7 +15,7 @@ export interface EngineState {
   globalBeat: number;
   activePhasers: ActivePhaserState[];
   compileResult: CompileResult | null;
-  compileErrors: CompileError[];
+  compileErrors: Diagnostic[];
   compileStatus: CompileStatus;
   currentDslCode: string;
   parsedDsl: FullDSL | null;
@@ -42,7 +42,7 @@ export const engineActions = {
   setGlobalBeat: (val: number) => useEngineStore.setState({ globalBeat: val }),
   setActivePhasers: (val: ActivePhaserState[]) => useEngineStore.setState({ activePhasers: val }),
   setCompileResult: (res: CompileResult | null) => useEngineStore.setState({ compileResult: res }),
-  setCompileErrors: (errors: CompileError[]) => useEngineStore.setState({ compileErrors: errors }),
+  setCompileErrors: (errors: Diagnostic[]) => useEngineStore.setState({ compileErrors: errors }),
   setCompileStatus: (status: CompileStatus) => useEngineStore.setState({ compileStatus: status }),
   setCurrentDslCode: (code: string) => {
     let parsed = null;

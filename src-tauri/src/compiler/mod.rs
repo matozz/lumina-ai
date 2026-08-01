@@ -1,7 +1,9 @@
-pub mod error;
+pub mod diagnostic;
 pub mod parser;
 
-use error::{CompileError, ErrorSeverity};
+use diagnostic::{
+    Diagnostic, DiagnosticSeverity, DSL_DUPLICATE_FIXTURE_ID, DSL_TARGET_GROUP_NOT_FOUND,
+};
 use fasteval::{Compiler as FastevalCompiler, Evaler};
 use parser::*;
 use std::collections::HashMap;
@@ -105,7 +107,7 @@ pub struct CompiledTimeline {
 pub struct Compiler;
 
 impl Compiler {
-    pub fn compile(dsl: ShowDSL) -> Result<CompiledShow, Vec<CompileError>> {
+    pub fn compile(dsl: ShowDSL) -> Result<CompiledShow, Vec<Diagnostic>> {
         let mut errors = Vec::new();
 
         let fixtures = Self::compile_patch(&dsl.patch, &mut errors);
@@ -120,7 +122,7 @@ impl Compiler {
         if !errors.is_empty()
             && errors
                 .iter()
-                .any(|e| matches!(e.severity, ErrorSeverity::Error))
+                .any(|e| matches!(e.severity, DiagnosticSeverity::Error))
         {
             return Err(errors);
         }
@@ -134,16 +136,17 @@ impl Compiler {
         })
     }
 
-    fn compile_patch(patch_dsl: &[PatchDSL], errors: &mut Vec<CompileError>) -> Vec<Fixture> {
+    fn compile_patch(patch_dsl: &[PatchDSL], errors: &mut Vec<Diagnostic>) -> Vec<Fixture> {
         let mut fixtures = Vec::new();
         for p in patch_dsl {
             for id in p.id_range.0..=p.id_range.1 {
                 if fixtures.iter().any(|f: &Fixture| f.id == id) {
-                    errors.push(CompileError {
-                        path: "patch.id_range".to_string(),
-                        message: format!("Duplicate fixture ID: {}", id),
-                        severity: ErrorSeverity::Error,
-                    });
+                    errors.push(Diagnostic::error(
+                        DSL_DUPLICATE_FIXTURE_ID,
+                        "patch.id_range",
+                        format!("Duplicate fixture ID: {id}"),
+                        "Use a unique fixture ID across all patch ranges.",
+                    ));
                 }
                 fixtures.push(Fixture {
                     id,
@@ -157,7 +160,7 @@ impl Compiler {
     fn compile_layout(
         layout_dsl: &LayoutDSL,
         fixtures: &[Fixture],
-        _errors: &mut Vec<CompileError>,
+        _errors: &mut Vec<Diagnostic>,
     ) -> Vec<LayoutCoord> {
         let mut coords = Vec::new();
         let fix_ids: Vec<u32> = fixtures.iter().map(|f| f.id).collect();
@@ -300,7 +303,7 @@ impl Compiler {
         group_dsl: &[GroupDSL],
         _fixtures: &[Fixture],
         coords: &[LayoutCoord],
-        _errors: &mut Vec<CompileError>,
+        _errors: &mut Vec<Diagnostic>,
     ) -> HashMap<String, CompiledGroup> {
         let mut groups = HashMap::new();
 
@@ -597,16 +600,17 @@ impl Compiler {
     fn compile_phasers(
         phasers: &[PhaserDSL],
         groups: &HashMap<String, CompiledGroup>,
-        errors: &mut Vec<CompileError>,
+        errors: &mut Vec<Diagnostic>,
     ) -> HashMap<String, CompiledPhaser> {
         let mut map = HashMap::new();
         for p in phasers {
             if !groups.contains_key(&p.target) {
-                errors.push(CompileError {
-                    path: format!("phasers[name={}]", p.name),
-                    message: format!("Target group not found: {}", p.target),
-                    severity: ErrorSeverity::Error,
-                });
+                errors.push(Diagnostic::error(
+                    DSL_TARGET_GROUP_NOT_FOUND,
+                    format!("phasers[name={}]", p.name),
+                    format!("Target group not found: {}", p.target),
+                    "Define the target group or update this phaser's target.",
+                ));
             }
 
             let phase = match p.phase.mode.as_str() {
@@ -667,7 +671,11 @@ impl Compiler {
 
 #[cfg(test)]
 mod tests {
-    use super::{parser::ShowDSL, Compiler, PhaseConfig};
+    use super::{
+        diagnostic::{DSL_DUPLICATE_FIXTURE_ID, DSL_TARGET_GROUP_NOT_FOUND},
+        parser::ShowDSL,
+        Compiler, PhaseConfig,
+    };
 
     const VALID_SHOW: &str = r##"
     {
@@ -749,8 +757,14 @@ mod tests {
         };
 
         assert_eq!(errors.len(), 2);
+        assert_eq!(errors[0].code, DSL_DUPLICATE_FIXTURE_ID);
         assert_eq!(errors[0].path, "patch.id_range");
         assert_eq!(errors[0].message, "Duplicate fixture ID: 2");
+        assert_eq!(
+            errors[0].hint.as_deref(),
+            Some("Use a unique fixture ID across all patch ranges.")
+        );
+        assert_eq!(errors[1].code, DSL_TARGET_GROUP_NOT_FOUND);
         assert_eq!(errors[1].path, "phasers[name=Pulse]");
         assert_eq!(errors[1].message, "Target group not found: Missing");
     }

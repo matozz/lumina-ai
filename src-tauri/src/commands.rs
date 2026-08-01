@@ -1,5 +1,5 @@
 use crate::compiler::parser::ShowDSL;
-use crate::compiler::{error::CompileError, Compiler, LayoutCoord};
+use crate::compiler::{diagnostic::Diagnostic, Compiler, LayoutCoord};
 use crate::state::{ActivePhaser, EngineState};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Runtime, State};
@@ -18,17 +18,17 @@ pub struct CompileResult {
     pub group_names: Vec<String>,
     pub phasers: Vec<PhaserInfo>,
     pub sequence_names: Vec<String>,
-    pub errors: Vec<CompileError>,
-    pub warnings: Vec<CompileError>,
+    pub errors: Vec<Diagnostic>,
+    pub warnings: Vec<Diagnostic>,
 }
 
 #[tauri::command]
 pub async fn load_dsl(
     dsl_json: String,
     state: State<'_, Arc<EngineState>>,
-) -> Result<CompileResult, String> {
+) -> Result<CompileResult, Diagnostic> {
     let dsl: ShowDSL =
-        serde_json::from_str(&dsl_json).map_err(|e| format!("JSON parsing error: {}", e))?;
+        serde_json::from_str(&dsl_json).map_err(|error| Diagnostic::json_parse(&error))?;
     let mut group_names: Vec<String> = Vec::new();
     for g in &dsl.groups {
         if !group_names.contains(&g.name) {
@@ -95,9 +95,9 @@ pub async fn load_dsl(
 }
 
 #[tauri::command]
-pub async fn validate_dsl(dsl_json: String) -> Result<Vec<CompileError>, String> {
+pub async fn validate_dsl(dsl_json: String) -> Result<Vec<Diagnostic>, Diagnostic> {
     let dsl: ShowDSL =
-        serde_json::from_str(&dsl_json).map_err(|e| format!("JSON parsing error: {}", e))?;
+        serde_json::from_str(&dsl_json).map_err(|error| Diagnostic::json_parse(&error))?;
     let compiled = Compiler::compile(dsl);
     match compiled {
         Ok(_) => Ok(vec![]),
