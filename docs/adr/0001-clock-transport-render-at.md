@@ -72,4 +72,5 @@ Stage 1 需要建立可测试、单实例、无累计漂移的实时核心，同
 - Revisioned Frame publisher: `55694a2`
 - Single joined scheduler worker: `c73a54a`
 - Lock-order stress and loaded runtime validation: `045cfce`
-- Raw Frame preview: 本切片提交
+- Raw Frame preview: `9834158`
+- UI command and app-shutdown validation: 本切片提交

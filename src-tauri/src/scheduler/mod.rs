@@ -552,6 +552,36 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn shutdown_joins_active_worker_and_resets_transient_state() {
+        let app = tauri::test::mock_app();
+        let (state, clock) = engine_state(OutputRate::default());
+        state.shows.publish(show_with_fixture(1)).await;
+        state.runtime.write().await.live_phasers.push(LivePhaser {
+            id: "active".to_string(),
+            start_beat: 0.0,
+            phase_offset: 0.0,
+            multiplier: 1.0,
+        });
+
+        state
+            .scheduler
+            .play(app.handle().clone(), state.clone())
+            .await
+            .expect("play before shutdown");
+        clock.advance(Duration::from_secs(2));
+        assert!(state.scheduler.is_running().await);
+
+        state.scheduler.shutdown(&state).await.expect("shutdown");
+
+        assert!(!state.scheduler.is_running().await);
+        let runtime = state.runtime.read().await;
+        assert!(runtime.live_phasers.is_empty());
+        let transport = runtime.transport.snapshot(clock.now());
+        assert_eq!(transport.state, TransportState::Stopped);
+        assert_eq!(transport.cursor_beat, 0.0);
+    }
+
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     async fn concurrent_reload_transport_and_resync_finishes_without_deadlock() {
         let app = tauri::test::mock_app();

@@ -1079,14 +1079,14 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 ## Handoff
 
 - Current Stage: Stage 1 · 实时内核与 Transport（in_progress）
-- Slice completed: 移除 Preview fixture visual 的固定 80ms ease-out；已接受的逻辑 Frame 现在同帧直接更新颜色与 dimmer，RAF 只负责绘制；移除已无 backend 生产者的旧 `engine:beat` bridge。
-- Commits: Stage 0 `a87014e`、`f1cdbb0`、`a86392f`、`ac547bc`、`d24e0f5`、`acf5b81`；Stage 1 `aceef6a`、`ce44617`、`55694a2`、`c73a54a`、`045cfce`；`fix(preview): 💡 consume raw logical frames`（本切片提交）
-- Files changed: `FixtureVisual`/`CanvasRenderer`、raw-frame/blackout 前端回归测试、bridge dead-code cleanup、ADR/计划文档。
-- Validation: `pnpm check:all` 通过（34 Rust tests/contracts、10 Vitest tests）；连续高亮/blackout Frame 无中间插值值。
-- ADRs added/updated: ADR-0001 明确 Preview 直接消费逻辑 Frame，未来平滑只能是显式展示选项。
-- Risks opened/closed: R-004 closed；Stage 1 代码级风险全部处置或按后续 Stage 明确保留。
-- Remaining exit criteria: 真实 Tauri 窗口验证 Play/Pause/Stop、template reload、error/keyboard 与 shutdown；最终统一门禁。
-- Recommended next slice: 启动真实 Tauri app 完成 Stage 1 UI/lifecycle 验收。
+- Slice completed: 真实启动 Tauri app，确认 800×600 原生窗口与默认模板经 IPC 编译为 revision 1，并通过 app 自身 Quit 菜单以 exit 0 结束；增加 ControlPanel 原生可聚焦按钮的 Play/Pause/Stop/Timeline command 回归，以及 active-worker shutdown cancel/join/reset 回归。
+- Commits: Stage 0 `a87014e`、`f1cdbb0`、`a86392f`、`ac547bc`、`d24e0f5`、`acf5b81`；Stage 1 `aceef6a`、`ce44617`、`55694a2`、`c73a54a`、`045cfce`、`9834158`；`test(app): 🧪 validate Stage 1 lifecycle UI`（本切片提交）
+- Files changed: scheduler shutdown regression、ControlPanel transport/mode/focus regression、ADR/计划文档。
+- Validation: `pnpm check:all` 通过（35 Rust tests/contracts、12 Vitest tests）；真实 Tauri launch/template IPC/Quit 通过；active-worker shutdown 完成 cancel/join/reset。
+- ADRs added/updated: ADR-0001 补充 UI command 与 app-shutdown 验证证据；决策无变化。
+- Risks opened/closed: 无新增产品风险；记录宿主锁屏导致桌面输入不可投递的验证环境失败，已由可重复自动化测试覆盖。
+- Remaining exit criteria: 最终统一门禁、自审并关闭 Stage 1/全局 Definition of Done。
+- Recommended next slice: 执行最终 Stage 0+1 验证矩阵，更新 Stage 状态与 Handoff 后停止，不进入 Stage 2。
 
 ## 19. ADR 规范
 
@@ -1144,6 +1144,8 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 1        | 并发 + loaded runtime | failed    | none        | 未覆盖环境的 Cargo fmt 再触发 rustup temp 权限错误    | 所有本地 Rust 命令统一显式使用同版本 stable   | stable fmt 后复跑统一门禁                   |
 | 2026-08-02 | 1        | 并发 + loaded runtime | completed | 本切片提交  | `pnpm check:all`；34 Rust/8 frontend tests            | 格式化/toolchain 执行问题均关闭               | Preview raw Frame + 真实 Tauri 验收         |
 | 2026-08-02 | 1        | Preview raw Frame     | completed | 本切片提交  | `pnpm check:all`；34 Rust/10 frontend tests           | R-004 closed；移除隐式 80ms 插值              | 真实 Tauri 窗口验收                         |
+| 2026-08-02 | 1        | 真实 Tauri 窗口验收   | failed    | none        | 窗口/IPC 正常；宿主前台为 loginwindow，输入不可投递   | 属验证环境限制；不改变 runtime 架构           | 自动化 UI command + shutdown 回归           |
+| 2026-08-02 | 1        | UI + app lifecycle    | completed | 本切片提交  | native revision 1/Quit 0；35 Rust/12 frontend tests   | 临时观测日志已移除；无新产品风险              | 最终 Stage 0+1 验证与文档收口               |
 
 ## 21. Open Risks
 
