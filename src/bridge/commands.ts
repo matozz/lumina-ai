@@ -25,4 +25,6 @@ export const engine = {
   setSequencerMode: (mode: "live" | "timeline") => invoke("set_sequencer_mode", { mode }),
 
   getLayoutCoords: () => invoke<LayoutCoord[]>("get_layout_coords"),
+
+  requestFullFrame: () => invoke("request_full_frame"),
 };

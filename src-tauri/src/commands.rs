@@ -13,6 +13,7 @@ pub struct PhaserInfo {
 #[derive(serde::Serialize)]
 pub struct CompileResult {
     pub success: bool,
+    pub show_revision: Option<u64>,
     pub fixture_count: usize,
     pub layout_coords: Vec<LayoutCoord>,
     pub group_names: Vec<String>,
@@ -50,6 +51,7 @@ pub async fn load_dsl(
 
     let mut result = CompileResult {
         success: false,
+        show_revision: None,
         fixture_count: 0,
         layout_coords: vec![],
         group_names: vec![],
@@ -67,7 +69,8 @@ pub async fn load_dsl(
             result.group_names = group_names;
             result.phasers = phasers;
 
-            let mut show_guard = state.compiled_show.write().await;
+            let snapshot = state.shows.publish(c).await;
+            result.show_revision = Some(snapshot.revision);
 
             // Reset active phasers when loading a new DSL (both live and timeline mode)
             let mut r_state = state.runtime.write().await;
@@ -75,7 +78,7 @@ pub async fn load_dsl(
 
             // If in timeline mode, re-initialize timeline executor with new DSL
             if r_state.sequencer_mode == crate::state::SequencerMode::Timeline {
-                if let Some(timeline) = &c.timeline {
+                if let Some(timeline) = &snapshot.show.timeline {
                     r_state.timeline_executor = Some(
                         crate::engine::timeline::TimelineExecutor::new(timeline.clone()),
                     );
@@ -83,8 +86,6 @@ pub async fn load_dsl(
                     r_state.timeline_executor = None;
                 }
             }
-
-            *show_guard = Some(c);
         }
         Err(e) => {
             result.errors = e;
@@ -125,26 +126,23 @@ async fn stop_engine<R: Runtime>(
     state: &Arc<EngineState>,
 ) -> Result<(), String> {
     state.scheduler.stop();
+    let snapshot = state.shows.current().await;
     let mut r_state = state.runtime.write().await;
     r_state.is_playing = false;
     r_state.active_phasers.clear(); // Reset active phasers on stop
 
     // Clear the canvas by computing a blackout frame
-    let show_guard = state.compiled_show.read().await;
-    if let Some(show) = &*show_guard {
+    if let Some(snapshot) = snapshot {
         let black_frame = crate::engine::compute_frame(
             r_state.global_beat,
             &[],
-            show,
+            &snapshot.show,
             &r_state.parameter_context,
         );
-        r_state.prev_frame = black_frame.clone();
-
-        let payload = crate::scheduler::FramePayload {
-            beat: r_state.global_beat,
-            full: true,
-            outputs: black_frame,
-        };
+        let beat = r_state.global_beat;
+        let payload = r_state
+            .frame_publisher
+            .publish_full(snapshot.revision, beat, black_frame);
         let _ = app_handle.emit("engine:frame-update", payload);
     }
 
@@ -157,6 +155,7 @@ pub async fn reset_beat(state: State<'_, Arc<EngineState>>) -> Result<(), String
 }
 
 async fn reset_beat_engine(state: &Arc<EngineState>) -> Result<(), String> {
+    let snapshot = state.shows.current().await;
     let mut r_state = state.runtime.write().await;
     r_state.global_beat = 0.0;
     state.scheduler.reset_beat();
@@ -164,9 +163,8 @@ async fn reset_beat_engine(state: &Arc<EngineState>) -> Result<(), String> {
     // Also reset any active timeline execution state since we jumped in time
     if r_state.sequencer_mode == crate::state::SequencerMode::Timeline {
         r_state.active_phasers.clear();
-        let show_guard = state.compiled_show.read().await;
-        if let Some(show) = &*show_guard {
-            if let Some(timeline) = &show.timeline {
+        if let Some(snapshot) = snapshot {
+            if let Some(timeline) = &snapshot.show.timeline {
                 r_state.timeline_executor = Some(crate::engine::timeline::TimelineExecutor::new(
                     timeline.clone(),
                 ));
@@ -244,6 +242,7 @@ pub async fn set_sequencer_mode(
     mode: String,
     state: State<'_, Arc<EngineState>>,
 ) -> Result<(), String> {
+    let snapshot = state.shows.current().await;
     let mut r_state = state.runtime.write().await;
     r_state.sequencer_mode = match mode.as_str() {
         "timeline" => crate::state::SequencerMode::Timeline,
@@ -255,9 +254,8 @@ pub async fn set_sequencer_mode(
 
     // If switching to timeline mode, re-initialize timeline executor
     if r_state.sequencer_mode == crate::state::SequencerMode::Timeline {
-        let show_guard = state.compiled_show.read().await;
-        if let Some(show) = &*show_guard {
-            if let Some(timeline) = &show.timeline {
+        if let Some(snapshot) = snapshot {
+            if let Some(timeline) = &snapshot.show.timeline {
                 r_state.timeline_executor = Some(crate::engine::timeline::TimelineExecutor::new(
                     timeline.clone(),
                 ));
@@ -274,20 +272,26 @@ pub async fn set_sequencer_mode(
 pub async fn get_layout_coords(
     state: State<'_, Arc<EngineState>>,
 ) -> Result<Vec<LayoutCoord>, String> {
-    let show = state.compiled_show.read().await;
-    if let Some(s) = &*show {
-        Ok(s.coords.clone())
+    if let Some(snapshot) = state.shows.current().await {
+        Ok(snapshot.show.coords.clone())
     } else {
         Ok(vec![])
     }
+}
+
+#[tauri::command]
+pub async fn request_full_frame(state: State<'_, Arc<EngineState>>) -> Result<(), String> {
+    state.runtime.write().await.frame_publisher.request_full();
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::{play_engine, reset_beat_engine, stop_engine};
     use crate::engine::animation::ParameterContext;
+    use crate::engine::frame::FramePublisher;
     use crate::scheduler::Scheduler;
-    use crate::state::{ActivePhaser, EngineState, RuntimeState, SequencerMode};
+    use crate::state::{ActivePhaser, EngineState, RuntimeState, SequencerMode, ShowStore};
     use std::sync::Arc;
     use std::time::Duration;
     use tokio::runtime::Runtime;
@@ -296,7 +300,7 @@ mod tests {
     fn engine_state() -> Arc<EngineState> {
         Arc::new(EngineState {
             scheduler: Scheduler::new(),
-            compiled_show: Arc::new(RwLock::new(None)),
+            shows: ShowStore::default(),
             runtime: Arc::new(RwLock::new(RuntimeState {
                 global_beat: 0.0,
                 is_playing: false,
@@ -309,7 +313,7 @@ mod tests {
                 }],
                 sequencer_mode: SequencerMode::Live,
                 timeline_executor: None,
-                prev_frame: Vec::new(),
+                frame_publisher: FramePublisher::default(),
                 parameter_context: ParameterContext::new(),
             })),
         })

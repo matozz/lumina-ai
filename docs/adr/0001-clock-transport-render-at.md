@@ -66,4 +66,5 @@ Stage 1 需要建立可测试、单实例、无累计漂移的实时核心，同
 
 - Stage 0 characterization: `ac547bc`
 - Clock/Transport core: `aceef6a`
-- Deterministic `render_at`: 本切片提交
+- Deterministic `render_at`: `ce44617`
+- Revisioned Frame publisher: 本切片提交

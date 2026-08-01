@@ -329,17 +329,17 @@ flowchart TD
 
 #### 1.4 并发和 Snapshot
 
-- [ ] 消除 `compiled_show` 与 `runtime` 的嵌套反向锁。
-- [ ] 优先使用短锁和 immutable `Arc<CompiledShow>` snapshot。
-- [ ] 编辑态 compile 成功后生成新 revision，不在持锁时执行昂贵计算。
+- [x] 消除 `compiled_show` 与 `runtime` 的嵌套反向锁。
+- [x] 优先使用短锁和 immutable `Arc<CompiledShow>` snapshot。
+- [x] 编辑态 compile 成功后生成新 revision，不在持锁时执行昂贵计算。
 - [ ] 明确锁顺序并添加并发回归测试。
 
 #### 1.5 Frame 发布
 
-- [ ] 首帧、revision 改变、fixture topology 改变时必须发送 full frame。
-- [ ] diff 按 fixture ID/attribute 比较，不依赖 slice `zip`。
-- [ ] Frame payload 包含 `show_revision`、`frame_sequence` 和逻辑时间。
-- [ ] 丢帧/乱序帧可由前端检测并请求 full resync。
+- [x] 首帧、revision 改变、fixture topology 改变时必须发送 full frame。
+- [x] diff 按 fixture ID/attribute 比较，不依赖 slice `zip`。
+- [x] Frame payload 包含 `show_revision`、`frame_sequence` 和逻辑时间。
+- [x] 丢帧/乱序帧可由前端检测并请求 full resync。
 
 ### 验证
 
@@ -1079,14 +1079,14 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 ## Handoff
 
 - Current Stage: Stage 1 · 实时内核与 Transport（in_progress）
-- Slice completed: 新增纯 `render_at(RenderTime)`；Timeline active phaser、float/color automation 和 multiplier phase 均按目标 beat 重建，live phaser 以 start/offset/multiplier 求值；旧 `compute_frame` 暂时作为同一底层 renderer 的兼容包装。
-- Commits: Stage 0 `a87014e`、`f1cdbb0`、`a86392f`、`ac547bc`、`d24e0f5`、`acf5b81`；Stage 1 `aceef6a`；`feat(tauri): 🎞️ add deterministic render-at runtime`（本切片提交）
-- Files changed: Rust animation value parser、纯 renderer 与 timeline compatibility、18 模板 runtime contract、ADR-0001 related commits、本文档。
-- Validation: `RUSTUP_TOOLCHAIN=stable pnpm check:all` 通过（28 Rust tests/contracts、5 Vitest tests、fmt、TypeScript、Vite build、Clippy）；直接 Seek 与先渲染 75 个中间点的目标 Frame 完全相等，18/18 模板的 timeline/live Frame 均确定且 fixture topology 完整。
-- ADRs added/updated: ADR-0001 补充对应实现切片；决策无变化。
-- Risks opened/closed: 无状态变化；R-001/R-009/R-011/R-012 仍保持 open，等待 scheduler/publisher/app integration。
-- Remaining exit criteria: Clock/Transport 与纯 renderer 尚未接入单 worker；snapshot/revision、Frame full/diff/resync、前端命令、shutdown 与压力/频率验证未完成。
-- Recommended next slice: 建立 revisioned immutable show snapshot 与按 fixture ID 的 Frame publisher，关闭首帧/topology/revision 丢失回归，再接入 scheduler。
+- Slice completed: 用短锁发布递增 revision 的 immutable `Arc<CompiledShow>` snapshot；新增 ID-based Frame publisher，首帧/revision/topology/显式 resync 强制 full；前端以 ref 检测 revision、sequence gap 和乱序并请求 full resync。
+- Commits: Stage 0 `a87014e`、`f1cdbb0`、`a86392f`、`ac547bc`、`d24e0f5`、`acf5b81`；Stage 1 `aceef6a`、`ce44617`；`fix(tauri): 🧭 publish revisioned full frames`（本切片提交）
+- Files changed: Rust ShowStore/FramePublisher、scheduler/commands state access、Tauri command registration，TypeScript frame/compile contract、Canvas ref-based resync、前端单元测试、ADR/计划文档。
+- Validation: `RUSTUP_TOOLCHAIN=stable pnpm check:all` 通过（32 Rust tests/contracts、8 Vitest tests、fmt、TypeScript、Vite build、Clippy）；覆盖 immutable revision、首帧/revision/topology full、ID diff、显式 resync 及前端 gap/stale/revision 决策。
+- ADRs added/updated: ADR-0001 补充 revisioned Frame 实现切片；决策无变化。
+- Risks opened/closed: R-009 closed；R-001/R-011/R-012 继续 open，等待单 worker 与 Transport app integration。
+- Remaining exit criteria: Clock/Transport/纯 renderer 尚未替换旧 worker；单 task cancel/join、Pause/Stop/Seek commands、state revision、shutdown、并发压力与真实输出频率验证未完成。
+- Recommended next slice: 用单 Tokio task 接入 MonotonicClock、Transport 和纯 renderer；Start 返回 AlreadyPlaying，Pause/Stop await worker，移除 per-start runtime 与 spin-loop。
 
 ## 19. ADR 规范
 
@@ -1134,6 +1134,7 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 1        | Clock + Transport   | failed    | none        | Cargo 不接受两个位置测试过滤参数                      | 改为执行完整 Rust test suite                  | 全量验证 Clock/Transport 与存量契约         |
 | 2026-08-02 | 1        | Clock + Transport   | completed | 本切片提交  | `cargo test` 24 passed；ManualClock 10 分钟零累计误差 | ADR-0001 accepted；既有 Stage 1 风险仍 open   | 纯 `render_at` + Seek/template contract     |
 | 2026-08-02 | 1        | 纯 render_at        | completed | 本切片提交  | `pnpm check:all`；28 Rust tests/contracts；18/18 模板 | Seek=顺序求值；automation/multiplier 时间重建 | revision snapshot + Frame publisher         |
+| 2026-08-02 | 1        | Snapshot + Frame    | completed | 本切片提交  | `pnpm check:all`；32 Rust/8 frontend tests            | R-009 closed；revision/sequence/full resync   | 单 Tokio worker + Transport integration     |
 
 ## 21. Open Risks
 
@@ -1147,7 +1148,7 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | R-006 | 没有歌曲时间模型导致 AI 编排不可复现               | high     | 5/7         | 整数 tick + TempoMap + SongAnalysis                     | open   |
 | R-007 | AI 直接生成无效或不安全效果                        | critical | 8           | typed plan、capability、validator、safety budget        | open   |
 | R-008 | 硬件故障时无法自动 Blackout                        | critical | 9           | 独立 safety controller 和 fail-safe tests               | open   |
-| R-009 | 首帧或 fixture topology 变化被 zip diff 丢弃       | high     | 1           | revision/topology 强制 full frame，并按 fixture ID diff | open   |
+| R-009 | 首帧或 fixture topology 变化被 zip diff 丢弃       | high     | 1           | revision/topology 强制 full frame，并按 fixture ID diff | closed |
 | R-010 | jsdom 30 无法在固定 Node 20 启动测试 worker        | medium   | 0           | 改用 Vitest 官方支持的 happy-dom                        | closed |
 | R-011 | timer-only 漂移基线未覆盖 Tauri/锁/render load     | medium   | 1           | ManualClock 确定性测试 + loaded runtime 压力测试        | open   |
 | R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失 | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command           | open   |

@@ -1,6 +1,7 @@
 pub mod animation;
 pub mod clock;
 pub mod color;
+pub mod frame;
 pub mod phaser;
 pub mod render;
 pub mod timeline;
@@ -48,13 +49,7 @@ pub fn compute_frame(
 }
 
 pub fn compute_frame_diff(prev: &[FixtureOutput], curr: &[FixtureOutput]) -> Vec<FixtureOutput> {
-    curr.iter()
-        .zip(prev.iter())
-        .filter(|(c, p)| {
-            c.r != p.r || c.g != p.g || c.b != p.b || (c.dimmer - p.dimmer).abs() > 0.005
-        })
-        .map(|(c, _)| c.clone())
-        .collect()
+    frame::diff_outputs_by_id(prev, curr)
 }
 
 #[cfg(test)]
@@ -96,23 +91,20 @@ mod tests {
     }
 
     #[test]
-    fn baseline_frame_diff_drops_initial_fixture_outputs() {
+    fn frame_diff_includes_initial_fixture_outputs() {
         let current = vec![output(1, (255, 0, 0), 1.0)];
 
-        assert!(
-            compute_frame_diff(&[], &current).is_empty(),
-            "Stage 1 must replace this characterization with a full-frame assertion"
-        );
+        assert_eq!(compute_frame_diff(&[], &current), current);
     }
 
     #[test]
-    fn baseline_frame_diff_drops_appended_fixture_outputs() {
+    fn frame_diff_includes_appended_fixture_outputs() {
         let previous = vec![output(1, (255, 0, 0), 1.0)];
         let current = vec![output(1, (255, 0, 0), 1.0), output(2, (0, 0, 255), 0.75)];
 
-        assert!(
-            compute_frame_diff(&previous, &current).is_empty(),
-            "Stage 1 must replace this characterization with a topology full-frame assertion"
+        assert_eq!(
+            compute_frame_diff(&previous, &current),
+            vec![current[1].clone()]
         );
     }
 }

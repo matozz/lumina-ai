@@ -9,7 +9,9 @@ export interface FixtureOutput {
 }
 
 export interface FramePayload {
-  beat: number;
+  show_revision: number;
+  frame_sequence: number;
+  logical_beat: number;
   full: boolean;
   outputs: FixtureOutput[];
 }
@@ -23,6 +25,7 @@ export interface LayoutCoord {
 
 export interface CompileResult {
   success: boolean;
+  show_revision: number | null;
   fixture_count: number;
   layout_coords: LayoutCoord[];
   group_names: string[];

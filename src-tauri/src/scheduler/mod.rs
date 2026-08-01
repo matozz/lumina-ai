@@ -1,4 +1,4 @@
-use crate::engine::{compute_frame, compute_frame_diff};
+use crate::engine::compute_frame;
 use crate::state::EngineState;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
@@ -9,13 +9,6 @@ use tauri::{AppHandle, Emitter, Runtime};
 pub struct Scheduler {
     running: Arc<AtomicBool>,
     tempo: Arc<AtomicU32>,
-}
-
-#[derive(Clone, serde::Serialize)]
-pub struct FramePayload {
-    pub beat: f64,
-    pub full: bool,
-    pub outputs: Vec<crate::engine::FixtureOutput>,
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -66,9 +59,9 @@ impl Scheduler {
                 next_tick += tick_interval;
                 global_beat += delta_beat;
 
+                let show_snapshot = rt.block_on(state.shows.current());
                 let (payload, state_payload) = rt.block_on(async {
                     let mut r_state = state.runtime.write().await;
-                    let show_guard = state.compiled_show.read().await;
 
                     r_state.global_beat = global_beat;
                     r_state.is_playing = true;
@@ -124,31 +117,18 @@ impl Scheduler {
                     //     seq.tick(global_beat);
                     // }
 
-                    let current_frame;
-                    let full;
-
-                    if let Some(show) = &*show_guard {
+                    if let Some(snapshot) = show_snapshot {
                         let frame = compute_frame(
                             global_beat,
                             &r_state.active_phasers,
-                            show,
+                            &snapshot.show,
                             &r_state.parameter_context,
                         );
-
-                        // we can send diffs
-                        let diff = compute_frame_diff(&r_state.prev_frame, &frame);
-                        current_frame = frame.clone();
-                        r_state.prev_frame = frame;
-
-                        // For simplicity let's just say full = false if diff is small, but if there's an action full = true
-                        full = false;
-
-                        // Create payload
-                        let payload = FramePayload {
-                            beat: global_beat,
-                            full,
-                            outputs: if full { current_frame } else { diff },
-                        };
+                        let payload = r_state.frame_publisher.publish(
+                            snapshot.revision,
+                            global_beat,
+                            frame,
+                        );
 
                         let state_payload = EngineStatePayload {
                             is_playing: true,

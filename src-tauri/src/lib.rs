@@ -15,14 +15,14 @@ pub fn run() {
         .setup(|app| {
             let engine_state = Arc::new(state::EngineState {
                 scheduler: scheduler::Scheduler::new(),
-                compiled_show: Arc::new(RwLock::new(None)),
+                shows: state::ShowStore::default(),
                 runtime: Arc::new(RwLock::new(state::RuntimeState {
                     global_beat: 0.0,
                     is_playing: false,
                     active_phasers: Vec::new(),
                     sequencer_mode: state::SequencerMode::Live,
                     timeline_executor: None,
-                    prev_frame: Vec::new(),
+                    frame_publisher: engine::frame::FramePublisher::default(),
                     parameter_context: engine::animation::ParameterContext::new(),
                 })),
             });
@@ -43,7 +43,8 @@ pub fn run() {
             commands::save_show,
             commands::load_show,
             commands::set_sequencer_mode,
-            commands::get_layout_coords
+            commands::get_layout_coords,
+            commands::request_full_frame
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
