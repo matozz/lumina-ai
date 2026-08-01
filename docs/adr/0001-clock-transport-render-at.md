@@ -43,6 +43,7 @@ Stage 1 需要建立可测试、单实例、无累计漂移的实时核心，同
 - publisher 维护上一完整 Frame，但 diff 按 fixture ID 比较。
 - 首帧、show revision 变化、fixture topology 变化或显式 resync 必须发布 full frame。
 - payload 携带 `show_revision`、单调 `frame_sequence`、逻辑 beat/time 与 `full`；前端可据此检测 revision、丢帧和乱序。
+- Preview 将每个已接受 Frame 直接应用到 fixture visual；不得叠加隐式时间插值。未来视觉平滑只能作为显式、可关闭且不改变逻辑 Frame 的展示选项。
 
 ## Alternatives considered
 
@@ -56,6 +57,7 @@ Stage 1 需要建立可测试、单实例、无累计漂移的实时核心，同
 - timeline automation，尤其 multiplier，需要可按目标时间求值或积分；旧 `accumulated_beat` 将被移除。
 - scheduler 测试可用 ManualClock 在无真实等待的情况下验证 10 分钟逻辑时间、Pause/Resume 和 Seek。
 - Tauri command 与 event payload 会变更，前端 bridge 和 ControlPanel 必须同阶段迁移。
+- Preview 会忠实显示瞬时 blackout/strobe，视觉上可能比旧 80ms ease-out 更锐利，但与后续 Output Adapter 的逻辑输入一致。
 - output adapter 尚未在 Stage 1 引入；shutdown hook 先确保 scheduler worker 完整退出。
 
 ## Migration and rollback
@@ -69,4 +71,5 @@ Stage 1 需要建立可测试、单实例、无累计漂移的实时核心，同
 - Deterministic `render_at`: `ce44617`
 - Revisioned Frame publisher: `55694a2`
 - Single joined scheduler worker: `c73a54a`
-- Lock-order stress and loaded runtime validation: 本切片提交
+- Lock-order stress and loaded runtime validation: `045cfce`
+- Raw Frame preview: 本切片提交

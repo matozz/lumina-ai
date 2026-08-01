@@ -1079,14 +1079,14 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 ## Handoff
 
 - Current Stage: Stage 1 · 实时内核与 Transport（in_progress）
-- Slice completed: 固化 scheduler lifecycle → 已完成的 ShowStore 操作 → runtime state 的锁顺序；新增 40 轮 transport、100 次 reload、200 次 resync 并发压力回归；release harness 以 60Hz、500 fixtures 连续模拟 10 分钟 loaded render/publish。
-- Commits: Stage 0 `a87014e`、`f1cdbb0`、`a86392f`、`ac547bc`、`d24e0f5`、`acf5b81`；Stage 1 `aceef6a`、`ce44617`、`55694a2`、`c73a54a`；`perf(tauri): 📈 validate loaded runtime stability`（本切片提交）
-- Files changed: scheduler 锁顺序说明与并发压力测试、Stage 1 release validation harness、可复现 benchmark script/artifact、ADR/计划文档。
-- Validation: `pnpm check:all` 通过（34 Rust tests/contracts、8 Vitest tests）；并发压力测试在 10 秒 timeout 内结束；release harness 完成 36,000 ticks/18,000,000 fixture evaluations，逻辑漂移 0.012ms、平均 render/publish 112.277µs、148.44× realtime。
-- ADRs added/updated: ADR-0001 补充 lock-order/stress/loaded validation 证据；决策无变化。
-- Risks opened/closed: R-001/R-011 closed；R-004 的 Stage 1 preview 部分仍待处理。
-- Remaining exit criteria: 让 Preview 直接消费原始 Frame；真实 Tauri 窗口验证 Play/Pause/Stop、template reload、error/keyboard 与 shutdown；最终统一门禁。
-- Recommended next slice: 移除 Preview 隐式 80ms 插值并补前端回归，然后进行真实 Tauri 窗口验收。
+- Slice completed: 移除 Preview fixture visual 的固定 80ms ease-out；已接受的逻辑 Frame 现在同帧直接更新颜色与 dimmer，RAF 只负责绘制；移除已无 backend 生产者的旧 `engine:beat` bridge。
+- Commits: Stage 0 `a87014e`、`f1cdbb0`、`a86392f`、`ac547bc`、`d24e0f5`、`acf5b81`；Stage 1 `aceef6a`、`ce44617`、`55694a2`、`c73a54a`、`045cfce`；`fix(preview): 💡 consume raw logical frames`（本切片提交）
+- Files changed: `FixtureVisual`/`CanvasRenderer`、raw-frame/blackout 前端回归测试、bridge dead-code cleanup、ADR/计划文档。
+- Validation: `pnpm check:all` 通过（34 Rust tests/contracts、10 Vitest tests）；连续高亮/blackout Frame 无中间插值值。
+- ADRs added/updated: ADR-0001 明确 Preview 直接消费逻辑 Frame，未来平滑只能是显式展示选项。
+- Risks opened/closed: R-004 closed；Stage 1 代码级风险全部处置或按后续 Stage 明确保留。
+- Remaining exit criteria: 真实 Tauri 窗口验证 Play/Pause/Stop、template reload、error/keyboard 与 shutdown；最终统一门禁。
+- Recommended next slice: 启动真实 Tauri app 完成 Stage 1 UI/lifecycle 验收。
 
 ## 19. ADR 规范
 
@@ -1143,6 +1143,7 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 1        | 并发 + loaded runtime | failed    | none        | Prettier 无 Rust parser，组合命令在 checks 前退出     | Rust 改由 Cargo fmt；前端/文档仍用 Prettier   | 分离格式化后复跑统一门禁                    |
 | 2026-08-02 | 1        | 并发 + loaded runtime | failed    | none        | 未覆盖环境的 Cargo fmt 再触发 rustup temp 权限错误    | 所有本地 Rust 命令统一显式使用同版本 stable   | stable fmt 后复跑统一门禁                   |
 | 2026-08-02 | 1        | 并发 + loaded runtime | completed | 本切片提交  | `pnpm check:all`；34 Rust/8 frontend tests            | 格式化/toolchain 执行问题均关闭               | Preview raw Frame + 真实 Tauri 验收         |
+| 2026-08-02 | 1        | Preview raw Frame     | completed | 本切片提交  | `pnpm check:all`；34 Rust/10 frontend tests           | R-004 closed；移除隐式 80ms 插值              | 真实 Tauri 窗口验收                         |
 
 ## 21. Open Risks
 
@@ -1151,7 +1152,7 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | R-001 | scheduler 重复线程或锁反转导致演出冻结             | critical | 1           | 单 worker、统一锁策略、压力测试                         | closed |
 | R-002 | schema 漂移导致用户/AI 字段静默丢失                | critical | 2           | 单一 schema、deny unknown、contract test                | open   |
 | R-003 | 所有属性使用 max 混合产生错误颜色/运动             | high     | 3           | 属性级 HTP/LTP/mix policy                               | open   |
-| R-004 | Preview 80ms 插值掩盖真实频闪输出                  | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                    | open   |
+| R-004 | Preview 80ms 插值掩盖真实频闪输出                  | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                    | closed |
 | R-005 | Raw DSL 热编译破坏 Live active show                | critical | 1/6         | Draft/Live immutable snapshot                           | open   |
 | R-006 | 没有歌曲时间模型导致 AI 编排不可复现               | high     | 5/7         | 整数 tick + TempoMap + SongAnalysis                     | open   |
 | R-007 | AI 直接生成无效或不安全效果                        | critical | 8           | typed plan、capability、validator、safety budget        | open   |

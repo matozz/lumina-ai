@@ -8,7 +8,3 @@ export function onFrameUpdate(callback: (payload: FramePayload) => void): Promis
 export function onStateChange(callback: (state: EngineStatePayload) => void): Promise<UnlistenFn> {
   return listen<EngineStatePayload>("engine:state-change", (e) => callback(e.payload));
 }
-
-export function onBeat(callback: (beat: number) => void): Promise<UnlistenFn> {
-  return listen<{ beat: number }>("engine:beat", (e) => callback(e.payload.beat));
-}

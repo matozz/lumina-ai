@@ -8,7 +8,6 @@ export class CanvasRenderer {
   private fixtures: Map<number, FixtureVisual>;
   private glowEnabled: boolean = true;
   private camera: Camera;
-  private lastTimestamp: number = 0;
   private animationFrameId: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -30,17 +29,13 @@ export class CanvasRenderer {
     for (const out of outputs) {
       const visual = this.fixtures.get(out.id);
       if (visual) {
-        visual.setTarget(out.r, out.g, out.b, out.dimmer);
+        visual.applyOutput(out.r, out.g, out.b, out.dimmer);
       }
     }
   }
 
   startRenderLoop(): void {
-    const loop = (timestamp: number) => {
-      const dt = timestamp - this.lastTimestamp;
-      this.lastTimestamp = timestamp;
-
-      this.update(dt);
+    const loop = () => {
       this.draw();
 
       this.animationFrameId = requestAnimationFrame(loop);
@@ -50,12 +45,6 @@ export class CanvasRenderer {
 
   stopRenderLoop(): void {
     cancelAnimationFrame(this.animationFrameId);
-  }
-
-  private update(dt: number): void {
-    for (const visual of this.fixtures.values()) {
-      visual.updateInterpolation(dt);
-    }
   }
 
   private draw(): void {
