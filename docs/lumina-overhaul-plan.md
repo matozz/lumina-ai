@@ -243,8 +243,8 @@ flowchart TD
 
 - [x] 为 Rust compiler、phaser、timeline、frame diff 建立首批单元测试。
 - [x] 加入至少一个端到端 golden show：DSL → compile → 指定 tick Frame。
-- [ ] 为前端加入测试命令和轻量组件/状态测试框架。
-- [ ] 为模板建立 contract test：所有模板必须通过同一 schema 和 Rust compile。
+- [x] 为前端加入测试命令和轻量组件/状态测试框架。
+- [x] 为模板建立 contract test：所有模板必须通过同一 schema 和 Rust compile。
 - [x] 测试禁止只断言“不崩溃”；必须断言 fixture/attribute/timing 输出。
 
 #### 0.2 基线数据
@@ -1079,14 +1079,14 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 ## Handoff
 
 - Current Stage: Stage 0 · Baseline 与质量护栏（in_progress）
-- Slice completed: Rust 可执行行为基线；新增 compiler/phaser/timeline/frame diff 单元测试与 DSL → compile → 指定 beat Frame golden test。
-- Commits: `chore(tauri): 🧪 establish Rust behavior baseline`（本切片提交）
-- Files changed: `src-tauri/src/compiler/mod.rs`、`src-tauri/src/engine/{mod,phaser,timeline}.rs`、`src-tauri/src/scheduler/mod.rs`、`src-tauri/tests/**`、本文档。
-- Validation: `pnpm build`；`cargo fmt -- --check`；`cargo clippy --all-targets -- -D warnings`；`cargo test`（10 passed）。
-- ADRs added/updated: 无；本切片只建立和清理质量基线，没有架构边界决策。
-- Risks opened/closed: 新增 R-009；严格 Clippy 首次发现的 13 个存量 lint 已用等价改写关闭。
-- Remaining exit criteria: 前端测试框架、18 模板 contract、性能/漂移基线、Transport 回归夹具、统一 check/CI、Diagnostic contract。
-- Recommended next slice: 加入前端轻量测试 runner，并让 18 个模板经过前端 schema 与 Rust compile contract。
+- Slice completed: 前端 Vitest/Testing Library 测试 runner、Zustand 状态测试，以及 18/18 模板的 FullDSLSchema + Rust compile 双侧 contract。
+- Commits: `a87014e`；`chore(test): 🧪 add frontend and template contracts`（本切片提交）
+- Files changed: `package.json`、`pnpm-lock.yaml`、`vite.config.ts`、`src/test/setup.ts`、`src/{stores/timeline,editor/templates}.test.ts`、`src-tauri/tests/template_contract.rs`、本文档。
+- Validation: `pnpm test`（2 files / 3 tests）；`pnpm build`；`cargo fmt -- --check`；`cargo clippy --all-targets -- -D warnings`；`cargo test`（11 passed，含 18 templates contract）。
+- ADRs added/updated: 无；测试环境选择不改变产品架构。
+- Risks opened/closed: R-010 在本切片内发现并关闭；R-009 保持 open，留待 Stage 1。
+- Remaining exit criteria: 性能/bundle/compile/漂移基线、Transport 回归夹具、统一 check/toolchain/CI、Diagnostic contract。
+- Recommended next slice: 建立可重复的 release benchmark 与 10 秒 scheduler drift 基线 artifact。
 
 ## 19. ADR 规范
 
@@ -1123,6 +1123,8 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | Planning | 建立分阶段改造规格 | completed | docs commit | 基线审计：`pnpm build` 通过；`cargo test` 为 0 tests | 当前系统定位为 PoC；实时可信度优先于 AI 功能 | Stage 0：建立 Rust/Frontend 测试与 baseline |
 | 2026-08-02 | 0        | Rust 行为基线      | failed    | none        | 首次严格 Clippy 发现 13 个存量 lint                  | 等价机械清理，不改变 scheduler 行为          | 清理后复跑全部 Rust 门槛                    |
 | 2026-08-02 | 0        | Rust 行为基线      | completed | 本切片提交  | `pnpm build`；fmt；Clippy；`cargo test` 10 passed    | 新增 R-009；无 ADR                           | 前端测试 runner + 18 模板 contract          |
+| 2026-08-02 | 0        | 前端 runner + 模板 | failed    | none        | jsdom 30 在 Node 20 无法启动 Vitest worker           | 记录 R-010；改用 Vitest 官方 happy-dom       | 复跑前端与 Rust template contract           |
+| 2026-08-02 | 0        | 前端 runner + 模板 | completed | 本切片提交  | `pnpm test` 3 passed；`cargo test` 11 passed；build  | R-010 closed；18/18 双侧 contract            | release benchmark + 10 秒 drift baseline    |
 
 ## 21. Open Risks
 
@@ -1137,6 +1139,7 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | R-007 | AI 直接生成无效或不安全效果                  | critical | 8           | typed plan、capability、validator、safety budget        | open   |
 | R-008 | 硬件故障时无法自动 Blackout                  | critical | 9           | 独立 safety controller 和 fail-safe tests               | open   |
 | R-009 | 首帧或 fixture topology 变化被 zip diff 丢弃 | high     | 1           | revision/topology 强制 full frame，并按 fixture ID diff | open   |
+| R-010 | jsdom 30 无法在固定 Node 20 启动测试 worker  | medium   | 0           | 改用 Vitest 官方支持的 happy-dom                        | closed |
 
 ## 22. Deferred Backlog
 
