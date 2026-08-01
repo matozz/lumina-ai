@@ -256,10 +256,10 @@ flowchart TD
 
 #### 0.3 自动化检查
 
-- [ ] 固定并文档化 Node、pnpm、Rust toolchain 版本。
-- [ ] 增加统一 `pnpm check`，串联 format check、TypeScript、前端测试和 Vite build。
-- [ ] 增加统一 Rust check：`cargo fmt --check`、`cargo clippy --all-targets -- -D warnings`、`cargo test`。
-- [ ] 若仓库启用 CI，CI 必须执行上述检查。
+- [x] 固定并文档化 Node、pnpm、Rust toolchain 版本。
+- [x] 增加统一 `pnpm check`，串联 format check、TypeScript、前端测试和 Vite build。
+- [x] 增加统一 Rust check：`cargo fmt --check`、`cargo clippy --all-targets -- -D warnings`、`cargo test`。
+- [x] 若仓库启用 CI，CI 必须执行上述检查。
 
 #### 0.4 诊断格式
 
@@ -1079,14 +1079,14 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 ## Handoff
 
 - Current Stage: Stage 0 · Baseline 与质量护栏（in_progress）
-- Slice completed: 可执行的 Transport/topology characterization；量化重复 Play 双 worker、Stop-as-Pause 丢 active phaser、Stop/Reset cursor 语义，以及首帧/fixture append 被 zip diff 丢弃。
-- Commits: `a87014e`、`f1cdbb0`、`a86392f`；`chore(tauri): 🧪 characterize transport regressions`（本切片提交）
-- Files changed: `src-tauri/src/{commands,state,lib}.rs`、`src-tauri/src/{scheduler,engine}/mod.rs`、`src-tauri/Cargo.toml`、本文档。
-- Validation: `pnpm test`（3 passed）；`pnpm build`；fmt；严格 Clippy；`cargo test`（16 passed）。重复 Play characterization 在 220ms 窗口验证 accumulated phase 超过单 worker 1.5 倍。
-- ADRs added/updated: 无；仅移除未使用 AppHandle 字段、泛化 Runtime 以接入 Tauri 官方 MockRuntime，不改变生产命令语义。
-- Risks opened/closed: 新增 R-012；R-001、R-009 以可执行测试确认并保持 open。
-- Remaining exit criteria: 统一 check/toolchain/CI、Diagnostic contract 与前端可定位错误呈现。
-- Recommended next slice: 固定 Node/pnpm/Rust toolchain，增加 `pnpm check`、统一 Rust check 与 CI。
+- Slice completed: 固定 Node 20.19.3、pnpm 10.33.0、Rust 1.94.1；新增统一 frontend/Rust checks 和执行同一门槛的 GitHub Actions workflow。
+- Commits: `a87014e`、`f1cdbb0`、`a86392f`、`ac547bc`；`chore(config): 🔧 add reproducible quality gates`（本切片提交）
+- Files changed: `.nvmrc`、`rust-toolchain.toml`、`.github/workflows/check.yml`、`package.json`、`src-tauri/Cargo.toml`、`docs/development.md`、README/贡献与 agent 文档及一个存量 TS 文件的纯格式化、本文档。
+- Validation: `pnpm check` 通过；`RUSTUP_TOOLCHAIN=stable pnpm check:rust` 通过（stable 实测 rustc/cargo 1.94.1，16 Rust tests）；workflow 经 Prettier YAML parser 校验并调用相同命令。精确命名 toolchain 在 managed sandbox 内恢复下载超时，记录为 R-013 closed-by-equivalent-validation。
+- ADRs added/updated: 无；版本 pin 与检查编排不改变产品架构。
+- Risks opened/closed: 新增并关闭 R-013；产品风险无状态变化。
+- Remaining exit criteria: Diagnostic contract、稳定 code 与前端可定位错误呈现。
+- Recommended next slice: 定义首版 `Diagnostic { code, severity, path, message, hint }`，迁移现有 compile errors，并在编辑器内呈现可定位错误。
 
 ## 19. ADR 规范
 
@@ -1127,6 +1127,8 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 0        | 前端 runner + 模板 | completed | 本切片提交  | `pnpm test` 3 passed；`cargo test` 11 passed；build  | R-010 closed；18/18 双侧 contract            | release benchmark + 10 秒 drift baseline    |
 | 2026-08-02 | 0        | release 基线       | completed | 本切片提交  | 4 档 fixture + 18 模板 + bundle + 10 秒 drift        | 新增 R-011；基线 source `f1cdbb0`            | Transport/topology 回归夹具                 |
 | 2026-08-02 | 0        | Transport 回归夹具 | completed | 本切片提交  | `cargo test` 16 passed；MockRuntime 生命周期可执行   | 确认 R-001/R-009；新增 R-012                 | toolchain + unified checks + CI             |
+| 2026-08-02 | 0        | toolchain + checks | failed    | none        | 4 个存量 Prettier 文件；sandbox 阻止 rustup temp     | 纯格式化；记录 R-013                         | 复跑统一前端/Rust 门槛                      |
+| 2026-08-02 | 0        | toolchain + checks | completed | 本切片提交  | `pnpm check`；同版本 stable `pnpm check:rust`        | R-013 closed；CI 调用同一命令                | Diagnostic contract + UI error              |
 
 ## 21. Open Risks
 
@@ -1144,6 +1146,7 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | R-010 | jsdom 30 无法在固定 Node 20 启动测试 worker        | medium   | 0           | 改用 Vitest 官方支持的 happy-dom                        | closed |
 | R-011 | timer-only 漂移基线未覆盖 Tauri/锁/render load     | medium   | 1           | ManualClock 确定性测试 + loaded runtime 压力测试        | open   |
 | R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失 | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command           | open   |
+| R-013 | managed sandbox 内精确 toolchain 恢复下载超时      | low      | 0           | 同版本 stable 完整验证；干净 CI 执行 pin                | closed |
 
 ## 22. Deferred Backlog
 

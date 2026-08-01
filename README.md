@@ -8,6 +8,7 @@ A modern, high-performance timeline and sequencer engine for lighting shows, bui
 ## Architecture
 
 Lumina AI leverages a hybrid architecture for optimal performance:
+
 - **Frontend**: React + TypeScript + Tailwind CSS, featuring a highly optimized custom timeline renderer with native Pointer Events API for zero-lag 60fps drag-and-drop interactions.
 - **Backend**: Rust + Tauri, executing a powerful custom DSL (Domain Specific Language) that drives the actual lighting show execution.
 
@@ -112,9 +113,13 @@ Here is an example of defining a matrix of lights and creating a "Blink" phaser 
 ### Prerequisites
 
 Ensure you have the following installed:
-- [Node.js](https://nodejs.org/) (v18+)
-- [pnpm](https://pnpm.io/)
-- [Rust](https://www.rust-lang.org/tools/install)
+
+- [Node.js](https://nodejs.org/) 20.19.3
+- [pnpm](https://pnpm.io/) 10.33.0
+- [Rust](https://www.rust-lang.org/tools/install) 1.94.1 with rustfmt and Clippy
+
+See [`docs/development.md`](docs/development.md) for the pinned toolchain and unified local/CI checks.
+
 - [Tauri Dependencies](https://v2.tauri.app/start/prerequisites/) for your specific OS.
 
 ### Installation

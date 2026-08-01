@@ -1,9 +1,4 @@
-import {
-  useEngineStore,
-  engineActions,
-  engineSelectors,
-  SequencerMode,
-} from "@/stores/engine";
+import { useEngineStore, engineActions, engineSelectors, SequencerMode } from "@/stores/engine";
 import { engine } from "@/bridge/commands";
 import { Play, Pause, Square, Activity, Clock, Settings2, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
