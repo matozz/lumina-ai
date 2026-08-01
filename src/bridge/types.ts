@@ -44,11 +44,14 @@ export interface Diagnostic {
 }
 
 export interface EngineStatePayload {
-  is_playing: boolean;
+  transport_state: TransportState;
+  transport_revision: number;
   tempo: number;
   global_beat: number;
   active_phasers: { id: string; multiplier: number }[];
 }
+
+export type TransportState = "stopped" | "playing" | "paused" | "seeking" | "error";
 
 // -----------------------------------------------------------------------------
 // Zod Schemas for ShowDSL

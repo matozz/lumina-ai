@@ -4,6 +4,7 @@ use super::FixtureOutput;
 use crate::compiler::parser::{TimelineActionDefDSL, TimelineEventDSL};
 use crate::compiler::CompiledShow;
 use rayon::prelude::*;
+use serde::Serialize;
 use std::collections::HashMap;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -11,7 +12,7 @@ pub struct RenderTime {
     pub beat: f64,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct LivePhaser {
     pub id: String,
     pub start_beat: f64,

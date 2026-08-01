@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
-pub trait Clock: Clone + Send + Sync + 'static {
+pub trait Clock: Send + Sync + 'static {
     fn now(&self) -> Duration;
 }
 

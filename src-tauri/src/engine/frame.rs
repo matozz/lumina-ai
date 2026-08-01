@@ -73,6 +73,11 @@ impl FramePublisher {
     pub fn request_full(&mut self) {
         self.force_full = true;
     }
+
+    #[cfg(test)]
+    pub fn frame_sequence(&self) -> u64 {
+        self.frame_sequence
+    }
 }
 
 pub fn diff_outputs_by_id(

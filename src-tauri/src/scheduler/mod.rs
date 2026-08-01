@@ -1,27 +1,67 @@
-use crate::engine::compute_frame;
-use crate::state::EngineState;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use crate::engine::frame::FramePayload;
+use crate::engine::render::{render_at, RenderSource, RenderTime};
+use crate::engine::transport::{OutputRate, TransportError, TransportSnapshot, TransportState};
+use crate::state::{EngineState, SequencerMode};
+use serde::Serialize;
+use std::fmt;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Runtime};
+use tokio::sync::{watch, Mutex};
+use tokio::task::JoinHandle;
+use tokio::time::{interval, MissedTickBehavior};
 
-#[derive(Clone)]
 pub struct Scheduler {
-    running: Arc<AtomicBool>,
-    tempo: Arc<AtomicU32>,
+    lifecycle: Mutex<SchedulerLifecycle>,
 }
 
-#[derive(Clone, serde::Serialize)]
+struct SchedulerLifecycle {
+    worker: Option<Worker>,
+    output_rate: OutputRate,
+}
+
+struct Worker {
+    cancel: watch::Sender<bool>,
+    handle: JoinHandle<()>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SchedulerError {
+    AlreadyPlaying,
+    Transport(TransportError),
+    WorkerJoin(String),
+}
+
+impl fmt::Display for SchedulerError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::AlreadyPlaying => formatter.write_str("scheduler worker is already running"),
+            Self::Transport(error) => write!(formatter, "{error}"),
+            Self::WorkerJoin(error) => {
+                write!(formatter, "scheduler worker failed to join: {error}")
+            }
+        }
+    }
+}
+
+impl From<TransportError> for SchedulerError {
+    fn from(error: TransportError) -> Self {
+        Self::Transport(error)
+    }
+}
+
+#[derive(Clone, Serialize)]
 pub struct EngineStatePayload {
-    pub is_playing: bool,
+    pub transport_state: TransportState,
+    pub transport_revision: u64,
     pub tempo: u32,
     pub global_beat: f64,
-    pub active_phasers: Vec<crate::state::ActivePhaser>,
+    pub active_phasers: Vec<ActivePhaserPayload>,
 }
 
-#[derive(Clone, serde::Serialize)]
-pub struct BeatPayload {
-    pub beat: f64,
+#[derive(Clone, Serialize)]
+pub struct ActivePhaserPayload {
+    pub id: String,
+    pub multiplier: f64,
 }
 
 impl Default for Scheduler {
@@ -32,180 +72,481 @@ impl Default for Scheduler {
 
 impl Scheduler {
     pub fn new() -> Self {
+        Self::with_output_rate(OutputRate::default())
+    }
+
+    pub fn with_output_rate(output_rate: OutputRate) -> Self {
         Self {
-            running: Arc::new(AtomicBool::new(false)),
-            tempo: Arc::new(AtomicU32::new(120)),
+            lifecycle: Mutex::new(SchedulerLifecycle {
+                worker: None,
+                output_rate,
+            }),
         }
     }
 
-    pub fn start<R: Runtime>(&self, app: AppHandle<R>, state: Arc<EngineState>, subdivision: u32) {
-        let running = self.running.clone();
-        let tempo = self.tempo.clone();
-        running.store(true, Ordering::SeqCst);
+    pub async fn play<R: Runtime>(
+        &self,
+        app: AppHandle<R>,
+        state: Arc<EngineState>,
+    ) -> Result<(), SchedulerError> {
+        let mut lifecycle = self.lifecycle.lock().await;
+        self.clear_finished_worker(&mut lifecycle).await?;
+        if lifecycle.worker.is_some() {
+            return Err(SchedulerError::AlreadyPlaying);
+        }
 
-        std::thread::spawn(move || {
-            let mut next_tick = Instant::now();
-            let rt = tokio::runtime::Runtime::new().unwrap();
+        let snapshot = {
+            let mut runtime = state.runtime.write().await;
+            runtime.transport.play(state.clock.now())?
+        };
+        emit_state(&app, &state, snapshot).await;
+        lifecycle.worker = Some(spawn_worker(app, state, lifecycle.output_rate));
+        Ok(())
+    }
 
-            // Read initial global_beat from state when starting/resuming
-            let mut global_beat = rt.block_on(async { state.runtime.read().await.global_beat });
-            let mut last_integer_beat: i64 = global_beat.floor() as i64;
+    pub async fn pause<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        state: &Arc<EngineState>,
+    ) -> Result<(), SchedulerError> {
+        let mut lifecycle = self.lifecycle.lock().await;
+        stop_worker(&mut lifecycle).await?;
+        let snapshot = {
+            let mut runtime = state.runtime.write().await;
+            runtime.transport.pause(state.clock.now())?
+        };
+        emit_state(app, state, snapshot).await;
+        Ok(())
+    }
 
-            while running.load(Ordering::SeqCst) {
-                let bpm = tempo.load(Ordering::Relaxed) as f64;
-                let tick_interval = Duration::from_secs_f64(60.0 / (bpm * subdivision as f64));
-                let delta_beat = 1.0 / subdivision as f64;
+    pub async fn stop<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        state: &Arc<EngineState>,
+    ) -> Result<(), SchedulerError> {
+        let mut lifecycle = self.lifecycle.lock().await;
+        stop_worker(&mut lifecycle).await?;
+        let snapshot = {
+            let mut runtime = state.runtime.write().await;
+            runtime.live_phasers.clear();
+            runtime.transport.stop(state.clock.now())
+        };
+        publish_blackout(app, state, snapshot).await;
+        emit_state(app, state, snapshot).await;
+        Ok(())
+    }
 
-                next_tick += tick_interval;
-                global_beat += delta_beat;
+    pub async fn seek<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        state: &Arc<EngineState>,
+        target_beat: f64,
+    ) -> Result<(), SchedulerError> {
+        let mut lifecycle = self.lifecycle.lock().await;
+        stop_worker(&mut lifecycle).await?;
+        let now = state.clock.now();
+        let seeking = {
+            let mut runtime = state.runtime.write().await;
+            runtime.transport.begin_seek(target_beat, now)?
+        };
+        emit_state(app, state, seeking).await;
 
-                let show_snapshot = rt.block_on(state.shows.current());
-                let (payload, state_payload) = rt.block_on(async {
-                    let mut r_state = state.runtime.write().await;
+        let settled = {
+            let mut runtime = state.runtime.write().await;
+            runtime.transport.complete_seek(now)?
+        };
+        render_and_emit(app, state, true).await;
+        emit_state(app, state, settled).await;
 
-                    r_state.global_beat = global_beat;
-                    r_state.is_playing = true;
+        if settled.state == TransportState::Playing {
+            lifecycle.worker = Some(spawn_worker(
+                app.clone(),
+                state.clone(),
+                lifecycle.output_rate,
+            ));
+        }
+        Ok(())
+    }
 
-                    // Accumulate phase for active phasers based on current multiplier
-                    let mut updates: Vec<(usize, f64)> = Vec::new();
-                    for (i, active) in r_state.active_phasers.iter().enumerate() {
-                        let dynamic_multiplier = r_state.parameter_context
-                            .get_float(&format!("phaser:{}.multiplier", active.id))
-                            .unwrap_or(active.multiplier);
-                        updates.push((i, delta_beat * dynamic_multiplier));
-                    }
-                    for (i, amt) in updates {
-                        r_state.active_phasers[i].accumulated_beat += amt;
-                    }
+    pub async fn set_tempo<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        state: &Arc<EngineState>,
+        bpm: u32,
+    ) -> Result<(), SchedulerError> {
+        let snapshot = {
+            let mut runtime = state.runtime.write().await;
+            runtime.transport.set_tempo(bpm, state.clock.now())?
+        };
+        emit_state(app, state, snapshot).await;
+        Ok(())
+    }
 
-                    // Tick timeline and sequence
-                    if r_state.sequencer_mode == crate::state::SequencerMode::Timeline {
-                        if let Some(ref mut timeline) = r_state.timeline_executor {
-                            let actions = timeline.tick(global_beat);
-                            for action in actions {
-                                match action {
-                                    crate::engine::timeline::TimelineAction::Start(instance_id, def) => {
-                                        if let crate::compiler::parser::TimelineActionDefDSL::Phaser { phaser } = def {
-                                            // Only add if this specific instance isn't already active
-                                            if !r_state.active_phasers.iter().any(|p| p.id == phaser && p.instance_id == Some(instance_id)) {
-                                                r_state.active_phasers.push(crate::state::ActivePhaser {
-                                                    id: phaser,
-                                                    start_beat: global_beat,
-                                                    instance_id: Some(instance_id),
-                                                    multiplier: 1.0,
-                                                    accumulated_beat: 0.0,
-                                                });
-                                            }
-                                        }
-                                    }
-                                    crate::engine::timeline::TimelineAction::Stop(instance_id, def) => {
-                                        if let crate::compiler::parser::TimelineActionDefDSL::Phaser { phaser } = def {
-                                            // Only remove this specific instance
-                                            r_state.active_phasers.retain(|p| !(p.id == phaser && p.instance_id == Some(instance_id)));
-                                        }
-                                    }
-                                    crate::engine::timeline::TimelineAction::UpdateParameter(target, value) => {
-                                        r_state.parameter_context.write_value(&target, value);
-                                    }
-                                }
-                            }
-                        }
-                    }
+    pub async fn set_output_rate(&self, output_rate: OutputRate) -> Result<(), SchedulerError> {
+        let mut lifecycle = self.lifecycle.lock().await;
+        self.clear_finished_worker(&mut lifecycle).await?;
+        if lifecycle.worker.is_some() {
+            return Err(SchedulerError::AlreadyPlaying);
+        }
+        lifecycle.output_rate = output_rate;
+        Ok(())
+    }
 
-                    // (Omitted the action execution logic for simplicity, could be added later)
-                    // if let Some(ref mut seq) = r_state.sequence_executor {
-                    //     seq.tick(global_beat);
-                    // }
+    pub async fn shutdown(&self, state: &Arc<EngineState>) -> Result<(), SchedulerError> {
+        let mut lifecycle = self.lifecycle.lock().await;
+        stop_worker(&mut lifecycle).await?;
+        let mut runtime = state.runtime.write().await;
+        runtime.live_phasers.clear();
+        runtime.transport.stop(state.clock.now());
+        Ok(())
+    }
 
-                    if let Some(snapshot) = show_snapshot {
-                        let frame = compute_frame(
-                            global_beat,
-                            &r_state.active_phasers,
-                            &snapshot.show,
-                            &r_state.parameter_context,
-                        );
-                        let payload = r_state.frame_publisher.publish(
-                            snapshot.revision,
-                            global_beat,
-                            frame,
-                        );
-
-                        let state_payload = EngineStatePayload {
-                            is_playing: true,
-                            tempo: tempo.load(Ordering::Relaxed),
-                            global_beat,
-                            active_phasers: r_state.active_phasers.clone(),
-                        };
-
-                        (Some(payload), Some(state_payload))
-                    } else {
-                        (None, None)
-                    }
-                });
-
-                if let Some(p) = payload {
-                    let _ = app.emit("engine:frame-update", p);
-                }
-
-                if let Some(sp) = state_payload {
-                    let _ = app.emit("engine:state-change", sp);
-                }
-
-                let current_int_beat = global_beat.floor() as i64;
-                if current_int_beat > last_integer_beat {
-                    let _ = app.emit(
-                        "engine:beat",
-                        BeatPayload {
-                            beat: current_int_beat as f64,
-                        },
-                    );
-                    last_integer_beat = current_int_beat;
-                }
-
-                let now = Instant::now();
-                if next_tick > now {
-                    let wait = next_tick - now;
-                    if wait > Duration::from_millis(2) {
-                        std::thread::sleep(wait - Duration::from_millis(1));
-                    }
-                    while Instant::now() < next_tick {
-                        std::hint::spin_loop();
-                    }
-                } else {
-                    // Skip if behind
-                    next_tick = now;
-                }
+    async fn clear_finished_worker(
+        &self,
+        lifecycle: &mut SchedulerLifecycle,
+    ) -> Result<(), SchedulerError> {
+        let is_finished = lifecycle
+            .worker
+            .as_ref()
+            .is_some_and(|worker| worker.handle.is_finished());
+        if is_finished {
+            if let Some(worker) = lifecycle.worker.take() {
+                worker
+                    .handle
+                    .await
+                    .map_err(|error| SchedulerError::WorkerJoin(error.to_string()))?;
             }
+        }
+        Ok(())
+    }
 
-            // when stopped
-            rt.block_on(async {
-                let mut r_state = state.runtime.write().await;
-                r_state.is_playing = false;
-                let sp = EngineStatePayload {
-                    is_playing: false,
-                    tempo: tempo.load(Ordering::Relaxed),
-                    global_beat: r_state.global_beat,
-                    active_phasers: r_state.active_phasers.clone(),
-                };
-                let _ = app.emit("engine:state-change", sp);
-            });
+    #[cfg(test)]
+    async fn is_running(&self) -> bool {
+        self.lifecycle
+            .lock()
+            .await
+            .worker
+            .as_ref()
+            .is_some_and(|worker| !worker.handle.is_finished())
+    }
+}
+
+fn spawn_worker<R: Runtime>(
+    app: AppHandle<R>,
+    state: Arc<EngineState>,
+    output_rate: OutputRate,
+) -> Worker {
+    let (cancel, mut cancelled) = watch::channel(false);
+    let handle = tokio::spawn(async move {
+        let mut ticker = interval(output_rate.interval());
+        ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
+
+        loop {
+            tokio::select! {
+                biased;
+                changed = cancelled.changed() => {
+                    if changed.is_err() || *cancelled.borrow() {
+                        break;
+                    }
+                }
+                _ = ticker.tick() => render_and_emit(&app, &state, false).await,
+            }
+        }
+    });
+    Worker { cancel, handle }
+}
+
+async fn stop_worker(lifecycle: &mut SchedulerLifecycle) -> Result<(), SchedulerError> {
+    let Some(worker) = lifecycle.worker.take() else {
+        return Ok(());
+    };
+    let _ = worker.cancel.send(true);
+    worker
+        .handle
+        .await
+        .map_err(|error| SchedulerError::WorkerJoin(error.to_string()))
+}
+
+async fn render_and_emit<R: Runtime>(
+    app: &AppHandle<R>,
+    state: &Arc<EngineState>,
+    force_full: bool,
+) {
+    let show_snapshot = state.shows.current().await;
+    let now = state.clock.now();
+    let (transport, mode, live_phasers) = {
+        let runtime = state.runtime.read().await;
+        (
+            runtime.transport.snapshot(now),
+            runtime.sequencer_mode.clone(),
+            runtime.live_phasers.clone(),
+        )
+    };
+
+    if let Some(show_snapshot) = show_snapshot {
+        let source = match mode {
+            SequencerMode::Timeline => RenderSource::Timeline,
+            SequencerMode::Live => RenderSource::Live(&live_phasers),
+        };
+        let frame = render_at(
+            &show_snapshot.show,
+            RenderTime {
+                beat: transport.cursor_beat,
+            },
+            source,
+        );
+        let payload = {
+            let mut runtime = state.runtime.write().await;
+            if force_full {
+                runtime.frame_publisher.publish_full(
+                    show_snapshot.revision,
+                    transport.cursor_beat,
+                    frame,
+                )
+            } else {
+                runtime.frame_publisher.publish(
+                    show_snapshot.revision,
+                    transport.cursor_beat,
+                    frame,
+                )
+            }
+        };
+        let _ = app.emit("engine:frame-update", payload);
+    }
+
+    emit_state(app, state, transport).await;
+}
+
+async fn publish_blackout<R: Runtime>(
+    app: &AppHandle<R>,
+    state: &Arc<EngineState>,
+    transport: TransportSnapshot,
+) {
+    let Some(show_snapshot) = state.shows.current().await else {
+        return;
+    };
+    let blackout = show_snapshot
+        .show
+        .fixtures
+        .iter()
+        .map(|fixture| crate::engine::FixtureOutput::black(fixture.id))
+        .collect();
+    let payload: FramePayload = state.runtime.write().await.frame_publisher.publish_full(
+        show_snapshot.revision,
+        transport.cursor_beat,
+        blackout,
+    );
+    let _ = app.emit("engine:frame-update", payload);
+}
+
+async fn emit_state<R: Runtime>(
+    app: &AppHandle<R>,
+    state: &Arc<EngineState>,
+    transport: TransportSnapshot,
+) {
+    let active_phasers = state
+        .runtime
+        .read()
+        .await
+        .live_phasers
+        .iter()
+        .map(|phaser| ActivePhaserPayload {
+            id: phaser.id.clone(),
+            multiplier: phaser.multiplier,
+        })
+        .collect();
+    let payload = EngineStatePayload {
+        transport_state: transport.state,
+        transport_revision: transport.revision,
+        tempo: transport.tempo_bpm,
+        global_beat: transport.cursor_beat,
+        active_phasers,
+    };
+    let _ = app.emit("engine:state-change", payload);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Scheduler, SchedulerError};
+    use crate::compiler::{CompiledShow, Fixture};
+    use crate::engine::clock::{Clock, ManualClock};
+    use crate::engine::frame::FramePublisher;
+    use crate::engine::render::LivePhaser;
+    use crate::engine::transport::{OutputRate, Transport, TransportState};
+    use crate::state::{EngineState, RuntimeState, SequencerMode, ShowStore};
+    use std::sync::Arc;
+    use std::time::Duration;
+    use tokio::sync::RwLock;
+
+    fn engine_state(output_rate: OutputRate) -> (Arc<EngineState>, ManualClock) {
+        let clock = ManualClock::default();
+        let state = Arc::new(EngineState {
+            scheduler: Scheduler::with_output_rate(output_rate),
+            clock: Arc::new(clock.clone()),
+            shows: ShowStore::default(),
+            runtime: Arc::new(RwLock::new(RuntimeState {
+                transport: Transport::new(120, clock.now()).expect("transport"),
+                live_phasers: Vec::new(),
+                sequencer_mode: SequencerMode::Timeline,
+                frame_publisher: FramePublisher::default(),
+            })),
         });
+        (state, clock)
     }
 
-    pub fn stop(&self) {
-        self.running.store(false, Ordering::SeqCst);
+    #[tokio::test]
+    async fn repeated_play_returns_already_playing_and_keeps_one_worker() {
+        let app = tauri::test::mock_app();
+        let (state, _) = engine_state(OutputRate::default());
+
+        state
+            .scheduler
+            .play(app.handle().clone(), state.clone())
+            .await
+            .expect("first play");
+        assert_eq!(
+            state
+                .scheduler
+                .play(app.handle().clone(), state.clone())
+                .await,
+            Err(SchedulerError::AlreadyPlaying)
+        );
+        assert!(state.scheduler.is_running().await);
+
+        state
+            .scheduler
+            .pause(app.handle(), &state)
+            .await
+            .expect("pause and join");
+        assert!(!state.scheduler.is_running().await);
     }
 
-    pub fn reset_beat(&self) {
-        // Only relevant if we have internal beat state in the scheduler thread
-        // For now, the global beat is entirely derived from `state.runtime.global_beat`
-        // but we manage our own local `global_beat` var inside the run loop.
-        // We'll need to communicate this reset to the thread if it's running.
-        // Since we modify r_state in `reset_beat` command, the next time `start` is called
-        // it starts from 0 anyway, but let's signal a reset via an atomic if it's currently running.
+    #[tokio::test]
+    async fn pause_holds_cursor_and_stop_resets_with_joined_worker() {
+        let app = tauri::test::mock_app();
+        let (state, clock) = engine_state(OutputRate::default());
+        state
+            .scheduler
+            .play(app.handle().clone(), state.clone())
+            .await
+            .expect("play");
+        state.runtime.write().await.live_phasers.push(LivePhaser {
+            id: "live".to_string(),
+            start_beat: 0.0,
+            phase_offset: 0.0,
+            multiplier: 1.0,
+        });
+        clock.advance(Duration::from_secs(2));
+        state
+            .scheduler
+            .pause(app.handle(), &state)
+            .await
+            .expect("pause");
+
+        let paused = state.runtime.read().await.transport.snapshot(clock.now());
+        assert_eq!(paused.state, TransportState::Paused);
+        assert_eq!(paused.cursor_beat, 4.0);
+        assert_eq!(state.runtime.read().await.live_phasers.len(), 1);
+        clock.advance(Duration::from_secs(20));
+        assert_eq!(
+            state
+                .runtime
+                .read()
+                .await
+                .transport
+                .snapshot(clock.now())
+                .cursor_beat,
+            4.0
+        );
+
+        state
+            .scheduler
+            .stop(app.handle(), &state)
+            .await
+            .expect("stop");
+        let stopped = state.runtime.read().await.transport.snapshot(clock.now());
+        assert_eq!(stopped.state, TransportState::Stopped);
+        assert_eq!(stopped.cursor_beat, 0.0);
+        assert!(state.runtime.read().await.live_phasers.is_empty());
+        assert!(!state.scheduler.is_running().await);
     }
 
-    pub fn set_tempo(&self, bpm: u32) {
-        self.tempo.store(bpm, Ordering::Relaxed);
+    #[tokio::test]
+    async fn seek_rebuilds_immediately_and_resumes_the_single_worker() {
+        let app = tauri::test::mock_app();
+        let (state, clock) = engine_state(OutputRate::default());
+        state
+            .shows
+            .publish(CompiledShow {
+                fixtures: vec![Fixture {
+                    id: 1,
+                    type_: "pixel".to_string(),
+                }],
+                ..CompiledShow::default()
+            })
+            .await;
+        state
+            .scheduler
+            .play(app.handle().clone(), state.clone())
+            .await
+            .expect("play");
+        clock.advance(Duration::from_secs(2));
+
+        state
+            .scheduler
+            .seek(app.handle(), &state, 42.0)
+            .await
+            .expect("seek");
+
+        let transport = state.runtime.read().await.transport.snapshot(clock.now());
+        assert_eq!(transport.state, TransportState::Playing);
+        assert_eq!(transport.cursor_beat, 42.0);
+        assert_eq!(transport.revision, 3);
+        assert!(state.runtime.read().await.frame_publisher.frame_sequence() >= 1);
+        assert!(state.scheduler.is_running().await);
+
+        state
+            .scheduler
+            .pause(app.handle(), &state)
+            .await
+            .expect("pause");
+    }
+
+    #[tokio::test]
+    async fn configured_output_rate_drives_the_publisher_frequency() {
+        let app = tauri::test::mock_app();
+        for hz in [30, 60, 120] {
+            let output_rate = OutputRate::new(hz).expect("rate");
+            let (state, _) = engine_state(output_rate);
+            state
+                .shows
+                .publish(CompiledShow {
+                    fixtures: vec![Fixture {
+                        id: 1,
+                        type_: "pixel".to_string(),
+                    }],
+                    ..CompiledShow::default()
+                })
+                .await;
+            state
+                .scheduler
+                .play(app.handle().clone(), state.clone())
+                .await
+                .expect("play");
+            tokio::time::sleep(Duration::from_millis(250)).await;
+
+            let sequence = state.runtime.read().await.frame_publisher.frame_sequence();
+            let expected = u64::from(hz) / 4;
+            let tolerance = expected / 3 + 1;
+            assert!(
+                (expected - tolerance..=expected + tolerance).contains(&sequence),
+                "{hz}Hz produced {sequence} frames"
+            );
+            state
+                .scheduler
+                .pause(app.handle(), &state)
+                .await
+                .expect("pause");
+        }
     }
 }

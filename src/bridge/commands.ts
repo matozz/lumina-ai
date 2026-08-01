@@ -7,9 +7,11 @@ export const engine = {
   validateDSL: (json: string) => invoke<Diagnostic[]>("validate_dsl", { dslJson: json }),
 
   play: () => invoke("play"),
+  pause: () => invoke("pause"),
   stop: () => invoke("stop"),
-  resetBeat: () => invoke("reset_beat"),
+  seek: (beat: number) => invoke("seek", { beat }),
   setTempo: (bpm: number) => invoke("set_tempo", { bpm }),
+  setOutputRate: (hz: 30 | 60 | 120) => invoke("set_output_rate", { hz }),
 
   triggerPhaser: (id: string, multiplier?: number) =>
     invoke("trigger_phaser", { phaserId: id, multiplier: multiplier ?? 1.0 }),

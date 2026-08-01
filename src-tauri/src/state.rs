@@ -1,7 +1,8 @@
 use crate::compiler::CompiledShow;
-use crate::engine::animation::ParameterContext;
+use crate::engine::clock::Clock;
 use crate::engine::frame::FramePublisher;
-use crate::engine::timeline::TimelineExecutor;
+use crate::engine::render::LivePhaser;
+use crate::engine::transport::Transport;
 use crate::scheduler::Scheduler;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -9,6 +10,7 @@ use tokio::sync::RwLock;
 
 pub struct EngineState {
     pub scheduler: Scheduler,
+    pub clock: Arc<dyn Clock>,
     pub shows: ShowStore,
     pub runtime: Arc<RwLock<RuntimeState>>,
 }
@@ -55,13 +57,10 @@ pub enum SequencerMode {
 }
 
 pub struct RuntimeState {
-    pub global_beat: f64,
-    pub is_playing: bool,
-    pub active_phasers: Vec<ActivePhaser>,
+    pub transport: Transport,
+    pub live_phasers: Vec<LivePhaser>,
     pub sequencer_mode: SequencerMode,
-    pub timeline_executor: Option<TimelineExecutor>,
     pub frame_publisher: FramePublisher,
-    pub parameter_context: ParameterContext,
 }
 
 #[derive(Clone, serde::Serialize)]

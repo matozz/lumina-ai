@@ -12,7 +12,7 @@ function App() {
 
   useEffect(() => {
     const unlisten = onStateChange((state) => {
-      engineActions.setIsPlaying(state.is_playing);
+      engineActions.setTransport(state.transport_state, state.transport_revision);
       engineActions.setTempo(state.tempo);
       engineActions.setGlobalBeat(state.global_beat);
       engineActions.setActivePhasers(state.active_phasers);

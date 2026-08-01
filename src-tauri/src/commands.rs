@@ -1,8 +1,10 @@
 use crate::compiler::parser::ShowDSL;
 use crate::compiler::{diagnostic::Diagnostic, Compiler, LayoutCoord};
-use crate::state::{ActivePhaser, EngineState};
+use crate::engine::render::{LivePhaser, RenderTime};
+use crate::engine::transport::OutputRate;
+use crate::state::EngineState;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, Runtime, State};
+use tauri::{AppHandle, State};
 
 #[derive(serde::Serialize, Clone)]
 pub struct PhaserInfo {
@@ -74,18 +76,7 @@ pub async fn load_dsl(
 
             // Reset active phasers when loading a new DSL (both live and timeline mode)
             let mut r_state = state.runtime.write().await;
-            r_state.active_phasers.clear();
-
-            // If in timeline mode, re-initialize timeline executor with new DSL
-            if r_state.sequencer_mode == crate::state::SequencerMode::Timeline {
-                if let Some(timeline) = &snapshot.show.timeline {
-                    r_state.timeline_executor = Some(
-                        crate::engine::timeline::TimelineExecutor::new(timeline.clone()),
-                    );
-                } else {
-                    r_state.timeline_executor = None;
-                }
-            }
+            r_state.live_phasers.clear();
         }
         Err(e) => {
             result.errors = e;
@@ -108,77 +99,68 @@ pub async fn validate_dsl(dsl_json: String) -> Result<Vec<Diagnostic>, Diagnosti
 
 #[tauri::command]
 pub async fn play(app_handle: AppHandle, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
-    play_engine(app_handle, state.inner().clone());
-    Ok(())
+    state
+        .scheduler
+        .play(app_handle, state.inner().clone())
+        .await
+        .map_err(|error| error.to_string())
 }
 
-fn play_engine<R: Runtime>(app_handle: AppHandle<R>, state: Arc<EngineState>) {
-    state.scheduler.start(app_handle, state.clone(), 8);
+#[tauri::command]
+pub async fn pause(
+    app_handle: AppHandle,
+    state: State<'_, Arc<EngineState>>,
+) -> Result<(), String> {
+    state
+        .scheduler
+        .pause(&app_handle, state.inner())
+        .await
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
 pub async fn stop(app_handle: AppHandle, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
-    stop_engine(&app_handle, state.inner()).await
+    state
+        .scheduler
+        .stop(&app_handle, state.inner())
+        .await
+        .map_err(|error| error.to_string())
 }
 
-async fn stop_engine<R: Runtime>(
-    app_handle: &AppHandle<R>,
-    state: &Arc<EngineState>,
+#[tauri::command]
+pub async fn seek(
+    beat: f64,
+    app_handle: AppHandle,
+    state: State<'_, Arc<EngineState>>,
 ) -> Result<(), String> {
-    state.scheduler.stop();
-    let snapshot = state.shows.current().await;
-    let mut r_state = state.runtime.write().await;
-    r_state.is_playing = false;
-    r_state.active_phasers.clear(); // Reset active phasers on stop
-
-    // Clear the canvas by computing a blackout frame
-    if let Some(snapshot) = snapshot {
-        let black_frame = crate::engine::compute_frame(
-            r_state.global_beat,
-            &[],
-            &snapshot.show,
-            &r_state.parameter_context,
-        );
-        let beat = r_state.global_beat;
-        let payload = r_state
-            .frame_publisher
-            .publish_full(snapshot.revision, beat, black_frame);
-        let _ = app_handle.emit("engine:frame-update", payload);
-    }
-
-    Ok(())
+    state
+        .scheduler
+        .seek(&app_handle, state.inner(), beat)
+        .await
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-pub async fn reset_beat(state: State<'_, Arc<EngineState>>) -> Result<(), String> {
-    reset_beat_engine(state.inner()).await
-}
-
-async fn reset_beat_engine(state: &Arc<EngineState>) -> Result<(), String> {
-    let snapshot = state.shows.current().await;
-    let mut r_state = state.runtime.write().await;
-    r_state.global_beat = 0.0;
-    state.scheduler.reset_beat();
-
-    // Also reset any active timeline execution state since we jumped in time
-    if r_state.sequencer_mode == crate::state::SequencerMode::Timeline {
-        r_state.active_phasers.clear();
-        if let Some(snapshot) = snapshot {
-            if let Some(timeline) = &snapshot.show.timeline {
-                r_state.timeline_executor = Some(crate::engine::timeline::TimelineExecutor::new(
-                    timeline.clone(),
-                ));
-            }
-        }
-    }
-
-    Ok(())
+pub async fn set_tempo(
+    bpm: u32,
+    app_handle: AppHandle,
+    state: State<'_, Arc<EngineState>>,
+) -> Result<(), String> {
+    state
+        .scheduler
+        .set_tempo(&app_handle, state.inner(), bpm)
+        .await
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-pub async fn set_tempo(bpm: u32, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
-    state.scheduler.set_tempo(bpm);
-    Ok(())
+pub async fn set_output_rate(hz: u32, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
+    let output_rate = OutputRate::new(hz).map_err(|error| error.to_string())?;
+    state
+        .scheduler
+        .set_output_rate(output_rate)
+        .await
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -187,21 +169,19 @@ pub async fn trigger_phaser(
     multiplier: f64,
     state: State<'_, Arc<EngineState>>,
 ) -> Result<(), String> {
+    let now = state.clock.now();
     let mut r_state = state.runtime.write().await;
-    if let Some(phaser) = r_state
-        .active_phasers
-        .iter_mut()
-        .find(|p| p.id == phaser_id)
-    {
+    let beat = r_state.transport.snapshot(now).cursor_beat;
+    if let Some(phaser) = r_state.live_phasers.iter_mut().find(|p| p.id == phaser_id) {
+        phaser.phase_offset = phaser.phase_at(RenderTime { beat });
+        phaser.start_beat = beat;
         phaser.multiplier = multiplier;
     } else {
-        let beat = r_state.global_beat;
-        r_state.active_phasers.push(ActivePhaser {
+        r_state.live_phasers.push(LivePhaser {
             id: phaser_id,
             start_beat: beat,
-            instance_id: None,
+            phase_offset: 0.0,
             multiplier,
-            accumulated_beat: 0.0,
         });
     }
     Ok(())
@@ -213,7 +193,7 @@ pub async fn stop_phaser(
     state: State<'_, Arc<EngineState>>,
 ) -> Result<(), String> {
     let mut r_state = state.runtime.write().await;
-    r_state.active_phasers.retain(|p| p.id != phaser_id);
+    r_state.live_phasers.retain(|p| p.id != phaser_id);
     Ok(())
 }
 
@@ -242,7 +222,6 @@ pub async fn set_sequencer_mode(
     mode: String,
     state: State<'_, Arc<EngineState>>,
 ) -> Result<(), String> {
-    let snapshot = state.shows.current().await;
     let mut r_state = state.runtime.write().await;
     r_state.sequencer_mode = match mode.as_str() {
         "timeline" => crate::state::SequencerMode::Timeline,
@@ -250,20 +229,7 @@ pub async fn set_sequencer_mode(
     };
 
     // Clear active phasers when switching modes
-    r_state.active_phasers.clear();
-
-    // If switching to timeline mode, re-initialize timeline executor
-    if r_state.sequencer_mode == crate::state::SequencerMode::Timeline {
-        if let Some(snapshot) = snapshot {
-            if let Some(timeline) = &snapshot.show.timeline {
-                r_state.timeline_executor = Some(crate::engine::timeline::TimelineExecutor::new(
-                    timeline.clone(),
-                ));
-            }
-        }
-    } else {
-        r_state.timeline_executor = None;
-    }
+    r_state.live_phasers.clear();
 
     Ok(())
 }
@@ -283,121 +249,4 @@ pub async fn get_layout_coords(
 pub async fn request_full_frame(state: State<'_, Arc<EngineState>>) -> Result<(), String> {
     state.runtime.write().await.frame_publisher.request_full();
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{play_engine, reset_beat_engine, stop_engine};
-    use crate::engine::animation::ParameterContext;
-    use crate::engine::frame::FramePublisher;
-    use crate::scheduler::Scheduler;
-    use crate::state::{ActivePhaser, EngineState, RuntimeState, SequencerMode, ShowStore};
-    use std::sync::Arc;
-    use std::time::Duration;
-    use tokio::runtime::Runtime;
-    use tokio::sync::RwLock;
-
-    fn engine_state() -> Arc<EngineState> {
-        Arc::new(EngineState {
-            scheduler: Scheduler::new(),
-            shows: ShowStore::default(),
-            runtime: Arc::new(RwLock::new(RuntimeState {
-                global_beat: 0.0,
-                is_playing: false,
-                active_phasers: vec![ActivePhaser {
-                    id: "baseline".to_string(),
-                    start_beat: 0.0,
-                    instance_id: None,
-                    multiplier: 1.0,
-                    accumulated_beat: 0.0,
-                }],
-                sequencer_mode: SequencerMode::Live,
-                timeline_executor: None,
-                frame_publisher: FramePublisher::default(),
-                parameter_context: ParameterContext::new(),
-            })),
-        })
-    }
-
-    fn accumulated_after_starts(start_count: usize) -> f64 {
-        let app = tauri::test::mock_app();
-        let state = engine_state();
-        for _ in 0..start_count {
-            play_engine(app.handle().clone(), state.clone());
-        }
-        std::thread::sleep(Duration::from_millis(220));
-        state.scheduler.stop();
-        std::thread::sleep(Duration::from_millis(100));
-
-        Runtime::new()
-            .expect("test runtime")
-            .block_on(async { state.runtime.read().await.active_phasers[0].accumulated_beat })
-    }
-
-    #[test]
-    fn baseline_repeated_play_starts_multiple_workers() {
-        let single_start_phase = accumulated_after_starts(1);
-        let repeated_start_phase = accumulated_after_starts(2);
-
-        assert!(single_start_phase > 0.0);
-        assert!(
-            repeated_start_phase > single_start_phase * 1.5,
-            "Stage 1 must replace this characterization with a single-worker assertion"
-        );
-    }
-
-    #[test]
-    fn baseline_pause_resume_via_stop_loses_active_phasers() {
-        let app = tauri::test::mock_app();
-        let state = engine_state();
-        let runtime = Runtime::new().expect("test runtime");
-
-        play_engine(app.handle().clone(), state.clone());
-        std::thread::sleep(Duration::from_millis(80));
-        runtime
-            .block_on(stop_engine(app.handle(), &state))
-            .expect("baseline stop");
-        play_engine(app.handle().clone(), state.clone());
-        std::thread::sleep(Duration::from_millis(80));
-        state.scheduler.stop();
-        std::thread::sleep(Duration::from_millis(100));
-
-        let active_count =
-            runtime.block_on(async { state.runtime.read().await.active_phasers.len() });
-        assert_eq!(
-            active_count, 0,
-            "Stage 1 Pause must preserve and rebuild active clips"
-        );
-    }
-
-    #[test]
-    fn stop_then_reset_clears_outputs_and_returns_cursor_to_zero() {
-        let app = tauri::test::mock_app();
-        let state = engine_state();
-        let runtime = Runtime::new().expect("test runtime");
-        runtime.block_on(async {
-            let mut current = state.runtime.write().await;
-            current.global_beat = 4.0;
-            current.is_playing = true;
-        });
-
-        runtime
-            .block_on(stop_engine(app.handle(), &state))
-            .expect("baseline stop");
-        let stopped = runtime.block_on(async {
-            let current = state.runtime.read().await;
-            (
-                current.is_playing,
-                current.global_beat,
-                current.active_phasers.len(),
-            )
-        });
-        assert_eq!(stopped, (false, 4.0, 0));
-
-        runtime
-            .block_on(reset_beat_engine(&state))
-            .expect("baseline reset");
-        let reset_beat = runtime.block_on(async { state.runtime.read().await.global_beat });
-        assert_eq!(reset_beat, 0.0);
-    }
 }

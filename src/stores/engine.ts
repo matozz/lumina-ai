@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { CompileResult, Diagnostic, FullDSL } from "../bridge/types";
+import type { CompileResult, Diagnostic, FullDSL, TransportState } from "../bridge/types";
 
 export type SequencerMode = "live" | "timeline";
 export type CompileStatus = "idle" | "compiling" | "success" | "error";
@@ -10,7 +10,8 @@ interface ActivePhaserState {
 }
 
 export interface EngineState {
-  isPlaying: boolean;
+  transportState: TransportState;
+  transportRevision: number;
   tempo: number;
   globalBeat: number;
   activePhasers: ActivePhaserState[];
@@ -23,7 +24,8 @@ export interface EngineState {
 }
 
 export const useEngineStore = create<EngineState>()(() => ({
-  isPlaying: false,
+  transportState: "stopped",
+  transportRevision: 0,
   tempo: 120,
   globalBeat: 0,
   activePhasers: [],
@@ -37,7 +39,8 @@ export const useEngineStore = create<EngineState>()(() => ({
 
 // Actions
 export const engineActions = {
-  setIsPlaying: (val: boolean) => useEngineStore.setState({ isPlaying: val }),
+  setTransport: (state: TransportState, revision: number) =>
+    useEngineStore.setState({ transportState: state, transportRevision: revision }),
   setTempo: (val: number) => useEngineStore.setState({ tempo: val }),
   setGlobalBeat: (val: number) => useEngineStore.setState({ globalBeat: val }),
   setActivePhasers: (val: ActivePhaserState[]) => useEngineStore.setState({ activePhasers: val }),
@@ -56,7 +59,8 @@ export const engineActions = {
 
 // Selectors
 export const engineSelectors = {
-  isPlaying: (state: EngineState) => state.isPlaying,
+  isPlaying: (state: EngineState) => state.transportState === "playing",
+  transportState: (state: EngineState) => state.transportState,
   tempo: (state: EngineState) => state.tempo,
   globalBeat: (state: EngineState) => state.globalBeat,
   activePhasers: (state: EngineState) => state.activePhasers,
