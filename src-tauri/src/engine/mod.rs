@@ -153,4 +153,25 @@ mod tests {
             above_tolerance
         );
     }
+
+    #[test]
+    fn baseline_frame_diff_drops_initial_fixture_outputs() {
+        let current = vec![output(1, (255, 0, 0), 1.0)];
+
+        assert!(
+            compute_frame_diff(&[], &current).is_empty(),
+            "Stage 1 must replace this characterization with a full-frame assertion"
+        );
+    }
+
+    #[test]
+    fn baseline_frame_diff_drops_appended_fixture_outputs() {
+        let previous = vec![output(1, (255, 0, 0), 1.0)];
+        let current = vec![output(1, (255, 0, 0), 1.0), output(2, (0, 0, 255), 0.75)];
+
+        assert!(
+            compute_frame_diff(&previous, &current).is_empty(),
+            "Stage 1 must replace this characterization with a topology full-frame assertion"
+        );
+    }
 }

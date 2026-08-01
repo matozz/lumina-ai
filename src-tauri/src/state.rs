@@ -4,11 +4,9 @@ use crate::engine::timeline::TimelineExecutor;
 use crate::engine::FixtureOutput;
 use crate::scheduler::Scheduler;
 use std::sync::Arc;
-use tauri::AppHandle;
 use tokio::sync::RwLock;
 
 pub struct EngineState {
-    pub app_handle: AppHandle,
     pub scheduler: Scheduler,
     pub compiled_show: Arc<RwLock<Option<CompiledShow>>>,
     pub runtime: Arc<RwLock<RuntimeState>>,

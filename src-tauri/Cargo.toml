@@ -27,3 +27,5 @@ rayon = "1.10"
 palette = "0.7"
 fasteval = "0.2"
 
+[dev-dependencies]
+tauri = { version = "2", features = ["test"] }

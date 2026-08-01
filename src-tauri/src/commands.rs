@@ -2,7 +2,7 @@ use crate::compiler::parser::ShowDSL;
 use crate::compiler::{error::CompileError, Compiler, LayoutCoord};
 use crate::state::{ActivePhaser, EngineState};
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Runtime, State};
 
 #[derive(serde::Serialize, Clone)]
 pub struct PhaserInfo {
@@ -107,12 +107,23 @@ pub async fn validate_dsl(dsl_json: String) -> Result<Vec<CompileError>, String>
 
 #[tauri::command]
 pub async fn play(app_handle: AppHandle, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
-    state.scheduler.start(app_handle, (*state).clone(), 8);
+    play_engine(app_handle, state.inner().clone());
     Ok(())
+}
+
+fn play_engine<R: Runtime>(app_handle: AppHandle<R>, state: Arc<EngineState>) {
+    state.scheduler.start(app_handle, state.clone(), 8);
 }
 
 #[tauri::command]
 pub async fn stop(app_handle: AppHandle, state: State<'_, Arc<EngineState>>) -> Result<(), String> {
+    stop_engine(&app_handle, state.inner()).await
+}
+
+async fn stop_engine<R: Runtime>(
+    app_handle: &AppHandle<R>,
+    state: &Arc<EngineState>,
+) -> Result<(), String> {
     state.scheduler.stop();
     let mut r_state = state.runtime.write().await;
     r_state.is_playing = false;
@@ -142,6 +153,10 @@ pub async fn stop(app_handle: AppHandle, state: State<'_, Arc<EngineState>>) -> 
 
 #[tauri::command]
 pub async fn reset_beat(state: State<'_, Arc<EngineState>>) -> Result<(), String> {
+    reset_beat_engine(state.inner()).await
+}
+
+async fn reset_beat_engine(state: &Arc<EngineState>) -> Result<(), String> {
     let mut r_state = state.runtime.write().await;
     r_state.global_beat = 0.0;
     state.scheduler.reset_beat();
@@ -264,5 +279,121 @@ pub async fn get_layout_coords(
         Ok(s.coords.clone())
     } else {
         Ok(vec![])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{play_engine, reset_beat_engine, stop_engine};
+    use crate::engine::animation::ParameterContext;
+    use crate::scheduler::Scheduler;
+    use crate::state::{ActivePhaser, EngineState, RuntimeState, SequencerMode};
+    use std::sync::Arc;
+    use std::time::Duration;
+    use tokio::runtime::Runtime;
+    use tokio::sync::RwLock;
+
+    fn engine_state() -> Arc<EngineState> {
+        Arc::new(EngineState {
+            scheduler: Scheduler::new(),
+            compiled_show: Arc::new(RwLock::new(None)),
+            runtime: Arc::new(RwLock::new(RuntimeState {
+                global_beat: 0.0,
+                is_playing: false,
+                active_phasers: vec![ActivePhaser {
+                    id: "baseline".to_string(),
+                    start_beat: 0.0,
+                    instance_id: None,
+                    multiplier: 1.0,
+                    accumulated_beat: 0.0,
+                }],
+                sequencer_mode: SequencerMode::Live,
+                timeline_executor: None,
+                prev_frame: Vec::new(),
+                parameter_context: ParameterContext::new(),
+            })),
+        })
+    }
+
+    fn accumulated_after_starts(start_count: usize) -> f64 {
+        let app = tauri::test::mock_app();
+        let state = engine_state();
+        for _ in 0..start_count {
+            play_engine(app.handle().clone(), state.clone());
+        }
+        std::thread::sleep(Duration::from_millis(220));
+        state.scheduler.stop();
+        std::thread::sleep(Duration::from_millis(100));
+
+        Runtime::new()
+            .expect("test runtime")
+            .block_on(async { state.runtime.read().await.active_phasers[0].accumulated_beat })
+    }
+
+    #[test]
+    fn baseline_repeated_play_starts_multiple_workers() {
+        let single_start_phase = accumulated_after_starts(1);
+        let repeated_start_phase = accumulated_after_starts(2);
+
+        assert!(single_start_phase > 0.0);
+        assert!(
+            repeated_start_phase > single_start_phase * 1.5,
+            "Stage 1 must replace this characterization with a single-worker assertion"
+        );
+    }
+
+    #[test]
+    fn baseline_pause_resume_via_stop_loses_active_phasers() {
+        let app = tauri::test::mock_app();
+        let state = engine_state();
+        let runtime = Runtime::new().expect("test runtime");
+
+        play_engine(app.handle().clone(), state.clone());
+        std::thread::sleep(Duration::from_millis(80));
+        runtime
+            .block_on(stop_engine(app.handle(), &state))
+            .expect("baseline stop");
+        play_engine(app.handle().clone(), state.clone());
+        std::thread::sleep(Duration::from_millis(80));
+        state.scheduler.stop();
+        std::thread::sleep(Duration::from_millis(100));
+
+        let active_count =
+            runtime.block_on(async { state.runtime.read().await.active_phasers.len() });
+        assert_eq!(
+            active_count, 0,
+            "Stage 1 Pause must preserve and rebuild active clips"
+        );
+    }
+
+    #[test]
+    fn stop_then_reset_clears_outputs_and_returns_cursor_to_zero() {
+        let app = tauri::test::mock_app();
+        let state = engine_state();
+        let runtime = Runtime::new().expect("test runtime");
+        runtime.block_on(async {
+            let mut current = state.runtime.write().await;
+            current.global_beat = 4.0;
+            current.is_playing = true;
+        });
+
+        runtime
+            .block_on(stop_engine(app.handle(), &state))
+            .expect("baseline stop");
+        let stopped = runtime.block_on(async {
+            let current = state.runtime.read().await;
+            (
+                current.is_playing,
+                current.global_beat,
+                current.active_phasers.len(),
+            )
+        });
+        assert_eq!(stopped, (false, 4.0, 0));
+
+        runtime
+            .block_on(reset_beat_engine(&state))
+            .expect("baseline reset");
+        let reset_beat = runtime.block_on(async { state.runtime.read().await.global_beat });
+        assert_eq!(reset_beat, 0.0);
     }
 }

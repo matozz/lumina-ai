@@ -3,7 +3,7 @@ use crate::state::EngineState;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Runtime};
 
 #[derive(Clone)]
 pub struct Scheduler {
@@ -45,7 +45,7 @@ impl Scheduler {
         }
     }
 
-    pub fn start(&self, app: AppHandle, state: Arc<EngineState>, subdivision: u32) {
+    pub fn start<R: Runtime>(&self, app: AppHandle<R>, state: Arc<EngineState>, subdivision: u32) {
         let running = self.running.clone();
         let tempo = self.tempo.clone();
         running.store(true, Ordering::SeqCst);

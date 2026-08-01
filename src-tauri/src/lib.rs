@@ -13,10 +13,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            let app_handle = app.handle().clone();
-
             let engine_state = Arc::new(state::EngineState {
-                app_handle: app_handle.clone(),
                 scheduler: scheduler::Scheduler::new(),
                 compiled_show: Arc::new(RwLock::new(None)),
                 runtime: Arc::new(RwLock::new(state::RuntimeState {
