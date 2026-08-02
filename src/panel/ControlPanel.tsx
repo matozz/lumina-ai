@@ -4,7 +4,11 @@ import { Play, Pause, Square, Activity, Clock, Settings2, SlidersHorizontal } fr
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-export const ControlPanel = () => {
+interface ControlPanelProps {
+  embedded?: boolean;
+}
+
+export const ControlPanel = ({ embedded = false }: ControlPanelProps) => {
   const isPlaying = useEngineStore(engineSelectors.isPlaying);
   const tempo = useEngineStore(engineSelectors.tempo);
   const compileResult = useEngineStore(engineSelectors.compileResult);
@@ -71,7 +75,10 @@ export const ControlPanel = () => {
   return (
     <div
       className={cn(
-        "z-10 flex min-h-0 w-[clamp(13rem,18vw,16rem)] shrink-0 flex-col border-l border-zinc-800 bg-zinc-950 text-zinc-100 shadow-xl",
+        "z-10 flex min-h-0 flex-col bg-zinc-950 text-zinc-100",
+        embedded
+          ? "h-full w-full"
+          : "w-[clamp(13rem,18vw,16rem)] shrink-0 border-l border-zinc-800 shadow-xl",
       )}
       data-layout-region="inspector"
     >

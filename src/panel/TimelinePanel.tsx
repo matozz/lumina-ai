@@ -18,7 +18,11 @@ import {
   TimelinePlayhead,
 } from "./components";
 
-export const TimelinePanel = () => {
+interface TimelinePanelProps {
+  embedded?: boolean;
+}
+
+export const TimelinePanel = ({ embedded = false }: TimelinePanelProps) => {
   const compileResult = useEngineStore(engineSelectors.compileResult);
   const canUndo = useEngineStore(engineSelectors.canUndo);
   const canRedo = useEngineStore(engineSelectors.canRedo);
@@ -211,7 +215,10 @@ export const TimelinePanel = () => {
       tabIndex={0}
       onKeyDown={handleHistoryKeyDown}
       className={cn(
-        "relative z-20 flex h-[clamp(18rem,40vh,24rem)] min-h-0 min-w-0 shrink-0 flex-col border-t border-zinc-800 bg-zinc-950 shadow-[0_-8px_20px_rgba(0,0,0,0.5)] select-none",
+        "relative z-20 flex min-h-0 min-w-0 flex-col bg-zinc-950 select-none",
+        embedded
+          ? "h-full border-0 shadow-none"
+          : "h-[clamp(18rem,40vh,24rem)] shrink-0 border-t border-zinc-800 shadow-[0_-8px_20px_rgba(0,0,0,0.5)]",
       )}
       data-layout-region="timeline"
     >

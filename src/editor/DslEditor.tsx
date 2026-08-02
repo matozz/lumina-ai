@@ -19,38 +19,29 @@ import {
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-export const DslEditor = () => {
+interface DslEditorProps {
+  embedded?: boolean;
+}
+
+export const DslEditor = ({ embedded = false }: DslEditorProps) => {
   const code = useEngineStore(engineSelectors.currentDslCode);
   const compileErrors = useEngineStore(engineSelectors.compileErrors);
 
   const [templates, setTemplates] = useState<DslTemplate[]>(getTemplates);
-  const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>("combined");
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>("custom");
 
   const latestCodeRef = useRef(code);
   latestCodeRef.current = code;
 
-  useEffect(() => {
-    if (!code && templates.length > 0) {
-      // Find the first valid template to set as default
-      const firstValidTemplate = templates.find((t) => !t.disabled) || templates[0];
-      if (firstValidTemplate) {
-        engineActions.loadCurrentDslCode(firstValidTemplate.dsl);
-        setSelectedTemplateKey(firstValidTemplate.key);
-      }
-    }
-  }, []); // Run only on mount
-
-  const compileCode = async (codeToCompile: string) => {
+  const validateCode = async (codeToValidate: string) => {
     engineActions.setCompileStatus("compiling");
     try {
-      const res = await engine.loadDSL(codeToCompile);
-      if (res.success) {
-        engineActions.setCompileResult(res);
+      const diagnostics = await engine.validateDSL(codeToValidate);
+      if (diagnostics.length === 0) {
         engineActions.setCompileErrors([]);
         engineActions.setCompileStatus("success");
-        window.dispatchEvent(new CustomEvent("engine:layout-ready"));
       } else {
-        engineActions.setCompileErrors(res.errors);
+        engineActions.setCompileErrors(diagnostics);
         engineActions.setCompileStatus("error");
       }
     } catch (error: unknown) {
@@ -63,7 +54,7 @@ export const DslEditor = () => {
     if (!code) return;
 
     const handler = setTimeout(() => {
-      compileCode(code);
+      void validateCode(code);
     }, 200);
 
     return () => clearTimeout(handler);
@@ -104,7 +95,8 @@ export const DslEditor = () => {
   return (
     <div
       className={cn(
-        "z-10 flex h-full min-h-0 w-[clamp(20rem,30vw,28.125rem)] shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 shadow-xl",
+        "bg-card z-10 flex h-full min-h-0 flex-col",
+        embedded ? "w-full" : "border-border w-[clamp(20rem,30vw,28.125rem)] shrink-0 border-r",
       )}
       data-layout-region="editor"
     >
@@ -115,7 +107,7 @@ export const DslEditor = () => {
       >
         <div className="flex shrink-0 items-center gap-2">
           <FileCode2 className="h-4 w-4 text-indigo-400" />
-          <span className="text-xs font-semibold tracking-wide text-zinc-200">DSL EDITOR</span>
+          <span className="text-xs font-semibold tracking-wide text-zinc-200">ADVANCED DSL</span>
         </div>
 
         <div className="flex items-center justify-end gap-2">

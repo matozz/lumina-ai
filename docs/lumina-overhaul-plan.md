@@ -718,9 +718,9 @@ Keyframe 至少包含：
 
 #### 6.1 Workspace Shell
 
-- [ ] 使用可调节或可折叠 panel，不再固定 450px + 256px。
-- [ ] 默认窗口建议至少 1280×800，推荐 1440×900；定义合理 min size。
-- [ ] Canvas/Timeline 是主工作区，属性 Inspector 按选择上下文变化。
+- [x] 使用可调节或可折叠 panel，不再固定 450px + 256px。
+- [x] 默认窗口建议至少 1280×800，推荐 1440×900；定义合理 min size。
+- [x] Canvas/Timeline 是主工作区，属性 Inspector 按选择上下文变化。
 - [ ] 保留清晰的 project/show/song 名称和保存状态。
 
 #### 6.2 Stage Setup
@@ -751,7 +751,7 @@ Keyframe 至少包含：
 - [ ] effect 可配置 toggle、momentary、one-shot、exclusive group。
 - [ ] Pause、Stop、Blackout 视觉层级不同，Blackout 始终可见。
 - [ ] 显示 FPS、frame lag、output adapter、last error 和 show revision。
-- [ ] 编辑草稿和 Live Snapshot 状态明确区分。
+- [x] 编辑草稿和 Live Snapshot 状态明确区分。
 
 #### 6.6 Accessibility
 
@@ -1081,15 +1081,15 @@ flowchart LR
 
 ## Handoff
 
-- Current Stage: Stage 5 先前已完成；“Stage 5 后置稳定性修复”已完成，Stage 6 保持 `not_started`。
-- Slice completed: rAF DOM preview/shared snap、clip duration/width 保持、单 command/cancel、popover 编辑键边界、默认真实最大化/min-size/响应式布局、聚焦回归与真实 Tauri 全矩阵均完成。
-- Commits: 当前分支 `fix/timeline-drag-window-experience` stacked 在未合并的 Stage 5 最终提交 `6ffce7a`；拖拽 `f5e7faa`；窗口 `254974b`；popover/真实矩阵 `b8d84f8`；治理 `28c8966`；Node 22.20.0 alignment `e79abae`。
-- Files changed: shared TimelineGeometry、clip/keyframe rAF interaction、grid/toolbar、editable-target guard、Tauri window lifecycle/config、responsive Editor/Canvas/Control/Timeline/Library、Node runtime pin/docs、tests、screenshots、Evidence/Ledger/Open Risks/Handoff。
-- Validation: Node 22.20.0 下 `pnpm check:all` 通过且无 engine mismatch；30 frontend files/61 tests；Rust fmt/strict Clippy/85 tests/contracts；schema/typecheck/Vite build；真实 keyframe snap/cancel/play、clip move/cross/resize、Undo/Redo、popover Backspace，以及 max/common/min window matrix 全部通过。
-- ADRs added/updated: 无；本切片遵循 ADR-0003 的原生 PointerEvent、DOM preview、单次 document transaction 与 history 边界，不改变 Stage 5 架构。
-- Risks opened/closed: R-016、R-017、R-018 已关闭。
-- Remaining exit criteria: 无；本 scoped Goal 的实现、回归、真实窗口证据、文档与统一门禁均完成。
-- Recommended next slice: 停止实现并保持 Stage 6 `not_started`；等待用户明确要求 merge/open PR 后再发布 stacked work。
+- Current Stage: Stage 6 `in_progress`；严格止于 Stage 7。
+- Slice completed: `main@3a690c0` 原生基线、Draft/Published/Live immutable snapshot 边界、紧凑五工作区 Shell、可调/可隐藏 context panels、Raw DSL Advanced Mode、4×4 starter project。
+- Commits: 分支 `codex/song-driven-dj-workspace`；原生基线 `3b709a0`；snapshot contract `e9a32d8`；Workspace Shell 为当前切片提交。
+- Files changed: ShowStore/Tauri commands/bridge、ADR-0006、workspace Zustand state、starter project、Workspace Rail/Header/Library/Content/Inspector、shadcn Resizable/Badge/Separator/ScrollArea/Empty、embedded Canvas/Timeline/Control、tests 与原生截图证据。
+- Validation: `pnpm check:all` 全绿：34 frontend files/67 tests、74 Rust unit + 12 contracts/golden/templates、schema、format、typecheck、Vite build、strict Clippy；真实 Tauri max/min/Arrange/Advanced 截图与 AX names。既有 PointerEvents/DOM ref/snap/duration/Undo 代码未改写。
+- ADRs added/updated: ADR-0006 accepted；Draft 发布不改变 Live，只有显式 Take live 激活 revision。
+- Risks opened/closed: R-005 后端与前端边界已实现，仍保持 open，等待 Stage 6 完整原生用户路径复核后关闭。
+- Remaining exit criteria: Stage Setup 编辑器、完整 Effect Lab、Arrange place/empty/help、Live Pad modes/Blackout、全路径 accessibility；之后才进入 Stage 7 Audio/TempoMap/SongAnalysis。
+- Recommended next slice: Stage Setup 的 profile/patch/layout/group 可视化编辑、capability 与冲突提示。
 
 ## 19. ADR 规范
 
@@ -1194,6 +1194,9 @@ flowchart LR
 | 2026-08-02 | 6        | Snapshot separation 首测  | failed    | none        | Rust compile：`expect_err` 需要 `ShowSnapshot: Debug`                    | 测试写法约束；产品类型不增加无用 `Debug`                    | 改为显式匹配 `Result`                       |
 | 2026-08-02 | 6        | Snapshot strict gate      | failed    | none        | 3 behavior tests 通过；Clippy 命中 `needless_borrow`                     | 纯 lint；不改变 publish/activate 语义                       | 修正借用并复跑全 Rust 门禁                  |
 | 2026-08-02 | 6        | Draft/Published/Live core | completed | 本切片提交  | 74 Rust + contracts；strict Clippy；typecheck；concurrent reload stress  | ADR-0006 accepted；R-005 后端边界完成                       | 紧凑 Workspace Shell + revision UI          |
+| 2026-08-02 | 6        | Workspace Shell 首测      | failed    | none        | typecheck 仅发现 shadcn ScrollArea 与 WorkspaceLibrary 未使用 import     | 删除无用 import；不改变组件行为                             | 重跑 frontend 与真实 Tauri                  |
+| 2026-08-02 | 6        | 紧凑 Workspace Shell      | completed | 本切片提交  | `check:all`；67 frontend；86 Rust；4 native screenshots；AX names        | npm official shadcn；Canvas/Timeline 主区；Advanced DSL     | Stage Setup 可视化编辑                      |
+| 2026-08-02 | 6        | revision 原生点击复核     | failed    | none        | 截图后窗口被宿主关闭；重启时 macOS 仅暴露 `loginwindow`，无可访问窗口    | backend + frontend integration 均通过；不判定产品回归       | 完整原生用户路径时重跑 Publish/Take live    |
 
 ## 21. Open Risks
 
