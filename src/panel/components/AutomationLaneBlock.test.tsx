@@ -232,4 +232,22 @@ describe("AutomationLaneBlock", () => {
     expect(timelineActions.onMoveKeyframes).not.toHaveBeenCalled();
     expect(timelineActions.onSnapPreviewEnd).toHaveBeenCalledOnce();
   });
+
+  it("does not route editing-popover keys to automation deletion or movement", () => {
+    const timelineActions = actions();
+    render(
+      <TimelineActionContext.Provider value={timelineActions}>
+        <AutomationLaneBlock event={event} viewport={{ startBeat: 0, endBeat: 8 }} />
+      </TimelineActionContext.Provider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Speed keyframe at tick 1920" }));
+    const timeInput = screen.getByLabelText("Time tick");
+    fireEvent.keyDown(timeInput, { key: "Delete" });
+    fireEvent.keyDown(timeInput, { key: "Backspace" });
+    fireEvent.keyDown(timeInput, { key: "ArrowRight" });
+
+    expect(timelineActions.onDeleteKeyframes).not.toHaveBeenCalled();
+    expect(timelineActions.onMoveKeyframes).not.toHaveBeenCalled();
+  });
 });

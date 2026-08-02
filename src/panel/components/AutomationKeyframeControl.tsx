@@ -3,6 +3,7 @@ import type { KeyframeDSL, ParameterDefinitionDSL, TempoMapDSL } from "@/bridge/
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { isTextEditingTarget } from "@/lib/dom";
 import type { TimelineActions } from "../context/TimelineContext";
 import { keyframeMoveBounds, keyframeTransform, keyframeValueY } from "../keyframeGeometry";
 import { AutomationKeyframeInspector } from "./AutomationKeyframeInspector";
@@ -83,6 +84,7 @@ export const AutomationKeyframeControl = ({
               mouseEvent.stopPropagation();
             }}
             onKeyDown={(keyboardEvent) => {
+              if (isTextEditingTarget(keyboardEvent.target)) return;
               if (keyboardEvent.key !== "Delete" && keyboardEvent.key !== "Backspace") return;
               keyboardEvent.preventDefault();
               keyboardEvent.stopPropagation();

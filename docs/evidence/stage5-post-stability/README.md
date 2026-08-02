@@ -48,6 +48,18 @@
 - 最小尺寸：`1100 × 720`；Canvas `562 × 400`，Editor `330px`、Control `208px`，Timeline toolbar 最右控件止于 `x=1282`、窗口右边界 `x=1306`。尝试设置 `900 × 600` 被原生约束恢复为 `1100 × 720`。
 - [`layout-minimum-1100x720.png`](./layout-minimum-1100x720.png) 保留了最小窗口真实截图；Canvas、Timeline、Library 和右侧 Control/Inspector 没有相互覆盖或把主编辑区压缩到不可用。
 
+## 真实 Tauri 交互矩阵
+
+在最大化的真实 Tauri/WebKit 窗口中加载 `combined` V4 document，以原生 CG PointerEvent 和 macOS AX 树验证：
+
+- Effect Clip 同轨移动：`bl_spread` 从 beat 12 snap 到 beat 13，duration 始终为 20 beats、可见宽度始终为 `800px`；只启用一条 Undo，Undo 回到 beat 12，Redo 回到 beat 13。
+- Effect Clip 跨虚拟轨移动：20 beats / `800px` 保持不变，source track/clip identity 未被 overlap preview 改写；Undo 恢复原虚拟轨。
+- Effect Clip resize：duration 从 20 精确变成 21 beats、宽度从 `800px` 变成 `840px`，证明只有 resize 修改 duration。
+- keyframe preview：middle Speed keyframe 从 tick 15360 拖到 16320；[`keyframe-drag-preview-maximized.png`](./keyframe-drag-preview-maximized.png) 同时显示节点跟随位置、黄色 snap guide 和 `tick 16320`，pointerup 后 AX 名称也是 `Speed keyframe at tick 16320`。
+- keyframe cancel：拖向 tick 17280 时发送真实 Escape，pointerup 后仍为 tick 16320。
+- 播放中拖拽：先确认 transport 按钮为 `PAUSE`，随后把 keyframe 从 tick 16320 拖到 17280 并成功提交；播放到 document 末尾后回到 `PLAY`。
+- popover 编辑键：React portal 中的 input keyboard event 原先会继续冒泡到 automation row/document shortcut。现在所有时间轴快捷键先排除 `input/textarea/select/contenteditable`；真实 Time tick 输入框中输入再 Backspace 后，3 个 Speed keyframe 和 Effect Clips 全部仍在。[`popover-delete-preserves-timeline.png`](./popover-delete-preserves-timeline.png) 保留了打开的编辑器与完整时间轴。
+
 ## 尚待本 Goal 完成的证据
 
 - 完整统一门禁、最终增量提交和文档收口。

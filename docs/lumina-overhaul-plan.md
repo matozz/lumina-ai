@@ -1081,14 +1081,14 @@ flowchart LR
 ## Handoff
 
 - Current Stage: Stage 5 已完成；“Stage 5 后置稳定性修复”正在进行，Stage 6 保持 `not_started`。
-- Slice completed: 拖拽 interaction slice 已提交；窗口 slice 完成默认真实最大化、`1100 × 720` minimum、三档响应式布局与配置测试，并保留最小窗口截图/AX 尺寸矩阵。
-- Commits: 当前分支 `fix/timeline-drag-window-experience` stacked 在未合并的 Stage 5 最终提交 `6ffce7a`；拖拽切片 `f5e7faa`；窗口切片待本轮自审后生成。
-- Files changed: Tauri window config/Ready lifecycle、App/Editor/Canvas/Control/Timeline responsive constraints、window config test、Evidence/Ledger/Open Risks/Handoff。
-- Validation: window/panel/canvas 20 个测试文件/37 项通过；`pnpm build` 通过；冷启动 `(0,33) / 1512×892 / AXFullScreen=false`，常用 `1440×892` 和最小 `1100×720` 区域矩阵通过，低于 minimum 的 resize 被原生 clamp。
+- Slice completed: 拖拽 interaction 与 window slices 已提交；新增 popover 编辑键边界，完成真实 clip 同轨/跨轨、resize、keyframe preview/commit/Escape、播放中拖拽、Undo/Redo 与输入 Backspace 矩阵。
+- Commits: 当前分支 `fix/timeline-drag-window-experience` stacked 在未合并的 Stage 5 最终提交 `6ffce7a`；拖拽 `f5e7faa`；窗口 `254974b`；popover/真实矩阵切片待本轮自审后生成。
+- Files changed: editable-target guard、TimelinePanel/clip/keyframe/lane shortcut boundaries、focused tests、最大化 snap preview 与 popover 截图、Evidence/Ledger/Open Risks/Handoff。
+- Validation: popover focused 3 files/5 tests 与 `pnpm build` 通过；真实 keyframe preview/commit 同为 tick 16320、Escape 恢复、播放中 commit；clip move 20 beats/800px 保持、resize 21 beats/840px；Undo/Redo；输入 Backspace 后 3 个 keyframe 均保留。
 - ADRs added/updated: 无；本切片遵循 ADR-0003 的原生 PointerEvent、DOM preview、单次 document transaction 与 history 边界，不改变 Stage 5 架构。
-- Risks opened/closed: R-016、R-017 已关闭；新增 popover 编辑键误触发时间轴删除的事件边界修复正在验证。
-- Remaining exit criteria: popover 编辑键回归切片提交；真实拖拽矩阵证据汇总；完整门禁与最终文档收口。
-- Recommended next slice: 只完成 popover 编辑键事件边界和最终真实窗口/完整门禁收口，不进入 Stage 6。
+- Risks opened/closed: R-016、R-017、R-018 已关闭。
+- Remaining exit criteria: `pnpm check:all` 完整统一门禁、最终提交与 clean-worktree 审计。
+- Recommended next slice: 只执行完整门禁和最终文档/提交收口，不进入 Stage 6。
 
 ## 19. ADR 规范
 
@@ -1186,6 +1186,8 @@ flowchart LR
 | 2026-08-02 | 5 后置   | 拖拽回归首测              | failed    | none        | 20 项中 19 项通过；旧夹具把已占用 tick 当作可用 quarter                  | 测试期望错误；实现与 document contract 无回归               | 修正夹具后复跑聚焦矩阵                      |
 | 2026-08-02 | 5 后置   | DOM preview + shared snap | completed | 本切片提交  | panel 17 files/32 tests；`pnpm build`；原生窗口/AX 基线                  | R-016 closed；stacked 在 Stage 5 `6ffce7a`                  | 最大化/min-size + layout matrix             |
 | 2026-08-02 | 5 后置   | Window + layout matrix    | completed | 本切片提交  | window/panel/canvas 20 files/37 tests；build；max/common/min native AX   | R-017 closed；Ready 后执行真实非全屏 Zoom                   | popover 编辑键事件边界                      |
+| 2026-08-02 | 5 后置   | Popover keyboard boundary | completed | 本切片提交  | focused 3 files/5 tests；build；native input Delete/Backspace            | R-018 closed；portal 编辑事件不再进入时间轴快捷键           | 完整统一门禁                                |
+| 2026-08-02 | 5 后置   | Native drag matrix        | completed | 本切片提交  | clip move/cross/resize；keyframe snap/cancel/play；Undo/Redo；screens    | preview=commit tick；move duration/width 保持               | 完整统一门禁                                |
 
 ## 21. Open Risks
 
@@ -1208,6 +1210,7 @@ flowchart LR
 | R-015 | legacy Phaser 与 EffectGraph 过渡期存在双重 IR      | high     | 4           | typed graph evaluator 已替代 CompiledPhaser；旧 evaluator/runtime field 删除  | closed   |
 | R-016 | 高频拖拽预览、分裂 snap 与 width 清空导致时间轴漂移 | high     | 5 后置      | rAF DOM preview、共享 TimelineGeometry、源快照、单 transaction 与聚焦回归     | closed   |
 | R-017 | 默认小窗口与布局约束不足压缩或裁切主编辑区          | medium   | 5 后置      | 默认最大化、合理 min-size、1440×900/最小窗口布局矩阵和真实 Tauri 验收         | closed   |
+| R-018 | popover 输入编辑键冒泡后误删 clip/keyframe/lane     | high     | 5 后置      | 编辑目标识别；clip/keyframe/lane/history shortcuts guard；unit + native test  | closed   |
 
 ## 22. Deferred Backlog
 

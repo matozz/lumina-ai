@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEngineStore, engineActions, engineSelectors } from "@/stores/engine";
 import { useTimelineStore, timelineActions, timelineSelectors } from "@/stores/timeline";
 import { cn } from "@/lib/utils";
+import { isTextEditingTarget } from "@/lib/dom";
 import { useTimelineEvents } from "./hooks/useTimelineEvents";
 import { useTimelineTracks } from "./hooks/useTimelineTracks";
 import { TimelineActionContext } from "./context/TimelineContext";
@@ -190,6 +191,7 @@ export const TimelinePanel = () => {
   );
 
   const handleHistoryKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (isTextEditingTarget(event.target)) return;
     if (!event.metaKey && !event.ctrlKey) return;
     const key = event.key.toLowerCase();
     if (key === "z") {

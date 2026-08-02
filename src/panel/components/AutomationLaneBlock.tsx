@@ -2,6 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyframeInterpolationDSL } from "@/bridge/types";
 import { engineSelectors, useEngineStore } from "@/stores/engine";
 import { resolveAutomationParameter } from "../automationParameters";
+import { isTextEditingTarget } from "@/lib/dom";
 import { useTimelineActions } from "../context/TimelineContext";
 import { clampKeyframeDelta, keyframeMoveBounds, keyframeTransform } from "../keyframeGeometry";
 import {
@@ -279,6 +280,7 @@ export const AutomationLaneBlock = memo(({ event, viewport }: AutomationLaneBloc
         addAtTick(Math.round(((x / actions.geometry.beatWidth) * ppq) / step) * step);
       }}
       onKeyDown={(keyboardEvent) => {
+        if (isTextEditingTarget(keyboardEvent.target)) return;
         if ((keyboardEvent.metaKey || keyboardEvent.ctrlKey) && keyboardEvent.key === "a") {
           keyboardEvent.preventDefault();
           setSelectedIds(new Set(lane.keyframes.map((keyframe) => keyframe.id)));

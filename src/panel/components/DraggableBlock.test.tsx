@@ -49,6 +49,12 @@ describe("DraggableBlock keyboard controls", () => {
 
     fireEvent.keyDown(block, { key: "ArrowRight" });
     fireEvent.keyDown(block, { key: "ArrowLeft", shiftKey: true });
+    const editorInput = document.createElement("input");
+    block.append(editorInput);
+    fireEvent.keyDown(editorInput, { key: "Delete" });
+    fireEvent.keyDown(editorInput, { key: "Backspace" });
+
+    expect(actions.onDelete).not.toHaveBeenCalled();
     fireEvent.keyDown(block, { key: "Delete" });
 
     expect(actions.onNudge).toHaveBeenNthCalledWith(1, 7, 0.5);
