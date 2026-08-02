@@ -4,6 +4,11 @@ pub mod parser;
 use crate::document::{DocumentValidator, ValidatedShow};
 use crate::engine::attribute::{resolve_attribute, AttributeHandle};
 use crate::engine::color::parse_hex_color;
+use crate::engine::effect::{
+    common_parameter_handle, EffectDefinition, EffectDefinitionHandle, EffectInstance,
+    ParameterHandle, COLOR_PARAMETER_ID, INTENSITY_PARAMETER_ID, PAN_PARAMETER_ID,
+    SPEED_PARAMETER_ID, TILT_PARAMETER_ID,
+};
 use crate::engine::profile::{
     profile_by_handle, profile_handle_by_id, AttributeValue, FixtureProfileHandle,
     COLOR_RGB_ATTRIBUTE, INTENSITY_ATTRIBUTE, PAN_ATTRIBUTE, TILT_ATTRIBUTE,
@@ -22,6 +27,8 @@ pub struct CompiledShow {
     pub fixtures: Vec<Fixture>,
     pub coords: Vec<LayoutCoord>,
     pub groups: HashMap<String, CompiledGroup>,
+    pub effect_definitions: Vec<EffectDefinition>,
+    pub effect_instances: HashMap<String, EffectInstance>,
     pub phasers: HashMap<String, CompiledPhaser>,
     pub timeline: Option<CompiledTimeline>,
 }
@@ -178,17 +185,8 @@ pub enum CompiledAutomationTarget {
     GlobalMasterDimmer,
     EffectInstance {
         instance: EffectInstanceHandle,
-        parameter: CompiledEffectParameter,
+        parameter: ParameterHandle,
     },
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum CompiledEffectParameter {
-    Multiplier,
-    Color,
-    Dimmer,
-    Pan,
-    Tilt,
 }
 
 pub struct Compiler;
@@ -207,6 +205,7 @@ impl Compiler {
         let coords = Self::compile_layout(&dsl.layout, &fixtures, &mut errors);
         let groups = Self::compile_groups(&dsl.groups, &fixtures, &coords, &mut errors);
         let phasers = Self::compile_phasers(&dsl.phasers, &groups, &fixtures, &mut errors);
+        let (effect_definitions, effect_instances) = compile_legacy_effect_models(&dsl.phasers);
 
         let timeline = dsl.timeline.map(Self::compile_timeline);
 
@@ -222,6 +221,8 @@ impl Compiler {
             fixtures,
             coords,
             groups,
+            effect_definitions,
+            effect_instances,
             phasers,
             timeline,
         })
@@ -973,19 +974,49 @@ fn compile_automation_target(target: AutomationTargetDSL) -> CompiledAutomationT
             instance_id,
             parameter_id,
         } => {
-            let parameter = match parameter_id {
-                EffectParameterDSL::Multiplier => CompiledEffectParameter::Multiplier,
-                EffectParameterDSL::Color => CompiledEffectParameter::Color,
-                EffectParameterDSL::Dimmer => CompiledEffectParameter::Dimmer,
-                EffectParameterDSL::Pan => CompiledEffectParameter::Pan,
-                EffectParameterDSL::Tilt => CompiledEffectParameter::Tilt,
+            let parameter_id = match parameter_id {
+                EffectParameterDSL::Multiplier => SPEED_PARAMETER_ID,
+                EffectParameterDSL::Color => COLOR_PARAMETER_ID,
+                EffectParameterDSL::Dimmer => INTENSITY_PARAMETER_ID,
+                EffectParameterDSL::Pan => PAN_PARAMETER_ID,
+                EffectParameterDSL::Tilt => TILT_PARAMETER_ID,
             };
+            let parameter = common_parameter_handle(parameter_id)
+                .expect("common effect parameter handles are fixed at compile time");
             CompiledAutomationTarget::EffectInstance {
                 instance: instance_id.into(),
                 parameter,
             }
         }
     }
+}
+
+fn compile_legacy_effect_models(
+    phasers: &[PhaserDSL],
+) -> (Vec<EffectDefinition>, HashMap<String, EffectInstance>) {
+    let mut definitions = Vec::with_capacity(phasers.len());
+    let mut instances = HashMap::with_capacity(phasers.len());
+
+    for phaser in phasers {
+        let definition_handle = EffectDefinitionHandle::from_index(definitions.len());
+        definitions.push(EffectDefinition::legacy(
+            &phaser.id,
+            &phaser.name,
+            phaser.multiplier.unwrap_or(1.0),
+        ));
+        instances.insert(
+            phaser.id.clone(),
+            EffectInstance {
+                id: phaser.id.clone(),
+                definition: definition_handle,
+                target_group_id: phaser.target.clone(),
+                parameter_overrides: HashMap::new(),
+                seed: EffectInstance::stable_seed(&phaser.id),
+            },
+        );
+    }
+
+    (definitions, instances)
 }
 
 fn formula_diagnostic(path: &str, error: impl std::fmt::Display) -> Diagnostic {
@@ -1016,6 +1047,7 @@ mod tests {
         parser::ShowDSL,
         Compiler, PhaseConfig,
     };
+    use crate::engine::effect::{ParameterValue, SPEED_PARAMETER_ID};
     use crate::engine::profile::AttributeValue;
 
     const VALID_SHOW: &str = r##"
@@ -1072,6 +1104,20 @@ mod tests {
 
         let phaser = show.phasers.get("pulse").expect("compiled pulse phaser");
         assert_eq!(phaser.multiplier, Some(2.0));
+        let instance = show
+            .effect_instances
+            .get("pulse")
+            .expect("compiled effect instance");
+        let definition = &show.effect_definitions[instance.definition.index()];
+        let speed = definition
+            .parameter_handle(SPEED_PARAMETER_ID)
+            .expect("typed speed parameter");
+        assert_eq!(definition.id, "legacy.pulse");
+        assert_eq!(instance.target_group_id, "line");
+        assert_eq!(
+            instance.resolve_parameter(definition, speed),
+            Some(&ParameterValue::Scalar(2.0))
+        );
         let profile_phaser = phaser
             .profile_steps
             .get(&show.fixtures[0].profile)

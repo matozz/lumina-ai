@@ -222,7 +222,7 @@ flowchart TD
 | 1     | 实时内核与 Transport                    | completed   | 0    | Clock/Play/Pause/Stop/Seek 确定且无重复线程 |
 | 2     | Versioned Document 与统一 Schema        | completed   | 1    | 单一 schema 契约、migration、零 panic       |
 | 3     | Fixture Attribute、Mixer 与 Output 抽象 | completed   | 2    | 通用属性、HTP/LTP、Null/Preview Sink        |
-| 4     | 可扩展 Effect Engine                    | not_started | 3    | EffectGraph/参数/空间相位可确定性求值       |
+| 4     | 可扩展 Effect Engine                    | in_progress | 3    | EffectGraph/参数/空间相位可确定性求值       |
 | 5     | Timeline、Keyframe 与 Undo/Redo         | not_started | 4    | 多关键帧、seek/replay、无隐式数据破坏       |
 | 6     | 用户工作区与 Effect Lab                 | not_started | 5    | Stage→Effect→Arrange→Live 主路径可用        |
 | 7     | Audio、TempoMap 与歌曲分析              | not_started | 5    | 波形、节拍、段落和灯光同步可验证            |
@@ -1080,15 +1080,15 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 
 ## Handoff
 
-- Current Stage: Stage 3 · Fixture Attribute、Mixer 与 Output 抽象（completed）；Stage 2、Stage 3 及本次 scoped Goal 的全局 DoD 已满足，Stage 4 保持 not_started。
-- Slice completed: 定义不可变、revisioned `LogicalFrame` 与同步非阻塞 `OutputSink` lifecycle/capability/health/backpressure contract；实现 Null、单槽 best-effort Preview、bounded backpressured Recording 及统一 `OutputHub`；scheduler、Seek/full resync、Stop/Blackout 和 Canvas Tauri subscription 全部经过 PreviewSink；Hub 把同一个 `Arc<LogicalFrame>` fan-out 到 Preview/Recording；Recording 保留 Moving Head pan/tilt，blackout 类型显式可见；真实协议仍只属于 Stage 9。
-- Commits: Stage 2 `0ce3cbb`/`06e14e3`；Fixture Profile `cab82e2`；Attribute Frame `ced259c`；Attribute Mixer `0279bad`；OutputSink + Stage 3 close（本切片提交）。
-- Files changed: output contract/sinks/hub、Arc-backed FramePublisher、scheduler/state/commands/app lifecycle、loaded-runtime harness、sink/scheduler integration tests、ADR-0004、Stage/DoD/Ledger/Handoff。
-- Validation: schema check、Prettier、`pnpm build`、18 frontend tests、strict Rust fmt/Clippy、68 Rust tests/contracts 全通过；18/18 V2 templates compile/render；Output lifecycle/health/backpressure、Moving Head Recording、blackout、Preview/Recording same revision、scheduler fan-out 均有测试；真实 OutputHub release harness 完成 36k ticks/18m evaluations，0.012ms drift、73.93× realtime、225.44µs mean render+publish。
-- ADRs added/updated: ADR-0004 补充 immutable Arc fan-out、best-effort/backpressured delivery 和 Stage 9 adapter 边界。
-- Risks opened/closed: R-002/R-003 均 closed；没有新增 Stage 2/3 风险；R-005–R-008 属未开始的后续 Stage，不阻塞本次 scoped Goal。
-- Remaining exit criteria: 本次 Stage 2+3 Goal 无剩余退出条件；Stage 4 未开始。
-- Recommended next slice: 无；按用户边界停止，不提前实施 Stage 4。
+- Current Stage: Stage 4 · 可扩展 Effect Engine（in_progress）；Stage 0–3 交接已在干净 `main` 基线上重新审计并通过。
+- Slice completed: 建立 compiled `EffectDefinition`/`EffectInstance` identity、stable definition/parameter handles、typed defaults/ranges/units/UI hints/automation policy、实例 overrides 与 deterministic seed；旧 Phaser 在 compile 时生成独立 definition/instance，timeline `multiplier` 只在 contract 边界映射为 runtime `speed` parameter handle。
+- Commits: 本切片提交。
+- Files changed: `engine/effect.rs`、compiler compiled show/automation target、render parameter resolution、ADR-0005、Stage status、Ledger、Open Risks 和 Handoff。
+- Validation: 基线与实现后 `pnpm check:all` 均通过；18 frontend、63 Rust unit + 7 integration/contract tests 全绿，18/18 V2 模板保持确定性。
+- ADRs added/updated: 新增并接受 ADR-0005，固定 EffectGraph typed-port、纯求值、spatial cache、Catalog 与 V2→V3 migration 边界。
+- Risks opened/closed: 新增 R-015，跟踪 legacy Phaser/EffectGraph 过渡期双重 IR；Stage 4 退出前必须关闭。
+- Remaining exit criteria: Stage 4 的 V3 document contract、最小节点 evaluator、spatial phase、Catalog、完整 Phaser migration/golden/performance 尚未完成；Stage 5 未开始。
+- Recommended next slice: V3 EffectDefinition/Instance/typed parameter document schema、strict validation、V2→V3 migration 和 generated TypeScript/capability artifacts。
 
 ## 19. ADR 规范
 
@@ -1110,7 +1110,7 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | ADR-0002 | Schema 权威来源与代码生成链         | 2     | accepted |
 | ADR-0003 | MusicalTime PPQ 与 TempoMap         | 5     | pending  |
 | ADR-0004 | Fixture Attribute 与 mix policy     | 3     | accepted |
-| ADR-0005 | EffectGraph 节点和 typed ports      | 4     | pending  |
+| ADR-0005 | EffectGraph 节点和 typed ports      | 4     | accepted |
 | ADR-0006 | Draft 与 Live Snapshot 发布模型     | 6     | pending  |
 | ADR-0007 | Audio analysis 与缓存策略           | 7     | pending  |
 | ADR-0008 | AI ArrangementPlan 与 provider 边界 | 8     | pending  |
@@ -1164,6 +1164,8 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 3        | OutputSink            | failed    | none        | Rust compile 指出 `mut` 修正误命中 play guard                    | 精确恢复 transport mutable guard              | 复跑 Rust/Clippy 与 sink matrix             |
 | 2026-08-02 | 3        | OutputSink + close    | completed | 本切片提交  | 68 Rust/18 frontend；gates；0.012ms；73.93×                      | Stage 3 exits；ADR-0004；无新风险             | scoped Goal 最终审计                        |
 | 2026-08-02 | 2+3      | scoped Goal 收口      | completed | 本切片提交  | clean full gate；18/18 V2；36k ticks/18m evals                   | 全局 DoD 通过；Stage 4 not_started            | 停止，不进入 Stage 4                        |
+| 2026-08-02 | 4        | Effect core 验证      | failed    | none        | Cargo 不接受多个位置测试过滤参数                                 | 测试命令调用错误；改为执行完整 Rust suite     | 全量验证 typed parameter 与兼容 runtime     |
+| 2026-08-02 | 4        | Effect identity       | completed | 本切片提交  | 70 Rust tests/contracts；既有 18/18 V2 模板保持确定性            | ADR-0005 accepted；新增 R-015                 | V3 Definition/Instance document contract    |
 
 ## 21. Open Risks
 
@@ -1183,6 +1185,7 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失 | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command                                 | closed |
 | R-013 | managed sandbox 内精确 toolchain 恢复下载超时      | low      | 0           | 同版本 stable 完整验证；干净 CI 执行 pin                                      | closed |
 | R-014 | compile/bridge 异常只写 console，用户无法定位      | high     | 0           | 稳定 Diagnostic envelope、前端 normalizer 与错误 Alert                        | closed |
+| R-015 | legacy Phaser 与 EffectGraph 过渡期存在双重 IR     | high     | 4           | 先统一 identity/typed speed，再以 V3 graph evaluator 和 golden 彻底替换       | open   |
 
 ## 22. Deferred Backlog
 

@@ -1,6 +1,7 @@
-use crate::compiler::{CompiledAutomationTarget, CompiledEffectParameter, EffectInstanceHandle};
+use crate::compiler::{CompiledAutomationTarget, EffectInstanceHandle};
 use crate::document::AnimatableValueDSL;
 use crate::engine::color::{lerp_color_lab, parse_hex_color};
+use crate::engine::effect::ParameterHandle;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -61,7 +62,7 @@ pub fn ease(t: f64, easing: &str) -> f64 {
 #[derive(Clone, Default, Debug)]
 pub struct ParameterContext {
     global_master_dimmer: Option<AnimatableValue>,
-    effect_params: HashMap<EffectInstanceHandle, HashMap<CompiledEffectParameter, AnimatableValue>>,
+    effect_params: HashMap<EffectInstanceHandle, HashMap<ParameterHandle, AnimatableValue>>,
 }
 
 impl ParameterContext {
@@ -100,7 +101,7 @@ impl ParameterContext {
     pub fn get_effect_float(
         &self,
         instance: &EffectInstanceHandle,
-        parameter: CompiledEffectParameter,
+        parameter: ParameterHandle,
     ) -> Option<f64> {
         match self.effect_params.get(instance)?.get(&parameter)? {
             AnimatableValue::Float(value) => Some(*value),
@@ -111,7 +112,7 @@ impl ParameterContext {
     pub fn get_effect_color(
         &self,
         instance: &EffectInstanceHandle,
-        parameter: CompiledEffectParameter,
+        parameter: ParameterHandle,
     ) -> Option<(u8, u8, u8)> {
         if let AnimatableValue::Color(r, g, b) =
             self.effect_params.get(instance)?.get(&parameter)?

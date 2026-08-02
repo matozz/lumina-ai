@@ -2,6 +2,7 @@ pub mod animation;
 pub mod attribute;
 pub mod clock;
 pub mod color;
+pub mod effect;
 pub mod frame;
 pub mod mixer;
 pub mod output;

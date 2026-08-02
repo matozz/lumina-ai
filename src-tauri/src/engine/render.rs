@@ -3,8 +3,12 @@ use super::attribute::{AttributeHandle, FixtureFrame};
 use super::mixer::{mix_fixture, AttributeWrite};
 use super::phaser::{calculate_progress_delay, evaluate_phaser_at};
 use crate::compiler::{
-    CompiledAutomationTarget, CompiledEffectParameter, CompiledShow, CompiledTimelineAction,
-    CompiledTimelineEvent, EffectInstanceHandle,
+    CompiledAutomationTarget, CompiledShow, CompiledTimelineAction, CompiledTimelineEvent,
+    EffectInstanceHandle,
+};
+use crate::engine::effect::{
+    common_parameter_handle, COLOR_PARAMETER_ID, INTENSITY_PARAMETER_ID, PAN_PARAMETER_ID,
+    SPEED_PARAMETER_ID, TILT_PARAMETER_ID,
 };
 use crate::engine::profile::AttributeValue;
 use rayon::prelude::*;
@@ -52,7 +56,7 @@ pub fn render_at(
         RenderSource::Live(active) => (
             active
                 .iter()
-                .filter(|phaser| show.phasers.contains_key(&phaser.id))
+                .filter(|phaser| show.effect_instances.contains_key(&phaser.id))
                 .map(|phaser| ResolvedPhaser {
                     instance: phaser.id.clone().into(),
                     phase: phaser.phase_at(time),
@@ -111,26 +115,40 @@ pub(crate) fn render_resolved(
 
                 if let (Some(handle), Some((red, green, blue))) = (
                     profile_phaser.color,
-                    parameters.get_effect_color(&active.instance, CompiledEffectParameter::Color),
+                    parameters.get_effect_color(
+                        &active.instance,
+                        common_parameter_handle(COLOR_PARAMETER_ID)
+                            .expect("common color parameter"),
+                    ),
                 ) {
                     values[handle.index()] = Some(AttributeValue::Color([red, green, blue]));
                 }
                 apply_scalar_override(
                     &mut values,
                     profile_phaser.intensity,
-                    parameters.get_effect_float(&active.instance, CompiledEffectParameter::Dimmer),
+                    parameters.get_effect_float(
+                        &active.instance,
+                        common_parameter_handle(INTENSITY_PARAMETER_ID)
+                            .expect("common intensity parameter"),
+                    ),
                     AttributeValue::Scalar,
                 );
                 apply_scalar_override(
                     &mut values,
                     profile_phaser.pan,
-                    parameters.get_effect_float(&active.instance, CompiledEffectParameter::Pan),
+                    parameters.get_effect_float(
+                        &active.instance,
+                        common_parameter_handle(PAN_PARAMETER_ID).expect("common pan parameter"),
+                    ),
                     AttributeValue::Angle,
                 );
                 apply_scalar_override(
                     &mut values,
                     profile_phaser.tilt,
-                    parameters.get_effect_float(&active.instance, CompiledEffectParameter::Tilt),
+                    parameters.get_effect_float(
+                        &active.instance,
+                        common_parameter_handle(TILT_PARAMETER_ID).expect("common tilt parameter"),
+                    ),
                     AttributeValue::Angle,
                 );
 
@@ -199,14 +217,20 @@ fn resolve_timeline_at(
             continue;
         }
 
-        let default_multiplier = show
-            .phasers
+        let default_speed = show
+            .effect_instances
             .get(phaser.as_str())
-            .and_then(|compiled| compiled.multiplier)
+            .and_then(|instance| {
+                let definition = show.effect_definitions.get(instance.definition.index())?;
+                let handle = definition.parameter_handle(SPEED_PARAMETER_ID)?;
+                instance
+                    .resolve_parameter(definition, handle)
+                    .and_then(|value| value.as_scalar())
+            })
             .unwrap_or(1.0);
         let target = CompiledAutomationTarget::EffectInstance {
             instance: phaser.clone(),
-            parameter: CompiledEffectParameter::Multiplier,
+            parameter: common_parameter_handle(SPEED_PARAMETER_ID).expect("common speed parameter"),
         };
         active_phasers.push(ResolvedPhaser {
             instance: phaser.clone(),
@@ -215,7 +239,7 @@ fn resolve_timeline_at(
                 &target,
                 event.beat,
                 time.beat,
-                default_multiplier,
+                default_speed,
             ),
         });
     }
@@ -401,10 +425,9 @@ fn easing_antiderivative(value: f64, easing: &str) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::{integrate_float_parameter, render_at, RenderSource, RenderTime};
-    use crate::compiler::{
-        parser::ShowDSL, CompiledAutomationTarget, CompiledEffectParameter, Compiler,
-    };
+    use crate::compiler::{parser::ShowDSL, CompiledAutomationTarget, Compiler};
     use crate::engine::attribute::{resolve_attribute, FixtureFrame};
+    use crate::engine::effect::{common_parameter_handle, SPEED_PARAMETER_ID};
     use crate::engine::profile::{AttributeValue, COLOR_RGB_ATTRIBUTE, INTENSITY_ATTRIBUTE};
 
     fn compiled_show() -> crate::compiler::CompiledShow {
@@ -452,7 +475,7 @@ mod tests {
         let events = &show.timeline.as_ref().expect("timeline").events;
         let target = CompiledAutomationTarget::EffectInstance {
             instance: "pulse".to_string().into(),
-            parameter: CompiledEffectParameter::Multiplier,
+            parameter: common_parameter_handle(SPEED_PARAMETER_ID).expect("speed parameter"),
         };
 
         assert_eq!(
