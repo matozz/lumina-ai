@@ -214,6 +214,14 @@ describe("DocumentCommand transactions", () => {
           delta_tick: 120,
         },
         {
+          type: "update_keyframe",
+          track_id: "effects",
+          lane_id: "master",
+          keyframe_id: "master-inserted",
+          value: { type: "scalar", value: 0.75 },
+          interpolation: "ease_in_out",
+        },
+        {
           type: "delete_keyframes",
           track_id: "effects",
           lane_id: "master",
@@ -231,6 +239,10 @@ describe("DocumentCommand transactions", () => {
       ["master-1", 2_040],
       ["master-2", 2_880],
     ]);
+    expect(edited.timeline?.tracks[0].automation_lanes?.[0].keyframes[0]).toMatchObject({
+      value: { type: "scalar", value: 0.75 },
+      interpolation: "ease_in_out",
+    });
   });
 
   it("fails the whole transaction when any command is invalid", () => {
@@ -245,5 +257,42 @@ describe("DocumentCommand transactions", () => {
       ),
     ).toThrow(DocumentCommandError);
     expect(source.timeline?.tracks[0].clips?.[0].duration_tick).toBe(960);
+  });
+
+  it("rejects a keyframe update with the wrong typed value atomically", () => {
+    const source = document();
+    source.timeline!.tracks[0].automation_lanes = [
+      {
+        id: "master",
+        target: { scope: "global", parameter_id: "master_dimmer" },
+        keyframes: [
+          {
+            id: "master-0",
+            time_tick: 0,
+            value: { type: "scalar", value: 1 },
+            interpolation: "hold",
+          },
+        ],
+      },
+    ];
+
+    expect(() =>
+      applyDocumentTransaction(
+        source,
+        transaction([
+          {
+            type: "update_keyframe",
+            track_id: "effects",
+            lane_id: "master",
+            keyframe_id: "master-0",
+            value: { type: "color", value: "#ff0000" },
+          },
+        ]),
+      ),
+    ).toThrow("does not match scalar");
+    expect(source.timeline!.tracks[0].automation_lanes?.[0].keyframes[0].value).toEqual({
+      type: "scalar",
+      value: 1,
+    });
   });
 });

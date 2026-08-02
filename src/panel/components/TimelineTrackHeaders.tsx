@@ -1,17 +1,25 @@
-import { Plus, ChevronDown, ChevronRight, Play } from "lucide-react";
+import { ChevronDown, ChevronRight, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import type { FullDSL } from "@/bridge/types";
 import type { TimelineTrackData } from "../types";
+import {
+  automationParameterOptions,
+  type AutomationParameterOption,
+} from "../automationParameters";
+import { AutomationParameterMenu } from "./AutomationParameterMenu";
 
 interface TrackHeadersProps {
   tracks: TimelineTrackData[];
   scrollRef?: React.RefObject<HTMLDivElement | null>;
   expandedTracks: Record<string, boolean>;
   setExpandedTracks: (tracks: Record<string, boolean>) => void;
+  document: FullDSL | null;
+  onAddAutomationLane: (option: AutomationParameterOption) => void;
 }
 
 export const TimelineTrackHeaders = (props: TrackHeadersProps) => {
-  const { tracks, scrollRef, expandedTracks, setExpandedTracks } = props;
+  const { tracks, scrollRef, expandedTracks, setExpandedTracks, document, onAddAutomationLane } =
+    props;
 
   const toggleTrack = (trackId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -32,6 +40,7 @@ export const TimelineTrackHeaders = (props: TrackHeadersProps) => {
         {tracks.map((t) => {
           const hasSubTracks = t.subTracks && t.subTracks.length > 0;
           const isExpanded = expandedTracks[t.id] || false;
+          const availableParameters = automationParameterOptions(document, t.id);
 
           return (
             <div key={t.id} className="flex flex-col">
@@ -66,6 +75,12 @@ export const TimelineTrackHeaders = (props: TrackHeadersProps) => {
                 >
                   {t.name}
                 </span>
+                <AutomationParameterMenu
+                  compact
+                  label={`Add automation to ${t.name}`}
+                  options={availableParameters}
+                  onSelect={onAddAutomationLane}
+                />
                 {t.id === "global" && (
                   <span className="ml-2 shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-zinc-500 uppercase">
                     Master
@@ -95,15 +110,13 @@ export const TimelineTrackHeaders = (props: TrackHeadersProps) => {
             </div>
           );
         })}
-        <Button
-          variant="ghost"
-          className={cn(
-            "flex h-10 w-full shrink-0 items-center justify-center gap-1.5 rounded-none border-b border-zinc-800/30",
-            "text-[11px] font-medium text-zinc-500 transition-colors hover:bg-zinc-800/40 hover:text-zinc-300",
-          )}
-        >
-          <Plus data-icon="inline-start" /> Add Track
-        </Button>
+        <div className="flex h-10 shrink-0 items-center justify-center border-b border-zinc-800/30">
+          <AutomationParameterMenu
+            label="Global automation"
+            options={automationParameterOptions(document, "global")}
+            onSelect={onAddAutomationLane}
+          />
+        </div>
         <div className="min-h-25 flex-1" />
       </div>
     </div>

@@ -96,6 +96,15 @@ export type DocumentCommand =
       track_id: string;
       lane_id: string;
       keyframe_ids: string[];
+    }
+  | {
+      type: "update_keyframe";
+      track_id: string;
+      lane_id: string;
+      keyframe_id: string;
+      time_tick?: number;
+      value?: KeyframeDSL["value"];
+      interpolation?: KeyframeDSL["interpolation"];
     };
 
 export interface DocumentTransaction {
@@ -213,6 +222,7 @@ function applyCommand(document: FullDSL, command: DocumentCommand) {
       assertItemIdAvailable(document, command.lane.id);
       assertTargetAvailable(document, command.lane);
       assertLane(command.lane);
+      assertLaneTargetValues(document, command.lane);
       const track = ensureTrack(document, command.track_id, command.track_name);
       track.automation_lanes ??= [];
       track.automation_lanes.push(structuredClone(command.lane));
@@ -234,6 +244,7 @@ function applyCommand(document: FullDSL, command: DocumentCommand) {
       }
       assertTargetAvailable(document, command.lane, command.lane_id);
       assertLane(command.lane);
+      assertLaneTargetValues(document, command.lane);
       track.automation_lanes![index] = structuredClone(command.lane);
       return;
     }
@@ -289,6 +300,7 @@ function applyCommand(document: FullDSL, command: DocumentCommand) {
       lane.keyframes.push(structuredClone(command.keyframe));
       lane.keyframes.sort((left, right) => left.time_tick - right.time_tick);
       assertLane(lane);
+      assertLaneTargetValues(document, lane);
       return;
     }
     case "move_keyframes": {
@@ -316,6 +328,19 @@ function applyCommand(document: FullDSL, command: DocumentCommand) {
       }
       lane.keyframes = lane.keyframes.filter((keyframe) => !selected.has(keyframe.id));
       assertLane(lane);
+      assertLaneTargetValues(document, lane);
+      return;
+    }
+    case "update_keyframe": {
+      const lane = findLane(document, command.track_id, command.lane_id);
+      const keyframe = lane.keyframes.find((candidate) => candidate.id === command.keyframe_id);
+      if (!keyframe) throw missing("Keyframe", command.keyframe_id);
+      if (command.time_tick !== undefined) keyframe.time_tick = command.time_tick;
+      if (command.value !== undefined) keyframe.value = structuredClone(command.value);
+      if (command.interpolation !== undefined) keyframe.interpolation = command.interpolation;
+      lane.keyframes.sort((left, right) => left.time_tick - right.time_tick);
+      assertLane(lane);
+      assertLaneTargetValues(document, lane);
       return;
     }
   }
@@ -415,6 +440,53 @@ function assertLane(lane: AutomationLaneDSL) {
       throw new DocumentCommandError("AutomationLane keyframes must be strictly increasing");
     }
   });
+}
+
+function assertLaneTargetValues(document: FullDSL, lane: AutomationLaneDSL) {
+  const parameter =
+    lane.target.scope === "global"
+      ? {
+          value_type: "scalar" as const,
+          range: [0, 1] as [number, number],
+          automation: "continuous" as const,
+        }
+      : resolveEffectParameter(document, lane.target.instance_id, lane.target.parameter_id);
+
+  for (const keyframe of lane.keyframes) {
+    if (keyframe.value.type !== parameter.value_type) {
+      throw new DocumentCommandError(
+        `keyframe value type ${keyframe.value.type} does not match ${parameter.value_type}`,
+      );
+    }
+    if (
+      keyframe.value.type === "scalar" &&
+      parameter.range &&
+      (keyframe.value.value < parameter.range[0] || keyframe.value.value > parameter.range[1])
+    ) {
+      throw new DocumentCommandError("keyframe scalar value is outside the parameter range");
+    }
+    if (parameter.automation === "discrete" && keyframe.interpolation !== "hold") {
+      throw new DocumentCommandError("discrete automation keyframes must use hold interpolation");
+    }
+  }
+}
+
+function resolveEffectParameter(document: FullDSL, instanceId: string, parameterId: string) {
+  const instance = document.effect_instances.find((candidate) => candidate.id === instanceId);
+  if (!instance) throw missing("EffectInstance", instanceId);
+  const definition = document.effect_definitions.find(
+    (candidate) =>
+      candidate.id === instance.definition_id &&
+      candidate.revision === instance.definition_revision,
+  );
+  if (!definition) {
+    throw new DocumentCommandError(
+      `EffectDefinition revision not found: ${instance.definition_id}@${instance.definition_revision}`,
+    );
+  }
+  const parameter = definition.parameters.find((candidate) => candidate.id === parameterId);
+  if (!parameter) throw missing("EffectParameter", parameterId);
+  return parameter;
 }
 
 function targetKey(lane: AutomationLaneDSL) {

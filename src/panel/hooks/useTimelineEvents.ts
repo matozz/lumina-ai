@@ -11,6 +11,7 @@ import type {
 import type { DocumentCommand, DocumentTransaction } from "@/document/commands";
 import { useEngineStore, engineActions, engineSelectors } from "@/stores/engine";
 import { BEAT_WIDTH } from "../context/TimelineContext";
+import type { AutomationParameterOption } from "../automationParameters";
 
 interface MoveInteraction {
   type: "move";
@@ -63,6 +64,45 @@ export const useTimelineEvents = () => {
             source_offset_tick: 0,
             playback: "once",
             layer: track ? nextLayer(track) : 0,
+          },
+        }),
+      );
+    },
+    [parsedDsl],
+  );
+
+  const addAutomationLane = useCallback(
+    (option: AutomationParameterOption) => {
+      if (!parsedDsl) return;
+      const ppq = parsedDsl.timeline?.ppq ?? 960;
+      const laneDuration = 4 * ppq;
+      const startTick = Math.min(
+        0xffff_ffff - laneDuration,
+        Math.max(0, Math.round(useEngineStore.getState().globalBeat * ppq)),
+      );
+      const endTick = startTick + laneDuration;
+      engineActions.applyDocumentTransaction(
+        transaction("Add AutomationLane", {
+          type: "add_automation_lane",
+          track_id: "automation",
+          track_name: "Automation",
+          lane: {
+            id: stableId("lane"),
+            target: option.target,
+            keyframes: [
+              {
+                id: stableId("keyframe"),
+                time_tick: startTick,
+                value: structuredClone(option.initialValue),
+                interpolation: option.definition.automation === "discrete" ? "hold" : "linear",
+              },
+              {
+                id: stableId("keyframe"),
+                time_tick: endTick,
+                value: structuredClone(option.initialValue),
+                interpolation: "hold",
+              },
+            ],
           },
         }),
       );
@@ -241,11 +281,13 @@ export const useTimelineEvents = () => {
   }, []);
 
   return {
+    document: parsedDsl,
     timelineEvents,
     interactionState,
     startMoving,
     startResizing,
     addEvent,
+    addAutomationLane,
     deleteEvent,
     nudgeEvent,
     updateAnimationBlock,

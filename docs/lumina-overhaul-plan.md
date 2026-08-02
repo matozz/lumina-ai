@@ -675,7 +675,7 @@ Keyframe 至少包含：
 
 #### 5.5 Automation UI
 
-- [ ] 可从参数菜单创建 lane。
+- [x] 可从参数菜单创建 lane。
 - [ ] 支持添加、移动、删除、框选关键帧。
 - [ ] 支持曲线/hold 类型和数值 inspector。
 - [ ] 颜色参数提供颜色编辑，角度/百分比显示正确单位。
@@ -1081,14 +1081,14 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 ## Handoff
 
 - Current Stage: Stage 5 · Timeline、Keyframe 与 Undo/Redo（in_progress）；Stage 4 已在 `d338c08` 满足全部退出条件。
-- Slice completed: drag/resize pointermove 改为 DOM ref transform/width preview，pointerup 才提交 transaction；playhead 独立订阅 store 并直接更新 transform；clip/subtrack 与 bar label 按量化 viewport 裁剪，grid 改用 CSS gradient；block 支持键盘移动/删除和可见 focus，automation lane 长度进入 timeline dimension。
-- Commits: Stage 4 through `d338c08`；MusicalTime `13645ec`；V4 contract `11955ab`；pure evaluator `aa37595`；DocumentCommand/history `c82c842`；timeline DOM/performance（本切片提交）。
-- Files changed: timeline pointer interaction refs、viewport virtualization、CSS grid、playhead subscription、memoized tracks/blocks、keyboard block controls、dimension calculation、性能与交互回归测试、ADR/Ledger/Handoff。
-- Validation: `pnpm check:all`；73 Rust unit + 12 Rust integration/contracts + 33 frontend tests；1,000 clip 实际仅挂载 24 blocks，pointermove 无 React render/history，pointerup 单 transaction，playhead store 更新无额外 React commit，lane-only timeline width 与 block 键盘路径有回归测试。
-- ADRs added/updated: ADR-0003 的前端性能路径已落地；viewport 按 beat 量化并带 8-beat overscan，playhead 与 pointer preview 不再经过 timeline React render tree。
+- Slice completed: typed parameter menu 按 EffectInstance 的 definition ID/revision 解析参数 metadata、override/default 与 continuous/discrete policy，隐藏已有 target；可为 effect instance 或 global master dimmer 在当前整数 tick 创建两关键帧 AutomationLane；新增单关键帧 value/interpolation/time 的 fail-closed command。
+- Commits: Stage 4 through `d338c08`；MusicalTime `13645ec`；V4 contract `11955ab`；pure evaluator `aa37595`；DocumentCommand/history `c82c842`；timeline DOM/performance `34473b9`；typed lane creation（本切片提交）。
+- Files changed: typed automation parameter resolver/tests、参数 Popover 菜单、track header lane entry、lane creation transaction、keyframe update command/tests、ADR/Ledger/Handoff。
+- Validation: `pnpm check:all`；73 Rust unit + 12 Rust integration/contracts + 38 frontend tests；精确 definition revision、instance override、重复 target 隐藏、global target、当前 tick 两关键帧 transaction、菜单选择/关闭、keyframe typed update 与错误类型原子拒绝均有回归测试。
+- ADRs added/updated: ADR-0003 补充 AutomationLane 创建边界：UI 只消费 V4 typed parameter metadata，lane target 全局唯一，初值来自 instance override 或 definition default，编辑仍统一进入 DocumentCommand transaction。
 - Risks opened/closed: 无新风险；R-006 维持 open 至 Stage 7 SongAnalysis，但 Stage 5 arrangement/history 已可复现。
-- Remaining exit criteria: bar.beat.tick/seconds UI、overlap 裁剪/替换的 UI 预览路径、Automation lane 创建、关键帧添加/移动/删除/框选、interpolation/typed value inspector；最后完成真实窗口键盘与 1,000 clip 交互验收。
-- Recommended next slice: 完成 Automation UI 垂直切片：从 typed parameter 创建 lane，以 `DocumentCommand` 编辑多关键帧和 interpolation/value，并补齐颜色/角度/百分比单位及框选/键盘路径。
+- Remaining exit criteria: bar.beat.tick/seconds UI、overlap 裁剪/替换的 UI 预览路径、关键帧添加/移动/删除/框选、interpolation/typed value inspector、颜色/角度/百分比单位；最后完成真实窗口键盘与 1,000 clip 交互验收。
+- Recommended next slice: 把 automation subtrack 从旧 from/to block 切换为多关键帧 canvas/DOM row，完成添加、DOM-preview 移动、删除、框选、键盘和 typed inspector。
 
 ## 19. ADR 规范
 
@@ -1176,6 +1176,7 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 5        | Pure tick evaluator      | completed | 本切片提交  | `check:all`；85 Rust tests/contracts；100 Seek；1,000 clip index         | 删除 stateful executor；四类 overlap；LAB/Hermite           | DocumentCommand + history                   |
 | 2026-08-02 | 5        | DocumentCommand/history  | completed | 本切片提交  | `check:all`；85 Rust/25 frontend；atomic transactions；Undo/Redo         | drag 单 entry；save/dirty；AI Apply 边界                    | timeline DOM/performance + Automation UI    |
 | 2026-08-02 | 5        | Timeline DOM/performance | completed | 本切片提交  | `check:all`；85 Rust/33 frontend；1,000 clip DOM=24；零帧级 React commit | DOM preview；viewport culling；playhead isolation；无新风险 | Automation UI + typed inspector             |
+| 2026-08-02 | 5        | Typed lane creation      | completed | 本切片提交  | `check:all`；85 Rust/38 frontend；typed target/default/revision/menu     | target 唯一；override 优先；无新风险                        | multi-keyframe row + inspector              |
 
 ## 21. Open Risks
 

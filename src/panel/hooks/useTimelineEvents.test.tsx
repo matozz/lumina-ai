@@ -2,6 +2,7 @@ import { act, fireEvent, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { FullDSL } from "@/bridge/types";
 import { engineActions, useEngineStore } from "@/stores/engine";
+import type { AutomationParameterOption } from "../automationParameters";
 import { useTimelineEvents } from "./useTimelineEvents";
 
 const documentFixture: FullDSL = {
@@ -83,5 +84,39 @@ describe("timeline pointer interactions", () => {
     expect(block.style.width).toBe("");
     expect(useEngineStore.getState().documentHistory).toHaveLength(0);
     block.remove();
+  });
+
+  it("creates a typed automation lane at the current integer tick", () => {
+    const option: AutomationParameterOption = {
+      definition: {
+        id: "master_dimmer",
+        name: "Master dimmer",
+        value_type: "scalar",
+        default_value: { type: "scalar", value: 1 },
+        range: [0, 1],
+        unit: "percent",
+        ui_hint: "slider",
+        automation: "continuous",
+      },
+      initialValue: { type: "scalar", value: 0.75 },
+      target: { scope: "global", parameter_id: "master_dimmer" },
+    };
+    const { result } = renderHook(() => useTimelineEvents());
+    act(() => engineActions.setGlobalBeat(2));
+
+    act(() => result.current.addAutomationLane(option));
+
+    const lane = useEngineStore
+      .getState()
+      .parsedDsl?.timeline?.tracks.find((track) => track.id === "automation")
+      ?.automation_lanes?.[0];
+    expect(lane).toMatchObject({
+      target: { scope: "global", parameter_id: "master_dimmer" },
+      keyframes: [
+        { time_tick: 1_920, value: { type: "scalar", value: 0.75 }, interpolation: "linear" },
+        { time_tick: 5_760, value: { type: "scalar", value: 0.75 }, interpolation: "hold" },
+      ],
+    });
+    expect(useEngineStore.getState().documentHistory).toHaveLength(1);
   });
 });

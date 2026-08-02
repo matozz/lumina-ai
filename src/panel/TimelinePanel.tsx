@@ -30,11 +30,13 @@ export const TimelinePanel = () => {
   const [viewport, setViewport] = useState<TimelineViewport>({ startBeat: 0, endBeat: 40 });
 
   const {
+    document,
     timelineEvents,
     interactionState,
     startMoving,
     startResizing,
     addEvent,
+    addAutomationLane,
     deleteEvent,
     nudgeEvent,
     updateAnimationBlock,
@@ -185,6 +187,8 @@ export const TimelinePanel = () => {
           scrollRef={trackHeadersScrollRef}
           expandedTracks={expandedTracks}
           setExpandedTracks={timelineActions.setExpandedTracks}
+          document={document}
+          onAddAutomationLane={addAutomationLane}
         />
 
         <TimelineActionContext.Provider value={timelineActionsValue}>
