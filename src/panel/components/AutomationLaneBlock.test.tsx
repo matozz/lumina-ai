@@ -101,6 +101,8 @@ function actions(): TimelineActions {
     onResizeStart: vi.fn(),
     onDelete: vi.fn(),
     onNudge: vi.fn(),
+    onTrimClipOverlaps: vi.fn(),
+    onReplaceClipOverlaps: vi.fn(),
     onAddKeyframe: vi.fn(),
     onMoveKeyframes: vi.fn(),
     onDeleteKeyframes: vi.fn(),

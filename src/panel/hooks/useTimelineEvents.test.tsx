@@ -119,4 +119,40 @@ describe("timeline pointer interactions", () => {
     });
     expect(useEngineStore.getState().documentHistory).toHaveLength(1);
   });
+
+  it("applies previewed trim and replacement as one undoable transaction", () => {
+    const overlapDocument = structuredClone(documentFixture);
+    overlapDocument.timeline!.tracks[0].clips!.push({
+      id: "overlap",
+      instance_id: "pulse",
+      start_tick: 480,
+      duration_tick: 960,
+      source_offset_tick: 0,
+      playback: "once",
+      layer: 1,
+    });
+    engineActions.loadCurrentDslCode(JSON.stringify(overlapDocument));
+    const { result } = renderHook(() => useTimelineEvents());
+
+    act(() => result.current.trimClipOverlaps(0));
+    expect(useEngineStore.getState().parsedDsl?.timeline?.tracks[0].clips?.[0]).toMatchObject({
+      id: "pulse",
+      start_tick: 0,
+      duration_tick: 480,
+      source_offset_tick: 0,
+    });
+    expect(useEngineStore.getState().documentHistory).toHaveLength(1);
+
+    act(() => engineActions.undoDocument());
+    act(() => result.current.replaceClipOverlaps(0));
+    expect(
+      useEngineStore.getState().parsedDsl?.timeline?.tracks[0].clips?.map((clip) => clip.id),
+    ).toEqual(["pulse"]);
+    expect(useEngineStore.getState().documentHistory).toHaveLength(1);
+
+    act(() => engineActions.undoDocument());
+    expect(
+      useEngineStore.getState().parsedDsl?.timeline?.tracks[0].clips?.map((clip) => clip.id),
+    ).toEqual(["pulse", "overlap"]);
+  });
 });

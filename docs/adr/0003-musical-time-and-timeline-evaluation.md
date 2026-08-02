@@ -24,6 +24,7 @@ Stage 5 需要更换时间与 arrangement contract，同时保持 Stage 1 Transp
 - playhead 独立订阅 engine store 并直接更新 DOM ref transform；drag/resize pointermove 同样只修改目标 block 的 transform/width。两条高频路径都绕过 timeline React render tree，toolbar 的轻量时间显示可以独立订阅。
 - AutomationLane 创建只消费当前 V4 EffectDefinition/Instance 的 typed parameter metadata。UI 必须按 instance 声明的 definition revision 精确解析参数，以 instance override 优先、definition default 兜底；已有 target 从菜单隐藏，最终唯一性仍由 `DocumentCommand` fail-closed 验证。continuous 参数初始 segment 使用 linear，discrete 参数强制从 hold 开始。
 - automation row 直接渲染 V4 的任意多个 keyframe，不再把 lane 降级成 from/to。keyframe pointermove 只更新目标 DOM transform，pointerup 以一个整数 tick delta command 提交；box selection 和键盘移动使用相同 command。bar.beat.tick 与 seconds 只从 tick、PPQ、TempoMap 派生，percent/degree/color 等只做 inspector 显示转换，不成为第二个存储真相。
+- overlap policy 的 layer/replace/reject/crossfade 继续只影响纯求值，不允许隐式改写文档。显式 trim/replace 操作必须先由纯 planner 计算半开区间 overlap、受影响 IDs 和精确 tick/source offset preview；用户确认后，trim 当前 clip 或删除重叠 clips 分别形成一个 transaction，Undo 恢复完整快照。
 
 ## Alternatives considered
 
@@ -52,4 +53,5 @@ V4 migration 先生成整数时间和 arrangement contract，再切换 compiler/
 - DocumentCommand transaction/history/save point: 本切片提交
 - Timeline DOM preview/virtualization/playhead isolation: `34473b9`
 - Typed parameter menu and AutomationLane creation: `82b29b6`
-- Multi-keyframe row, typed inspector, and derived time display: 本切片提交
+- Multi-keyframe row, typed inspector, and derived time display: `fb0e913`
+- Explicit overlap preview and undoable trim/replace: 本切片提交

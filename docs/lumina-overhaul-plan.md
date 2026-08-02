@@ -656,7 +656,7 @@ Keyframe 至少包含：
 
 - [x] 删除当前自动裁剪 overlap 的隐式行为。
 - [x] 明确 track overlap policy：layer、replace、reject 或 crossfade。
-- [ ] 所有裁剪/替换必须在 UI 预览并可 Undo。
+- [x] 所有裁剪/替换必须在 UI 预览并可 Undo。
 - [x] 多选、复制、粘贴、duplicate、split、trim、loop 进入 command model。
 
 #### 5.3 Undo/Redo
@@ -1081,14 +1081,14 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 ## Handoff
 
 - Current Stage: Stage 5 · Timeline、Keyframe 与 Undo/Redo（in_progress）；Stage 4 已在 `d338c08` 满足全部退出条件。
-- Slice completed: automation subtrack 已从旧 from/to block 切换为任意多关键帧 curve row；支持双击/按钮添加、单选/Shift 多选/框选、DOM-only pointer drag、键盘移动/全选/删除、单次 transaction，以及 hold/linear/ease/bezier inspector。typed inspector 提供颜色输入、方向选择、角度/百分比等单位与合法范围；toolbar 显示派生的 bar.beat.tick 和 TempoMap seconds。
-- Commits: Stage 4 through `d338c08`；MusicalTime `13645ec`；V4 contract `11955ab`；pure evaluator `aa37595`；DocumentCommand/history `c82c842`；timeline DOM/performance `34473b9`；typed lane creation `82b29b6`；multi-keyframe UI（本切片提交）。
-- Files changed: automation lane row/curve/keyframe controls、typed inspector、keyframe geometry/time display helpers、timeline toolbar、document action adapter、旧二关键帧 AnimationEditor 删除、组件/交互测试、ADR/Ledger/Handoff。
-- Validation: `pnpm check:all`；73 Rust unit + 12 Rust integration/contracts + 48 frontend tests；DOM preview 前无 command、pointerup 单 move、多选/框选/键盘/delete/add、参数 revision、percent 0–1 显示转换、color/degree controls、bar.beat.tick 与分段 TempoMap seconds 均有回归测试。
-- ADRs added/updated: ADR-0003 的多关键帧 UI 只提交整数 tick command；显示时间从 tick/TempoMap 派生，pointermove 不产生文档真相；typed inspector 的显示单位转换不改变存储值。
+- Slice completed: EffectClip inspector 在任何显式裁剪/替换前展示 track overlap policy、精确受影响 clip ID 与 before/after tick/source offset；trim 只保留当前 clip 内最大且稳定最早的无冲突区间，replace 删除全部半开区间重叠 clip。确认后各自作为一个 transaction 提交，Undo 可恢复；无 overlap 时不产生 command。
+- Commits: Stage 4 through `d338c08`；MusicalTime `13645ec`；V4 contract `11955ab`；pure evaluator `aa37595`；DocumentCommand/history `c82c842`；timeline DOM/performance `34473b9`；typed lane creation `82b29b6`；multi-keyframe UI `fb0e913`；overlap preview（本切片提交）。
+- Files changed: pure clip overlap planner/tests、EffectClip preview inspector、trim/replace timeline actions、DraggableBlock Popover、Undo integration tests、ADR/Ledger/Handoff。
+- Validation: `pnpm check:all`；73 Rust unit + 12 Rust integration/contracts + 52 frontend tests；半开边界、最大无冲突 trim、全覆盖禁用、精确 replace IDs、确认前零 command、单 transaction、Undo 恢复均有回归测试。
+- ADRs added/updated: ADR-0003 补充显式 overlap mutation：求值 policy 不改文档；trim/replace 必须先产生纯 preview plan，再由用户确认形成一个可 Undo transaction。
 - Risks opened/closed: 无新风险；R-006 维持 open 至 Stage 7 SongAnalysis，但 Stage 5 arrangement/history 已可复现。
-- Remaining exit criteria: overlap 裁剪/替换的 UI 预览与 Undo 路径；随后完成真实窗口键盘、typed inspector 与 1,000 clip 交互验收，并执行 Stage 5/全局 DoD 收口审计。
-- Recommended next slice: 为 explicit trim/replace command 增加非破坏预览确认，展示受影响 clip 与 overlap policy，确认后作为一个可 Undo transaction 提交。
+- Remaining exit criteria: 实现检查项已全部完成；还需真实窗口键盘、typed inspector、overlap preview 与 1,000 clip 交互验收，随后执行 Stage 5/全局 DoD 收口审计。
+- Recommended next slice: 启动本地应用执行最终 UI/Accessibility/性能验收，复跑 release 与完整 checks，审计 Stage 5 退出条件、全局 DoD、Open Risks 与 Stage 6 未启动状态。
 
 ## 19. ADR 规范
 
@@ -1179,6 +1179,8 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 5        | Typed lane creation      | completed | 本切片提交  | `check:all`；85 Rust/38 frontend；typed target/default/revision/menu     | target 唯一；override 优先；无新风险                        | multi-keyframe row + inspector              |
 | 2026-08-02 | 5        | Multi-keyframe UI        | failed    | none        | 首次 `check:all` 仅发现 inspector Prettier 漂移                          | 纯格式化；无行为或架构变化                                  | 格式化后复跑完整门禁                        |
 | 2026-08-02 | 5        | Multi-keyframe UI        | completed | 本切片提交  | `check:all`；85 Rust/48 frontend；DOM drag/box/keyboard/typed inspector  | 派生时间显示；单位只在 UI 转换；无新风险                    | overlap preview + final UI gate             |
+| 2026-08-02 | 5        | Overlap preview test     | failed    | none        | 52 项中 51 通过；测试缺少 Base UI Popover root context                   | 测试夹具问题；实现路径无异常                                | 补根上下文并复跑                            |
+| 2026-08-02 | 5        | Overlap preview          | completed | 本切片提交  | `check:all`；85 Rust/52 frontend；preview→confirm→Undo                   | 半开边界；纯 plan；单 transaction；无新风险                 | final native UI + Stage 5 audit             |
 
 ## 21. Open Risks
 

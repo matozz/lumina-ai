@@ -18,6 +18,8 @@ export interface TimelineActions {
   ) => void;
   onDelete: (originalIndex: number) => void;
   onNudge: (originalIndex: number, deltaBeats: number) => void;
+  onTrimClipOverlaps: (originalIndex: number) => void;
+  onReplaceClipOverlaps: (originalIndex: number) => void;
   onAddKeyframe: (
     trackId: string,
     laneId: string,

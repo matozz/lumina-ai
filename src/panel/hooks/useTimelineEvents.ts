@@ -10,6 +10,7 @@ import type {
   TimelineTrackDSL,
 } from "@/bridge/types";
 import type { DocumentCommand, DocumentTransaction } from "@/document/commands";
+import { clipOverlapPlan } from "@/document/clipOverlapPlan";
 import { useEngineStore, engineActions, engineSelectors } from "@/stores/engine";
 import { BEAT_WIDTH } from "../context/TimelineContext";
 import type { AutomationParameterOption } from "../automationParameters";
@@ -229,6 +230,50 @@ export const useTimelineEvents = () => {
     [parsedDsl, timelineEvents],
   );
 
+  const trimClipOverlaps = useCallback(
+    (originalIndex: number) => {
+      if (!parsedDsl) return;
+      const view = timelineEvents[originalIndex];
+      if (!view?.source_track_id || !view.source_item_id) return;
+      const plan = clipOverlapPlan(parsedDsl, view.source_track_id, view.source_item_id);
+      if (!plan?.trim || plan.overlappingClipIds.length === 0) return;
+      engineActions.applyDocumentTransaction(
+        transaction("Trim EffectClip overlap", {
+          type: "trim_clip",
+          track_id: plan.track.id,
+          clip_id: plan.clip.id,
+          start_tick: plan.trim.startTick,
+          duration_tick: plan.trim.durationTick,
+          source_offset_tick: plan.trim.sourceOffsetTick,
+        }),
+      );
+    },
+    [parsedDsl, timelineEvents],
+  );
+
+  const replaceClipOverlaps = useCallback(
+    (originalIndex: number) => {
+      if (!parsedDsl) return;
+      const view = timelineEvents[originalIndex];
+      if (!view?.source_track_id || !view.source_item_id) return;
+      const plan = clipOverlapPlan(parsedDsl, view.source_track_id, view.source_item_id);
+      if (!plan || plan.overlappingClipIds.length === 0) return;
+      engineActions.applyDocumentTransaction(
+        transaction(
+          "Replace overlapping EffectClips",
+          ...plan.overlappingClipIds.map(
+            (clipId): DocumentCommand => ({
+              type: "delete_clip",
+              track_id: plan.track.id,
+              clip_id: clipId,
+            }),
+          ),
+        ),
+      );
+    },
+    [parsedDsl, timelineEvents],
+  );
+
   const startMoving = useCallback(
     (
       originalIndex: number,
@@ -339,6 +384,8 @@ export const useTimelineEvents = () => {
     addAutomationLane,
     deleteEvent,
     nudgeEvent,
+    trimClipOverlaps,
+    replaceClipOverlaps,
     addKeyframe,
     moveKeyframes,
     deleteKeyframes,
