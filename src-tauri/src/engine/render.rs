@@ -352,9 +352,9 @@ mod tests {
     fn compiled_show() -> crate::compiler::CompiledShow {
         let dsl: ShowDSL = serde_json::from_str(
             r##"{
-                "schema_version": 1,
+                "schema_version": 2,
                 "meta": { "name": "render at" },
-                "patch": [{ "type": "pixel", "id_range": [1, 1] }],
+                "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 1] }],
                 "layout": { "type": "generator", "generator": {
                     "shape": "matrix", "rows": 1, "columns": 1, "spacing": 1
                 }},

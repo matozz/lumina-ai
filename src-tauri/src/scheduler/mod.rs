@@ -373,6 +373,7 @@ mod tests {
     use crate::compiler::{CompiledShow, Fixture};
     use crate::engine::clock::{Clock, ManualClock};
     use crate::engine::frame::FramePublisher;
+    use crate::engine::profile::{profile_handle_by_id, GENERIC_RGB_PROFILE_ID};
     use crate::engine::render::LivePhaser;
     use crate::engine::transport::{OutputRate, Transport, TransportState};
     use crate::state::{EngineState, RuntimeState, SequencerMode, ShowStore};
@@ -480,10 +481,7 @@ mod tests {
         state
             .shows
             .publish(CompiledShow {
-                fixtures: vec![Fixture {
-                    id: 1,
-                    type_: "pixel".to_string(),
-                }],
+                fixtures: vec![fixture(1)],
                 ..CompiledShow::default()
             })
             .await;
@@ -523,10 +521,7 @@ mod tests {
             state
                 .shows
                 .publish(CompiledShow {
-                    fixtures: vec![Fixture {
-                        id: 1,
-                        type_: "pixel".to_string(),
-                    }],
+                    fixtures: vec![fixture(1)],
                     ..CompiledShow::default()
                 })
                 .await;
@@ -651,11 +646,15 @@ mod tests {
 
     fn show_with_fixture(id: u32) -> CompiledShow {
         CompiledShow {
-            fixtures: vec![Fixture {
-                id,
-                type_: "pixel".to_string(),
-            }],
+            fixtures: vec![fixture(id)],
             ..CompiledShow::default()
+        }
+    }
+
+    fn fixture(id: u32) -> Fixture {
+        Fixture {
+            id,
+            profile: profile_handle_by_id(GENERIC_RGB_PROFILE_ID).expect("built-in RGB profile"),
         }
     }
 }

@@ -81,15 +81,13 @@ export interface LayoutDSL {
 
 export type LayoutType = "generator";
 
-export type LegacyFixtureType = "spot" | "pixel";
-
 export interface MetaDSL {
   name: string;
 }
 
-export interface PatchV1DSL {
+export interface PatchDSL {
   id_range: [number, number];
-  type: LegacyFixtureType;
+  profile_id: string;
 }
 
 export type PhaseConfigDSL =
@@ -179,12 +177,12 @@ export interface TimelineEventDSL {
   duration?: number | null;
 }
 
-export interface ShowDocumentV1 {
+export interface ShowDocumentV2 {
   groups: Array<GroupDSL>;
   layout: LayoutDSL;
   meta: MetaDSL;
-  patch: Array<PatchV1DSL>;
+  patch: Array<PatchDSL>;
   phasers: Array<PhaserDSL>;
-  schema_version: 1;
+  schema_version: 2;
   timeline?: TimelineDSL | null;
 }

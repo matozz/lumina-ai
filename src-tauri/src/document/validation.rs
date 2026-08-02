@@ -1,14 +1,16 @@
 use super::{
     AnimatableValueDSL, AutomationTargetDSL, EffectParameterDSL, GeneratorDSL, GroupFixturesDSL,
-    PhaseConfigDSL, ShowDocumentV1, TimelineActionDefDSL, CURRENT_SCHEMA_VERSION,
+    PhaseConfigDSL, ShowDocumentV2, TimelineActionDefDSL, CURRENT_SCHEMA_VERSION,
 };
 use crate::compiler::diagnostic::{
     Diagnostic, DOC_DUPLICATE_ID, DOC_FIXTURE_REFERENCE_NOT_FOUND, DOC_FORMULA_INVALID,
     DOC_INVALID_COLOR, DOC_INVALID_NUMBER, DOC_INVALID_RANGE, DOC_INVALID_VALUE,
-    DOC_PHASER_REFERENCE_NOT_FOUND, DOC_SVG_PATH_INVALID, DOC_TIMELINE_TARGET_INVALID,
-    DOC_UNSUPPORTED_SCHEMA_VERSION, DSL_DUPLICATE_FIXTURE_ID, DSL_TARGET_GROUP_NOT_FOUND,
+    DOC_PHASER_REFERENCE_NOT_FOUND, DOC_PROFILE_NOT_FOUND, DOC_SVG_PATH_INVALID,
+    DOC_TIMELINE_TARGET_INVALID, DOC_UNSUPPORTED_SCHEMA_VERSION, DSL_DUPLICATE_FIXTURE_ID,
+    DSL_TARGET_GROUP_NOT_FOUND,
 };
 use crate::engine::color::parse_hex_color;
+use crate::engine::profile::profile_by_id;
 use fasteval::{Compiler as FastevalCompiler, Evaler};
 use std::collections::HashSet;
 
@@ -16,11 +18,11 @@ const MAX_FIXTURES: u64 = 1_000_000;
 
 #[derive(Debug, Clone)]
 pub struct ValidatedShow {
-    document: ShowDocumentV1,
+    document: ShowDocumentV2,
 }
 
 impl ValidatedShow {
-    pub(crate) fn into_document(self) -> ShowDocumentV1 {
+    pub(crate) fn into_document(self) -> ShowDocumentV2 {
         self.document
     }
 }
@@ -28,7 +30,7 @@ impl ValidatedShow {
 pub struct DocumentValidator;
 
 impl DocumentValidator {
-    pub fn validate(document: ShowDocumentV1) -> Result<ValidatedShow, Vec<Diagnostic>> {
+    pub fn validate(document: ShowDocumentV2) -> Result<ValidatedShow, Vec<Diagnostic>> {
         let mut diagnostics = Vec::new();
         if document.schema_version != CURRENT_SCHEMA_VERSION {
             diagnostics.push(Diagnostic::error(
@@ -53,10 +55,18 @@ impl DocumentValidator {
     }
 }
 
-fn validate_patch(document: &ShowDocumentV1, diagnostics: &mut Vec<Diagnostic>) -> HashSet<u32> {
+fn validate_patch(document: &ShowDocumentV2, diagnostics: &mut Vec<Diagnostic>) -> HashSet<u32> {
     let mut fixture_ids = HashSet::new();
     let mut total_fixture_count = 0_u64;
     for (index, patch) in document.patch.iter().enumerate() {
+        if profile_by_id(&patch.profile_id).is_none() {
+            diagnostics.push(Diagnostic::error(
+                DOC_PROFILE_NOT_FOUND,
+                format!("patch[{index}].profile_id"),
+                format!("Fixture profile not found: {:?}.", patch.profile_id),
+                "Use a profile ID from schemas/fixture-profiles-v1.json.",
+            ));
+        }
         let path = format!("patch[{index}].id_range");
         let (start, end) = patch.id_range;
         if start == 0 || end < start {
@@ -103,7 +113,7 @@ fn validate_patch(document: &ShowDocumentV1, diagnostics: &mut Vec<Diagnostic>) 
 }
 
 fn validate_layout(
-    document: &ShowDocumentV1,
+    document: &ShowDocumentV2,
     fixture_ids: &HashSet<u32>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
@@ -221,7 +231,7 @@ fn validate_layout(
 }
 
 fn validate_groups(
-    document: &ShowDocumentV1,
+    document: &ShowDocumentV2,
     fixture_ids: &HashSet<u32>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> HashSet<String> {
@@ -282,7 +292,7 @@ fn validate_groups(
 }
 
 fn validate_phasers(
-    document: &ShowDocumentV1,
+    document: &ShowDocumentV2,
     group_ids: &HashSet<String>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> HashSet<String> {
@@ -389,7 +399,7 @@ fn validate_phasers(
 }
 
 fn validate_timeline(
-    document: &ShowDocumentV1,
+    document: &ShowDocumentV2,
     phaser_ids: &HashSet<String>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {

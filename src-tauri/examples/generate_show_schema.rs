@@ -1,4 +1,5 @@
-use lumina_ai_lib::document::{ShowDocumentV1, CURRENT_SCHEMA_VERSION};
+use lumina_ai_lib::document::{ShowDocumentV1, ShowDocumentV2, CURRENT_SCHEMA_VERSION};
+use lumina_ai_lib::engine::profile::builtin_profiles;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeSet;
 use std::fs;
@@ -9,17 +10,21 @@ fn main() {
         .parent()
         .expect("src-tauri must have a repository parent")
         .to_path_buf();
-    let schema_path = repository_root.join("schemas/show-document-v1.schema.json");
-    let capabilities_path = repository_root.join("schemas/show-capabilities-v1.json");
-    let typescript_path = repository_root.join("src/generated/show-document-v1.ts");
-    let schema = schemars::schema_for!(ShowDocumentV1);
-    let mut contents = serde_json::to_string_pretty(&schema).expect("schema serializes");
-    contents.push('\n');
-    let schema_value = serde_json::to_value(&schema).expect("schema converts to JSON");
-    let typescript = render_typescript(&schema_value);
-    let capabilities_value = json!({
+    let schema_v1_path = repository_root.join("schemas/show-document-v1.schema.json");
+    let schema_v2_path = repository_root.join("schemas/show-document-v2.schema.json");
+    let capabilities_v1_path = repository_root.join("schemas/show-capabilities-v1.json");
+    let capabilities_v2_path = repository_root.join("schemas/show-capabilities-v2.json");
+    let profiles_path = repository_root.join("schemas/fixture-profiles-v1.json");
+    let typescript_v1_path = repository_root.join("src/generated/show-document-v1.ts");
+    let typescript_v2_path = repository_root.join("src/generated/show-document-v2.ts");
+
+    let schema_v1 = schemars::schema_for!(ShowDocumentV1);
+    let schema_v2 = schemars::schema_for!(ShowDocumentV2);
+    let schema_v1_value = serde_json::to_value(&schema_v1).expect("V1 schema converts to JSON");
+    let schema_v2_value = serde_json::to_value(&schema_v2).expect("V2 schema converts to JSON");
+    let capabilities_v1_value = json!({
         "metadata_version": 1,
-        "document_schema_version": CURRENT_SCHEMA_VERSION,
+        "document_schema_version": 1,
         "document_schema": "show-document-v1.schema.json",
         "document_contract": {
             "fixture_types": ["spot", "pixel"],
@@ -32,44 +37,79 @@ fn main() {
             }
         }
     });
-    let mut capabilities =
-        serde_json::to_string_pretty(&capabilities_value).expect("capability metadata serializes");
-    capabilities.push('\n');
+    let capabilities_v2_value = json!({
+        "metadata_version": 1,
+        "document_schema_version": CURRENT_SCHEMA_VERSION,
+        "document_schema": "show-document-v2.schema.json",
+        "fixture_profiles": "fixture-profiles-v1.json",
+        "document_contract": {
+            "patch_reference": "profile_id",
+            "layout_shapes": ["matrix", "circle", "formula", "svg_path", "custom"],
+            "phase_modes": ["spread", "grouped"],
+            "step_attributes": ["color", "dimmer", "pan", "tilt"],
+            "automation_targets": {
+                "global": ["master_dimmer"],
+                "effect_instance": ["multiplier", "color", "dimmer", "pan", "tilt"]
+            }
+        }
+    });
+    let profiles_value = json!({
+        "metadata_version": 1,
+        "profiles": builtin_profiles()
+    });
+
+    let json_artifacts = [
+        (&schema_v1_path, &schema_v1_value),
+        (&schema_v2_path, &schema_v2_value),
+        (&capabilities_v1_path, &capabilities_v1_value),
+        (&capabilities_v2_path, &capabilities_v2_value),
+        (&profiles_path, &profiles_value),
+    ];
+    let typescript_v1 = render_typescript(&schema_v1_value, "ShowDocumentV1");
+    let typescript_v2 = render_typescript(&schema_v2_value, "ShowDocumentV2");
+    let text_artifacts = [
+        (&typescript_v1_path, typescript_v1.as_str()),
+        (&typescript_v2_path, typescript_v2.as_str()),
+    ];
 
     if std::env::args().any(|argument| argument == "--check") {
-        let schema_is_current = fs::read_to_string(&schema_path)
-            .ok()
-            .and_then(|source| serde_json::from_str::<Value>(&source).ok())
-            .is_some_and(|checked_in| checked_in == schema_value);
-        let capabilities_are_current = fs::read_to_string(&capabilities_path)
-            .ok()
-            .and_then(|source| serde_json::from_str::<Value>(&source).ok())
-            .is_some_and(|checked_in| checked_in == capabilities_value);
-        let typescript_is_current =
-            fs::read_to_string(&typescript_path).unwrap_or_default() == typescript;
-        if !schema_is_current || !capabilities_are_current || !typescript_is_current {
+        let json_is_current = json_artifacts.iter().all(|(path, expected)| {
+            fs::read_to_string(path)
+                .ok()
+                .and_then(|source| serde_json::from_str::<Value>(&source).ok())
+                .is_some_and(|checked_in| checked_in == **expected)
+        });
+        let text_is_current = text_artifacts
+            .iter()
+            .all(|(path, expected)| fs::read_to_string(path).unwrap_or_default() == *expected);
+        if !json_is_current || !text_is_current {
             eprintln!("generated document contracts are stale; run pnpm schema:generate");
             std::process::exit(1);
         }
         return;
     }
 
-    fs::create_dir_all(schema_path.parent().expect("schema parent"))
+    fs::create_dir_all(schema_v1_path.parent().expect("schema parent"))
         .expect("schema directory is writable");
-    fs::write(&schema_path, contents).expect("schema artifact is writable");
-    fs::write(&capabilities_path, capabilities).expect("capability metadata is writable");
-    fs::create_dir_all(typescript_path.parent().expect("TypeScript parent"))
+    for (path, schema) in [(&schema_v1_path, &schema_v1), (&schema_v2_path, &schema_v2)] {
+        let mut contents = serde_json::to_string_pretty(schema).expect("schema serializes");
+        contents.push('\n');
+        fs::write(path, contents).expect("schema artifact is writable");
+    }
+    for (path, value) in json_artifacts.into_iter().skip(2) {
+        let mut contents = serde_json::to_string_pretty(value).expect("JSON artifact serializes");
+        contents.push('\n');
+        fs::write(path, contents).expect("JSON artifact is writable");
+    }
+    fs::create_dir_all(typescript_v1_path.parent().expect("TypeScript parent"))
         .expect("TypeScript directory is writable");
-    fs::write(&typescript_path, typescript).expect("TypeScript artifact is writable");
-    println!(
-        "generated {}, {}, and {}",
-        schema_path.display(),
-        capabilities_path.display(),
-        typescript_path.display()
-    );
+    for (path, contents) in text_artifacts {
+        fs::write(path, contents).expect("TypeScript artifact is writable");
+    }
+    println!("generated versioned document schemas, types, and fixture profile metadata");
 }
 
-fn render_typescript(schema: &Value) -> String {
+fn render_typescript(schema: &Value, root_name: &str) -> String {
     let mut output =
         String::from("// Generated by `pnpm schema:generate`. Do not edit directly.\n\n");
     let definitions = schema
@@ -81,7 +121,7 @@ fn render_typescript(schema: &Value) -> String {
         output.push_str(&render_named_type(name, definition));
         output.push('\n');
     }
-    output.push_str(&render_named_type("ShowDocumentV1", schema));
+    output.push_str(&render_named_type(root_name, schema));
     output
 }
 

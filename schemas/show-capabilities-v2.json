@@ -1,0 +1,16 @@
+{
+  "document_contract": {
+    "automation_targets": {
+      "effect_instance": ["multiplier", "color", "dimmer", "pan", "tilt"],
+      "global": ["master_dimmer"]
+    },
+    "layout_shapes": ["matrix", "circle", "formula", "svg_path", "custom"],
+    "patch_reference": "profile_id",
+    "phase_modes": ["spread", "grouped"],
+    "step_attributes": ["color", "dimmer", "pan", "tilt"]
+  },
+  "document_schema": "show-document-v2.schema.json",
+  "document_schema_version": 2,
+  "fixture_profiles": "fixture-profiles-v1.json",
+  "metadata_version": 1
+}

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateShowDocument } from "./showDocument";
 
 const document = {
-  schema_version: 1,
+  schema_version: 2,
   meta: { name: "Contract" },
   patch: [],
   layout: { type: "generator", generator: { shape: "custom", fixtures: [] } },
@@ -10,7 +10,7 @@ const document = {
   phasers: [],
 };
 
-describe("generated ShowDocumentV1 validator", () => {
+describe("generated ShowDocumentV2 validator", () => {
   it("accepts the current version and rejects unknown fields", () => {
     expect(validateShowDocument(document).success).toBe(true);
 
@@ -25,7 +25,7 @@ describe("generated ShowDocumentV1 validator", () => {
   });
 
   it("fails closed for an unknown schema version", () => {
-    const result = validateShowDocument({ ...document, schema_version: 2 });
+    const result = validateShowDocument({ ...document, schema_version: 3 });
 
     expect(result.success).toBe(false);
   });

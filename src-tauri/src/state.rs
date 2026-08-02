@@ -77,6 +77,7 @@ pub struct ActivePhaser {
 mod tests {
     use super::ShowStore;
     use crate::compiler::{CompiledShow, Fixture};
+    use crate::engine::profile::{profile_handle_by_id, GENERIC_RGB_PROFILE_ID};
 
     #[tokio::test]
     async fn show_store_publishes_monotonic_immutable_revisions() {
@@ -98,7 +99,8 @@ mod tests {
         CompiledShow {
             fixtures: vec![Fixture {
                 id,
-                type_: "pixel".to_string(),
+                profile: profile_handle_by_id(GENERIC_RGB_PROFILE_ID)
+                    .expect("built-in RGB profile"),
             }],
             ..CompiledShow::default()
         }

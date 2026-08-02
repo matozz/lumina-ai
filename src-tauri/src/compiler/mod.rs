@@ -3,8 +3,9 @@ pub mod parser;
 
 use crate::document::{DocumentValidator, ValidatedShow};
 use crate::engine::color::parse_hex_color;
+use crate::engine::profile::{profile_by_handle, profile_handle_by_id, FixtureProfileHandle};
 use diagnostic::{
-    Diagnostic, DiagnosticSeverity, DOC_FORMULA_INVALID, DOC_INVALID_COLOR,
+    Diagnostic, DiagnosticSeverity, DOC_FORMULA_INVALID, DOC_INVALID_COLOR, DOC_PROFILE_NOT_FOUND,
     DSL_DUPLICATE_FIXTURE_ID, DSL_TARGET_GROUP_NOT_FOUND,
 };
 use fasteval::{Compiler as FastevalCompiler, Evaler};
@@ -53,7 +54,7 @@ impl From<String> for EffectInstanceHandle {
 #[derive(Clone, Debug)]
 pub struct Fixture {
     pub id: u32,
-    pub type_: String,
+    pub profile: FixtureProfileHandle,
 }
 
 #[derive(serde::Serialize, Clone, Debug)]
@@ -215,6 +216,15 @@ impl Compiler {
     fn compile_patch(patch_dsl: &[PatchDSL], errors: &mut Vec<Diagnostic>) -> Vec<Fixture> {
         let mut fixtures = Vec::new();
         for p in patch_dsl {
+            let Some(profile) = profile_handle_by_id(&p.profile_id) else {
+                errors.push(Diagnostic::error(
+                    DOC_PROFILE_NOT_FOUND,
+                    "patch.profile_id",
+                    format!("Fixture profile not found: {:?}.", p.profile_id),
+                    "Select a registered fixture profile.",
+                ));
+                continue;
+            };
             for id in p.id_range.0..=p.id_range.1 {
                 if fixtures.iter().any(|f: &Fixture| f.id == id) {
                     errors.push(Diagnostic::error(
@@ -224,10 +234,7 @@ impl Compiler {
                         "Use a unique fixture ID across all patch ranges.",
                     ));
                 }
-                fixtures.push(Fixture {
-                    id,
-                    type_: p.type_.as_str().to_string(),
-                });
+                fixtures.push(Fixture { id, profile });
             }
         }
         fixtures
@@ -240,12 +247,17 @@ impl Compiler {
     ) -> Vec<LayoutCoord> {
         let mut coords = Vec::new();
         let fix_ids: Vec<u32> = fixtures.iter().map(|f| f.id).collect();
-        // helper to get type
+        // Transitional Canvas adapter metadata is derived from the profile, not the layout.
         let get_type = |id: u32| -> String {
             fixtures
                 .iter()
                 .find(|f| f.id == id)
-                .map(|f| f.type_.clone())
+                .map(|fixture| {
+                    profile_by_handle(fixture.profile)
+                        .preview_kind
+                        .as_legacy_type()
+                        .to_string()
+                })
                 .unwrap_or_else(|| "spot".to_string())
         };
 
@@ -868,9 +880,9 @@ mod tests {
 
     const VALID_SHOW: &str = r##"
     {
-      "schema_version": 1,
+      "schema_version": 2,
       "meta": { "name": "Compiler baseline" },
-      "patch": [{ "type": "pixel", "id_range": [1, 2] }],
+      "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 2] }],
       "layout": {
         "type": "generator",
         "generator": {
@@ -936,8 +948,8 @@ mod tests {
     fn reports_duplicate_fixture_and_missing_target_outputs() {
         let invalid_show = VALID_SHOW
             .replace(
-                "[{ \"type\": \"pixel\", \"id_range\": [1, 2] }]",
-                "[{ \"type\": \"pixel\", \"id_range\": [1, 2] }, { \"type\": \"pixel\", \"id_range\": [2, 3] }]",
+                "[{ \"profile_id\": \"generic-rgb\", \"id_range\": [1, 2] }]",
+                "[{ \"profile_id\": \"generic-rgb\", \"id_range\": [1, 2] }, { \"profile_id\": \"generic-rgb\", \"id_range\": [2, 3] }]",
             )
             .replace("\"target\": \"line\"", "\"target\": \"Missing\"");
         let dsl: ShowDSL = serde_json::from_str(&invalid_show).expect("syntactically valid DSL");

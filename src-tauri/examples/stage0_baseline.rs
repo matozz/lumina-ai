@@ -2,6 +2,7 @@ use lumina_ai_lib::compiler::{
     parser::ShowDSL, CompiledGroup, CompiledPhaser, CompiledShow, CompiledStep, Compiler, Fixture,
     PhaseConfig,
 };
+use lumina_ai_lib::engine::profile::{profile_handle_by_id, GENERIC_RGB_PROFILE_ID};
 use lumina_ai_lib::engine::{animation::ParameterContext, compute_frame};
 use lumina_ai_lib::state::ActivePhaser;
 use serde::Serialize;
@@ -149,10 +150,11 @@ fn benchmark_compute_frame(fixture_count: usize) -> ComputeFrameReport {
 }
 
 fn synthetic_show(fixture_count: usize) -> CompiledShow {
+    let profile = profile_handle_by_id(GENERIC_RGB_PROFILE_ID).expect("built-in RGB profile");
     let fixtures: Vec<_> = (1..=fixture_count)
         .map(|id| Fixture {
             id: id as u32,
-            type_: "pixel".to_string(),
+            profile,
         })
         .collect();
     let group = CompiledGroup {

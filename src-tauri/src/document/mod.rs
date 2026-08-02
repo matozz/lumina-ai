@@ -9,12 +9,26 @@ mod validation;
 
 pub use validation::{DocumentValidator, ValidatedShow};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 1;
+pub const CURRENT_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ShowDocumentV1 {
     #[schemars(range(min = 1, max = 1))]
+    pub schema_version: u32,
+    pub meta: MetaDSL,
+    pub patch: Vec<PatchV1DSL>,
+    pub layout: LayoutDSL,
+    pub groups: Vec<GroupDSL>,
+    pub phasers: Vec<PhaserDSL>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeline: Option<TimelineDSL>,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ShowDocumentV2 {
+    #[schemars(range(min = 2, max = 2))]
     pub schema_version: u32,
     pub meta: MetaDSL,
     pub patch: Vec<PatchDSL>,
@@ -34,6 +48,13 @@ pub struct MetaDSL {
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct PatchDSL {
+    pub profile_id: String,
+    pub id_range: (u32, u32),
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct PatchV1DSL {
     #[serde(rename = "type")]
     pub type_: LegacyFixtureType,
     pub id_range: (u32, u32),
@@ -51,6 +72,13 @@ impl LegacyFixtureType {
         match self {
             Self::Spot => "spot",
             Self::Pixel => "pixel",
+        }
+    }
+
+    pub const fn profile_id(self) -> &'static str {
+        match self {
+            Self::Spot => crate::engine::profile::GENERIC_MOVING_HEAD_PROFILE_ID,
+            Self::Pixel => crate::engine::profile::GENERIC_RGB_PROFILE_ID,
         }
     }
 }
@@ -385,7 +413,7 @@ pub struct MigrationReport {
 
 #[derive(Debug, Clone)]
 pub struct LoadedDocument {
-    pub document: ShowDocumentV1,
+    pub document: ShowDocumentV2,
     pub migration_report: MigrationReport,
 }
 
@@ -401,7 +429,7 @@ pub fn load_document(source: &str) -> Result<LoadedDocument, Diagnostic> {
             DOC_SCHEMA_INVALID,
             "$",
             error.to_string(),
-            "Update the document to match the generated ShowDocumentV1 schema.",
+            "Update the document to match the generated ShowDocumentV2 schema.",
         )
     })?;
 
@@ -421,15 +449,12 @@ pub fn migrate_document(
     }
 
     let mut changes = Vec::new();
-    match from_version {
+    let mut migrated_version = match from_version {
         None => {
             let object = value
                 .as_object_mut()
                 .ok_or_else(top_level_object_diagnostic)?;
-            object.insert(
-                "schema_version".to_string(),
-                serde_json::Value::from(CURRENT_SCHEMA_VERSION),
-            );
+            object.insert("schema_version".to_string(), serde_json::Value::from(1));
             changes.push(MigrationChange {
                 code: "MIGRATION_ADD_SCHEMA_VERSION".to_string(),
                 path: "schema_version".to_string(),
@@ -437,9 +462,17 @@ pub fn migrate_document(
             });
             migrate_group_ids(&mut value, &mut changes)?;
             migrate_automation_targets(&mut value, &mut changes)?;
+            1
         }
-        Some(CURRENT_SCHEMA_VERSION) => {}
+        Some(version @ 1..=CURRENT_SCHEMA_VERSION) => version,
         Some(version) => return Err(unsupported_schema_version(version)),
+    };
+    if migrated_version == 1 {
+        migrate_fixture_profiles(&mut value, &mut changes)?;
+        migrated_version = 2;
+    }
+    if migrated_version != CURRENT_SCHEMA_VERSION {
+        return Err(unsupported_schema_version(migrated_version));
     }
 
     Ok((
@@ -450,6 +483,65 @@ pub fn migrate_document(
             changes,
         },
     ))
+}
+
+fn migrate_fixture_profiles(
+    value: &mut serde_json::Value,
+    changes: &mut Vec<MigrationChange>,
+) -> Result<(), Diagnostic> {
+    let patch = value
+        .get_mut("patch")
+        .and_then(serde_json::Value::as_array_mut)
+        .ok_or_else(|| {
+            Diagnostic::error(
+                DOC_SCHEMA_INVALID,
+                "patch",
+                "V1 patch must be an array.",
+                "Repair the V1 document before migrating it to profile-backed patch entries.",
+            )
+        })?;
+    for (index, entry) in patch.iter_mut().enumerate() {
+        let Some(entry) = entry.as_object_mut() else {
+            continue;
+        };
+        let Some(legacy_type) = entry
+            .remove("type")
+            .and_then(|value| value.as_str().map(str::to_owned))
+        else {
+            continue;
+        };
+        let profile_id = match legacy_type.as_str() {
+            "pixel" => crate::engine::profile::GENERIC_RGB_PROFILE_ID,
+            "spot" => crate::engine::profile::GENERIC_MOVING_HEAD_PROFILE_ID,
+            _ => {
+                return Err(Diagnostic::error(
+                    DOC_SCHEMA_INVALID,
+                    format!("patch[{index}].type"),
+                    format!("Unsupported V1 fixture type: {legacy_type:?}."),
+                    "Use pixel or spot in V1, or select a valid profile_id in V2.",
+                ));
+            }
+        };
+        entry.insert(
+            "profile_id".to_string(),
+            serde_json::Value::String(profile_id.to_string()),
+        );
+        changes.push(MigrationChange {
+            code: "MIGRATION_PATCH_PROFILE".to_string(),
+            path: format!("patch[{index}].profile_id"),
+            message: format!("Mapped V1 fixture type {legacy_type:?} to {profile_id:?}."),
+        });
+    }
+    let object = value
+        .as_object_mut()
+        .ok_or_else(top_level_object_diagnostic)?;
+    object.insert("schema_version".to_string(), serde_json::Value::from(2));
+    changes.push(MigrationChange {
+        code: "MIGRATION_SCHEMA_V1_TO_V2".to_string(),
+        path: "schema_version".to_string(),
+        message: "Upgraded the show document from schema version 1 to 2.".to_string(),
+    });
+    Ok(())
 }
 
 fn document_version(value: &serde_json::Value) -> Result<Option<u32>, Diagnostic> {
@@ -712,7 +804,7 @@ mod tests {
 
         assert_eq!(loaded.document.schema_version, CURRENT_SCHEMA_VERSION);
         assert_eq!(loaded.migration_report.from_version, None);
-        assert_eq!(loaded.migration_report.changes.len(), 1);
+        assert_eq!(loaded.migration_report.changes.len(), 2);
         assert_eq!(
             loaded.migration_report.changes[0].code,
             "MIGRATION_ADD_SCHEMA_VERSION"
@@ -743,7 +835,7 @@ mod tests {
     #[test]
     fn does_not_repair_a_malformed_current_version() {
         let source = LEGACY_DOCUMENT
-            .replacen('{', "{\"schema_version\": 1,", 1)
+            .replacen('{', "{\"schema_version\": 2,", 1)
             .replace(
                 "\"groups\": []",
                 "\"groups\": [{ \"name\": \"Missing ID\", \"fixtures\": [] }]",
@@ -775,6 +867,30 @@ mod tests {
             .changes
             .iter()
             .any(|change| change.code == "MIGRATION_STRUCTURE_AUTOMATION_TARGET"));
+    }
+
+    #[test]
+    fn migrates_v1_fixture_types_to_v2_profiles() {
+        let source = LEGACY_DOCUMENT
+            .replacen('{', "{\"schema_version\": 1,", 1)
+            .replace(
+                "\"patch\": []",
+                "\"patch\": [{ \"type\": \"pixel\", \"id_range\": [1, 1] }, { \"type\": \"spot\", \"id_range\": [2, 2] }]",
+            );
+        let loaded = load_document(&source).expect("V1 fixture types migrate");
+
+        assert_eq!(loaded.document.schema_version, 2);
+        assert_eq!(loaded.document.patch[0].profile_id, "generic-rgb");
+        assert_eq!(loaded.document.patch[1].profile_id, "generic-moving-head");
+        assert_eq!(
+            loaded
+                .migration_report
+                .changes
+                .iter()
+                .filter(|change| change.code == "MIGRATION_PATCH_PROFILE")
+                .count(),
+            2
+        );
     }
 
     #[test]

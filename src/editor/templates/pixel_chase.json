@@ -1,11 +1,11 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "meta": {
     "name": "Pixel Chase"
   },
   "patch": [
     {
-      "type": "pixel",
+      "profile_id": "generic-rgb",
       "id_range": [
         1,
         40

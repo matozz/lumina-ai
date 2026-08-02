@@ -1,4 +1,4 @@
-import type { AnimatableValueDSL, EasingDSL, ShowDocumentV1 } from "@/generated/show-document-v1";
+import type { AnimatableValueDSL, EasingDSL, ShowDocumentV2 } from "@/generated/show-document-v2";
 
 export type {
   AnimatableValueDSL,
@@ -17,15 +17,15 @@ export type {
   PhaserDSL,
   PhaserStepDSL,
   PhaseSpreadDSL,
-  ShowDocumentV1,
+  ShowDocumentV2,
   StepValuesDSL,
   SvgPathDef,
   TimelineActionDefDSL,
   TimelineDSL,
   TimelineEventDSL,
-} from "@/generated/show-document-v1";
+} from "@/generated/show-document-v2";
 
-export type FullDSL = ShowDocumentV1;
+export type FullDSL = ShowDocumentV2;
 export type FromTo = AnimatableValueDSL;
 export type Easing = EasingDSL;
 
@@ -78,7 +78,7 @@ export interface MigrationReport {
 }
 
 export interface LoadShowResult {
-  document: ShowDocumentV1;
+  document: ShowDocumentV2;
   migration_report: MigrationReport;
 }
 

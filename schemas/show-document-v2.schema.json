@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "ShowDocumentV1",
+  "title": "ShowDocumentV2",
   "type": "object",
   "properties": {
     "groups": {
@@ -18,7 +18,7 @@
     "patch": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/PatchV1DSL"
+        "$ref": "#/$defs/PatchDSL"
       }
     },
     "phasers": {
@@ -30,8 +30,8 @@
     "schema_version": {
       "type": "integer",
       "format": "uint32",
-      "maximum": 1,
-      "minimum": 1
+      "maximum": 2,
+      "minimum": 2
     },
     "timeline": {
       "anyOf": [
@@ -376,10 +376,6 @@
       "type": "string",
       "enum": ["generator"]
     },
-    "LegacyFixtureType": {
-      "type": "string",
-      "enum": ["spot", "pixel"]
-    },
     "MetaDSL": {
       "type": "object",
       "properties": {
@@ -390,7 +386,7 @@
       "additionalProperties": false,
       "required": ["name"]
     },
-    "PatchV1DSL": {
+    "PatchDSL": {
       "type": "object",
       "properties": {
         "id_range": {
@@ -410,12 +406,12 @@
             }
           ]
         },
-        "type": {
-          "$ref": "#/$defs/LegacyFixtureType"
+        "profile_id": {
+          "type": "string"
         }
       },
       "additionalProperties": false,
-      "required": ["type", "id_range"]
+      "required": ["profile_id", "id_range"]
     },
     "PhaseConfigDSL": {
       "oneOf": [

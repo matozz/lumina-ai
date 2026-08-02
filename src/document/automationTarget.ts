@@ -1,4 +1,4 @@
-import type { AutomationTargetDSL } from "@/generated/show-document-v1";
+import type { AutomationTargetDSL } from "@/generated/show-document-v2";
 
 export function automationTargetPath(target: AutomationTargetDSL): string {
   return target.scope === "global"

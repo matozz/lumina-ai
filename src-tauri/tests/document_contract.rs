@@ -1,14 +1,14 @@
 use lumina_ai_lib::compiler::diagnostic::{
     DOC_FIXTURE_REFERENCE_NOT_FOUND, DOC_FORMULA_INVALID, DOC_INVALID_COLOR,
-    DOC_INVALID_PHASE_CONFIG, DOC_INVALID_RANGE, DOC_SVG_PATH_INVALID,
+    DOC_INVALID_PHASE_CONFIG, DOC_INVALID_RANGE, DOC_PROFILE_NOT_FOUND, DOC_SVG_PATH_INVALID,
 };
 use lumina_ai_lib::compiler::Compiler;
 use lumina_ai_lib::document::load_document;
 
 const VALID_DOCUMENT: &str = r##"{
-  "schema_version": 1,
+  "schema_version": 2,
   "meta": { "name": "Strict contract" },
-  "patch": [{ "type": "pixel", "id_range": [1, 2] }],
+  "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 2] }],
   "layout": {
     "type": "generator",
     "generator": {
@@ -42,6 +42,10 @@ fn rejects_bad_color_reference_range_and_formula_with_stable_diagnostics() {
         (
             VALID_DOCUMENT.replace("#ff0000", "red"),
             DOC_INVALID_COLOR,
+        ),
+        (
+            VALID_DOCUMENT.replace("generic-rgb", "unknown-profile"),
+            DOC_PROFILE_NOT_FOUND,
         ),
         (
             VALID_DOCUMENT.replace("\"fixtures\": [1, 2]", "\"fixtures\": [1, 99]"),
@@ -99,7 +103,7 @@ fn reports_svg_layout_instead_of_silently_falling_back() {
 }
 
 fn compile_errors(
-    document: lumina_ai_lib::document::ShowDocumentV1,
+    document: lumina_ai_lib::document::ShowDocumentV2,
 ) -> Vec<lumina_ai_lib::compiler::diagnostic::Diagnostic> {
     match Compiler::compile_document(document) {
         Ok(_) => panic!("document must not compile"),
