@@ -4,7 +4,7 @@ use crate::engine::attribute::FixtureFramePayload;
 use crate::engine::effect::{EffectCatalog, EffectCatalogQuery, EffectSource, SPEED_PARAMETER_ID};
 use crate::engine::render::{render_at, LivePhaser, RenderSource, RenderTime};
 use crate::engine::transport::OutputRate;
-use crate::state::EngineState;
+use crate::state::{EngineState, LivePadQuantize, ScheduledLiveActionKind, ShowSnapshot};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -42,6 +42,26 @@ pub struct LoadShowResult {
 pub struct ShowSnapshotState {
     pub published_revision: Option<u64>,
     pub live_revision: Option<u64>,
+}
+
+#[derive(serde::Serialize)]
+pub struct LiveEffectInfo {
+    pub instance_id: String,
+    pub definition_id: String,
+    pub definition_revision: u32,
+    pub name: String,
+    pub target_group_id: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct LiveEffectCatalog {
+    pub show_revision: u64,
+    pub effects: Vec<LiveEffectInfo>,
+}
+
+#[derive(serde::Serialize)]
+pub struct QueuedLivePad {
+    pub target_beat: f64,
 }
 
 #[derive(serde::Serialize)]
@@ -171,7 +191,10 @@ pub async fn activate_show_revision(
     state: State<'_, Arc<EngineState>>,
 ) -> Result<ShowSnapshotState, String> {
     state.shows.activate(revision).await?;
-    state.runtime.write().await.live_phasers.clear();
+    let mut runtime = state.runtime.write().await;
+    runtime.live_phasers.clear();
+    runtime.pending_live_actions.clear();
+    drop(runtime);
     Ok(show_snapshot_state(state.inner()).await)
 }
 
@@ -324,7 +347,133 @@ pub async fn set_output_rate(hz: u32, state: State<'_, Arc<EngineState>>) -> Res
         .scheduler
         .set_output_rate(output_rate)
         .await
-        .map_err(|error| error.to_string())
+        .map_err(|error| error.to_string())?;
+    state.runtime.write().await.output_rate_hz = output_rate.hz();
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_live_effects(
+    state: State<'_, Arc<EngineState>>,
+) -> Result<LiveEffectCatalog, String> {
+    let snapshot = state
+        .shows
+        .current()
+        .await
+        .ok_or_else(|| "No Live Snapshot is active.".to_string())?;
+    Ok(live_effect_catalog(&snapshot))
+}
+
+fn live_effect_catalog(snapshot: &ShowSnapshot) -> LiveEffectCatalog {
+    let mut effects: Vec<_> = snapshot
+        .show
+        .effect_instances
+        .values()
+        .filter_map(|instance| {
+            let definition = snapshot
+                .show
+                .effect_definitions
+                .get(instance.definition.index())?;
+            Some(LiveEffectInfo {
+                instance_id: instance.id.clone(),
+                definition_id: definition.id.clone(),
+                definition_revision: definition.revision,
+                name: definition.name.clone(),
+                target_group_id: instance.target_group_id.clone(),
+            })
+        })
+        .collect();
+    effects.sort_by(|left, right| {
+        left.name
+            .cmp(&right.name)
+            .then(left.instance_id.cmp(&right.instance_id))
+    });
+    LiveEffectCatalog {
+        show_revision: snapshot.revision,
+        effects,
+    }
+}
+
+#[tauri::command]
+pub async fn queue_live_pad(
+    effect_id: String,
+    action: String,
+    quantize: String,
+    multiplier: f64,
+    exclusive_ids: Vec<String>,
+    one_shot_beats: Option<f64>,
+    state: State<'_, Arc<EngineState>>,
+) -> Result<QueuedLivePad, String> {
+    if !multiplier.is_finite() || !(0.125..=8.0).contains(&multiplier) {
+        return Err("Live Pad multiplier must be between 0.125 and 8.".to_string());
+    }
+    if one_shot_beats
+        .is_some_and(|duration| !duration.is_finite() || !(0.25..=256.0).contains(&duration))
+    {
+        return Err("One-shot duration must be between 0.25 and 256 beats.".to_string());
+    }
+
+    let live = state
+        .shows
+        .current()
+        .await
+        .ok_or_else(|| "No Live Snapshot is active.".to_string())?;
+    if !live.show.effect_instances.contains_key(&effect_id) {
+        return Err(format!(
+            "Effect {effect_id:?} is not part of Live revision {}.",
+            live.revision
+        ));
+    }
+    let exclusive_ids = exclusive_ids
+        .into_iter()
+        .filter(|id| id != &effect_id && live.show.effect_instances.contains_key(id))
+        .collect();
+    let kind = match action.as_str() {
+        "start" => ScheduledLiveActionKind::Start {
+            multiplier,
+            exclusive_ids,
+        },
+        "stop" => ScheduledLiveActionKind::Stop,
+        _ => return Err("Live Pad action must be start or stop.".to_string()),
+    };
+    let quantize = match quantize.as_str() {
+        "off" => LivePadQuantize::Off,
+        "beat" => LivePadQuantize::Beat,
+        "bar" => LivePadQuantize::Bar,
+        _ => return Err("Live Pad quantize must be off, beat, or bar.".to_string()),
+    };
+
+    let now = state.clock.now();
+    let mut runtime = state.runtime.write().await;
+    let transport = runtime.transport.snapshot(now);
+    if transport.state != crate::engine::transport::TransportState::Playing {
+        return Err("Start or resume Transport before triggering a Live Pad.".to_string());
+    }
+    let target_beat = runtime.queue_live_pad(
+        effect_id,
+        kind,
+        quantize,
+        transport.cursor_beat,
+        if action == "start" {
+            one_shot_beats
+        } else {
+            None
+        },
+    );
+    Ok(QueuedLivePad { target_beat })
+}
+
+#[tauri::command]
+pub async fn set_blackout(
+    enabled: bool,
+    app_handle: AppHandle,
+    state: State<'_, Arc<EngineState>>,
+) -> Result<(), String> {
+    state
+        .scheduler
+        .set_blackout(&app_handle, state.inner(), enabled)
+        .await;
+    Ok(())
 }
 
 #[tauri::command]
@@ -395,6 +544,7 @@ pub async fn set_sequencer_mode(
 
     // Clear active phasers when switching modes
     r_state.live_phasers.clear();
+    r_state.pending_live_actions.clear();
 
     Ok(())
 }
@@ -445,8 +595,13 @@ async fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{atomic_write, preview_dsl, preview_effect_loop, SAVE_SEQUENCE};
+    use super::{
+        atomic_write, compile_dsl, live_effect_catalog, preview_dsl, preview_effect_loop,
+        SAVE_SEQUENCE,
+    };
+    use crate::state::ShowSnapshot;
     use std::sync::atomic::Ordering;
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn atomically_replaces_a_show_without_leaving_temporary_files() {
@@ -541,6 +696,17 @@ mod tests {
           "effect_instances": [{ "id": "red-pulse", "definition_id": "project.red-pulse", "definition_revision": 1, "target_group_id": "all", "seed": "0000000000000001" }],
           "timeline": { "ppq": 960, "tempo_map": { "points": [{ "time_tick": 0, "bpm": 120 }] }, "tracks": [] }
         }"##;
+
+        let (_, compiled) = compile_dsl(source).expect("compile live catalog");
+        let catalog = live_effect_catalog(&ShowSnapshot {
+            revision: 7,
+            show: Arc::new(compiled.expect("compiled show")),
+        });
+        assert_eq!(catalog.show_revision, 7);
+        assert_eq!(catalog.effects.len(), 1);
+        assert_eq!(catalog.effects[0].instance_id, "red-pulse");
+        assert_eq!(catalog.effects[0].name, "Red Pulse");
+        assert_eq!(catalog.effects[0].definition_revision, 1);
 
         let frames = preview_effect_loop(source.to_string(), "red-pulse".to_string(), 16)
             .await

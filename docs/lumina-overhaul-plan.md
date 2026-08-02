@@ -747,10 +747,10 @@ Keyframe 至少包含：
 
 #### 6.5 Live/Rehearse
 
-- [ ] Live Pad 支持 beat/bar quantize。
-- [ ] effect 可配置 toggle、momentary、one-shot、exclusive group。
-- [ ] Pause、Stop、Blackout 视觉层级不同，Blackout 始终可见。
-- [ ] 显示 FPS、frame lag、output adapter、last error 和 show revision。
+- [x] Live Pad 支持 beat/bar quantize。
+- [x] effect 可配置 toggle、momentary、one-shot、exclusive group。
+- [x] Pause、Stop、Blackout 视觉层级不同，Blackout 始终可见。
+- [x] 显示 FPS、frame lag、output adapter、last error 和 show revision。
 - [x] 编辑草稿和 Live Snapshot 状态明确区分。
 
 #### 6.6 Accessibility
@@ -1082,14 +1082,14 @@ flowchart LR
 ## Handoff
 
 - Current Stage: Stage 6 `in_progress`；严格止于 Stage 7。
-- Slice completed: `main@3a690c0` 原生基线、immutable snapshot 边界、紧凑五工作区 Shell、Stage Setup、完整参数化 Effect Lab，以及 Arrange 的 Draft effect 直通、click/native-drag placement、可读轨道与帮助/恢复状态。
-- Commits: 分支 `codex/song-driven-dj-workspace`；基线 `3b709a0`；snapshot `e9a32d8`；Shell `a490908`；Stage Setup `00e2148`；Effect Lab `bc4e050`；Arrange 为当前切片提交。
-- Files changed: ShowStore/Tauri bridge、Workspace Shell、Stage Setup、effect factory/catalog/inspector、blocking Draft preview、Canvas rAF loop、Timeline Draft library/native drop/friendly labels/help 与 tests/evidence。
-- Validation: Arrange `check:all` 全绿：41 frontend files/90 tests、76 Rust unit + 12 contracts、schema/format/typecheck/build/strict Clippy；1440×900 与 1100×720 browser design QA；真实指针 click 在 beat 6 生成 Red Pulse clip。原生窗口当前 AX/Space capture failed，未把黑屏当证据，完整原生路径后续重跑。
+- Slice completed: Stage 6 baseline/snapshots/Shell/Stage Setup/Effect Lab/Arrange，以及只读取 immutable Live Snapshot 的 quantized Live Pad、四种行为语义、latched Blackout 与输出诊断。
+- Commits: 分支 `codex/song-driven-dj-workspace`；基线 `3b709a0`；snapshot `e9a32d8`；Shell `a490908`；Stage Setup `00e2148`；Effect Lab `bc4e050`；Arrange `949b831`；Live/Rehearse 为当前切片提交。
+- Files changed: ShowStore/Tauri bridge、single scheduler quantized queue/blackout state、runtime diagnostics、Live Snapshot catalog、persistent pad config、Live transport/pads/settings/diagnostics 与 tests/evidence。
+- Validation: Live/Rehearse `check:all` 全绿：43 frontend files/96 tests、80 Rust unit + 12 contracts、schema/format/typecheck/build/strict Clippy；1440×900 与 1100×720 browser empty-state QA；Rust 验证 beat/bar、one-shot、exclusive、momentary cancel 和 Blackout latch。
 - ADRs added/updated: ADR-0006 accepted；Draft 发布不改变 Live，只有显式 Take live 激活 revision。
 - Risks opened/closed: R-005 closed；原生 Publish 得到 `Published r2 / Live r1`，只有显式 Take live 后变为 `Live r2`。
-- Remaining exit criteria: Stage Setup 继续补 layout 参数/Custom 坐标编辑；Live Pad modes/Blackout/diagnostics、完整原生路径与 accessibility；之后才进入 Stage 7 Audio/TempoMap/SongAnalysis。
-- Recommended next slice: Live/Rehearse quantized pads、toggle/momentary/one-shot/exclusive group，以及 Pause/Stop/Blackout 层级。
+- Remaining exit criteria: Stage Setup 补齐 layout 参数/Custom 坐标编辑；完成 accessibility 审计与完整原生用户路径；之后才进入 Stage 7 Audio/TempoMap/SongAnalysis。
+- Recommended next slice: Stage Setup layout visual editor + Stage 6 accessibility/native closure。
 
 ## 19. ADR 规范
 
@@ -1203,6 +1203,7 @@ flowchart LR
 | 2026-08-02 | 6        | Effect Lab 原生留证       | failed    | none        | clean Tauri ×2；CG window 存在；AX 0 windows；capture 黑 WebView         | 无效截图不提交；browser 仅做 design QA                      | Arrange/Live 后重跑完整 native path         |
 | 2026-08-02 | 6        | Effect Lab implementation | completed | 本切片提交  | `check:all`；84 frontend；88 Rust；1440×900 browser QA                   | atomic revision；one compile；rAF Canvas；A/B cache         | Arrange placement                           |
 | 2026-08-02 | 6        | Arrange visual workflow   | completed | 本切片提交  | `check:all`；90 frontend；88 Rust；1440×900 + min browser QA             | Draft revision 直入 Library；native drag；统一 snap         | Live Pad + safety hierarchy                 |
+| 2026-08-02 | 6        | Live/Rehearse controls    | completed | 本切片提交  | `check:all`；96 frontend；92 Rust；max/min browser QA                    | quantize queue；Blackout latch；Live catalog                | layout + accessibility                      |
 
 ## 21. Open Risks
 

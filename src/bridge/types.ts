@@ -141,6 +141,29 @@ export interface EngineStatePayload {
   tempo: number;
   global_beat: number;
   active_phasers: { id: string; multiplier: number }[];
+  blackout: boolean;
+  output_rate_hz: number;
+  frame_lag_ms: number;
+  output_adapter: string;
+  last_output_error: string | null;
+  live_revision: number | null;
+}
+
+export interface LiveEffectInfo {
+  instance_id: string;
+  definition_id: string;
+  definition_revision: number;
+  name: string;
+  target_group_id: string;
+}
+
+export interface LiveEffectCatalog {
+  show_revision: number;
+  effects: LiveEffectInfo[];
+}
+
+export interface QueuedLivePad {
+  target_beat: number;
 }
 
 export type TransportState = "stopped" | "playing" | "paused" | "seeking" | "error";

@@ -148,4 +148,30 @@ describe("document history", () => {
     });
     expect(useEngineStore.getState().documentHistory).toHaveLength(0);
   });
+
+  it("applies runtime diagnostics without replacing unchanged active pad identity", () => {
+    engineActions.setActivePhasers([{ id: "pulse", multiplier: 1 }]);
+    const active = useEngineStore.getState().activePhasers;
+
+    engineActions.applyRuntimeState({
+      transport_state: "playing",
+      transport_revision: 3,
+      tempo: 128,
+      global_beat: 12.5,
+      active_phasers: [{ id: "pulse", multiplier: 1 }],
+      blackout: true,
+      output_rate_hz: 60,
+      frame_lag_ms: 0.4,
+      output_adapter: "preview",
+      last_output_error: null,
+      live_revision: 7,
+    });
+
+    expect(useEngineStore.getState().activePhasers).toBe(active);
+    expect(useEngineStore.getState()).toMatchObject({
+      blackout: true,
+      frameLagMs: 0.4,
+      liveShowRevision: 7,
+    });
+  });
 });

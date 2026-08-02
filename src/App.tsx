@@ -10,10 +10,7 @@ function App() {
 
   useEffect(() => {
     const unlisten = onStateChange((state) => {
-      engineActions.setTransport(state.transport_state, state.transport_revision);
-      engineActions.setTempo(state.tempo);
-      engineActions.setGlobalBeat(state.global_beat);
-      engineActions.setActivePhasers(state.active_phasers);
+      engineActions.applyRuntimeState(state);
     });
 
     return () => {

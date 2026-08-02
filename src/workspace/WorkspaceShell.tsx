@@ -28,6 +28,10 @@ export function WorkspaceShell() {
     try {
       await engine.setSequencerMode(mode);
       engineActions.setSequencerMode(mode);
+      if (workspace === "live") {
+        const catalog = await engine.getLiveEffects();
+        engineActions.setLiveEffectCatalog(catalog);
+      }
     } catch (error) {
       workspaceActions.setPublishStatus(
         "error",

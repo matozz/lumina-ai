@@ -19,7 +19,8 @@ import { EffectCatalogLibrary } from "./effect-lab/EffectCatalogLibrary";
 
 export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   const document = useEngineStore(engineSelectors.parsedDsl);
-  const selectedEffectId = useWorkspaceStore(workspaceSelectors.selectedEffectId);
+  const liveEffects = useEngineStore(engineSelectors.liveEffects);
+  const selectedLiveEffectId = useWorkspaceStore(workspaceSelectors.selectedLiveEffectId);
   const favorites = useWorkspaceStore(workspaceSelectors.favoriteEffectIds);
 
   return (
@@ -38,16 +39,19 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
           {workspace === "effect-lab" && document && <EffectCatalogLibrary document={document} />}
 
           {workspace === "live" &&
-            document?.effect_definitions.map((effect) => (
+            liveEffects.map((effect) => (
               <Button
-                key={effect.id}
-                variant={selectedEffectId === effect.id ? "secondary" : "ghost"}
+                key={effect.instance_id}
+                variant={selectedLiveEffectId === effect.instance_id ? "secondary" : "ghost"}
                 size="sm"
                 className="h-auto w-full justify-start py-1.5"
-                onClick={() => workspaceActions.setSelectedEffectId(effect.id)}
+                onClick={() => workspaceActions.setSelectedLiveEffectId(effect.instance_id)}
               >
                 <span className="min-w-0 flex-1 truncate text-left">{effect.name}</span>
-                {favorites.includes(effect.id) && <Star aria-label="Favorite" />}
+                <span className="text-muted-foreground font-mono text-[9px]">
+                  r{effect.definition_revision}
+                </span>
+                {favorites.includes(effect.definition_id) && <Star aria-label="Favorite" />}
               </Button>
             ))}
 
@@ -62,7 +66,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
 
           {workspace === "song" && <SongEmptyState />}
 
-          {workspace === "live" && document?.effect_definitions.length === 0 && (
+          {workspace === "live" && liveEffects.length === 0 && (
             <CompactEmpty
               icon={Boxes}
               title="No effects yet"

@@ -6,6 +6,8 @@ import type {
   LayoutCoord,
   FullDSL,
   LoadShowResult,
+  LiveEffectCatalog,
+  QueuedLivePad,
   ShowSnapshotState,
 } from "./types";
 
@@ -36,6 +38,27 @@ export const engine = {
   seek: (beat: number) => invoke("seek", { beat }),
   setTempo: (bpm: number) => invoke("set_tempo", { bpm }),
   setOutputRate: (hz: 30 | 60 | 120) => invoke("set_output_rate", { hz }),
+
+  getLiveEffects: () => invoke<LiveEffectCatalog>("get_live_effects"),
+
+  queueLivePad: (options: {
+    effectId: string;
+    action: "start" | "stop";
+    quantize: "off" | "beat" | "bar";
+    multiplier?: number;
+    exclusiveIds?: string[];
+    oneShotBeats?: number;
+  }) =>
+    invoke<QueuedLivePad>("queue_live_pad", {
+      effectId: options.effectId,
+      action: options.action,
+      quantize: options.quantize,
+      multiplier: options.multiplier ?? 1,
+      exclusiveIds: options.exclusiveIds ?? [],
+      oneShotBeats: options.oneShotBeats,
+    }),
+
+  setBlackout: (enabled: boolean) => invoke("set_blackout", { enabled }),
 
   triggerPhaser: (id: string, multiplier?: number) =>
     invoke("trigger_phaser", { phaserId: id, multiplier: multiplier ?? 1.0 }),

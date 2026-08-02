@@ -4,6 +4,14 @@ import type { ShowSnapshotState } from "@/bridge/types";
 
 export type WorkspaceId = "stage" | "effect-lab" | "song" | "arrange" | "live";
 export type PublishStatus = "idle" | "publishing" | "activating" | "error";
+export type LivePadMode = "toggle" | "momentary" | "one_shot";
+export type LivePadQuantize = "off" | "beat" | "bar";
+
+export interface LivePadConfig {
+  mode: LivePadMode;
+  exclusiveGroup: string;
+  oneShotBeats: number;
+}
 
 export interface PatchAddress {
   universe: number;
@@ -16,7 +24,10 @@ export interface WorkspaceState {
   libraryVisible: boolean;
   inspectorVisible: boolean;
   selectedEffectId: string | null;
+  selectedLiveEffectId: string | null;
   favoriteEffectIds: string[];
+  livePadQuantize: LivePadQuantize;
+  livePadConfigs: Record<string, LivePadConfig>;
   patchAddresses: PatchAddress[];
   publishedRevision: number | null;
   liveRevision: number | null;
@@ -30,7 +41,10 @@ const initialState: WorkspaceState = {
   libraryVisible: true,
   inspectorVisible: true,
   selectedEffectId: null,
+  selectedLiveEffectId: null,
   favoriteEffectIds: [],
+  livePadQuantize: "beat",
+  livePadConfigs: {},
   patchAddresses: [{ universe: 1, startChannel: 1 }],
   publishedRevision: null,
   liveRevision: null,
@@ -47,6 +61,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       libraryVisible: state.libraryVisible,
       inspectorVisible: state.inspectorVisible,
       favoriteEffectIds: state.favoriteEffectIds,
+      livePadQuantize: state.livePadQuantize,
+      livePadConfigs: state.livePadConfigs,
       patchAddresses: state.patchAddresses,
     }),
   }),
@@ -61,6 +77,14 @@ export const workspaceActions = {
     useWorkspaceStore.setState({ inspectorVisible }),
   setSelectedEffectId: (selectedEffectId: string | null) =>
     useWorkspaceStore.setState({ selectedEffectId }),
+  setSelectedLiveEffectId: (selectedLiveEffectId: string | null) =>
+    useWorkspaceStore.setState({ selectedLiveEffectId }),
+  setLivePadQuantize: (livePadQuantize: LivePadQuantize) =>
+    useWorkspaceStore.setState({ livePadQuantize }),
+  setLivePadConfig: (effectId: string, config: LivePadConfig) =>
+    useWorkspaceStore.setState((state) => ({
+      livePadConfigs: { ...state.livePadConfigs, [effectId]: config },
+    })),
   toggleFavoriteEffect: (effectId: string) =>
     useWorkspaceStore.setState((state) => ({
       favoriteEffectIds: state.favoriteEffectIds.includes(effectId)
@@ -91,7 +115,10 @@ export const workspaceSelectors = {
   libraryVisible: (state: WorkspaceState) => state.libraryVisible,
   inspectorVisible: (state: WorkspaceState) => state.inspectorVisible,
   selectedEffectId: (state: WorkspaceState) => state.selectedEffectId,
+  selectedLiveEffectId: (state: WorkspaceState) => state.selectedLiveEffectId,
   favoriteEffectIds: (state: WorkspaceState) => state.favoriteEffectIds,
+  livePadQuantize: (state: WorkspaceState) => state.livePadQuantize,
+  livePadConfigs: (state: WorkspaceState) => state.livePadConfigs,
   patchAddresses: (state: WorkspaceState) => state.patchAddresses,
   publishedRevision: (state: WorkspaceState) => state.publishedRevision,
   liveRevision: (state: WorkspaceState) => state.liveRevision,

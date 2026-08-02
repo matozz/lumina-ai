@@ -20,6 +20,7 @@ const commandMocks = vi.hoisted(() => ({
     warnings: [],
     migration_report: { from_version: 4, to_version: 4, changes: [] },
   }),
+  getLiveEffects: vi.fn().mockResolvedValue({ show_revision: 2, effects: [] }),
 }));
 
 vi.mock("@/bridge/commands", () => ({ engine: commandMocks }));

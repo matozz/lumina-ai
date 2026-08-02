@@ -44,4 +44,20 @@ describe("workspace state", () => {
       startChannel: 101,
     });
   });
+
+  it("persists Live Pad behavior separately from high-frequency active state", () => {
+    workspaceActions.setLivePadQuantize("bar");
+    workspaceActions.setLivePadConfig("red-pulse", {
+      mode: "one_shot",
+      exclusiveGroup: "color",
+      oneShotBeats: 8,
+    });
+
+    expect(useWorkspaceStore.getState()).toMatchObject({
+      livePadQuantize: "bar",
+      livePadConfigs: {
+        "red-pulse": { mode: "one_shot", exclusiveGroup: "color", oneShotBeats: 8 },
+      },
+    });
+  });
 });

@@ -59,6 +59,8 @@ export function WorkspaceHeader() {
     try {
       const snapshot = await engine.activateShowRevision(publishedRevision);
       workspaceActions.setSnapshotState(snapshot);
+      const catalog = await engine.getLiveEffects();
+      engineActions.setLiveEffectCatalog(catalog);
       workspaceActions.setPublishStatus("idle", `Live is now revision ${snapshot.live_revision}.`);
       window.dispatchEvent(new CustomEvent("engine:layout-ready"));
     } catch (error) {

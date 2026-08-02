@@ -29,6 +29,8 @@ export function useWorkspaceBootstrap() {
           live_revision: result.show_revision,
         });
         if (result.success) {
+          const catalog = await engine.getLiveEffects();
+          engineActions.setLiveEffectCatalog(catalog);
           window.dispatchEvent(new CustomEvent("engine:layout-ready"));
         }
       } catch (error) {
