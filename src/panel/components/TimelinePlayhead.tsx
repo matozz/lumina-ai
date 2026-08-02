@@ -1,13 +1,13 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useEngineStore } from "@/stores/engine";
-import { BEAT_WIDTH } from "../context/TimelineContext";
 
 interface PlayheadProps {
+  beatWidth: number;
   scrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
-export const TimelinePlayhead = ({ scrollRef }: PlayheadProps) => {
+export const TimelinePlayhead = ({ beatWidth, scrollRef }: PlayheadProps) => {
   const playheadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -15,7 +15,7 @@ export const TimelinePlayhead = ({ scrollRef }: PlayheadProps) => {
     const update = (beat: number) => {
       if (beat === previousBeat) return;
       previousBeat = beat;
-      const playheadX = beat * BEAT_WIDTH;
+      const playheadX = beat * beatWidth;
       if (playheadRef.current) {
         playheadRef.current.style.transform = `translate3d(${playheadX}px, 0, 0)`;
       }
@@ -29,7 +29,7 @@ export const TimelinePlayhead = ({ scrollRef }: PlayheadProps) => {
     };
     update(useEngineStore.getState().globalBeat);
     return useEngineStore.subscribe((state) => update(state.globalBeat));
-  }, [scrollRef]);
+  }, [beatWidth, scrollRef]);
 
   return (
     <div

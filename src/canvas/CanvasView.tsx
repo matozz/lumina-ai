@@ -3,6 +3,7 @@ import { CanvasRenderer } from "./CanvasRenderer";
 import { onFrameUpdate } from "../bridge/events";
 import { engine } from "../bridge/commands";
 import { assessFrame, type FrameCursor } from "../bridge/frameSync";
+import { cn } from "../lib/utils";
 
 export const CanvasView = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -47,8 +48,12 @@ export const CanvasView = () => {
   }, []);
 
   return (
-    <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flex: 1 }}>
-      <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
+    <div className={cn("flex h-full min-h-0 w-full min-w-0 flex-1 overflow-hidden")}>
+      <canvas
+        ref={canvasRef}
+        className={cn("block h-full min-h-0 w-full min-w-0")}
+        aria-label="Lighting canvas"
+      />
     </div>
   );
 };

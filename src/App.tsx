@@ -5,6 +5,7 @@ import { TimelinePanel } from "./panel/TimelinePanel";
 import { ControlPanel } from "./panel/ControlPanel";
 import { onStateChange } from "./bridge/events";
 import { useEngineStore, engineActions, engineSelectors } from "./stores/engine";
+import { cn } from "./lib/utils";
 import "./App.css";
 
 function App() {
@@ -24,10 +25,21 @@ function App() {
   }, []);
 
   return (
-    <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-black font-sans text-zinc-50">
-      <div className="flex flex-1 overflow-hidden">
+    <div
+      className={cn(
+        "relative flex h-screen min-h-0 w-screen min-w-0 flex-col overflow-hidden bg-black font-sans text-zinc-50",
+      )}
+      data-layout-root
+    >
+      <div
+        className={cn("flex min-h-0 min-w-0 flex-1 overflow-hidden")}
+        data-layout-region="workspace"
+      >
         <DslEditor />
-        <div className="relative z-0 flex flex-1 flex-col">
+        <div
+          className={cn("relative z-0 flex min-h-0 min-w-0 flex-1 flex-col")}
+          data-layout-region="canvas"
+        >
           <CanvasView />
         </div>
         <ControlPanel />

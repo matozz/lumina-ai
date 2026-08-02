@@ -71,8 +71,9 @@ export const ControlPanel = () => {
   return (
     <div
       className={cn(
-        "z-10 flex w-64 shrink-0 flex-col border-l border-zinc-800 bg-zinc-950 text-zinc-100 shadow-xl",
+        "z-10 flex min-h-0 w-[clamp(13rem,18vw,16rem)] shrink-0 flex-col border-l border-zinc-800 bg-zinc-950 text-zinc-100 shadow-xl",
       )}
+      data-layout-region="inspector"
     >
       {/* Header */}
       <div

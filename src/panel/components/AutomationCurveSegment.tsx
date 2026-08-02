@@ -1,8 +1,8 @@
 import type { KeyframeDSL, KeyframeInterpolationDSL, ParameterDefinitionDSL } from "@/bridge/types";
-import { BEAT_WIDTH } from "../context/TimelineContext";
 import { keyframeValueY } from "../keyframeGeometry";
 
 interface AutomationCurveSegmentProps {
+  beatWidth: number;
   definition: ParameterDefinitionDSL;
   end: KeyframeDSL;
   ppq: number;
@@ -16,9 +16,10 @@ export const AutomationCurveSegment = ({
   end,
   definition,
   ppq,
+  beatWidth,
 }: AutomationCurveSegmentProps) => {
-  const left = (start.time_tick / ppq) * BEAT_WIDTH;
-  const width = ((end.time_tick - start.time_tick) / ppq) * BEAT_WIDTH;
+  const left = (start.time_tick / ppq) * beatWidth;
+  const width = ((end.time_tick - start.time_tick) / ppq) * beatWidth;
   const startY = keyframeValueY(start.value, definition, ROW_HEIGHT);
   const endY = keyframeValueY(end.value, definition, ROW_HEIGHT);
   return (

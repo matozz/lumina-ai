@@ -3,9 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import { TimelineActionContext, type TimelineActions } from "../context/TimelineContext";
 import type { TimelineTrackData, UITimelineEvent } from "../types";
 import { viewportFromScroll } from "../virtualization";
+import { createTimelineGeometry } from "../timelineGeometry";
 import { DroppableTrack } from "./DroppableTrack";
 
 const actions: TimelineActions = {
+  geometry: createTimelineGeometry(960, 40),
   onDragStart: vi.fn(),
   onResizeStart: vi.fn(),
   onDelete: vi.fn(),
@@ -17,6 +19,8 @@ const actions: TimelineActions = {
   onDeleteKeyframes: vi.fn(),
   onUpdateKeyframe: vi.fn(),
   onGridClick: vi.fn(),
+  onSnapPreview: vi.fn(),
+  onSnapPreviewEnd: vi.fn(),
 };
 
 describe("DroppableTrack virtualization", () => {
@@ -37,6 +41,7 @@ describe("DroppableTrack virtualization", () => {
           selectedPhaser={null}
           viewport={viewport}
           isExpanded={false}
+          beatWidth={40}
         />
       </TimelineActionContext.Provider>,
     );

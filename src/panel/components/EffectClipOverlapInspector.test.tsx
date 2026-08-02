@@ -4,6 +4,7 @@ import type { FullDSL } from "@/bridge/types";
 import { useEngineStore } from "@/stores/engine";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TimelineActionContext, type TimelineActions } from "../context/TimelineContext";
+import { createTimelineGeometry } from "../timelineGeometry";
 import type { UITimelineEvent } from "../types";
 import { EffectClipOverlapInspector } from "./EffectClipOverlapInspector";
 
@@ -61,6 +62,7 @@ const event: UITimelineEvent = {
 
 function actions(): TimelineActions {
   return {
+    geometry: createTimelineGeometry(960, 40),
     onDragStart: vi.fn(),
     onResizeStart: vi.fn(),
     onDelete: vi.fn(),
@@ -72,6 +74,8 @@ function actions(): TimelineActions {
     onDeleteKeyframes: vi.fn(),
     onUpdateKeyframe: vi.fn(),
     onGridClick: vi.fn(),
+    onSnapPreview: vi.fn(),
+    onSnapPreviewEnd: vi.fn(),
   };
 }
 

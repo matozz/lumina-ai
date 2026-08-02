@@ -1,8 +1,9 @@
-import { AudioWaveform, Redo2, Undo2 } from "lucide-react";
+import { AudioWaveform, Redo2, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useEngineStore, engineSelectors } from "@/stores/engine";
 import { formatMusicalPosition, formatSeconds, ticksToSeconds } from "../musicalTimeDisplay";
+import { MAX_BEAT_WIDTH, MIN_BEAT_WIDTH } from "../timelineGeometry";
 
 interface ToolbarProps {
   canUndo: boolean;
@@ -10,10 +11,15 @@ interface ToolbarProps {
   isDirty: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  beatWidth: number;
+  snapBeats: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
 }
 
 export const TimelineToolbar = (props: ToolbarProps) => {
-  const { canUndo, canRedo, isDirty, onUndo, onRedo } = props;
+  const { canUndo, canRedo, isDirty, onUndo, onRedo, beatWidth, snapBeats, onZoomIn, onZoomOut } =
+    props;
   const globalBeat = useEngineStore(engineSelectors.globalBeat);
   const document = useEngineStore(engineSelectors.parsedDsl);
   const ppq = document?.timeline?.ppq ?? 960;
@@ -36,6 +42,29 @@ export const TimelineToolbar = (props: ToolbarProps) => {
         </span>
       </div>
       <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1" aria-label="Timeline zoom and grid snap">
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={onZoomOut}
+            disabled={beatWidth <= MIN_BEAT_WIDTH}
+            aria-label="Zoom timeline out"
+          >
+            <ZoomOut />
+          </Button>
+          <span className="min-w-14 text-center font-mono text-[9px] text-zinc-500">
+            SNAP {formatSnapBeats(snapBeats)}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={onZoomIn}
+            disabled={beatWidth >= MAX_BEAT_WIDTH}
+            aria-label="Zoom timeline in"
+          >
+            <ZoomIn />
+          </Button>
+        </div>
         <div className="flex items-center gap-1" aria-label="Timeline edit history">
           <Button
             variant="ghost"
@@ -77,3 +106,9 @@ export const TimelineToolbar = (props: ToolbarProps) => {
     </div>
   );
 };
+
+function formatSnapBeats(beats: number) {
+  if (beats === 0.25) return "1/4";
+  if (beats === 0.5) return "1/2";
+  return `${beats}`;
+}

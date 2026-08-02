@@ -14,7 +14,12 @@ export const TimelineResourcePanel = (props: ResourcePanelProps) => {
   const phasers = compileResult?.phasers || [];
 
   return (
-    <div className={cn("z-10 flex w-48 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/40")}>
+    <div
+      className={cn(
+        "z-10 flex w-[clamp(9rem,13vw,12rem)] shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/40",
+      )}
+      data-layout-region="library"
+    >
       <div
         className={cn(
           "flex h-7 items-center border-b border-zinc-800/60 bg-zinc-900/60 px-3 shadow-sm",
