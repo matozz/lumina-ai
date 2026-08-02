@@ -623,7 +623,7 @@ Time/Beat
 - [x] `MusicalTime` 使用整数 tick。
 - [x] `TempoMap` 接口先存在，即使 Stage 7 前只有单 BPM。
 - [x] event boundary、snap 和 duration 全部使用 tick。
-- [ ] UI 可以显示 bar.beat.tick 和 seconds，但不作为存储主值。
+- [x] UI 可以显示 bar.beat.tick 和 seconds，但不作为存储主值。
 
 ### Arrangement 模型
 
@@ -676,9 +676,9 @@ Keyframe 至少包含：
 #### 5.5 Automation UI
 
 - [x] 可从参数菜单创建 lane。
-- [ ] 支持添加、移动、删除、框选关键帧。
-- [ ] 支持曲线/hold 类型和数值 inspector。
-- [ ] 颜色参数提供颜色编辑，角度/百分比显示正确单位。
+- [x] 支持添加、移动、删除、框选关键帧。
+- [x] 支持曲线/hold 类型和数值 inspector。
+- [x] 颜色参数提供颜色编辑，角度/百分比显示正确单位。
 - [x] lane 长度进入 timeline dimension 计算。
 
 ### 验证
@@ -1081,14 +1081,14 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 ## Handoff
 
 - Current Stage: Stage 5 · Timeline、Keyframe 与 Undo/Redo（in_progress）；Stage 4 已在 `d338c08` 满足全部退出条件。
-- Slice completed: typed parameter menu 按 EffectInstance 的 definition ID/revision 解析参数 metadata、override/default 与 continuous/discrete policy，隐藏已有 target；可为 effect instance 或 global master dimmer 在当前整数 tick 创建两关键帧 AutomationLane；新增单关键帧 value/interpolation/time 的 fail-closed command。
-- Commits: Stage 4 through `d338c08`；MusicalTime `13645ec`；V4 contract `11955ab`；pure evaluator `aa37595`；DocumentCommand/history `c82c842`；timeline DOM/performance `34473b9`；typed lane creation（本切片提交）。
-- Files changed: typed automation parameter resolver/tests、参数 Popover 菜单、track header lane entry、lane creation transaction、keyframe update command/tests、ADR/Ledger/Handoff。
-- Validation: `pnpm check:all`；73 Rust unit + 12 Rust integration/contracts + 38 frontend tests；精确 definition revision、instance override、重复 target 隐藏、global target、当前 tick 两关键帧 transaction、菜单选择/关闭、keyframe typed update 与错误类型原子拒绝均有回归测试。
-- ADRs added/updated: ADR-0003 补充 AutomationLane 创建边界：UI 只消费 V4 typed parameter metadata，lane target 全局唯一，初值来自 instance override 或 definition default，编辑仍统一进入 DocumentCommand transaction。
+- Slice completed: automation subtrack 已从旧 from/to block 切换为任意多关键帧 curve row；支持双击/按钮添加、单选/Shift 多选/框选、DOM-only pointer drag、键盘移动/全选/删除、单次 transaction，以及 hold/linear/ease/bezier inspector。typed inspector 提供颜色输入、方向选择、角度/百分比等单位与合法范围；toolbar 显示派生的 bar.beat.tick 和 TempoMap seconds。
+- Commits: Stage 4 through `d338c08`；MusicalTime `13645ec`；V4 contract `11955ab`；pure evaluator `aa37595`；DocumentCommand/history `c82c842`；timeline DOM/performance `34473b9`；typed lane creation `82b29b6`；multi-keyframe UI（本切片提交）。
+- Files changed: automation lane row/curve/keyframe controls、typed inspector、keyframe geometry/time display helpers、timeline toolbar、document action adapter、旧二关键帧 AnimationEditor 删除、组件/交互测试、ADR/Ledger/Handoff。
+- Validation: `pnpm check:all`；73 Rust unit + 12 Rust integration/contracts + 48 frontend tests；DOM preview 前无 command、pointerup 单 move、多选/框选/键盘/delete/add、参数 revision、percent 0–1 显示转换、color/degree controls、bar.beat.tick 与分段 TempoMap seconds 均有回归测试。
+- ADRs added/updated: ADR-0003 的多关键帧 UI 只提交整数 tick command；显示时间从 tick/TempoMap 派生，pointermove 不产生文档真相；typed inspector 的显示单位转换不改变存储值。
 - Risks opened/closed: 无新风险；R-006 维持 open 至 Stage 7 SongAnalysis，但 Stage 5 arrangement/history 已可复现。
-- Remaining exit criteria: bar.beat.tick/seconds UI、overlap 裁剪/替换的 UI 预览路径、关键帧添加/移动/删除/框选、interpolation/typed value inspector、颜色/角度/百分比单位；最后完成真实窗口键盘与 1,000 clip 交互验收。
-- Recommended next slice: 把 automation subtrack 从旧 from/to block 切换为多关键帧 canvas/DOM row，完成添加、DOM-preview 移动、删除、框选、键盘和 typed inspector。
+- Remaining exit criteria: overlap 裁剪/替换的 UI 预览与 Undo 路径；随后完成真实窗口键盘、typed inspector 与 1,000 clip 交互验收，并执行 Stage 5/全局 DoD 收口审计。
+- Recommended next slice: 为 explicit trim/replace command 增加非破坏预览确认，展示受影响 clip 与 overlap policy，确认后作为一个可 Undo transaction 提交。
 
 ## 19. ADR 规范
 
@@ -1177,6 +1177,8 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 5        | DocumentCommand/history  | completed | 本切片提交  | `check:all`；85 Rust/25 frontend；atomic transactions；Undo/Redo         | drag 单 entry；save/dirty；AI Apply 边界                    | timeline DOM/performance + Automation UI    |
 | 2026-08-02 | 5        | Timeline DOM/performance | completed | 本切片提交  | `check:all`；85 Rust/33 frontend；1,000 clip DOM=24；零帧级 React commit | DOM preview；viewport culling；playhead isolation；无新风险 | Automation UI + typed inspector             |
 | 2026-08-02 | 5        | Typed lane creation      | completed | 本切片提交  | `check:all`；85 Rust/38 frontend；typed target/default/revision/menu     | target 唯一；override 优先；无新风险                        | multi-keyframe row + inspector              |
+| 2026-08-02 | 5        | Multi-keyframe UI        | failed    | none        | 首次 `check:all` 仅发现 inspector Prettier 漂移                          | 纯格式化；无行为或架构变化                                  | 格式化后复跑完整门禁                        |
+| 2026-08-02 | 5        | Multi-keyframe UI        | completed | 本切片提交  | `check:all`；85 Rust/48 frontend；DOM drag/box/keyboard/typed inspector  | 派生时间显示；单位只在 UI 转换；无新风险                    | overlap preview + final UI gate             |
 
 ## 21. Open Risks
 

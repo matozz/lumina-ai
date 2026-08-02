@@ -54,6 +54,25 @@ export function automationParameterOptions(
     .sort((left, right) => left.definition.name.localeCompare(right.definition.name));
 }
 
+export function resolveAutomationParameter(
+  document: FullDSL | null,
+  target: AutomationTargetV3DSL,
+): AutomationParameterOption | undefined {
+  if (!document) return undefined;
+  if (target.scope === "global") {
+    return target.parameter_id === "master_dimmer"
+      ? {
+          definition: MASTER_DIMMER,
+          initialValue: structuredClone(MASTER_DIMMER.default_value),
+          target,
+        }
+      : undefined;
+  }
+  return effectParameterOptions(document, `phaser:${target.instance_id}`).find(
+    (option) => option.target.parameter_id === target.parameter_id,
+  );
+}
+
 function effectParameterOptions(
   document: FullDSL,
   parentTrackId: string,

@@ -17,5 +17,7 @@ describe("timeline viewport culling", () => {
     expect(visible.length).toBeLessThanOrEqual(24);
     expect(visible[0].beat).toBeGreaterThanOrEqual(viewport.startBeat - 1);
     expect(visible[visible.length - 1].beat).toBeLessThanOrEqual(viewport.endBeat);
+    expect(viewport.visibleStartBeat).toBe(500);
+    expect(viewport.visibleEndBeat).toBe(530);
   });
 });

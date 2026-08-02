@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FullDSL } from "@/bridge/types";
-import { automationParameterOptions } from "./automationParameters";
+import { automationParameterOptions, resolveAutomationParameter } from "./automationParameters";
 
 function documentFixture(): FullDSL {
   return {
@@ -117,5 +117,18 @@ describe("automationParameterOptions", () => {
       ],
     });
     expect(automationParameterOptions(document, "global")).toHaveLength(0);
+  });
+
+  it("resolves metadata for an existing lane without filtering its target", () => {
+    const document = documentFixture();
+    const lane = document.timeline!.tracks[0].automation_lanes![0];
+
+    expect(resolveAutomationParameter(document, lane.target)).toMatchObject({
+      definition: {
+        id: "direction",
+        value_type: "direction",
+        automation: "discrete",
+      },
+    });
   });
 });

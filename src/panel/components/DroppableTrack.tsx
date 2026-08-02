@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import type { TimelineTrackData } from "../types";
 import { useTimelineActions, BEAT_WIDTH } from "../context/TimelineContext";
 import { visibleTimelineEvents, type TimelineViewport } from "../virtualization";
+import { AutomationLaneBlock } from "./AutomationLaneBlock";
 
 interface TrackProps {
   track: TimelineTrackData;
@@ -50,7 +51,7 @@ export const DroppableTrack = memo((props: TrackProps) => {
             )}
           >
             {visibleTimelineEvents(st.events, viewport).map((e) => (
-              <DraggableBlock key={e.id} event={e} beatWidth={BEAT_WIDTH} isSubTrack={true} />
+              <AutomationLaneBlock key={e.id} event={e} viewport={viewport} />
             ))}
           </div>
         ))}

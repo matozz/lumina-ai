@@ -27,7 +27,12 @@ export const TimelinePanel = () => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackHeadersScrollRef = useRef<HTMLDivElement>(null);
-  const [viewport, setViewport] = useState<TimelineViewport>({ startBeat: 0, endBeat: 40 });
+  const [viewport, setViewport] = useState<TimelineViewport>({
+    startBeat: 0,
+    endBeat: 40,
+    visibleStartBeat: 0,
+    visibleEndBeat: 32,
+  });
 
   const {
     document,
@@ -39,7 +44,10 @@ export const TimelinePanel = () => {
     addAutomationLane,
     deleteEvent,
     nudgeEvent,
-    updateAnimationBlock,
+    addKeyframe,
+    moveKeyframes,
+    deleteKeyframes,
+    updateKeyframe,
   } = useTimelineEvents();
 
   const tracks = useTimelineTracks(timelineEvents);
@@ -47,7 +55,12 @@ export const TimelinePanel = () => {
   const updateViewport = useCallback((container: HTMLDivElement) => {
     const next = viewportFromScroll(container.scrollLeft, container.clientWidth, BEAT_WIDTH);
     setViewport((current) =>
-      current.startBeat === next.startBeat && current.endBeat === next.endBeat ? current : next,
+      current.startBeat === next.startBeat &&
+      current.endBeat === next.endBeat &&
+      current.visibleStartBeat === next.visibleStartBeat &&
+      current.visibleEndBeat === next.visibleEndBeat
+        ? current
+        : next,
     );
   }, []);
 
@@ -130,17 +143,23 @@ export const TimelinePanel = () => {
       ) => startResizing(originalIndex, e.clientX, startDuration, element),
       onDelete: deleteEvent,
       onNudge: nudgeEvent,
-      onUpdateAnimation: updateAnimationBlock,
+      onAddKeyframe: addKeyframe,
+      onMoveKeyframes: moveKeyframes,
+      onDeleteKeyframes: deleteKeyframes,
+      onUpdateKeyframe: updateKeyframe,
       onGridClick: handleGridClick,
     }),
     [
       deleteEvent,
+      deleteKeyframes,
       handleGridClick,
+      addKeyframe,
+      moveKeyframes,
       nudgeEvent,
       startMoving,
       startResizing,
       tracks,
-      updateAnimationBlock,
+      updateKeyframe,
     ],
   );
 

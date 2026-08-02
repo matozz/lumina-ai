@@ -1,0 +1,189 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { FullDSL } from "@/bridge/types";
+import { useEngineStore } from "@/stores/engine";
+import { TimelineActionContext, type TimelineActions } from "../context/TimelineContext";
+import type { UITimelineEvent } from "../types";
+import { AutomationLaneBlock } from "./AutomationLaneBlock";
+
+function documentFixture(): FullDSL {
+  return {
+    schema_version: 4,
+    meta: { name: "Automation row" },
+    patch: [],
+    layout: { type: "generator", generator: { shape: "custom", fixtures: [] } },
+    groups: [],
+    effect_definitions: [
+      {
+        id: "pulse",
+        name: "Pulse",
+        revision: 1,
+        source: "project_local",
+        catalog: {
+          energy: 0.5,
+          density: 0.5,
+          colorfulness: 0.5,
+          motion: "pulse",
+          strobe_risk: "none",
+        },
+        parameters: [
+          {
+            id: "speed",
+            name: "Speed",
+            value_type: "scalar",
+            default_value: { type: "scalar", value: 1 },
+            range: [0, 2],
+            unit: "multiplier",
+            ui_hint: "slider",
+            automation: "continuous",
+          },
+        ],
+        graph: { nodes: [] },
+      },
+    ],
+    effect_instances: [
+      {
+        id: "front",
+        definition_id: "pulse",
+        definition_revision: 1,
+        target_group_id: "front",
+        seed: "0000000000000001",
+      },
+    ],
+    timeline: {
+      ppq: 960,
+      tempo_map: { points: [{ time_tick: 0, bpm: 120 }] },
+      tracks: [
+        {
+          id: "automation",
+          name: "Automation",
+          overlap_policy: "layer",
+          clips: [],
+          automation_lanes: [
+            {
+              id: "speed-lane",
+              target: {
+                scope: "effect_instance",
+                instance_id: "front",
+                parameter_id: "speed",
+              },
+              keyframes: [
+                {
+                  id: "speed-0",
+                  time_tick: 0,
+                  value: { type: "scalar", value: 0 },
+                  interpolation: "linear",
+                },
+                {
+                  id: "speed-1",
+                  time_tick: 960,
+                  value: { type: "scalar", value: 0.5 },
+                  interpolation: "ease_in_out",
+                },
+                {
+                  id: "speed-2",
+                  time_tick: 1_920,
+                  value: { type: "scalar", value: 1 },
+                  interpolation: "hold",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+function actions(): TimelineActions {
+  return {
+    onDragStart: vi.fn(),
+    onResizeStart: vi.fn(),
+    onDelete: vi.fn(),
+    onNudge: vi.fn(),
+    onAddKeyframe: vi.fn(),
+    onMoveKeyframes: vi.fn(),
+    onDeleteKeyframes: vi.fn(),
+    onUpdateKeyframe: vi.fn(),
+    onGridClick: vi.fn(),
+  };
+}
+
+const event: UITimelineEvent = {
+  id: "speed-lane",
+  originalIndex: 0,
+  beat: 0,
+  duration: 2,
+  action: {
+    type: "animate",
+    target: { scope: "effect_instance", instance_id: "front", parameter_id: "speed" },
+    from: 0,
+    to: 1,
+    easing: "linear",
+  },
+  source_track_id: "automation",
+  source_item_id: "speed-lane",
+};
+
+describe("AutomationLaneBlock", () => {
+  beforeEach(() => {
+    useEngineStore.setState(
+      { ...useEngineStore.getInitialState(), parsedDsl: documentFixture() },
+      true,
+    );
+  });
+
+  it("previews drag in the DOM, commits once, box-selects, and supports keyboard edits", () => {
+    const timelineActions = actions();
+    render(
+      <TimelineActionContext.Provider value={timelineActions}>
+        <AutomationLaneBlock event={event} viewport={{ startBeat: 0, endBeat: 8 }} />
+      </TimelineActionContext.Provider>,
+    );
+    const middle = screen.getByRole("button", { name: "Speed keyframe at tick 960" });
+
+    fireEvent.pointerDown(middle, { button: 0, clientX: 40 });
+    fireEvent.pointerMove(window, { clientX: 50 });
+    expect(middle.style.transform).toContain("10px");
+    expect(timelineActions.onMoveKeyframes).not.toHaveBeenCalled();
+    fireEvent.pointerUp(window);
+    expect(timelineActions.onMoveKeyframes).toHaveBeenCalledWith(
+      "automation",
+      "speed-lane",
+      ["speed-1"],
+      240,
+    );
+
+    const row = screen.getByRole("group", { name: /Speed automation lane/ });
+    fireEvent.pointerDown(row, { button: 0, clientX: 0 });
+    fireEvent.pointerMove(window, { clientX: 50 });
+    fireEvent.pointerUp(window);
+    expect(
+      screen.getByRole("button", { name: "Speed keyframe at tick 0" }).getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(middle.getAttribute("aria-pressed")).toBe("true");
+
+    fireEvent.keyDown(row, { key: "ArrowRight" });
+    expect(timelineActions.onMoveKeyframes).toHaveBeenLastCalledWith(
+      "automation",
+      "speed-lane",
+      ["speed-0", "speed-1"],
+      240,
+    );
+    fireEvent.keyDown(row, { key: "Delete" });
+    expect(timelineActions.onDeleteKeyframes).toHaveBeenCalledWith("automation", "speed-lane", [
+      "speed-0",
+      "speed-1",
+    ]);
+
+    useEngineStore.setState({ globalBeat: 4 });
+    fireEvent.click(screen.getByRole("button", { name: "Add Speed keyframe at playhead" }));
+    expect(timelineActions.onAddKeyframe).toHaveBeenCalledWith(
+      "automation",
+      "speed-lane",
+      3_840,
+      { type: "scalar", value: 1 },
+      "linear",
+    );
+  });
+});

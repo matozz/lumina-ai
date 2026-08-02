@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type {
   AutomationLaneDSL,
-  Easing,
   FromTo,
   FullDSL,
+  KeyframeDSL,
+  KeyframeInterpolationDSL,
   ParameterValueDSL,
   TimelineEventDSL,
   TimelineTrackDSL,
@@ -131,27 +132,75 @@ export const useTimelineEvents = () => {
     [timelineEvents],
   );
 
-  const updateAnimationBlock = useCallback(
-    (eventIndex: number, fromValue: FromTo, toValue: FromTo, easing: string) => {
-      if (!parsedDsl) return;
-      const view = timelineEvents[eventIndex];
-      const lane = findLane(parsedDsl, view);
-      if (!lane || lane.keyframes.length === 0 || !view.source_track_id) return;
-      const nextLane = structuredClone(lane);
-      nextLane.keyframes[0].value = toParameterValue(fromValue, nextLane.keyframes[0].value);
-      nextLane.keyframes[0].interpolation = easing as Easing;
-      const last = nextLane.keyframes[nextLane.keyframes.length - 1];
-      if (last) last.value = toParameterValue(toValue, last.value);
+  const addKeyframe = useCallback(
+    (
+      trackId: string,
+      laneId: string,
+      timeTick: number,
+      value: ParameterValueDSL,
+      interpolation: KeyframeInterpolationDSL,
+    ) => {
       engineActions.applyDocumentTransaction(
-        transaction("Update AutomationLane", {
-          type: "replace_automation_lane",
-          track_id: view.source_track_id,
-          lane_id: nextLane.id,
-          lane: nextLane,
+        transaction("Add keyframe", {
+          type: "add_keyframe",
+          track_id: trackId,
+          lane_id: laneId,
+          keyframe: {
+            id: stableId("keyframe"),
+            time_tick: timeTick,
+            value: structuredClone(value),
+            interpolation,
+          },
         }),
       );
     },
-    [parsedDsl, timelineEvents],
+    [],
+  );
+
+  const moveKeyframes = useCallback(
+    (trackId: string, laneId: string, keyframeIds: string[], deltaTick: number) => {
+      engineActions.applyDocumentTransaction(
+        transaction("Move keyframes", {
+          type: "move_keyframes",
+          track_id: trackId,
+          lane_id: laneId,
+          keyframe_ids: keyframeIds,
+          delta_tick: deltaTick,
+        }),
+      );
+    },
+    [],
+  );
+
+  const deleteKeyframes = useCallback((trackId: string, laneId: string, keyframeIds: string[]) => {
+    engineActions.applyDocumentTransaction(
+      transaction("Delete keyframes", {
+        type: "delete_keyframes",
+        track_id: trackId,
+        lane_id: laneId,
+        keyframe_ids: keyframeIds,
+      }),
+    );
+  }, []);
+
+  const updateKeyframe = useCallback(
+    (
+      trackId: string,
+      laneId: string,
+      keyframeId: string,
+      changes: Partial<Pick<KeyframeDSL, "time_tick" | "value" | "interpolation">>,
+    ) => {
+      engineActions.applyDocumentTransaction(
+        transaction("Update keyframe", {
+          type: "update_keyframe",
+          track_id: trackId,
+          lane_id: laneId,
+          keyframe_id: keyframeId,
+          ...changes,
+        }),
+      );
+    },
+    [],
   );
 
   const nudgeEvent = useCallback(
@@ -290,7 +339,10 @@ export const useTimelineEvents = () => {
     addAutomationLane,
     deleteEvent,
     nudgeEvent,
-    updateAnimationBlock,
+    addKeyframe,
+    moveKeyframes,
+    deleteKeyframes,
+    updateKeyframe,
   };
 };
 
@@ -432,12 +484,4 @@ function transaction(label: string, ...commands: DocumentCommand[]): DocumentTra
 
 function fromParameterValue(value: ParameterValueDSL): FromTo {
   return value.value;
-}
-
-function toParameterValue(value: FromTo, previous: ParameterValueDSL): ParameterValueDSL {
-  if (previous.type === "color") return { type: "color", value: String(value) };
-  if (previous.type === "direction") {
-    return { type: "direction", value: value === "reverse" ? "reverse" : "forward" };
-  }
-  return { type: "scalar", value: Number(value) };
 }

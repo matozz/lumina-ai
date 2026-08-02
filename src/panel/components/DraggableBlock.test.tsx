@@ -9,7 +9,10 @@ function renderBlock() {
     onResizeStart: vi.fn(),
     onDelete: vi.fn(),
     onNudge: vi.fn(),
-    onUpdateAnimation: vi.fn(),
+    onAddKeyframe: vi.fn(),
+    onMoveKeyframes: vi.fn(),
+    onDeleteKeyframes: vi.fn(),
+    onUpdateKeyframe: vi.fn(),
     onGridClick: vi.fn(),
   };
   render(
