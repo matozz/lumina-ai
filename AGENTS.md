@@ -31,12 +31,15 @@ Lumina AI is a high-performance timeline and sequencer engine for lighting shows
 
 When tasked with a feature or fix:
 
-1. **Branching**: Do NOT create a PR for every single small change. Instead, check out a new branch for the feature context (e.g., `feat/ui-overhaul`).
+1. **Branching**: Before committing, create or switch to a branch whose name summarizes the user-facing feature or technical capability being delivered.
+   - **Semantic Names**: Use names such as `feat/deterministic-transport` or `fix/timeline-drag-jitter`. Never use workflow bookkeeping such as `goal-1`, `stage-2`, `phase-3`, or similar placeholders.
+   - **Scope Changes**: If the scope changes materially during development, rename the branch before publishing it.
 2. **Continuous Commits**: Make continuous, incremental commits as you converse with the user and complete sub-tasks.
    - **Commit Messages**: Follow the project's commit convention (e.g., `feat(ui): ✨ add new feature`, `fix(tauri): 🐛 fix engine crash`). Refer to `CONTRIBUTING.md` for detailed rules.
    - **Self-Review**: Before every commit, actively review the generated code to ensure no useless comments, debugging logs, or unnecessary logic are included. Keep the code clean and concise.
 3. **Merging**: Only push to origin and create a Pull Request when the user explicitly instructs you to "merge", "open PR", or indicates the entire feature is fully complete.
 4. **PR Description**: When opening the PR, analyze all the commits you made on the branch and provide a comprehensive summary in the PR body.
+5. **Stacked Work**: When a feature depends on another unmerged branch, base its PR on that prerequisite branch and state the dependency in the PR description. After the prerequisite merges, rebase or retarget the dependent PR to `main`.
 
 ### Setup & Run
 
