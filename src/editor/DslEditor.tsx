@@ -104,8 +104,9 @@ export const DslEditor = () => {
   return (
     <div
       className={cn(
-        "z-10 flex h-full w-112.5 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 shadow-xl",
+        "z-10 flex h-full min-h-0 w-[clamp(20rem,30vw,28.125rem)] shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 shadow-xl",
       )}
+      data-layout-region="editor"
     >
       <div
         className={cn(

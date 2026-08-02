@@ -12,41 +12,73 @@ import type {
 import type { DocumentCommand, DocumentTransaction } from "@/document/commands";
 import { clipOverlapPlan } from "@/document/clipOverlapPlan";
 import { useEngineStore, engineActions, engineSelectors } from "@/stores/engine";
-import { BEAT_WIDTH } from "../context/TimelineContext";
 import type { AutomationParameterOption } from "../automationParameters";
+import {
+  createTimelineGeometry,
+  pointerDeltaWithScroll,
+  snappedDurationForPointerDelta,
+  snappedTickForPointerDelta,
+  ticksToPixels,
+  type TimelineGeometry,
+} from "../timelineGeometry";
+
+interface TimelineEventsOptions {
+  beatWidth: number;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+}
 
 interface MoveInteraction {
   type: "move";
-  originalIndex: number;
+  itemType: "clip" | "lane";
+  trackId: string;
+  itemId: string;
   startClientX: number;
   startClientY: number;
-  startBeat: number;
-  currentDeltaX: number;
-  currentDeltaY: number;
+  startScrollLeft: number;
+  currentClientX: number;
+  currentClientY: number;
+  originalStartTick: number;
+  originalDurationTick?: number;
+  originalInstanceId?: string;
+  previewStartTick: number;
   activeTrackName?: string;
+  geometry: TimelineGeometry;
   element: HTMLElement;
+  originalWidth: string;
 }
 
 interface ResizeInteraction {
   type: "resize";
-  originalIndex: number;
+  trackId: string;
+  itemId: string;
   startClientX: number;
-  startDuration: number;
-  currentDeltaX: number;
+  startScrollLeft: number;
+  currentClientX: number;
+  originalStartTick: number;
+  originalDurationTick: number;
+  previewDurationTick: number;
+  geometry: TimelineGeometry;
   element: HTMLElement;
+  originalWidth: string;
 }
 
 type TimelineInteraction = MoveInteraction | ResizeInteraction;
 
-export const useTimelineEvents = () => {
+export const useTimelineEvents = ({ beatWidth, scrollRef }: TimelineEventsOptions) => {
   const parsedDsl = useEngineStore(engineSelectors.parsedDsl);
   const interactionState = useRef<{ isInteracting: boolean }>({ isInteracting: false });
   const interaction = useRef<TimelineInteraction | null>(null);
+  const animationFrame = useRef<number | null>(null);
+  const snapGuideRef = useRef<HTMLDivElement>(null);
   const timelineEvents = useMemo(() => flattenTimeline(parsedDsl), [parsedDsl]);
   const parsedDslRef = useRef(parsedDsl);
   const timelineEventsRef = useRef(timelineEvents);
   parsedDslRef.current = parsedDsl;
   timelineEventsRef.current = timelineEvents;
+  const geometry = useMemo(
+    () => createTimelineGeometry(parsedDsl?.timeline?.ppq ?? 960, beatWidth),
+    [beatWidth, parsedDsl?.timeline?.ppq],
+  );
 
   const addEvent = useCallback(
     (newEvent: TimelineEventDSL) => {
@@ -274,80 +306,165 @@ export const useTimelineEvents = () => {
     [parsedDsl, timelineEvents],
   );
 
+  const showSnapPreview = useCallback(
+    (tick: number) => {
+      const guide = snapGuideRef.current;
+      if (!guide) return;
+      const activeGeometry = interaction.current?.geometry ?? geometry;
+      guide.style.display = "block";
+      guide.style.left = `${ticksToPixels(tick, activeGeometry)}px`;
+      guide.dataset.snapTick = String(tick);
+      const label = guide.querySelector<HTMLElement>("[data-snap-label]");
+      if (label) label.textContent = `tick ${tick}`;
+    },
+    [geometry],
+  );
+
+  const hideSnapPreview = useCallback(() => {
+    const guide = snapGuideRef.current;
+    if (!guide) return;
+    guide.style.display = "none";
+    delete guide.dataset.snapTick;
+  }, []);
+
   const startMoving = useCallback(
     (
       originalIndex: number,
       clientX: number,
       clientY: number,
-      startBeat: number,
       activeTrackName: string | undefined,
       element: HTMLElement,
     ) => {
+      const document = parsedDslRef.current;
+      const view = timelineEventsRef.current[originalIndex];
+      if (!document?.timeline || !view?.source_track_id || !view.source_item_id) return;
+      const clip = findClip(document, view);
+      const lane = findLane(document, view);
+      const originalStartTick = clip?.start_tick ?? lane?.keyframes[0]?.time_tick;
+      if (originalStartTick === undefined) return;
+      const originalDurationTick = clip?.duration_tick;
+      const originalWidth = element.style.width || globalThis.getComputedStyle(element).width;
+      if (originalDurationTick !== undefined) element.style.width = originalWidth;
       interactionState.current.isInteracting = false;
       interaction.current = {
         type: "move",
-        originalIndex,
+        itemType: clip ? "clip" : "lane",
+        trackId: view.source_track_id,
+        itemId: view.source_item_id,
         startClientX: clientX,
         startClientY: clientY,
-        startBeat,
-        currentDeltaX: 0,
-        currentDeltaY: 0,
+        startScrollLeft: scrollRef.current?.scrollLeft ?? 0,
+        currentClientX: clientX,
+        currentClientY: clientY,
+        originalStartTick,
+        originalDurationTick,
+        originalInstanceId: clip?.instance_id,
+        previewStartTick: originalStartTick,
         activeTrackName,
+        geometry,
         element,
+        originalWidth,
       };
     },
-    [],
+    [geometry, scrollRef],
   );
 
   const startResizing = useCallback(
-    (originalIndex: number, clientX: number, startDuration: number, element: HTMLElement) => {
+    (originalIndex: number, clientX: number, element: HTMLElement) => {
+      const document = parsedDslRef.current;
+      const view = timelineEventsRef.current[originalIndex];
+      const clip = document ? findClip(document, view) : undefined;
+      if (!view?.source_track_id || !view.source_item_id || !clip) return;
+      const originalWidth = element.style.width || globalThis.getComputedStyle(element).width;
+      element.style.width = originalWidth;
       interactionState.current.isInteracting = false;
       interaction.current = {
         type: "resize",
-        originalIndex,
+        trackId: view.source_track_id,
+        itemId: view.source_item_id,
         startClientX: clientX,
-        startDuration,
-        currentDeltaX: 0,
+        startScrollLeft: scrollRef.current?.scrollLeft ?? 0,
+        currentClientX: clientX,
+        originalStartTick: clip.start_tick,
+        originalDurationTick: clip.duration_tick,
+        previewDurationTick: clip.duration_tick,
+        geometry,
         element,
+        originalWidth,
       };
     },
-    [],
+    [geometry, scrollRef],
   );
 
   useEffect(() => {
+    const applyPointerPreview = (active: TimelineInteraction) => {
+      const currentScrollLeft = scrollRef.current?.scrollLeft ?? active.startScrollLeft;
+      const deltaX = pointerDeltaWithScroll(
+        active.startClientX,
+        active.currentClientX,
+        active.startScrollLeft,
+        currentScrollLeft,
+      );
+      if (active.type === "resize") {
+        active.previewDurationTick = snappedDurationForPointerDelta(
+          active.originalStartTick,
+          active.originalDurationTick,
+          deltaX,
+          active.geometry,
+        );
+        active.element.style.width = `${ticksToPixels(active.previewDurationTick, active.geometry)}px`;
+        showSnapPreview(active.originalStartTick + active.previewDurationTick);
+        return;
+      }
+
+      active.previewStartTick = snappedTickForPointerDelta(
+        active.originalStartTick,
+        deltaX,
+        active.geometry,
+      );
+      const previewDeltaX = ticksToPixels(
+        active.previewStartTick - active.originalStartTick,
+        active.geometry,
+      );
+      active.element.style.transform = `translate3d(${previewDeltaX}px, ${active.currentClientY - active.startClientY}px, 0)`;
+      if (active.originalDurationTick !== undefined)
+        active.element.style.width = active.originalWidth;
+      const track = globalThis.document
+        .elementsFromPoint?.(active.currentClientX, active.currentClientY)
+        .find((element) => element.hasAttribute("data-track-name"));
+      if (track) active.activeTrackName = track.getAttribute("data-track-name") ?? undefined;
+      showSnapPreview(active.previewStartTick);
+    };
+
+    const flushPointerPreview = () => {
+      animationFrame.current = null;
+      const active = interaction.current;
+      if (active) applyPointerPreview(active);
+    };
+
     const handlePointerMove = (event: PointerEvent) => {
       const active = interaction.current;
       if (!active) return;
       interactionState.current.isInteracting = true;
-      if (active.type === "resize") {
-        active.currentDeltaX = event.clientX - active.startClientX;
-        const duration = snappedDuration(active.startDuration, active.currentDeltaX);
-        active.element.style.width = `${duration * BEAT_WIDTH}px`;
-        return;
+      active.currentClientX = event.clientX;
+      if (active.type === "move") active.currentClientY = event.clientY;
+      if (animationFrame.current === null) {
+        animationFrame.current = globalThis.requestAnimationFrame(flushPointerPreview);
       }
-
-      active.currentDeltaX = event.clientX - active.startClientX;
-      active.currentDeltaY = event.clientY - active.startClientY;
-      const previewBeat = snappedBeat(active.startBeat, active.currentDeltaX);
-      const previewDeltaX = (previewBeat - active.startBeat) * BEAT_WIDTH;
-      active.element.style.transform = `translate3d(${previewDeltaX}px, ${active.currentDeltaY}px, 0)`;
-      const track = document
-        .elementsFromPoint?.(event.clientX, event.clientY)
-        .find((element) => element.hasAttribute("data-track-name"));
-      if (track) active.activeTrackName = track.getAttribute("data-track-name") ?? undefined;
     };
 
     const finishInteraction = (commit: boolean) => {
       const active = interaction.current;
       if (!active) return;
-      const document = parsedDslRef.current;
-      const view = timelineEventsRef.current[active.originalIndex];
-      const command =
-        commit && document?.timeline && view?.source_track_id && view.source_item_id
-          ? commandForInteraction(active, document, view)
-          : undefined;
+      if (animationFrame.current !== null) {
+        globalThis.cancelAnimationFrame(animationFrame.current);
+        animationFrame.current = null;
+        applyPointerPreview(active);
+      }
+      const command = commit ? commandForInteraction(active) : undefined;
       active.element.style.transform = "";
-      active.element.style.width = "";
+      if (!commit || active.type === "move") active.element.style.width = active.originalWidth;
+      hideSnapPreview();
       interaction.current = null;
       if (command) {
         engineActions.applyDocumentTransaction(
@@ -364,20 +481,33 @@ export const useTimelineEvents = () => {
 
     const handlePointerUp = () => finishInteraction(true);
     const handlePointerCancel = () => finishInteraction(false);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && interaction.current) {
+        event.preventDefault();
+        finishInteraction(false);
+      }
+    };
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
     window.addEventListener("pointercancel", handlePointerCancel);
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
+      if (animationFrame.current !== null) globalThis.cancelAnimationFrame(animationFrame.current);
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerCancel);
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [hideSnapPreview, scrollRef, showSnapPreview]);
 
   return {
     document: parsedDsl,
+    geometry,
     timelineEvents,
     interactionState,
+    snapGuideRef,
+    showSnapPreview,
+    hideSnapPreview,
     startMoving,
     startResizing,
     addEvent,
@@ -393,62 +523,44 @@ export const useTimelineEvents = () => {
   };
 };
 
-function commandForInteraction(
-  interaction: TimelineInteraction,
-  document: FullDSL,
-  view: TimelineEventDSL,
-): DocumentCommand | undefined {
-  if (!document.timeline || !view.source_track_id || !view.source_item_id) return undefined;
+function commandForInteraction(interaction: TimelineInteraction): DocumentCommand | undefined {
   if (interaction.type === "resize") {
-    const durationTick = Math.max(
-      1,
-      beatsToTicks(
-        snappedDuration(interaction.startDuration, interaction.currentDeltaX),
-        document.timeline.ppq,
-      ),
-    );
-    return view.action.type === "effect"
-      ? {
-          type: "resize_clip",
-          track_id: view.source_track_id,
-          clip_id: view.source_item_id,
-          duration_tick: durationTick,
-        }
-      : {
-          type: "scale_automation_lane",
-          track_id: view.source_track_id,
-          lane_id: view.source_item_id,
-          start_tick: beatsToTicks(view.beat, document.timeline.ppq),
-          duration_tick: durationTick,
-        };
+    if (interaction.previewDurationTick === interaction.originalDurationTick) return undefined;
+    return {
+      type: "resize_clip",
+      track_id: interaction.trackId,
+      clip_id: interaction.itemId,
+      duration_tick: interaction.previewDurationTick,
+    };
   }
 
-  const newTick = beatsToTicks(
-    snappedBeat(interaction.startBeat, interaction.currentDeltaX),
-    document.timeline.ppq,
-  );
-  const clip = findClip(document, view);
-  if (clip) {
+  if (interaction.itemType === "clip") {
+    const targetInstanceId = interaction.activeTrackName?.startsWith("phaser:")
+      ? interaction.activeTrackName.replace("phaser:", "")
+      : interaction.originalInstanceId;
+    if (
+      interaction.previewStartTick === interaction.originalStartTick &&
+      targetInstanceId === interaction.originalInstanceId
+    ) {
+      return undefined;
+    }
     return {
       type: "move_clip",
-      track_id: view.source_track_id,
-      clip_id: view.source_item_id,
-      start_tick: newTick,
-      instance_id: interaction.activeTrackName?.startsWith("phaser:")
-        ? interaction.activeTrackName.replace("phaser:", "")
-        : undefined,
+      track_id: interaction.trackId,
+      clip_id: interaction.itemId,
+      start_tick: interaction.previewStartTick,
+      instance_id: targetInstanceId,
     };
   }
-  const lane = findLane(document, view);
-  if (lane && lane.keyframes.length > 0) {
-    return {
-      type: "move_automation_lane",
-      track_id: view.source_track_id,
-      lane_id: view.source_item_id,
-      delta_tick: newTick - lane.keyframes[0].time_tick,
-    };
-  }
-  return undefined;
+  const deltaTick = interaction.previewStartTick - interaction.originalStartTick;
+  return deltaTick === 0
+    ? undefined
+    : {
+        type: "move_automation_lane",
+        track_id: interaction.trackId,
+        lane_id: interaction.itemId,
+        delta_tick: deltaTick,
+      };
 }
 
 export function flattenTimeline(document: FullDSL | null): TimelineEventDSL[] {
@@ -503,14 +615,6 @@ function findLane(document: FullDSL, view?: TimelineEventDSL): AutomationLaneDSL
   return document.timeline?.tracks
     .find((track) => track.id === view.source_track_id)
     ?.automation_lanes?.find((lane) => lane.id === view.source_item_id);
-}
-
-function snappedBeat(startBeat: number, deltaX: number) {
-  return Math.max(0, Math.floor((startBeat + deltaX / BEAT_WIDTH) * 2) / 2);
-}
-
-function snappedDuration(startDuration: number, deltaX: number) {
-  return Math.max(0.5, Math.round((startDuration + deltaX / BEAT_WIDTH) * 2) / 2);
 }
 
 function beatsToTicks(beats: number, ppq: number) {

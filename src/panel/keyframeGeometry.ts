@@ -35,11 +35,6 @@ export function keyframeMoveBounds(
   return { minimum, maximum };
 }
 
-export function snapKeyframeDelta(deltaPixels: number, ppq: number, beatWidth: number): number {
-  const step = Math.max(1, Math.round(ppq / 4));
-  return Math.round((deltaPixels / beatWidth / 0.25) * step);
-}
-
 export function clampKeyframeDelta(deltaTick: number, bounds: KeyframeMoveBounds): number {
   return Math.max(bounds.minimum, Math.min(bounds.maximum, deltaTick));
 }

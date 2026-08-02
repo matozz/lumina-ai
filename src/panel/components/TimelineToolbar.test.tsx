@@ -16,6 +16,10 @@ describe("TimelineToolbar musical time", () => {
         isDirty={false}
         onUndo={vi.fn()}
         onRedo={vi.fn()}
+        beatWidth={40}
+        snapBeats={1}
+        onZoomIn={vi.fn()}
+        onZoomOut={vi.fn()}
       />,
     );
 

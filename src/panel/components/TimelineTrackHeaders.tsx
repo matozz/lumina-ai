@@ -32,8 +32,9 @@ export const TimelineTrackHeaders = (props: TrackHeadersProps) => {
   return (
     <div
       className={cn(
-        "z-10 flex w-40 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/40 shadow-[4px_0_12px_rgba(0,0,0,0.1)]",
+        "z-10 flex w-[clamp(8.5rem,11vw,10rem)] shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/40 shadow-[4px_0_12px_rgba(0,0,0,0.1)]",
       )}
+      data-layout-region="track-headers"
     >
       <div className={cn("h-7 shrink-0 border-b border-zinc-800/60 bg-zinc-900/60")} />
       <div ref={scrollRef} className={cn("flex-1 overflow-y-hidden")}>

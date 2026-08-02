@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { TimelineEventDSL } from "../bridge/types";
+import { clampBeatWidth, DEFAULT_BEAT_WIDTH } from "../panel/timelineGeometry";
 
 // UI specific timeline event type that extends the DSL type with an originalIndex for tracking
 export type UITimelineEvent = TimelineEventDSL & { originalIndex: number };
@@ -8,12 +9,14 @@ export interface TimelineState {
   events: UITimelineEvent[];
   selectedPhaser: string | null;
   expandedTracks: Record<string, boolean>;
+  beatWidth: number;
 }
 
 export const useTimelineStore = create<TimelineState>()(() => ({
   events: [],
   selectedPhaser: null,
   expandedTracks: {},
+  beatWidth: DEFAULT_BEAT_WIDTH,
 }));
 
 export const timelineActions = {
@@ -21,6 +24,8 @@ export const timelineActions = {
   setSelectedPhaser: (id: string | null) => useTimelineStore.setState({ selectedPhaser: id }),
   setExpandedTracks: (expandedTracks: Record<string, boolean>) =>
     useTimelineStore.setState({ expandedTracks }),
+  setBeatWidth: (beatWidth: number) =>
+    useTimelineStore.setState({ beatWidth: clampBeatWidth(beatWidth) }),
   toggleTrackExpanded: (trackName: string) => {
     useTimelineStore.setState((state) => ({
       expandedTracks: {
@@ -47,4 +52,5 @@ export const timelineSelectors = {
   events: (state: TimelineState) => state.events,
   selectedPhaser: (state: TimelineState) => state.selectedPhaser,
   expandedTracks: (state: TimelineState) => state.expandedTracks,
+  beatWidth: (state: TimelineState) => state.beatWidth,
 };

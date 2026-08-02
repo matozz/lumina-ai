@@ -55,13 +55,27 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
-    app.run(|app_handle, event| {
-        if matches!(event, tauri::RunEvent::Exit) {
+    app.run(|app_handle, event| match event {
+        tauri::RunEvent::Ready => {
+            let main_window = app_handle
+                .get_webview_window("main")
+                .expect("main window must exist at startup");
+            main_window.show().expect("main window must be visible");
+            main_window
+                .unmaximize()
+                .expect("main window maximized state must reset");
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                main_window.maximize().expect("main window must maximize");
+            });
+        }
+        tauri::RunEvent::Exit => {
             let state = app_handle
                 .state::<Arc<state::EngineState>>()
                 .inner()
                 .clone();
             let _ = tauri::async_runtime::block_on(state.scheduler.shutdown(&state));
         }
+        _ => {}
     });
 }

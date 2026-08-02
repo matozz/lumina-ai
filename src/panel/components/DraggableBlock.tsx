@@ -1,6 +1,7 @@
 import { memo, useRef, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { isTextEditingTarget } from "@/lib/dom";
 import type { UITimelineEvent } from "../types";
 import { useTimelineActions } from "@/panel/context/TimelineContext";
 import { EffectClipOverlapInspector } from "./EffectClipOverlapInspector";
@@ -45,6 +46,7 @@ export const DraggableBlock = memo(({ event, beatWidth }: BlockProps) => {
               actions.onDelete(event.originalIndex);
             }}
             onKeyDown={(keyboardEvent) => {
+              if (isTextEditingTarget(keyboardEvent.target)) return;
               if (keyboardEvent.key === "Delete" || keyboardEvent.key === "Backspace") {
                 keyboardEvent.preventDefault();
                 actions.onDelete(event.originalIndex);
@@ -61,9 +63,9 @@ export const DraggableBlock = memo(({ event, beatWidth }: BlockProps) => {
               pointerEvent.preventDefault();
               pointerEvent.stopPropagation();
               ref.current?.focus();
-              (pointerEvent.target as HTMLElement).setPointerCapture(pointerEvent.pointerId);
+              pointerEvent.currentTarget.setPointerCapture(pointerEvent.pointerId);
               if (ref.current) {
-                actions.onDragStart(pointerEvent, event.originalIndex, event.beat, ref.current);
+                actions.onDragStart(pointerEvent, event.originalIndex, ref.current);
               }
             }}
           >
@@ -80,9 +82,9 @@ export const DraggableBlock = memo(({ event, beatWidth }: BlockProps) => {
               onPointerDown={(pointerEvent) => {
                 pointerEvent.preventDefault();
                 pointerEvent.stopPropagation();
-                (pointerEvent.target as HTMLElement).setPointerCapture(pointerEvent.pointerId);
+                pointerEvent.currentTarget.setPointerCapture(pointerEvent.pointerId);
                 if (ref.current) {
-                  actions.onResizeStart(pointerEvent, event.originalIndex, duration, ref.current);
+                  actions.onResizeStart(pointerEvent, event.originalIndex, ref.current);
                 }
               }}
             />
