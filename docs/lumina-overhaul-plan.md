@@ -1112,7 +1112,7 @@ flowchart LR
 | ADR-0003 | MusicalTime PPQ 与 TempoMap         | 5     | accepted |
 | ADR-0004 | Fixture Attribute 与 mix policy     | 3     | accepted |
 | ADR-0005 | EffectGraph 节点和 typed ports      | 4     | accepted |
-| ADR-0006 | Draft 与 Live Snapshot 发布模型     | 6     | pending  |
+| ADR-0006 | Draft 与 Live Snapshot 发布模型     | 6     | accepted |
 | ADR-0007 | Audio analysis 与缓存策略           | 7     | pending  |
 | ADR-0008 | AI ArrangementPlan 与 provider 边界 | 8     | pending  |
 | ADR-0009 | OutputSink fail-safe 与 Blackout    | 9     | pending  |
@@ -1191,6 +1191,9 @@ flowchart LR
 | 2026-08-02 | 5 后置   | Native drag matrix        | completed | 本切片提交  | clip move/cross/resize；keyframe snap/cancel/play；Undo/Redo；screens    | preview=commit tick；move duration/width 保持               | 完整统一门禁                                |
 | 2026-08-02 | 5 后置   | scoped Goal final gate    | completed | 本切片提交  | Node 22.20.0；`check:all`；61 frontend；85 Rust；全门禁                  | R-016/R-017/R-018 closed；Stage 6 not_started               | 停止；等待显式 publish 指令                 |
 | 2026-08-02 | 6        | 原生 UI 与路径基线        | completed | 本切片提交  | 6 native screenshots；max/common/min；DSL→Timeline→Play/Stop             | `main@3a690c0`；R-005 open；Stage 6 in_progress             | Workspace Shell + revisions                 |
+| 2026-08-02 | 6        | Snapshot separation 首测  | failed    | none        | Rust compile：`expect_err` 需要 `ShowSnapshot: Debug`                    | 测试写法约束；产品类型不增加无用 `Debug`                    | 改为显式匹配 `Result`                       |
+| 2026-08-02 | 6        | Snapshot strict gate      | failed    | none        | 3 behavior tests 通过；Clippy 命中 `needless_borrow`                     | 纯 lint；不改变 publish/activate 语义                       | 修正借用并复跑全 Rust 门禁                  |
+| 2026-08-02 | 6        | Draft/Published/Live core | completed | 本切片提交  | 74 Rust + contracts；strict Clippy；typecheck；concurrent reload stress  | ADR-0006 accepted；R-005 后端边界完成                       | 紧凑 Workspace Shell + revision UI          |
 
 ## 21. Open Risks
 

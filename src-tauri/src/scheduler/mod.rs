@@ -488,7 +488,7 @@ mod tests {
         let (state, clock) = engine_state(OutputRate::default());
         state
             .shows
-            .publish(CompiledShow {
+            .publish_and_activate(CompiledShow {
                 fixtures: vec![fixture(1)],
                 ..CompiledShow::default()
             })
@@ -536,7 +536,7 @@ mod tests {
             let (state, _) = engine_state(output_rate);
             state
                 .shows
-                .publish(CompiledShow {
+                .publish_and_activate(CompiledShow {
                     fixtures: vec![fixture(1)],
                     ..CompiledShow::default()
                 })
@@ -572,7 +572,7 @@ mod tests {
     async fn scheduler_fans_the_same_show_revision_to_preview_and_recording_sinks() {
         let app = tauri::test::mock_app();
         let (state, _) = engine_state(OutputRate::default());
-        let snapshot = state.shows.publish(show_with_fixture(1)).await;
+        let snapshot = state.shows.publish_and_activate(show_with_fixture(1)).await;
         let recording = Arc::new(RecordingSink::new(16));
         state
             .runtime
@@ -615,7 +615,7 @@ mod tests {
     async fn shutdown_joins_active_worker_and_resets_transient_state() {
         let app = tauri::test::mock_app();
         let (state, clock) = engine_state(OutputRate::default());
-        state.shows.publish(show_with_fixture(1)).await;
+        state.shows.publish_and_activate(show_with_fixture(1)).await;
         state.runtime.write().await.live_phasers.push(LivePhaser {
             id: "active".to_string(),
             start_beat: 0.0,
@@ -645,7 +645,7 @@ mod tests {
     async fn concurrent_reload_transport_and_resync_finishes_without_deadlock() {
         let app = tauri::test::mock_app();
         let (state, clock) = engine_state(OutputRate::default());
-        state.shows.publish(show_with_fixture(1)).await;
+        state.shows.publish_and_activate(show_with_fixture(1)).await;
 
         let transport = async {
             for iteration in 0..40 {
@@ -700,7 +700,16 @@ mod tests {
         .await
         .expect("concurrent operations must not deadlock");
 
-        assert_eq!(state.shows.current().await.expect("show").revision, 101);
+        assert_eq!(
+            state
+                .shows
+                .latest_published()
+                .await
+                .expect("latest published show")
+                .revision,
+            101
+        );
+        assert_eq!(state.shows.current().await.expect("live show").revision, 1);
         assert!(!state.scheduler.is_running().await);
         assert_eq!(
             state

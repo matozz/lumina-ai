@@ -1,8 +1,22 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CompileResult, Diagnostic, LayoutCoord, FullDSL, LoadShowResult } from "./types";
+import type {
+  CompileResult,
+  Diagnostic,
+  LayoutCoord,
+  FullDSL,
+  LoadShowResult,
+  ShowSnapshotState,
+} from "./types";
 
 export const engine = {
   loadDSL: (json: string) => invoke<CompileResult>("load_dsl", { dslJson: json }),
+
+  publishDSL: (json: string) => invoke<CompileResult>("publish_dsl", { dslJson: json }),
+
+  activateShowRevision: (revision: number) =>
+    invoke<ShowSnapshotState>("activate_show_revision", { revision }),
+
+  getShowSnapshotState: () => invoke<ShowSnapshotState>("get_show_snapshot_state"),
 
   validateDSL: (json: string) => invoke<Diagnostic[]>("validate_dsl", { dslJson: json }),
 

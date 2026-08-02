@@ -38,6 +38,12 @@ pub struct LoadShowResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ShowSnapshotState {
+    pub published_revision: Option<u64>,
+    pub live_revision: Option<u64>,
+}
+
+#[derive(serde::Serialize)]
 pub struct EffectCatalogInfo {
     pub id: String,
     pub name: String,
@@ -56,7 +62,7 @@ pub async fn query_effect_catalog(
 ) -> Result<Vec<EffectCatalogInfo>, String> {
     let snapshot = state
         .shows
-        .current()
+        .latest_published()
         .await
         .ok_or_else(|| "No compiled show is loaded.".to_string())?;
     Ok(snapshot
@@ -80,7 +86,49 @@ pub async fn load_dsl(
     dsl_json: String,
     state: State<'_, Arc<EngineState>>,
 ) -> Result<CompileResult, Diagnostic> {
-    let loaded = load_document(&dsl_json)?;
+    let (mut result, compiled) = compile_dsl(&dsl_json)?;
+    if let Some(compiled) = compiled {
+        let snapshot = state.shows.publish_and_activate(compiled).await;
+        result.show_revision = Some(snapshot.revision);
+        state.runtime.write().await.live_phasers.clear();
+    }
+    Ok(result)
+}
+
+#[tauri::command]
+pub async fn publish_dsl(
+    dsl_json: String,
+    state: State<'_, Arc<EngineState>>,
+) -> Result<CompileResult, Diagnostic> {
+    let (mut result, compiled) = compile_dsl(&dsl_json)?;
+    if let Some(compiled) = compiled {
+        let snapshot = state.shows.publish(compiled).await;
+        result.show_revision = Some(snapshot.revision);
+    }
+    Ok(result)
+}
+
+#[tauri::command]
+pub async fn activate_show_revision(
+    revision: u64,
+    state: State<'_, Arc<EngineState>>,
+) -> Result<ShowSnapshotState, String> {
+    state.shows.activate(revision).await?;
+    state.runtime.write().await.live_phasers.clear();
+    Ok(show_snapshot_state(state.inner()).await)
+}
+
+#[tauri::command]
+pub async fn get_show_snapshot_state(
+    state: State<'_, Arc<EngineState>>,
+) -> Result<ShowSnapshotState, String> {
+    Ok(show_snapshot_state(state.inner()).await)
+}
+
+fn compile_dsl(
+    dsl_json: &str,
+) -> Result<(CompileResult, Option<crate::compiler::CompiledShow>), Diagnostic> {
+    let loaded = load_document(dsl_json)?;
     let dsl = loaded.document;
     let mut group_names: Vec<String> = Vec::new();
     for g in &dsl.groups {
@@ -119,7 +167,7 @@ pub async fn load_dsl(
         migration_report: loaded.migration_report,
     };
 
-    match compiled {
+    let compiled = match compiled {
         Ok(c) => {
             result.success = true;
             result.fixture_count = c.fixtures.len();
@@ -127,19 +175,23 @@ pub async fn load_dsl(
             result.group_names = group_names;
             result.phasers = phasers;
 
-            let snapshot = state.shows.publish(c).await;
-            result.show_revision = Some(snapshot.revision);
-
-            // Reset active phasers when loading a new DSL (both live and timeline mode)
-            let mut r_state = state.runtime.write().await;
-            r_state.live_phasers.clear();
+            Some(c)
         }
         Err(e) => {
             result.errors = e;
+            None
         }
-    }
+    };
 
-    Ok(result)
+    Ok((result, compiled))
+}
+
+async fn show_snapshot_state(state: &EngineState) -> ShowSnapshotState {
+    let (published_revision, live_revision) = state.shows.revisions().await;
+    ShowSnapshotState {
+        published_revision,
+        live_revision,
+    }
 }
 
 #[tauri::command]

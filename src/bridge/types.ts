@@ -120,6 +120,11 @@ export interface LoadShowResult {
   migration_report: MigrationReport;
 }
 
+export interface ShowSnapshotState {
+  published_revision: number | null;
+  live_revision: number | null;
+}
+
 export interface Diagnostic {
   code: string;
   severity: "error" | "warning";
