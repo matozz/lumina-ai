@@ -5,6 +5,7 @@ pub mod color;
 pub mod effect;
 pub mod frame;
 pub mod mixer;
+pub mod musical_time;
 pub mod output;
 pub mod profile;
 pub mod render;
