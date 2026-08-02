@@ -75,6 +75,10 @@ export type EffectNodeDSL =
     }
   | {
       id: string;
+      type: "random";
+    }
+  | {
+      id: string;
       phase: EffectPortRefDSL;
       steps: Array<PhaserStepDSL>;
       type: "step_sequence";
@@ -141,6 +145,7 @@ export type EffectNodeDSL =
       attribute_id?: string | null;
       id: string;
       input: EffectPortRefDSL;
+      mask?: EffectPortRefDSL | null;
       type: "attribute_writer";
     };
 

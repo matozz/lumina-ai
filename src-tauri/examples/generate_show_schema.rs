@@ -70,7 +70,7 @@ fn main() {
             "parameter_types": ["scalar", "color", "direction"],
             "common_parameters": ["speed", "phase", "width", "transition", "intensity", "color", "direction"],
             "effect_nodes": [
-                "time", "constant", "step_sequence", "oscillator", "envelope",
+                "time", "constant", "random", "step_sequence", "oscillator", "envelope",
                 "spatial_phase", "math", "map", "clamp", "color_gradient",
                 "fixture_mask", "attribute_writer"
             ],

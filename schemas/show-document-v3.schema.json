@@ -313,6 +313,20 @@
             "id": {
               "type": "string"
             },
+            "type": {
+              "type": "string",
+              "const": "random"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "id"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
             "phase": {
               "$ref": "#/$defs/EffectPortRefDSL"
             },
@@ -577,6 +591,16 @@
             },
             "input": {
               "$ref": "#/$defs/EffectPortRefDSL"
+            },
+            "mask": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/EffectPortRefDSL"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "type": {
               "type": "string",

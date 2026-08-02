@@ -5,9 +5,11 @@ use crate::document::{DocumentValidator, ValidatedShow};
 use crate::engine::attribute::{resolve_attribute, AttributeHandle};
 use crate::engine::color::parse_hex_color;
 use crate::engine::effect::{
-    AutomationPolicy, Direction, EffectDefinition, EffectDefinitionHandle, EffectInstance,
-    ParameterDefinition, ParameterHandle, ParameterUiHint, ParameterUnit, ParameterValue,
-    ParameterValueType, SPEED_PARAMETER_ID,
+    AutomationPolicy, CompiledColorStop, CompiledEffectGraph, CompiledEffectNode,
+    CompiledEffectStep, CompiledProfileSequence, Direction, EffectCatalog, EffectDefinition,
+    EffectDefinitionHandle, EffectInstance, EffectNodeHandle, EffectSource, MathOperation,
+    MotionTag, OscillatorWaveform, ParameterDefinition, ParameterHandle, ParameterUiHint,
+    ParameterUnit, ParameterValue, ParameterValueType, SpatialBasis, StrobeRisk,
 };
 use crate::engine::profile::{
     profile_by_handle, profile_handle_by_id, AttributeValue, FixtureProfileHandle,
@@ -17,7 +19,6 @@ use diagnostic::{
     Diagnostic, DiagnosticSeverity, DOC_ATTRIBUTE_NOT_SUPPORTED, DOC_ATTRIBUTE_OUT_OF_RANGE,
     DOC_EFFECT_GRAPH_INVALID, DOC_EFFECT_INSTANCE_NOT_FOUND, DOC_FORMULA_INVALID,
     DOC_INVALID_COLOR, DOC_PARAMETER_INVALID, DOC_PROFILE_NOT_FOUND, DSL_DUPLICATE_FIXTURE_ID,
-    DSL_TARGET_GROUP_NOT_FOUND,
 };
 use fasteval::{Compiler as FastevalCompiler, Evaler};
 use parser::*;
@@ -30,7 +31,6 @@ pub struct CompiledShow {
     pub groups: HashMap<String, CompiledGroup>,
     pub effect_definitions: Vec<EffectDefinition>,
     pub effect_instances: HashMap<String, EffectInstance>,
-    pub phasers: HashMap<String, CompiledPhaser>,
     pub timeline: Option<CompiledTimeline>,
 }
 
@@ -117,46 +117,6 @@ impl CompiledGroup {
 }
 
 #[derive(Clone, Debug)]
-pub struct CompiledPhaser {
-    pub id: String,
-    pub name: String,
-    pub target: GroupHandle,
-    pub multiplier: Option<f64>,
-    pub profile_steps: HashMap<FixtureProfileHandle, CompiledProfilePhaser>,
-    pub phase: PhaseConfig,
-}
-
-#[derive(Clone, Debug)]
-pub struct CompiledProfilePhaser {
-    pub steps: Vec<CompiledStep>,
-    pub intensity: Option<AttributeHandle>,
-    pub color: Option<AttributeHandle>,
-    pub pan: Option<AttributeHandle>,
-    pub tilt: Option<AttributeHandle>,
-}
-
-#[derive(Clone, Debug)]
-pub struct CompiledStep {
-    pub values: Vec<Option<AttributeValue>>,
-    pub width: f64,
-    pub transition: f64,
-    pub accel: i32,
-    pub decel: i32,
-}
-
-#[derive(Clone, Debug)]
-pub enum PhaseConfig {
-    Spread {
-        from: f64,
-        to: f64,
-    },
-    Grouped {
-        group_size: usize,
-        spread: (f64, f64),
-    },
-}
-
-#[derive(Clone, Debug)]
 pub struct CompiledTimeline {
     pub events: Vec<CompiledTimelineEvent>,
 }
@@ -205,10 +165,14 @@ impl Compiler {
         let fixtures = Self::compile_patch(&dsl.patch, &mut errors);
         let coords = Self::compile_layout(&dsl.layout, &fixtures, &mut errors);
         let groups = Self::compile_groups(&dsl.groups, &fixtures, &coords, &mut errors);
-        let legacy_phasers = reconstruct_legacy_phasers(&dsl, &mut errors);
-        let phasers = Self::compile_phasers(&legacy_phasers, &groups, &fixtures, &mut errors);
-        let (effect_definitions, effect_instances) =
-            compile_effect_models(&dsl.effect_definitions, &dsl.effect_instances, &mut errors);
+        let (effect_definitions, effect_instances) = compile_effect_models(
+            &dsl.effect_definitions,
+            &dsl.effect_instances,
+            &groups,
+            &fixtures,
+            &coords,
+            &mut errors,
+        );
 
         let timeline = dsl.timeline.map(|timeline| {
             Self::compile_timeline(
@@ -233,7 +197,6 @@ impl Compiler {
             groups,
             effect_definitions,
             effect_instances,
-            phasers,
             timeline,
         })
     }
@@ -757,66 +720,6 @@ impl Compiler {
         groups
     }
 
-    fn compile_phasers(
-        phasers: &[PhaserDSL],
-        groups: &HashMap<String, CompiledGroup>,
-        fixtures: &[Fixture],
-        errors: &mut Vec<Diagnostic>,
-    ) -> HashMap<String, CompiledPhaser> {
-        let mut map = HashMap::new();
-        let fixture_profiles: HashMap<_, _> = fixtures
-            .iter()
-            .map(|fixture| (fixture.id, fixture.profile))
-            .collect();
-        for p in phasers {
-            let group = groups.get(&p.target);
-            if group.is_none() {
-                errors.push(Diagnostic::error(
-                    DSL_TARGET_GROUP_NOT_FOUND,
-                    format!("phasers[name={}]", p.name),
-                    format!("Target group not found: {}", p.target),
-                    "Define the target group or update this phaser's target.",
-                ));
-            }
-
-            let phase = match &p.phase {
-                PhaseConfigDSL::Spread { spread } => PhaseConfig::Spread {
-                    from: spread.from,
-                    to: spread.to,
-                },
-                PhaseConfigDSL::Grouped { grouped } => PhaseConfig::Grouped {
-                    group_size: grouped.group_size as usize,
-                    spread: grouped.spread,
-                },
-            };
-
-            let mut profile_steps = HashMap::new();
-            if let Some(group) = group {
-                for fixture_id in &group.sorted_fixture_ids {
-                    let Some(profile) = fixture_profiles.get(fixture_id).copied() else {
-                        continue;
-                    };
-                    profile_steps
-                        .entry(profile)
-                        .or_insert_with(|| compile_profile_phaser(p, profile, errors));
-                }
-            }
-
-            map.insert(
-                p.id.clone(),
-                CompiledPhaser {
-                    id: p.id.clone(),
-                    name: p.name.clone(),
-                    target: p.target.clone().into(),
-                    multiplier: p.multiplier,
-                    profile_steps,
-                    phase,
-                },
-            );
-        }
-        map
-    }
-
     fn compile_timeline(
         timeline: TimelineV3DSL,
         definitions: &[EffectDefinition],
@@ -858,18 +761,19 @@ impl Compiler {
     }
 }
 
-fn compile_profile_phaser(
-    phaser: &PhaserDSL,
+fn compile_profile_sequence(
+    definition_id: &str,
+    steps_dsl: &[PhaserStepDSL],
     profile_handle: FixtureProfileHandle,
     errors: &mut Vec<Diagnostic>,
-) -> CompiledProfilePhaser {
+) -> CompiledProfileSequence {
     let profile = profile_by_handle(profile_handle);
     let intensity = resolve_attribute(profile_handle, INTENSITY_ATTRIBUTE);
     let color = resolve_attribute(profile_handle, COLOR_RGB_ATTRIBUTE);
     let pan = resolve_attribute(profile_handle, PAN_ATTRIBUTE);
     let tilt = resolve_attribute(profile_handle, TILT_ATTRIBUTE);
-    let writes_pan = phaser.steps.iter().any(|step| step.values.pan.is_some());
-    let writes_tilt = phaser.steps.iter().any(|step| step.values.tilt.is_some());
+    let writes_pan = steps_dsl.iter().any(|step| step.values.pan.is_some());
+    let writes_tilt = steps_dsl.iter().any(|step| step.values.tilt.is_some());
 
     for (attribute_id, required, handle) in [
         (INTENSITY_ATTRIBUTE, true, intensity),
@@ -880,7 +784,7 @@ fn compile_profile_phaser(
         if required && handle.is_none() {
             errors.push(Diagnostic::error(
                 DOC_ATTRIBUTE_NOT_SUPPORTED,
-                format!("phasers[id={}].steps.values", phaser.id),
+                format!("effect_definitions[id={definition_id}].graph.steps.values"),
                 format!(
                     "Fixture profile {:?} does not support attribute {attribute_id:?}.",
                     profile.id
@@ -890,8 +794,7 @@ fn compile_profile_phaser(
         }
     }
 
-    let steps = phaser
-        .steps
+    let steps = steps_dsl
         .iter()
         .enumerate()
         .map(|(step_index, step)| {
@@ -907,7 +810,7 @@ fn compile_profile_phaser(
                     Err(error) => {
                         errors.push(Diagnostic::error(
                             DOC_INVALID_COLOR,
-                            format!("phasers[id={}].steps[{step_index}].values.color", phaser.id),
+                            format!("effect_definitions[id={definition_id}].graph.steps[{step_index}].values.color"),
                             error.to_string(),
                             "Use a color in #RRGGBB format.",
                         ));
@@ -922,7 +825,7 @@ fn compile_profile_phaser(
                 pan,
                 writes_pan,
                 step.values.pan,
-                format!("phasers[id={}].steps[{step_index}].values.pan", phaser.id),
+                format!("effect_definitions[id={definition_id}].graph.steps[{step_index}].values.pan"),
                 errors,
             );
             set_angle_value(
@@ -931,11 +834,11 @@ fn compile_profile_phaser(
                 tilt,
                 writes_tilt,
                 step.values.tilt,
-                format!("phasers[id={}].steps[{step_index}].values.tilt", phaser.id),
+                format!("effect_definitions[id={definition_id}].graph.steps[{step_index}].values.tilt"),
                 errors,
             );
 
-            CompiledStep {
+            CompiledEffectStep {
                 values,
                 width: step.width.unwrap_or(100.0),
                 transition: step.transition.unwrap_or(100.0),
@@ -945,7 +848,7 @@ fn compile_profile_phaser(
         })
         .collect();
 
-    CompiledProfilePhaser {
+    CompiledProfileSequence {
         steps,
         intensity,
         color,
@@ -1026,90 +929,36 @@ fn compile_automation_target(
     }
 }
 
-fn reconstruct_legacy_phasers(
-    document: &ShowDocumentV3,
-    errors: &mut Vec<Diagnostic>,
-) -> Vec<PhaserDSL> {
-    let definitions: HashMap<_, _> = document
-        .effect_definitions
-        .iter()
-        .map(|definition| (definition.id.as_str(), definition))
-        .collect();
-    let mut phasers = Vec::with_capacity(document.effect_instances.len());
-    for (index, instance) in document.effect_instances.iter().enumerate() {
-        let Some(definition) = definitions.get(instance.definition_id.as_str()) else {
-            continue;
-        };
-        let sequence = definition.graph.nodes.iter().find_map(|node| match node {
-            EffectNodeDSL::StepSequence { steps, .. } => Some(steps.clone()),
-            _ => None,
-        });
-        let spatial = definition.graph.nodes.iter().find_map(|node| match node {
-            EffectNodeDSL::SpatialPhase {
-                from,
-                to,
-                group_size,
-                ..
-            } => Some((*from, *to, *group_size)),
-            _ => None,
-        });
-        let (Some(steps), Some((from, to, group_size))) = (sequence, spatial) else {
-            errors.push(Diagnostic::error(
-                DOC_EFFECT_GRAPH_INVALID,
-                format!("effect_instances[{index}].definition_id"),
-                format!(
-                    "Effect definition {:?} is not yet reducible to the Stage 4 compatibility evaluator.",
-                    definition.id
-                ),
-                "Use the canonical Time → SpatialPhase → StepSequence → AttributeWriter graph until the typed evaluator slice lands.",
-            ));
-            continue;
-        };
-        let speed = instance
-            .parameter_overrides
-            .get(SPEED_PARAMETER_ID)
-            .or_else(|| {
-                definition
-                    .parameters
-                    .iter()
-                    .find(|parameter| parameter.id == SPEED_PARAMETER_ID)
-                    .map(|parameter| &parameter.default_value)
-            })
-            .and_then(|value| match value {
-                ParameterValueDSL::Scalar(value) => Some(*value),
-                ParameterValueDSL::Color(_) | ParameterValueDSL::Direction(_) => None,
-            });
-        let phase = group_size.map_or_else(
-            || PhaseConfigDSL::Spread {
-                spread: PhaseSpreadDSL {
-                    from: from * 100.0,
-                    to: to * 100.0,
-                },
-            },
-            |group_size| PhaseConfigDSL::Grouped {
-                grouped: PhaseGroupedDSL {
-                    group_size,
-                    spread: (from * 100.0, to * 100.0),
-                },
-            },
-        );
-        phasers.push(PhaserDSL {
-            id: instance.id.clone(),
-            name: definition.name.clone(),
-            target: instance.target_group_id.clone(),
-            multiplier: speed,
-            steps,
-            phase,
-        });
-    }
-    phasers
-}
-
 fn compile_effect_models(
     definition_documents: &[EffectDefinitionDSL],
     instance_documents: &[EffectInstanceDSL],
+    groups: &HashMap<String, CompiledGroup>,
+    fixtures: &[Fixture],
+    coords: &[LayoutCoord],
     errors: &mut Vec<Diagnostic>,
 ) -> (Vec<EffectDefinition>, HashMap<String, EffectInstance>) {
+    let fixture_profiles: HashMap<_, _> = fixtures
+        .iter()
+        .map(|fixture| (fixture.id, fixture.profile))
+        .collect();
+    let mut profiles_by_definition: HashMap<(&str, u32), Vec<FixtureProfileHandle>> =
+        HashMap::new();
+    for instance in instance_documents {
+        let Some(group) = groups.get(&instance.target_group_id) else {
+            continue;
+        };
+        let profiles = profiles_by_definition
+            .entry((&instance.definition_id, instance.definition_revision))
+            .or_default();
+        for fixture_id in &group.sorted_fixture_ids {
+            if let Some(profile) = fixture_profiles.get(fixture_id) {
+                if !profiles.contains(profile) {
+                    profiles.push(*profile);
+                }
+            }
+        }
+    }
+
     let mut definitions = Vec::with_capacity(definition_documents.len());
     let mut definition_handles = HashMap::with_capacity(definition_documents.len());
     for (index, definition) in definition_documents.iter().enumerate() {
@@ -1120,11 +969,22 @@ fn compile_effect_models(
             .iter()
             .filter_map(|parameter| compile_parameter_definition(parameter, errors))
             .collect();
+        let profiles = profiles_by_definition
+            .get(&(definition.id.as_str(), definition.revision))
+            .map(Vec::as_slice)
+            .unwrap_or(&[]);
         definitions.push(EffectDefinition {
             id: definition.id.clone(),
             name: definition.name.clone(),
             revision: definition.revision,
+            source: match definition.source {
+                EffectSourceDSL::BuiltIn => EffectSource::BuiltIn,
+                EffectSourceDSL::ProjectLocal => EffectSource::ProjectLocal,
+                EffectSourceDSL::UserLibrary => EffectSource::UserLibrary,
+            },
             parameters,
+            graph: compile_effect_graph(definition, profiles, errors),
+            catalog: compile_effect_catalog(&definition.catalog),
         });
     }
 
@@ -1173,10 +1033,396 @@ fn compile_effect_models(
                     ));
                     0
                 }),
+                spatial_offsets: HashMap::new(),
             },
         );
     }
+    for instance in instances.values_mut() {
+        let Some(definition) = definitions.get(instance.definition.index()) else {
+            continue;
+        };
+        instance.spatial_offsets =
+            compile_spatial_offsets(definition, instance, groups, fixtures, coords, errors);
+    }
     (definitions, instances)
+}
+
+fn compile_effect_catalog(catalog: &EffectCatalogDSL) -> EffectCatalog {
+    EffectCatalog {
+        mood: catalog.mood.clone(),
+        energy: catalog.energy,
+        density: catalog.density,
+        motion: match catalog.motion {
+            MotionTagDSL::Static => MotionTag::Static,
+            MotionTagDSL::Pulse => MotionTag::Pulse,
+            MotionTagDSL::Chase => MotionTag::Chase,
+            MotionTagDSL::Sweep => MotionTag::Sweep,
+            MotionTagDSL::Organic => MotionTag::Organic,
+        },
+        colorfulness: catalog.colorfulness,
+        strobe_risk: match catalog.strobe_risk {
+            StrobeRiskDSL::None => StrobeRisk::None,
+            StrobeRiskDSL::Low => StrobeRisk::Low,
+            StrobeRiskDSL::Medium => StrobeRisk::Medium,
+            StrobeRiskDSL::High => StrobeRisk::High,
+        },
+        required_attributes: catalog.required_attributes.clone(),
+    }
+}
+
+fn compile_effect_graph(
+    definition: &EffectDefinitionDSL,
+    profiles: &[FixtureProfileHandle],
+    errors: &mut Vec<Diagnostic>,
+) -> CompiledEffectGraph {
+    let mut remaining: Vec<_> = definition.graph.nodes.iter().collect();
+    let mut handles = HashMap::with_capacity(remaining.len());
+    let mut nodes = Vec::with_capacity(remaining.len());
+    let mut writers = Vec::new();
+
+    while !remaining.is_empty() {
+        let Some(index) = remaining.iter().position(|node| {
+            document_node_inputs(node)
+                .iter()
+                .all(|id| handles.contains_key(id))
+        }) else {
+            errors.push(Diagnostic::error(
+                DOC_EFFECT_GRAPH_INVALID,
+                format!("effect_definitions[id={}].graph", definition.id),
+                "EffectGraph cannot be topologically compiled.",
+                "Remove cycles and references to missing nodes.",
+            ));
+            break;
+        };
+        let node = remaining.remove(index);
+        let Some(handle) = EffectNodeHandle::from_index(nodes.len()) else {
+            errors.push(Diagnostic::error(
+                DOC_EFFECT_GRAPH_INVALID,
+                format!("effect_definitions[id={}].graph", definition.id),
+                "EffectGraph contains more than 65,535 nodes.",
+                "Split the effect into smaller definitions.",
+            ));
+            break;
+        };
+        handles.insert(node.id(), handle);
+        let compiled = compile_effect_node(definition, node, profiles, &handles, errors);
+        if matches!(compiled, CompiledEffectNode::AttributeWriter { .. }) {
+            writers.push(handle);
+        }
+        nodes.push(compiled);
+    }
+    CompiledEffectGraph { nodes, writers }
+}
+
+fn document_node_inputs(node: &EffectNodeDSL) -> Vec<&str> {
+    match node {
+        EffectNodeDSL::Time { .. }
+        | EffectNodeDSL::Constant { .. }
+        | EffectNodeDSL::Random { .. } => Vec::new(),
+        EffectNodeDSL::StepSequence { phase, .. } | EffectNodeDSL::Oscillator { phase, .. } => {
+            vec![&phase.node_id]
+        }
+        EffectNodeDSL::Envelope { input, .. }
+        | EffectNodeDSL::SpatialPhase { input, .. }
+        | EffectNodeDSL::Map { input, .. }
+        | EffectNodeDSL::Clamp { input, .. }
+        | EffectNodeDSL::ColorGradient { input, .. }
+        | EffectNodeDSL::FixtureMask { input, .. } => vec![&input.node_id],
+        EffectNodeDSL::Math { left, right, .. } => vec![&left.node_id, &right.node_id],
+        EffectNodeDSL::AttributeWriter { input, mask, .. } => {
+            let mut inputs = vec![input.node_id.as_str()];
+            if let Some(mask) = mask {
+                inputs.push(&mask.node_id);
+            }
+            inputs
+        }
+    }
+}
+
+fn compile_effect_node(
+    definition: &EffectDefinitionDSL,
+    node: &EffectNodeDSL,
+    profiles: &[FixtureProfileHandle],
+    handles: &HashMap<&str, EffectNodeHandle>,
+    errors: &mut Vec<Diagnostic>,
+) -> CompiledEffectNode {
+    let input = |id: &str| handles[id];
+    match node {
+        EffectNodeDSL::Time { .. } => CompiledEffectNode::Time,
+        EffectNodeDSL::Constant { value, .. } => CompiledEffectNode::Constant(
+            compile_parameter_value(value, errors).unwrap_or(ParameterValue::Scalar(0.0)),
+        ),
+        EffectNodeDSL::Random { .. } => CompiledEffectNode::Random,
+        EffectNodeDSL::StepSequence { phase, steps, .. } => CompiledEffectNode::StepSequence {
+            phase: input(&phase.node_id),
+            profiles: profiles
+                .iter()
+                .copied()
+                .map(|profile| {
+                    (
+                        profile,
+                        compile_profile_sequence(&definition.id, steps, profile, errors),
+                    )
+                })
+                .collect(),
+        },
+        EffectNodeDSL::Oscillator {
+            waveform, phase, ..
+        } => CompiledEffectNode::Oscillator {
+            waveform: match waveform {
+                OscillatorWaveformDSL::Sine => OscillatorWaveform::Sine,
+                OscillatorWaveformDSL::Triangle => OscillatorWaveform::Triangle,
+                OscillatorWaveformDSL::Saw => OscillatorWaveform::Saw,
+                OscillatorWaveformDSL::Pulse => OscillatorWaveform::Pulse,
+            },
+            phase: input(&phase.node_id),
+        },
+        EffectNodeDSL::Envelope {
+            input: source,
+            attack,
+            release,
+            ..
+        } => CompiledEffectNode::Envelope {
+            input: input(&source.node_id),
+            attack: *attack,
+            release: *release,
+        },
+        EffectNodeDSL::SpatialPhase {
+            input: source,
+            basis,
+            from,
+            to,
+            wrap,
+            group_size,
+            custom_order,
+            ..
+        } => CompiledEffectNode::SpatialPhase {
+            input: input(&source.node_id),
+            basis: match basis {
+                SpatialBasisDSL::Index => SpatialBasis::Index,
+                SpatialBasisDSL::X => SpatialBasis::X,
+                SpatialBasisDSL::Y => SpatialBasis::Y,
+                SpatialBasisDSL::Distance => SpatialBasis::Distance,
+                SpatialBasisDSL::Angle => SpatialBasis::Angle,
+                SpatialBasisDSL::Custom => SpatialBasis::Custom,
+            },
+            from: *from,
+            to: *to,
+            wrap: *wrap,
+            group_size: group_size.map(|size| size as usize),
+            custom_order: custom_order.clone(),
+        },
+        EffectNodeDSL::Math {
+            operation,
+            left,
+            right,
+            ..
+        } => CompiledEffectNode::Math {
+            operation: match operation {
+                MathOperationDSL::Add => MathOperation::Add,
+                MathOperationDSL::Subtract => MathOperation::Subtract,
+                MathOperationDSL::Multiply => MathOperation::Multiply,
+                MathOperationDSL::Divide => MathOperation::Divide,
+                MathOperationDSL::Min => MathOperation::Min,
+                MathOperationDSL::Max => MathOperation::Max,
+            },
+            left: input(&left.node_id),
+            right: input(&right.node_id),
+        },
+        EffectNodeDSL::Map {
+            input: source,
+            input_range,
+            output_range,
+            ..
+        } => CompiledEffectNode::Map {
+            input: input(&source.node_id),
+            input_range: *input_range,
+            output_range: *output_range,
+        },
+        EffectNodeDSL::Clamp {
+            input: source,
+            min,
+            max,
+            ..
+        } => CompiledEffectNode::Clamp {
+            input: input(&source.node_id),
+            min: *min,
+            max: *max,
+        },
+        EffectNodeDSL::ColorGradient {
+            input: source,
+            stops,
+            ..
+        } => CompiledEffectNode::ColorGradient {
+            input: input(&source.node_id),
+            stops: stops
+                .iter()
+                .filter_map(|stop| {
+                    parse_hex_color(&stop.color)
+                        .ok()
+                        .map(|color| CompiledColorStop {
+                            position: stop.position,
+                            color: [color.0, color.1, color.2],
+                        })
+                })
+                .collect(),
+        },
+        EffectNodeDSL::FixtureMask {
+            input: source,
+            min,
+            max,
+            ..
+        } => CompiledEffectNode::FixtureMask {
+            input: input(&source.node_id),
+            min: *min,
+            max: *max,
+        },
+        EffectNodeDSL::AttributeWriter {
+            input: source,
+            mask,
+            attribute_id,
+            ..
+        } => {
+            let attributes = profiles
+                .iter()
+                .copied()
+                .map(|profile| {
+                    let attribute = attribute_id
+                        .as_deref()
+                        .and_then(|id| resolve_attribute(profile, id));
+                    if let Some(id) = attribute_id {
+                        if attribute.is_none() {
+                            errors.push(Diagnostic::error(
+                                DOC_ATTRIBUTE_NOT_SUPPORTED,
+                                format!("effect_definitions[id={}].graph", definition.id),
+                                format!(
+                                    "Fixture profile {:?} does not support attribute {id:?}.",
+                                    profile_by_handle(profile).id
+                                ),
+                                "Retarget the effect or choose a supported fixture attribute.",
+                            ));
+                        }
+                    }
+                    (profile, attribute)
+                })
+                .collect();
+            CompiledEffectNode::AttributeWriter {
+                input: input(&source.node_id),
+                mask: mask.as_ref().map(|mask| input(&mask.node_id)),
+                attributes,
+            }
+        }
+    }
+}
+
+fn compile_spatial_offsets(
+    definition: &EffectDefinition,
+    instance: &EffectInstance,
+    groups: &HashMap<String, CompiledGroup>,
+    fixtures: &[Fixture],
+    coords: &[LayoutCoord],
+    errors: &mut Vec<Diagnostic>,
+) -> HashMap<EffectNodeHandle, Vec<f64>> {
+    let Some(group) = groups.get(&instance.target_group_id) else {
+        return HashMap::new();
+    };
+    let coords: HashMap<_, _> = coords.iter().map(|coord| (coord.id, coord)).collect();
+    let center = if group.is_empty() {
+        (0.0, 0.0)
+    } else {
+        let present: Vec<_> = group
+            .sorted_fixture_ids
+            .iter()
+            .filter_map(|id| coords.get(id).copied())
+            .collect();
+        if present.is_empty() {
+            (0.0, 0.0)
+        } else {
+            (
+                present.iter().map(|coord| coord.x).sum::<f64>() / present.len() as f64,
+                present.iter().map(|coord| coord.y).sum::<f64>() / present.len() as f64,
+            )
+        }
+    };
+    let fixture_indices: HashMap<_, _> = fixtures
+        .iter()
+        .enumerate()
+        .map(|(index, fixture)| (fixture.id, index))
+        .collect();
+    let mut result = HashMap::new();
+    for (index, node) in definition.graph.nodes.iter().enumerate() {
+        let CompiledEffectNode::SpatialPhase {
+            basis,
+            from,
+            to,
+            group_size,
+            custom_order,
+            ..
+        } = node
+        else {
+            continue;
+        };
+        let Some(handle) = EffectNodeHandle::from_index(index) else {
+            continue;
+        };
+        let raw: Vec<_> = group
+            .sorted_fixture_ids
+            .iter()
+            .enumerate()
+            .map(|(group_index, fixture_id)| match basis {
+                SpatialBasis::Index => group_index as f64,
+                SpatialBasis::Custom => custom_order
+                    .iter()
+                    .position(|id| id == fixture_id)
+                    .unwrap_or(group_index) as f64,
+                SpatialBasis::X | SpatialBasis::Y | SpatialBasis::Distance | SpatialBasis::Angle => {
+                    let Some(coord) = coords.get(fixture_id) else {
+                        errors.push(Diagnostic::error(
+                            DOC_EFFECT_GRAPH_INVALID,
+                            format!("effect_instances[id={}].target_group_id", instance.id),
+                            format!("Spatial basis {basis:?} requires layout coordinates for fixture {fixture_id}."),
+                            "Add layout coordinates for every targeted fixture.",
+                        ));
+                        return 0.0;
+                    };
+                    match basis {
+                        SpatialBasis::X => coord.x,
+                        SpatialBasis::Y => coord.y,
+                        SpatialBasis::Distance => {
+                            (coord.x - center.0).hypot(coord.y - center.1)
+                        }
+                        SpatialBasis::Angle => {
+                            (coord.y - center.1).atan2(coord.x - center.0)
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+            })
+            .collect();
+        let min = raw.iter().copied().reduce(f64::min).unwrap_or(0.0);
+        let max = raw.iter().copied().reduce(f64::max).unwrap_or(0.0);
+        let group_count = group_size.map(|size| group.len().div_ceil(size));
+        let mut offsets = vec![0.0; fixtures.len()];
+        for (group_index, fixture_id) in group.sorted_fixture_ids.iter().enumerate() {
+            let normalized = if let Some(size) = group_size {
+                let count = group_count.unwrap_or(0);
+                if count <= 1 {
+                    0.0
+                } else {
+                    (group_index / size) as f64 / (count - 1) as f64
+                }
+            } else if (max - min).abs() <= f64::EPSILON {
+                0.0
+            } else {
+                (raw[group_index] - min) / (max - min)
+            };
+            if let Some(fixture_index) = fixture_indices.get(fixture_id) {
+                offsets[*fixture_index] = from + (to - from) * normalized;
+            }
+        }
+        result.insert(handle, offsets);
+    }
+    result
 }
 
 fn compile_parameter_definition(
@@ -1267,9 +1513,9 @@ mod tests {
             DOC_ATTRIBUTE_NOT_SUPPORTED, DOC_ATTRIBUTE_OUT_OF_RANGE, DSL_DUPLICATE_FIXTURE_ID,
             DSL_TARGET_GROUP_NOT_FOUND,
         },
-        Compiler, PhaseConfig,
+        Compiler,
     };
-    use crate::engine::effect::{ParameterValue, SPEED_PARAMETER_ID};
+    use crate::engine::effect::{CompiledEffectNode, ParameterValue, SPEED_PARAMETER_ID};
     use crate::engine::profile::AttributeValue;
 
     const VALID_SHOW: &str = r##"
@@ -1326,8 +1572,6 @@ mod tests {
         assert_eq!(group.sorted_fixture_ids, vec![1, 2]);
         assert_eq!(group.blocks, vec![1, 1]);
 
-        let phaser = show.phasers.get("pulse").expect("compiled pulse phaser");
-        assert_eq!(phaser.multiplier, Some(2.0));
         let instance = show
             .effect_instances
             .get("pulse")
@@ -1342,10 +1586,17 @@ mod tests {
             instance.resolve_parameter(definition, speed),
             Some(&ParameterValue::Scalar(2.0))
         );
-        let profile_phaser = phaser
-            .profile_steps
-            .get(&show.fixtures[0].profile)
-            .expect("profile-specific phaser");
+        let profile_phaser = definition
+            .graph
+            .nodes
+            .iter()
+            .find_map(|node| match node {
+                CompiledEffectNode::StepSequence { profiles, .. } => {
+                    profiles.get(&show.fixtures[0].profile)
+                }
+                _ => None,
+            })
+            .expect("profile-specific effect sequence");
         assert_eq!(
             profile_phaser.steps[0].values[profile_phaser.color.expect("color").index()],
             Some(AttributeValue::Color([255, 0, 0]))
@@ -1354,13 +1605,10 @@ mod tests {
             profile_phaser.steps[0].values[profile_phaser.intensity.expect("intensity").index()],
             Some(AttributeValue::Scalar(0.5))
         );
-        assert!(matches!(
-            phaser.phase,
-            PhaseConfig::Spread {
-                from: 0.0,
-                to: 100.0
-            }
-        ));
+        assert!(instance
+            .spatial_offsets
+            .values()
+            .any(|offsets| offsets == &[0.0, 1.0]));
         assert_eq!(show.timeline.expect("compiled timeline").events.len(), 1);
     }
 

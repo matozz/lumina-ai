@@ -169,6 +169,9 @@ pub enum EffectNodeDSL {
         id: String,
         value: ParameterValueDSL,
     },
+    Random {
+        id: String,
+    },
     StepSequence {
         id: String,
         phase: EffectPortRefDSL,
@@ -232,6 +235,8 @@ pub enum EffectNodeDSL {
         id: String,
         input: EffectPortRefDSL,
         #[serde(skip_serializing_if = "Option::is_none")]
+        mask: Option<EffectPortRefDSL>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         attribute_id: Option<String>,
     },
 }
@@ -241,6 +246,7 @@ impl EffectNodeDSL {
         match self {
             Self::Time { id }
             | Self::Constant { id, .. }
+            | Self::Random { id }
             | Self::StepSequence { id, .. }
             | Self::Oscillator { id, .. }
             | Self::Envelope { id, .. }
@@ -257,6 +263,7 @@ impl EffectNodeDSL {
     pub const fn output_port(&self) -> EffectPortDSL {
         match self {
             Self::Time { .. }
+            | Self::Random { .. }
             | Self::Oscillator { .. }
             | Self::Envelope { .. }
             | Self::SpatialPhase { .. }

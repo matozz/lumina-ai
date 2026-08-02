@@ -6,7 +6,6 @@ pub mod effect;
 pub mod frame;
 pub mod mixer;
 pub mod output;
-pub mod phaser;
 pub mod profile;
 pub mod render;
 pub mod timeline;

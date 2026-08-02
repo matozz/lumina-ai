@@ -1,5 +1,6 @@
 use lumina_ai_lib::compiler::{parser::ShowDSL, Compiler};
 use lumina_ai_lib::document::load_document;
+use lumina_ai_lib::engine::effect::SPEED_PARAMETER_ID;
 use lumina_ai_lib::engine::render::{render_at, LivePhaser, RenderSource, RenderTime};
 use std::fs;
 use std::path::PathBuf;
@@ -44,13 +45,23 @@ fn all_templates_render_deterministically_with_the_stage_one_renderer() {
         );
 
         let live: Vec<_> = show
-            .phasers
+            .effect_instances
             .values()
-            .map(|phaser| LivePhaser {
-                id: phaser.id.clone(),
+            .map(|instance| LivePhaser {
+                id: instance.id.clone(),
                 start_beat: 0.0,
                 phase_offset: 0.0,
-                multiplier: phaser.multiplier.unwrap_or(1.0),
+                multiplier: show.effect_definitions[instance.definition.index()]
+                    .parameter_handle(SPEED_PARAMETER_ID)
+                    .and_then(|handle| {
+                        instance
+                            .resolve_parameter(
+                                &show.effect_definitions[instance.definition.index()],
+                                handle,
+                            )
+                            .and_then(|value| value.as_scalar())
+                    })
+                    .unwrap_or(1.0),
             })
             .collect();
         let live_frame = render_at(&show, time, RenderSource::Live(&live));

@@ -16,6 +16,7 @@
     "effect_nodes": [
       "time",
       "constant",
+      "random",
       "step_sequence",
       "oscillator",
       "envelope",

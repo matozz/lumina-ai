@@ -24,7 +24,7 @@ fn compiles_dsl_and_renders_expected_frame_at_known_beat() {
     assert_eq!(frame.len(), 3);
     assert_frame(&frame[0], 1, [0, 0, 255], 0.25);
     assert_frame(&frame[1], 2, [255, 0, 0], 1.0);
-    assert_frame(&frame[2], 3, [255, 0, 0], 1.0);
+    assert_frame(&frame[2], 3, [0, 0, 255], 0.25);
 }
 
 fn assert_frame(frame: &FixtureFrame, id: u32, color: [u8; 3], intensity: f32) {

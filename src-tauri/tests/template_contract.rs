@@ -44,7 +44,7 @@ fn all_editor_templates_parse_and_compile_with_fixture_outputs() {
             path.display()
         );
         assert_eq!(
-            show.phasers.len(),
+            show.effect_instances.len(),
             expected_phaser_count,
             "{} phaser output count",
             path.display()

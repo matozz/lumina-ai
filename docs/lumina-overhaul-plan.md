@@ -567,21 +567,21 @@ Time/Beat
 - [x] Definition 只描述可复用逻辑、参数 schema 和默认值。
 - [x] Instance 保存 definition ID、target group、parameter overrides 和 seed。
 - [x] 每个实例具有独立稳定 ID，Timeline 引用实例而不是 display name。
-- [ ] random 节点必须有 seed，相同 seed 的结果可复现（V3 instance 已使用精确 64-bit seed；待 typed evaluator 消费并验证）。
+- [x] random 节点必须有 seed，相同 seed 的结果可复现（instance seed、node handle、fixture ID 与离散 cycle 派生，无共享 RNG）。
 
 #### 4.2 Parameter Schema
 
 - [x] 参数声明类型、默认值、范围、单位、UI hint 和 automation policy。
 - [x] 首批通用参数：speed、phase、width、transition、intensity、color、direction。
-- [ ] `multiplier` 只保留一个定义和一个运行路径。
+- [x] `multiplier` 只保留一个定义和一个运行路径（仅在 V1/V2 migration 边界出现，runtime 统一为 `speed` handle）。
 - [x] parameter override 与 automation 使用相同 typed reference。
 
 #### 4.3 Spatial Phase
 
-- [ ] 支持按 fixture index、x、y、distance、angle、custom ordering 求相位。
-- [ ] 明确 spread 端点、wrap 和 grouped 语义。
-- [ ] layout 缺失或 group 为空时返回可解释结果。
-- [ ] 大型灯阵使用预计算排序和 phase cache。
+- [x] 支持按 fixture index、x、y、distance、angle、custom ordering 求相位。
+- [x] 明确 spread 端点、wrap 和 grouped 语义（首尾包含、单灯固定起点、grouped 对组索引归一化、wrap 显式）。
+- [x] layout 缺失或 group 为空时返回可解释结果（坐标 basis 缺失为结构化诊断；空组得到空 cache/零写入）。
+- [x] 大型灯阵使用预计算排序和 phase cache。
 
 #### 4.4 Phaser Compatibility
 
@@ -1081,14 +1081,14 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 ## Handoff
 
 - Current Stage: Stage 4 · 可扩展 Effect Engine（in_progress）；Stage 0–3 交接已在干净 `main` 基线上重新审计并通过。
-- Slice completed: 在 `a34528e` 的 compiled identity/typed parameter core 上新增 ShowDocument V3；Definition/Instance、typed parameter schema、structured typed-port EffectGraph、Catalog metadata/source/revision 和精确 hex seed 成为 Rust schema 权威；实现 strict parameter/port/cycle/revision/reference validation、V2 Phaser/timeline/multiplier→V3 Effect/speed migration、V3 JSON Schema/TypeScript/capability artifacts，并把 18 个模板与 golden fixture 升级到 V3。
-- Commits: `a34528e`；V3 contract（本切片提交）。
-- Files changed: document effect types/validation/migration、compiler compatibility lowering、schema generator/artifacts、commands/bridge/frontend validator、18 templates、timeline V3 action field适配、contract tests、ADR/Stage/Ledger/Handoff。
-- Validation: `pnpm check:all` 通过；Rust 64 unit + 8 integration/contract tests 与 frontend 18 tests 全绿；18/18 V3 templates 无 migration 即可 compile/render；V3 schema artifacts freshness、fmt、strict Clippy、TypeScript 和 Vite build 均通过。
-- ADRs added/updated: ADR-0005 补充跨 JS/Rust 精确 seed 表示；V3 contract 遵循已接受的 typed-port 与 migration 决策。
-- Risks opened/closed: 新增 R-015，跟踪 legacy Phaser/EffectGraph 过渡期双重 IR；Stage 4 退出前必须关闭。
-- Remaining exit criteria: Stage 4 的 typed graph evaluator、random seed 求值、spatial phase/cache、Catalog query、18 模板 before/after golden 与 1,000-fixture benchmark 尚未完成；`multiplier` compatibility IR 尚待删除；Stage 5 未开始。
-- Recommended next slice: 编译拓扑排序的 typed EffectGraph IR，并实现最小节点集的纯确定性 evaluator，替换 render path 的 legacy Phaser evaluator。
+- Slice completed: V3 graph 编译为拓扑排序的 typed node/attribute handles；纯函数 evaluator 覆盖 Time、Constant、seeded Random、StepSequence、四类 Oscillator、Envelope、SpatialPhase、Math/Map/Clamp、LAB ColorGradient、FixtureMask 和 AttributeWriter；instance 在 compile 阶段预计算 index/x/y/distance/angle/custom/grouped phase cache。旧 `CompiledPhaser`、`PhaseConfig` 与独立 Phaser evaluator 已从 runtime 删除，V1/V2 `multiplier` 只在 migration 边界映射到 typed `speed`。
+- Commits: `a34528e`；`7e3adb7`；typed evaluator（本切片提交）。
+- Files changed: Effect graph IR/evaluator、compiler topology/profile writers/spatial cache、render path、V3 Random/mask schema、schema artifacts、benchmark examples、golden/contracts、ADR/Stage/Ledger/Handoff；删除 legacy `engine/phaser.rs`。
+- Validation: `pnpm check:all` 通过；Rust 64 unit + 8 integration/contract tests 与 frontend 18 tests 全绿；18/18 V3 templates 直接走 typed graph compile/render；seed replay、最小节点集、Seek/replay 与 inclusive spatial endpoint 均有回归测试。
+- ADRs added/updated: ADR-0005 记录实际 topo IR、seed 派生、inclusive spatial cache 与 compatibility IR 删除结果。
+- Risks opened/closed: R-015 closed；runtime 不再维护 legacy Phaser/EffectGraph 双重 IR。
+- Remaining exit criteria: Stage 4 的 Catalog capability query、18 模板 V2→V3 before/after golden、pan/tilt migration 标记与 1,000-fixture 多层 release benchmark 尚未完成；Stage 5 未开始。
+- Recommended next slice: 完成 Effect Catalog capability/risk query，并建立 18 模板兼容 golden 与 1,000-fixture 多层 performance gate，满足 Stage 4 全部退出条件。
 
 ## 19. ADR 规范
 
@@ -1169,6 +1169,7 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 4        | V3 frontend gate      | failed    | none        | AJV strict mode 拒绝未知 `uint64` format                         | seed 改为精确 16 位 hex，避免 JS 精度损失     | 重生成 V3 artifacts 并复跑前端              |
 | 2026-08-02 | 4        | V3 Rust gate          | failed    | none        | 62/63 unit 通过；旧断言仍期望 Phaser target path                 | 更新为 V3 EffectInstance 诊断路径             | 复跑完整 Rust suite                         |
 | 2026-08-02 | 4        | V3 effect contract    | completed | 本切片提交  | 72 Rust/18 frontend；18/18 V3 templates compile/render           | typed ports/seed/migration；R-015 仍 open     | typed graph evaluator                       |
+| 2026-08-02 | 4        | Typed graph evaluator | completed | 本切片提交  | `check:all`；72 Rust/18 frontend；18/18 V3 typed graph render    | topo IR/spatial cache；R-015 closed           | Catalog query + compatibility/perf gates    |
 
 ## 21. Open Risks
 
@@ -1188,7 +1189,7 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失 | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command                                 | closed |
 | R-013 | managed sandbox 内精确 toolchain 恢复下载超时      | low      | 0           | 同版本 stable 完整验证；干净 CI 执行 pin                                      | closed |
 | R-014 | compile/bridge 异常只写 console，用户无法定位      | high     | 0           | 稳定 Diagnostic envelope、前端 normalizer 与错误 Alert                        | closed |
-| R-015 | legacy Phaser 与 EffectGraph 过渡期存在双重 IR     | high     | 4           | 先统一 identity/typed speed，再以 V3 graph evaluator 和 golden 彻底替换       | open   |
+| R-015 | legacy Phaser 与 EffectGraph 过渡期存在双重 IR     | high     | 4           | typed graph evaluator 已替代 CompiledPhaser；旧 evaluator/runtime field 删除  | closed |
 
 ## 22. Deferred Backlog
 

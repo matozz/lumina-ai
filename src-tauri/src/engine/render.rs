@@ -1,16 +1,18 @@
 use super::animation::{ease, AnimatableValue, ParameterContext};
 use super::attribute::{AttributeHandle, FixtureFrame};
 use super::mixer::{mix_fixture, AttributeWrite};
-use super::phaser::{calculate_progress_delay, evaluate_phaser_at};
 use crate::compiler::{
     CompiledAutomationTarget, CompiledShow, CompiledTimelineAction, CompiledTimelineEvent,
     EffectInstanceHandle,
 };
 use crate::engine::effect::{
-    common_parameter_handle, COLOR_PARAMETER_ID, INTENSITY_PARAMETER_ID, PAN_PARAMETER_ID,
+    common_parameter_handle, evaluate_effect_graph, Direction, ParameterValue, COLOR_PARAMETER_ID,
+    DIRECTION_PARAMETER_ID, INTENSITY_PARAMETER_ID, PAN_PARAMETER_ID, PHASE_PARAMETER_ID,
     SPEED_PARAMETER_ID, TILT_PARAMETER_ID,
 };
-use crate::engine::profile::AttributeValue;
+use crate::engine::profile::{
+    AttributeValue, COLOR_RGB_ATTRIBUTE, INTENSITY_ATTRIBUTE, PAN_ATTRIBUTE, TILT_ATTRIBUTE,
+};
 use rayon::prelude::*;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -76,78 +78,106 @@ pub(crate) fn render_resolved(
 ) -> Vec<FixtureFrame> {
     show.fixtures
         .par_iter()
-        .map(|fixture| {
+        .enumerate()
+        .map(|(fixture_index, fixture)| {
             let output = FixtureFrame::with_profile_defaults(fixture.id, fixture.profile);
             let mut writes = Vec::new();
 
             for (source_order, active) in active_phasers.iter().enumerate() {
-                let Some(phaser) = show.phasers.get(active.instance.as_str()) else {
+                let Some(instance) = show.effect_instances.get(active.instance.as_str()) else {
                     continue;
                 };
-                let Some(group) = show.groups.get(phaser.target.as_str()) else {
+                let Some(definition) = show.effect_definitions.get(instance.definition.index())
+                else {
                     continue;
                 };
-                let Some(fixture_index) = group.index_of(fixture.id) else {
+                let Some(group) = show.groups.get(&instance.target_group_id) else {
                     continue;
                 };
-                let Some(profile_phaser) = phaser.profile_steps.get(&fixture.profile) else {
+                if group.index_of(fixture.id).is_none() {
                     continue;
-                };
-
-                let progress_delay = calculate_progress_delay(
-                    fixture_index,
-                    group.len(),
-                    &phaser.phase,
-                    group.block_index_of(fixture.id),
+                }
+                let phase_offset = resolve_effect_scalar(
+                    definition,
+                    instance,
+                    &active.instance,
+                    parameters,
+                    PHASE_PARAMETER_ID,
+                    0.0,
                 );
-                let total_width: f64 = profile_phaser.steps.iter().map(|step| step.width).sum();
-                if total_width <= 0.0 {
-                    continue;
+                let direction = definition
+                    .parameter_handle(DIRECTION_PARAMETER_ID)
+                    .and_then(|handle| instance.resolve_parameter(definition, handle))
+                    .and_then(|value| match value {
+                        ParameterValue::Direction(direction) => Some(*direction),
+                        _ => None,
+                    })
+                    .unwrap_or(Direction::Forward);
+                let phase = match direction {
+                    Direction::Forward => active.phase + phase_offset,
+                    Direction::Reverse => phase_offset - active.phase,
+                };
+                let mut values = vec![
+                    None;
+                    crate::engine::profile::profile_by_handle(fixture.profile)
+                        .attributes
+                        .len()
+                ];
+                for (handle, value) in evaluate_effect_graph(
+                    definition,
+                    instance,
+                    fixture.id,
+                    fixture_index,
+                    fixture.profile,
+                    phase,
+                ) {
+                    values[handle.index()] = Some(value);
                 }
-
-                let raw_cycle = active.phase - progress_delay;
-                if raw_cycle < 0.0 {
-                    continue;
-                }
-
-                let normalized = (raw_cycle % 1.0) * total_width;
-                let mut values = evaluate_phaser_at(normalized, &profile_phaser.steps, total_width);
 
                 if let (Some(handle), Some((red, green, blue))) = (
-                    profile_phaser.color,
-                    parameters.get_effect_color(
+                    super::attribute::resolve_attribute(fixture.profile, COLOR_RGB_ATTRIBUTE),
+                    resolve_effect_color_override(
+                        definition,
+                        instance,
                         &active.instance,
-                        common_parameter_handle(COLOR_PARAMETER_ID)
-                            .expect("common color parameter"),
+                        parameters,
                     ),
                 ) {
                     values[handle.index()] = Some(AttributeValue::Color([red, green, blue]));
                 }
                 apply_scalar_override(
                     &mut values,
-                    profile_phaser.intensity,
-                    parameters.get_effect_float(
+                    super::attribute::resolve_attribute(fixture.profile, INTENSITY_ATTRIBUTE),
+                    resolve_effect_scalar_override(
+                        definition,
+                        instance,
                         &active.instance,
-                        common_parameter_handle(INTENSITY_PARAMETER_ID)
-                            .expect("common intensity parameter"),
+                        parameters,
+                        INTENSITY_PARAMETER_ID,
                     ),
                     AttributeValue::Scalar,
                 );
                 apply_scalar_override(
                     &mut values,
-                    profile_phaser.pan,
-                    parameters.get_effect_float(
+                    super::attribute::resolve_attribute(fixture.profile, PAN_ATTRIBUTE),
+                    resolve_effect_scalar_override(
+                        definition,
+                        instance,
                         &active.instance,
-                        common_parameter_handle(PAN_PARAMETER_ID).expect("common pan parameter"),
+                        parameters,
+                        PAN_PARAMETER_ID,
                     ),
                     AttributeValue::Angle,
                 );
                 apply_scalar_override(
                     &mut values,
-                    profile_phaser.tilt,
-                    parameters.get_effect_float(
+                    super::attribute::resolve_attribute(fixture.profile, TILT_ATTRIBUTE),
+                    resolve_effect_scalar_override(
+                        definition,
+                        instance,
                         &active.instance,
-                        common_parameter_handle(TILT_PARAMETER_ID).expect("common tilt parameter"),
+                        parameters,
+                        TILT_PARAMETER_ID,
                     ),
                     AttributeValue::Angle,
                 );
@@ -187,6 +217,56 @@ pub(crate) fn render_resolved(
             output
         })
         .collect()
+}
+
+fn resolve_effect_scalar(
+    definition: &crate::engine::effect::EffectDefinition,
+    instance: &crate::engine::effect::EffectInstance,
+    instance_handle: &EffectInstanceHandle,
+    parameters: &ParameterContext,
+    parameter_id: &str,
+    fallback: f64,
+) -> f64 {
+    let Some(handle) = definition.parameter_handle(parameter_id) else {
+        return fallback;
+    };
+    parameters
+        .get_effect_float(instance_handle, handle)
+        .or_else(|| instance.resolve_parameter(definition, handle)?.as_scalar())
+        .unwrap_or(fallback)
+}
+
+fn resolve_effect_scalar_override(
+    definition: &crate::engine::effect::EffectDefinition,
+    instance: &crate::engine::effect::EffectInstance,
+    instance_handle: &EffectInstanceHandle,
+    parameters: &ParameterContext,
+    parameter_id: &str,
+) -> Option<f64> {
+    let handle = definition.parameter_handle(parameter_id)?;
+    parameters
+        .get_effect_float(instance_handle, handle)
+        .or_else(|| {
+            instance
+                .parameter_overrides
+                .get(&handle)
+                .and_then(ParameterValue::as_scalar)
+        })
+}
+
+fn resolve_effect_color_override(
+    definition: &crate::engine::effect::EffectDefinition,
+    instance: &crate::engine::effect::EffectInstance,
+    instance_handle: &EffectInstanceHandle,
+    parameters: &ParameterContext,
+) -> Option<(u8, u8, u8)> {
+    let handle = definition.parameter_handle(COLOR_PARAMETER_ID)?;
+    parameters
+        .get_effect_color(instance_handle, handle)
+        .or_else(|| match instance.parameter_overrides.get(&handle)? {
+            ParameterValue::Color(color) => Some((color[0], color[1], color[2])),
+            _ => None,
+        })
 }
 
 fn apply_scalar_override(

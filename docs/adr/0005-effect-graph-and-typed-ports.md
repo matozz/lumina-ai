@@ -44,5 +44,6 @@ Stage 4 需要在不改变 Stage 5 时间模型、Stage 6 工作区或 Stage 9 �
 ## Related commits
 
 - Stage 3 baseline: `635f1a9`
-- Compiled Effect identity and typed parameter core: 本切片提交
-- V3 Effect document contract and V2 migration: 本切片提交
+- Compiled Effect identity and typed parameter core: `a34528e`
+- V3 Effect document contract and V2 migration: `7e3adb7`
+- Typed graph evaluator, spatial cache, and compatibility IR removal: 本切片提交

@@ -638,7 +638,8 @@ fn migrate_phasers_to_effects(
                 {
                     "type": "attribute_writer",
                     "id": "output",
-                    "input": { "node_id": "sequence", "port": "attribute_set" }
+                    "input": { "node_id": "sequence", "port": "attribute_set" },
+                    "mask": null
                 }
             ]},
             "catalog": {

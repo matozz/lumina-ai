@@ -606,7 +606,9 @@ fn effect_node_inputs(node: &EffectNodeDSL) -> Vec<(&EffectPortRefDSL, &'static 
         EffectPortDSL::AttributeSet,
     ];
     match node {
-        EffectNodeDSL::Time { .. } | EffectNodeDSL::Constant { .. } => Vec::new(),
+        EffectNodeDSL::Time { .. }
+        | EffectNodeDSL::Constant { .. }
+        | EffectNodeDSL::Random { .. } => Vec::new(),
         EffectNodeDSL::StepSequence { phase, .. } | EffectNodeDSL::Oscillator { phase, .. } => {
             vec![(phase, SCALAR)]
         }
@@ -617,7 +619,13 @@ fn effect_node_inputs(node: &EffectNodeDSL) -> Vec<(&EffectPortRefDSL, &'static 
         | EffectNodeDSL::ColorGradient { input, .. }
         | EffectNodeDSL::FixtureMask { input, .. } => vec![(input, SCALAR)],
         EffectNodeDSL::Math { left, right, .. } => vec![(left, SCALAR), (right, SCALAR)],
-        EffectNodeDSL::AttributeWriter { input, .. } => vec![(input, WRITABLE)],
+        EffectNodeDSL::AttributeWriter { input, mask, .. } => {
+            let mut inputs = vec![(input, WRITABLE)];
+            if let Some(mask) = mask {
+                inputs.push((mask, &[EffectPortDSL::Mask]));
+            }
+            inputs
+        }
     }
 }
 
