@@ -1,10 +1,11 @@
 {
+  "schema_version": 2,
   "meta": {
     "name": "Chaos Random"
   },
   "patch": [
     {
-      "type": "spot",
+      "profile_id": "generic-moving-head",
       "id_range": [
         1,
         17
@@ -26,6 +27,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -36,6 +38,7 @@
       "sort_by": "none"
     },
     {
+      "id": "byangle",
       "name": "ByAngle",
       "fixtures": {
         "range": [
@@ -50,7 +53,7 @@
     {
       "id": "sync_flyout",
       "name": "Sync Flyout",
-      "target": "All",
+      "target": "all",
       "multiplier": 0.5,
       "steps": [
         {
@@ -85,7 +88,7 @@
     {
       "id": "chaos_snap",
       "name": "Chaos Snap",
-      "target": "ByAngle",
+      "target": "byangle",
       "multiplier": 2,
       "steps": [
         {

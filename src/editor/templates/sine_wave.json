@@ -1,10 +1,11 @@
 {
+  "schema_version": 2,
   "meta": {
     "name": "Sine Wave Fly"
   },
   "patch": [
     {
-      "type": "spot",
+      "profile_id": "generic-moving-head",
       "id_range": [
         1,
         24
@@ -26,6 +27,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -40,7 +42,7 @@
     {
       "id": "sine_fly",
       "name": "Sine Fly",
-      "target": "All",
+      "target": "all",
       "multiplier": 1,
       "steps": [
         {

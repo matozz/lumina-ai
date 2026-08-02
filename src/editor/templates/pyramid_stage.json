@@ -1,10 +1,11 @@
 {
+  "schema_version": 2,
   "meta": {
     "name": "Pyramid Stage"
   },
   "patch": [
     {
-      "type": "spot",
+      "profile_id": "generic-moving-head",
       "id_range": [
         1,
         64
@@ -341,6 +342,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -351,6 +353,7 @@
       "sort_by": "none"
     },
     {
+      "id": "byydesc",
       "name": "ByYDesc",
       "fixtures": {
         "range": [
@@ -361,6 +364,7 @@
       "sort_by": "-y"
     },
     {
+      "id": "byx",
       "name": "ByX",
       "fixtures": {
         "range": [
@@ -375,7 +379,7 @@
     {
       "id": "pyramid_climb",
       "name": "Pyramid Climb",
-      "target": "ByYDesc",
+      "target": "byydesc",
       "multiplier": 1,
       "steps": [
         {
@@ -406,7 +410,7 @@
     {
       "id": "side_split",
       "name": "Side Split",
-      "target": "ByX",
+      "target": "byx",
       "multiplier": 0.5,
       "steps": [
         {

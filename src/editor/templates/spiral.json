@@ -1,10 +1,11 @@
 {
+  "schema_version": 2,
   "meta": {
     "name": "Golden Spiral"
   },
   "patch": [
     {
-      "type": "spot",
+      "profile_id": "generic-moving-head",
       "id_range": [
         1,
         150
@@ -29,6 +30,7 @@
   },
   "groups": [
     {
+      "id": "path",
       "name": "Path",
       "fixtures": {
         "range": [
@@ -39,6 +41,7 @@
       "sort_by": "none"
     },
     {
+      "id": "byangle",
       "name": "ByAngle",
       "fixtures": {
         "range": [
@@ -53,7 +56,7 @@
     {
       "id": "inward_flow",
       "name": "Inward Flow",
-      "target": "Path",
+      "target": "path",
       "multiplier": 2,
       "steps": [
         {
@@ -92,7 +95,7 @@
     {
       "id": "windmill",
       "name": "Windmill",
-      "target": "ByAngle",
+      "target": "byangle",
       "multiplier": 1,
       "steps": [
         {

@@ -1,10 +1,11 @@
 {
+  "schema_version": 2,
   "meta": {
     "name": "Pulse Engine"
   },
   "patch": [
     {
-      "type": "spot",
+      "profile_id": "generic-moving-head",
       "id_range": [
         1,
         40
@@ -26,6 +27,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -40,7 +42,7 @@
     {
       "id": "engine_shockwave",
       "name": "Engine Shockwave",
-      "target": "All",
+      "target": "all",
       "multiplier": 1,
       "steps": [
         {
@@ -79,7 +81,7 @@
     {
       "id": "core_burn",
       "name": "Core Burn",
-      "target": "All",
+      "target": "all",
       "multiplier": 2,
       "steps": [
         {

@@ -1,6 +1,7 @@
 import type { TimelineEventDSL } from "@/bridge/types";
 import type { TimelineTrackData } from "./types";
 import { BEAT_WIDTH } from "./context/TimelineContext";
+import { automationTargetPath } from "@/document/automationTarget";
 
 export function resolveOverlaps(events: TimelineEventDSL[]): TimelineEventDSL[] {
   const tracks = new Map<string, TimelineEventDSL[]>();
@@ -11,7 +12,7 @@ export function resolveOverlaps(events: TimelineEventDSL[]): TimelineEventDSL[] 
     if (e.action.type === "phaser") {
       groupKey = `phaser:${e.action.phaser}`;
     } else if (e.action.type === "animate") {
-      groupKey = `animate:${e.action.target}`;
+      groupKey = `animate:${automationTargetPath(e.action.target)}`;
     }
 
     if (!tracks.has(groupKey)) tracks.set(groupKey, []);

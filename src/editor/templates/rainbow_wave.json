@@ -1,10 +1,11 @@
 {
+  "schema_version": 2,
   "meta": {
     "name": "Rainbow Wave"
   },
   "patch": [
     {
-      "type": "spot",
+      "profile_id": "generic-moving-head",
       "id_range": [
         1,
         30
@@ -26,6 +27,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -40,7 +42,7 @@
     {
       "id": "rainbow_colors",
       "name": "Rainbow Colors",
-      "target": "All",
+      "target": "all",
       "multiplier": 0.5,
       "steps": [
         {
@@ -97,7 +99,7 @@
     {
       "id": "dimmer_sweep",
       "name": "Dimmer Sweep",
-      "target": "All",
+      "target": "all",
       "multiplier": 1,
       "steps": [
         {

@@ -1,10 +1,11 @@
 {
+  "schema_version": 2,
   "meta": {
     "name": "Matrix Dynamics"
   },
   "patch": [
     {
-      "type": "spot",
+      "profile_id": "generic-moving-head",
       "id_range": [
         1,
         64
@@ -26,6 +27,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -36,6 +38,7 @@
       "sort_by": "none"
     },
     {
+      "id": "byx",
       "name": "ByX",
       "fixtures": {
         "range": [
@@ -46,6 +49,7 @@
       "sort_by": "x"
     },
     {
+      "id": "byy",
       "name": "ByY",
       "fixtures": {
         "range": [
@@ -56,6 +60,7 @@
       "sort_by": "y"
     },
     {
+      "id": "bycenter",
       "name": "ByCenter",
       "fixtures": {
         "range": [
@@ -66,6 +71,7 @@
       "sort_by": "distance_center"
     },
     {
+      "id": "bydiag",
       "name": "ByDiag",
       "fixtures": {
         "range": [
@@ -80,7 +86,7 @@
     {
       "id": "diagonal_sweep",
       "name": "Diagonal Sweep",
-      "target": "ByDiag",
+      "target": "bydiag",
       "multiplier": 1,
       "steps": [
         {
@@ -111,7 +117,7 @@
     {
       "id": "crosshair_scan_x",
       "name": "Crosshair Scan X",
-      "target": "ByX",
+      "target": "byx",
       "multiplier": 2,
       "steps": [
         {
@@ -142,7 +148,7 @@
     {
       "id": "crosshair_scan_y",
       "name": "Crosshair Scan Y",
-      "target": "ByY",
+      "target": "byy",
       "multiplier": 2,
       "steps": [
         {
@@ -173,7 +179,7 @@
     {
       "id": "implosion",
       "name": "Implosion",
-      "target": "ByCenter",
+      "target": "bycenter",
       "multiplier": 1,
       "steps": [
         {

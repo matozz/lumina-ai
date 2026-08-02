@@ -1,10 +1,11 @@
 {
+  "schema_version": 2,
   "meta": {
     "name": "Concentric Circles"
   },
   "patch": [
     {
-      "type": "spot",
+      "profile_id": "generic-moving-head",
       "id_range": [
         1,
         100
@@ -26,6 +27,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -36,6 +38,7 @@
       "sort_by": "none"
     },
     {
+      "id": "byangle",
       "name": "ByAngle",
       "fixtures": {
         "range": [
@@ -46,6 +49,7 @@
       "sort_by": "angle_center"
     },
     {
+      "id": "bydist",
       "name": "ByDist",
       "fixtures": {
         "range": [
@@ -60,7 +64,7 @@
     {
       "id": "radar_scanner",
       "name": "Radar Scanner",
-      "target": "ByAngle",
+      "target": "byangle",
       "multiplier": 1,
       "steps": [
         {
@@ -91,7 +95,7 @@
     {
       "id": "zoom_in",
       "name": "Zoom In",
-      "target": "ByDist",
+      "target": "bydist",
       "multiplier": 1,
       "steps": [
         {

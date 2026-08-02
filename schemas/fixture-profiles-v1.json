@@ -1,0 +1,226 @@
+{
+  "metadata_version": 1,
+  "profiles": [
+    {
+      "attributes": [
+        {
+          "default_value": {
+            "type": "scalar",
+            "value": 0.0
+          },
+          "id": "intensity",
+          "mix_policy": "htp",
+          "output_mapping": {
+            "channel_offsets": [0],
+            "encoding": "scalar8"
+          },
+          "physical_range": {
+            "max": 1.0,
+            "min": 0.0,
+            "unit": "normalized"
+          },
+          "value_type": "scalar"
+        },
+        {
+          "default_value": {
+            "type": "color",
+            "value": [0, 0, 0]
+          },
+          "id": "color.rgb",
+          "mix_policy": "ltp",
+          "output_mapping": {
+            "channel_offsets": [1, 2, 3],
+            "encoding": "rgb8"
+          },
+          "physical_range": null,
+          "value_type": "color"
+        }
+      ],
+      "id": "generic-rgb",
+      "name": "Generic RGB",
+      "preview_kind": "pixel"
+    },
+    {
+      "attributes": [
+        {
+          "default_value": {
+            "type": "scalar",
+            "value": 0.0
+          },
+          "id": "intensity",
+          "mix_policy": "htp",
+          "output_mapping": {
+            "channel_offsets": [0],
+            "encoding": "scalar8"
+          },
+          "physical_range": {
+            "max": 1.0,
+            "min": 0.0,
+            "unit": "normalized"
+          },
+          "value_type": "scalar"
+        },
+        {
+          "default_value": {
+            "type": "color",
+            "value": [0, 0, 0]
+          },
+          "id": "color.rgb",
+          "mix_policy": "ltp",
+          "output_mapping": {
+            "channel_offsets": [1, 2, 3],
+            "encoding": "rgb8"
+          },
+          "physical_range": null,
+          "value_type": "color"
+        },
+        {
+          "default_value": {
+            "type": "scalar",
+            "value": 0.0
+          },
+          "id": "color.white",
+          "mix_policy": "ltp",
+          "output_mapping": {
+            "channel_offsets": [4],
+            "encoding": "scalar8"
+          },
+          "physical_range": {
+            "max": 1.0,
+            "min": 0.0,
+            "unit": "normalized"
+          },
+          "value_type": "scalar"
+        }
+      ],
+      "id": "generic-rgbw",
+      "name": "Generic RGBW",
+      "preview_kind": "pixel"
+    },
+    {
+      "attributes": [
+        {
+          "default_value": {
+            "type": "angle",
+            "value": 0.0
+          },
+          "id": "position.pan",
+          "mix_policy": "ltp",
+          "output_mapping": {
+            "channel_offsets": [0, 1],
+            "encoding": "scalar16"
+          },
+          "physical_range": {
+            "max": 270.0,
+            "min": -270.0,
+            "unit": "degrees"
+          },
+          "value_type": "angle"
+        },
+        {
+          "default_value": {
+            "type": "angle",
+            "value": 0.0
+          },
+          "id": "position.tilt",
+          "mix_policy": "ltp",
+          "output_mapping": {
+            "channel_offsets": [2, 3],
+            "encoding": "scalar16"
+          },
+          "physical_range": {
+            "max": 135.0,
+            "min": -135.0,
+            "unit": "degrees"
+          },
+          "value_type": "angle"
+        },
+        {
+          "default_value": {
+            "type": "scalar",
+            "value": 0.0
+          },
+          "id": "intensity",
+          "mix_policy": "htp",
+          "output_mapping": {
+            "channel_offsets": [4],
+            "encoding": "scalar8"
+          },
+          "physical_range": {
+            "max": 1.0,
+            "min": 0.0,
+            "unit": "normalized"
+          },
+          "value_type": "scalar"
+        },
+        {
+          "default_value": {
+            "type": "color",
+            "value": [0, 0, 0]
+          },
+          "id": "color.rgb",
+          "mix_policy": "ltp",
+          "output_mapping": {
+            "channel_offsets": [5, 6, 7],
+            "encoding": "rgb8"
+          },
+          "physical_range": null,
+          "value_type": "color"
+        },
+        {
+          "default_value": {
+            "type": "angle",
+            "value": 30.0
+          },
+          "id": "beam.zoom",
+          "mix_policy": "ltp",
+          "output_mapping": {
+            "channel_offsets": [8],
+            "encoding": "scalar8"
+          },
+          "physical_range": {
+            "max": 60.0,
+            "min": 5.0,
+            "unit": "degrees"
+          },
+          "value_type": "angle"
+        },
+        {
+          "default_value": {
+            "type": "scalar",
+            "value": 0.0
+          },
+          "id": "beam.strobe",
+          "mix_policy": "ltp",
+          "output_mapping": {
+            "channel_offsets": [9],
+            "encoding": "scalar8"
+          },
+          "physical_range": {
+            "max": 20.0,
+            "min": 0.0,
+            "unit": "hertz"
+          },
+          "value_type": "scalar"
+        },
+        {
+          "default_value": {
+            "type": "enum",
+            "value": "open"
+          },
+          "id": "beam.gobo",
+          "mix_policy": "ltp",
+          "output_mapping": {
+            "channel_offsets": [10],
+            "encoding": "enum8"
+          },
+          "physical_range": null,
+          "value_type": "enum"
+        }
+      ],
+      "id": "generic-moving-head",
+      "name": "Generic Moving Head",
+      "preview_kind": "moving_head"
+    }
+  ]
+}

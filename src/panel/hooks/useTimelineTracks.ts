@@ -3,6 +3,7 @@ import type { TimelineEventDSL } from "@/bridge/types";
 import type { UITimelineEvent, TimelineTrackData } from "../types";
 import { BEAT_WIDTH } from "../context/TimelineContext";
 import type { MovingState, ResizingState } from "./useTimelineEvents";
+import { automationTargetParentTrack } from "@/document/automationTarget";
 
 export const useTimelineTracks = (
   timelineEvents: TimelineEventDSL[],
@@ -20,13 +21,7 @@ export const useTimelineTracks = (
 
       // Handle Animate Actions differently
       if (displayType === "animate" && event.action.type === "animate") {
-        const target = event.action.target; // e.g. "phaser:Circle Ripple.multiplier"
-
-        let parentTrackId = "global";
-        if (target.startsWith("phaser:")) {
-          const parts = target.replace("phaser:", "").split(".");
-          parentTrackId = `phaser:${parts[0]}`;
-        }
+        const parentTrackId = automationTargetParentTrack(event.action.target);
 
         if (moving && moving.originalIndex === index) {
           const deltaBeats = moving.currentDeltaX / BEAT_WIDTH;
@@ -111,8 +106,7 @@ export const useTimelineTracks = (
       const subTracksMap = new Map<string, UITimelineEvent[]>();
       animEvents.forEach((e) => {
         if (e.action.type === "animate") {
-          const parts = e.action.target.split(".");
-          const propName = parts[parts.length - 1]; // "multiplier"
+          const propName = e.action.target.parameter_id;
           if (!subTracksMap.has(propName)) subTracksMap.set(propName, []);
           subTracksMap.get(propName)?.push(e);
         }

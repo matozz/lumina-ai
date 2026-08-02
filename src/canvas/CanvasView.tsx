@@ -2,10 +2,12 @@ import { useEffect, useRef } from "react";
 import { CanvasRenderer } from "./CanvasRenderer";
 import { onFrameUpdate } from "../bridge/events";
 import { engine } from "../bridge/commands";
+import { assessFrame, type FrameCursor } from "../bridge/frameSync";
 
 export const CanvasView = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CanvasRenderer | null>(null);
+  const frameCursorRef = useRef<FrameCursor | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -15,6 +17,13 @@ export const CanvasView = () => {
     renderer.startRenderLoop();
 
     const unlistenPromise = onFrameUpdate((payload) => {
+      const decision = assessFrame(frameCursorRef.current, payload);
+      if (decision.requestFull) {
+        void engine.requestFullFrame().catch(() => undefined);
+      }
+      if (!decision.accept) return;
+
+      frameCursorRef.current = decision.next;
       renderer.applyFrame(payload.outputs, payload.full);
     });
 

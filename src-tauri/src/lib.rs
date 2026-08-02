@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod compiler;
+pub mod document;
 pub mod engine;
 pub mod scheduler;
 pub mod state;
@@ -10,23 +11,22 @@ use tokio::sync::RwLock;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            let app_handle = app.handle().clone();
-
+            let clock: Arc<dyn engine::clock::Clock> =
+                Arc::new(engine::clock::MonotonicClock::default());
+            let transport = engine::transport::Transport::new(120, clock.now())
+                .map_err(|error| std::io::Error::other(error.to_string()))?;
             let engine_state = Arc::new(state::EngineState {
-                app_handle: app_handle.clone(),
                 scheduler: scheduler::Scheduler::new(),
-                compiled_show: Arc::new(RwLock::new(None)),
+                clock,
+                shows: state::ShowStore::default(),
                 runtime: Arc::new(RwLock::new(state::RuntimeState {
-                    global_beat: 0.0,
-                    is_playing: false,
-                    active_phasers: Vec::new(),
+                    transport,
+                    live_phasers: Vec::new(),
                     sequencer_mode: state::SequencerMode::Live,
-                    timeline_executor: None,
-                    prev_frame: Vec::new(),
-                    parameter_context: engine::animation::ParameterContext::new(),
+                    output_hub: engine::output::OutputHub::default(),
                 })),
             });
 
@@ -38,16 +38,29 @@ pub fn run() {
             commands::load_dsl,
             commands::validate_dsl,
             commands::play,
+            commands::pause,
             commands::stop,
-            commands::reset_beat,
+            commands::seek,
             commands::set_tempo,
+            commands::set_output_rate,
             commands::trigger_phaser,
             commands::stop_phaser,
             commands::save_show,
             commands::load_show,
             commands::set_sequencer_mode,
-            commands::get_layout_coords
+            commands::get_layout_coords,
+            commands::request_full_frame
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    app.run(|app_handle, event| {
+        if matches!(event, tauri::RunEvent::Exit) {
+            let state = app_handle
+                .state::<Arc<state::EngineState>>()
+                .inner()
+                .clone();
+            let _ = tauri::async_runtime::block_on(state.scheduler.shutdown(&state));
+        }
+    });
 }

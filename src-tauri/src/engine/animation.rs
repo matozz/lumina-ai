@@ -1,4 +1,6 @@
-use crate::engine::color::lerp_color_lab;
+use crate::compiler::{CompiledAutomationTarget, CompiledEffectParameter, EffectInstanceHandle};
+use crate::document::AnimatableValueDSL;
+use crate::engine::color::{lerp_color_lab, parse_hex_color};
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -8,6 +10,15 @@ pub enum AnimatableValue {
 }
 
 impl AnimatableValue {
+    pub fn from_document(value: &AnimatableValueDSL) -> Option<Self> {
+        let AnimatableValueDSL::Color(color) = value else {
+            return value.as_f64().map(Self::Float);
+        };
+        parse_hex_color(color)
+            .ok()
+            .map(|(red, green, blue)| Self::Color(red, green, blue))
+    }
+
     pub fn lerp(&self, other: &Self, t: f64) -> Self {
         match (self, other) {
             (AnimatableValue::Float(a), AnimatableValue::Float(b)) => {
@@ -49,30 +60,62 @@ pub fn ease(t: f64, easing: &str) -> f64 {
 // The Blackboard Context
 #[derive(Clone, Default, Debug)]
 pub struct ParameterContext {
-    pub global_params: HashMap<String, AnimatableValue>,
+    global_master_dimmer: Option<AnimatableValue>,
+    effect_params: HashMap<EffectInstanceHandle, HashMap<CompiledEffectParameter, AnimatableValue>>,
 }
 
 impl ParameterContext {
     pub fn new() -> Self {
         Self {
-            global_params: HashMap::new(),
+            global_master_dimmer: None,
+            effect_params: HashMap::new(),
         }
     }
 
-    pub fn write_value(&mut self, path: &str, value: AnimatableValue) {
-        self.global_params.insert(path.to_string(), value);
+    pub fn write_value(&mut self, target: CompiledAutomationTarget, value: AnimatableValue) {
+        match target {
+            CompiledAutomationTarget::GlobalMasterDimmer => {
+                self.global_master_dimmer = Some(value);
+            }
+            CompiledAutomationTarget::EffectInstance {
+                instance,
+                parameter,
+            } => {
+                self.effect_params
+                    .entry(instance)
+                    .or_default()
+                    .insert(parameter, value);
+            }
+        }
     }
 
-    pub fn get_float(&self, path: &str) -> Option<f64> {
-        if let Some(AnimatableValue::Float(v)) = self.global_params.get(path) {
+    pub fn global_master_dimmer(&self) -> Option<f64> {
+        if let Some(AnimatableValue::Float(v)) = &self.global_master_dimmer {
             Some(*v)
         } else {
             None
         }
     }
 
-    pub fn get_color(&self, path: &str) -> Option<(u8, u8, u8)> {
-        if let Some(AnimatableValue::Color(r, g, b)) = self.global_params.get(path) {
+    pub fn get_effect_float(
+        &self,
+        instance: &EffectInstanceHandle,
+        parameter: CompiledEffectParameter,
+    ) -> Option<f64> {
+        match self.effect_params.get(instance)?.get(&parameter)? {
+            AnimatableValue::Float(value) => Some(*value),
+            AnimatableValue::Color(_, _, _) => None,
+        }
+    }
+
+    pub fn get_effect_color(
+        &self,
+        instance: &EffectInstanceHandle,
+        parameter: CompiledEffectParameter,
+    ) -> Option<(u8, u8, u8)> {
+        if let AnimatableValue::Color(r, g, b) =
+            self.effect_params.get(instance)?.get(&parameter)?
+        {
             Some((*r, *g, *b))
         } else {
             None
@@ -80,6 +123,7 @@ impl ParameterContext {
     }
 
     pub fn clear(&mut self) {
-        self.global_params.clear();
+        self.global_master_dimmer = None;
+        self.effect_params.clear();
     }
 }

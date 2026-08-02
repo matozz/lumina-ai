@@ -30,8 +30,7 @@ export const DraggableBlock = (props: BlockProps) => {
   let label = event.action.type as string;
   if (event.action.type === "phaser") label = event.action.phaser;
   else if (event.action.type === "animate") {
-    const parts = event.action.target.split(".");
-    label = parts[parts.length - 1]; // e.g. "multiplier"
+    label = event.action.target.parameter_id;
   }
 
   // Extract from/to from keyframes. Default to 0 -> 1

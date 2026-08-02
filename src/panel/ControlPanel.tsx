@@ -1,9 +1,4 @@
-import {
-  useEngineStore,
-  engineActions,
-  engineSelectors,
-  SequencerMode,
-} from "@/stores/engine";
+import { useEngineStore, engineActions, engineSelectors, SequencerMode } from "@/stores/engine";
 import { engine } from "@/bridge/commands";
 import { Play, Pause, Square, Activity, Clock, Settings2, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,7 +13,7 @@ export const ControlPanel = () => {
 
   const handlePlay = async () => {
     if (isPlaying) {
-      await engine.stop();
+      await engine.pause();
     } else {
       await engine.play();
     }
@@ -26,8 +21,6 @@ export const ControlPanel = () => {
 
   const handleStop = async () => {
     await engine.stop();
-    await engine.resetBeat();
-    engineActions.setGlobalBeat(0);
   };
 
   const handleTempoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,8 +33,6 @@ export const ControlPanel = () => {
     try {
       if (mode !== sequencerMode) {
         await engine.stop();
-        await engine.resetBeat();
-        engineActions.setGlobalBeat(0);
         engineActions.setActivePhasers([]); // Explicitly clear UI state
       }
       await engine.setSequencerMode(mode);
@@ -52,13 +43,13 @@ export const ControlPanel = () => {
   };
 
   const handlePhaserToggle = async (id: string, multiplier: number = 1.0) => {
-    if (!isPlaying) {
-      await engine.play();
-      engineActions.setIsPlaying(true);
-    }
-
+    const needsPlay = !isPlaying || sequencerMode !== "live";
     if (sequencerMode !== "live") {
       await handleModeChange("live");
+    }
+
+    if (needsPlay) {
+      await engine.play();
     }
 
     const activePhaser = activePhasers.find((p) => p.id === id);

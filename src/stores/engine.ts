@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import type { CompileError, CompileResult, FullDSL } from "../bridge/types";
+import { validateShowDocument } from "../document/showDocument";
+import type { CompileResult, Diagnostic, FullDSL, TransportState } from "../bridge/types";
 
 export type SequencerMode = "live" | "timeline";
 export type CompileStatus = "idle" | "compiling" | "success" | "error";
@@ -10,12 +11,13 @@ interface ActivePhaserState {
 }
 
 export interface EngineState {
-  isPlaying: boolean;
+  transportState: TransportState;
+  transportRevision: number;
   tempo: number;
   globalBeat: number;
   activePhasers: ActivePhaserState[];
   compileResult: CompileResult | null;
-  compileErrors: CompileError[];
+  compileErrors: Diagnostic[];
   compileStatus: CompileStatus;
   currentDslCode: string;
   parsedDsl: FullDSL | null;
@@ -23,7 +25,8 @@ export interface EngineState {
 }
 
 export const useEngineStore = create<EngineState>()(() => ({
-  isPlaying: false,
+  transportState: "stopped",
+  transportRevision: 0,
   tempo: 120,
   globalBeat: 0,
   activePhasers: [],
@@ -37,26 +40,31 @@ export const useEngineStore = create<EngineState>()(() => ({
 
 // Actions
 export const engineActions = {
-  setIsPlaying: (val: boolean) => useEngineStore.setState({ isPlaying: val }),
+  setTransport: (state: TransportState, revision: number) =>
+    useEngineStore.setState({ transportState: state, transportRevision: revision }),
   setTempo: (val: number) => useEngineStore.setState({ tempo: val }),
   setGlobalBeat: (val: number) => useEngineStore.setState({ globalBeat: val }),
   setActivePhasers: (val: ActivePhaserState[]) => useEngineStore.setState({ activePhasers: val }),
   setCompileResult: (res: CompileResult | null) => useEngineStore.setState({ compileResult: res }),
-  setCompileErrors: (errors: CompileError[]) => useEngineStore.setState({ compileErrors: errors }),
+  setCompileErrors: (errors: Diagnostic[]) => useEngineStore.setState({ compileErrors: errors }),
   setCompileStatus: (status: CompileStatus) => useEngineStore.setState({ compileStatus: status }),
   setCurrentDslCode: (code: string) => {
-    let parsed = null;
+    let parsed: FullDSL | null = null;
     try {
-      parsed = JSON.parse(code);
-    } catch (e) {}
-    useEngineStore.setState({ currentDslCode: code, parsedDsl: parsed as FullDSL });
+      const validation = validateShowDocument(JSON.parse(code));
+      parsed = validation.success ? validation.data : null;
+    } catch {
+      parsed = null;
+    }
+    useEngineStore.setState({ currentDslCode: code, parsedDsl: parsed });
   },
   setSequencerMode: (mode: SequencerMode) => useEngineStore.setState({ sequencerMode: mode }),
 };
 
 // Selectors
 export const engineSelectors = {
-  isPlaying: (state: EngineState) => state.isPlaying,
+  isPlaying: (state: EngineState) => state.transportState === "playing",
+  transportState: (state: EngineState) => state.transportState,
   tempo: (state: EngineState) => state.tempo,
   globalBeat: (state: EngineState) => state.globalBeat,
   activePhasers: (state: EngineState) => state.activePhasers,

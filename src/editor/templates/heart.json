@@ -1,10 +1,11 @@
 {
+  "schema_version": 2,
   "meta": {
     "name": "Heart Show"
   },
   "patch": [
     {
-      "type": "spot",
+      "profile_id": "generic-moving-head",
       "id_range": [
         1,
         80
@@ -29,6 +30,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -39,6 +41,7 @@
       "sort_by": "none"
     },
     {
+      "id": "byx",
       "name": "ByX",
       "fixtures": {
         "range": [
@@ -49,6 +52,7 @@
       "sort_by": "x"
     },
     {
+      "id": "byangle",
       "name": "ByAngle",
       "fixtures": {
         "range": [
@@ -63,7 +67,7 @@
     {
       "id": "heart_beat",
       "name": "Heart Beat",
-      "target": "All",
+      "target": "all",
       "steps": [
         {
           "values": {
@@ -95,7 +99,7 @@
     {
       "id": "chase",
       "name": "Chase",
-      "target": "ByAngle",
+      "target": "byangle",
       "multiplier": 2,
       "steps": [
         {

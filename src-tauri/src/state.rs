@@ -1,17 +1,53 @@
 use crate::compiler::CompiledShow;
-use crate::engine::animation::ParameterContext;
-use crate::engine::timeline::TimelineExecutor;
-use crate::engine::FixtureOutput;
+use crate::engine::clock::Clock;
+use crate::engine::output::OutputHub;
+use crate::engine::render::LivePhaser;
+use crate::engine::transport::Transport;
 use crate::scheduler::Scheduler;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use tauri::AppHandle;
 use tokio::sync::RwLock;
 
 pub struct EngineState {
-    pub app_handle: AppHandle,
     pub scheduler: Scheduler,
-    pub compiled_show: Arc<RwLock<Option<CompiledShow>>>,
+    pub clock: Arc<dyn Clock>,
+    pub shows: ShowStore,
     pub runtime: Arc<RwLock<RuntimeState>>,
+}
+
+#[derive(Clone)]
+pub struct ShowSnapshot {
+    pub revision: u64,
+    pub show: Arc<CompiledShow>,
+}
+
+pub struct ShowStore {
+    current: RwLock<Option<ShowSnapshot>>,
+    next_revision: AtomicU64,
+}
+
+impl Default for ShowStore {
+    fn default() -> Self {
+        Self {
+            current: RwLock::new(None),
+            next_revision: AtomicU64::new(1),
+        }
+    }
+}
+
+impl ShowStore {
+    pub async fn publish(&self, show: CompiledShow) -> ShowSnapshot {
+        let snapshot = ShowSnapshot {
+            revision: self.next_revision.fetch_add(1, Ordering::Relaxed),
+            show: Arc::new(show),
+        };
+        *self.current.write().await = Some(snapshot.clone());
+        snapshot
+    }
+
+    pub async fn current(&self) -> Option<ShowSnapshot> {
+        self.current.read().await.clone()
+    }
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -21,13 +57,10 @@ pub enum SequencerMode {
 }
 
 pub struct RuntimeState {
-    pub global_beat: f64,
-    pub is_playing: bool,
-    pub active_phasers: Vec<ActivePhaser>,
+    pub transport: Transport,
+    pub live_phasers: Vec<LivePhaser>,
     pub sequencer_mode: SequencerMode,
-    pub timeline_executor: Option<TimelineExecutor>,
-    pub prev_frame: Vec<FixtureOutput>,
-    pub parameter_context: ParameterContext,
+    pub output_hub: OutputHub,
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -38,4 +71,46 @@ pub struct ActivePhaser {
     pub multiplier: f64,
     // Add accumulated_beat to calculate phase consistently during speed changes
     pub accumulated_beat: f64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ShowStore;
+    use crate::compiler::{CompiledShow, Fixture};
+    use crate::engine::attribute::resolve_attribute;
+    use crate::engine::profile::{
+        profile_handle_by_id, GENERIC_RGB_PROFILE_ID, INTENSITY_ATTRIBUTE,
+    };
+
+    #[tokio::test]
+    async fn show_store_publishes_monotonic_immutable_revisions() {
+        let store = ShowStore::default();
+        let first = store.publish(show_with_fixture(1)).await;
+        let second = store.publish(show_with_fixture(2)).await;
+
+        assert_eq!(first.revision, 1);
+        assert_eq!(second.revision, 2);
+        assert_eq!(first.show.fixtures[0].id, 1);
+        assert_eq!(second.show.fixtures[0].id, 2);
+
+        let current = store.current().await.expect("current show snapshot");
+        assert_eq!(current.revision, second.revision);
+        assert!(std::sync::Arc::ptr_eq(&current.show, &second.show));
+    }
+
+    fn show_with_fixture(id: u32) -> CompiledShow {
+        CompiledShow {
+            fixtures: vec![fixture(id)],
+            ..CompiledShow::default()
+        }
+    }
+
+    fn fixture(id: u32) -> Fixture {
+        let profile = profile_handle_by_id(GENERIC_RGB_PROFILE_ID).expect("built-in RGB profile");
+        Fixture {
+            id,
+            profile,
+            intensity: resolve_attribute(profile, INTENSITY_ATTRIBUTE),
+        }
+    }
 }
