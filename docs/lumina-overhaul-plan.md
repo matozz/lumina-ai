@@ -475,10 +475,10 @@ FixtureProfile
 
 #### 3.2 Attribute Frame
 
-- [ ] `FixtureOutput` 改为通用 typed attribute frame。
-- [ ] 编译阶段把属性字符串解析为内部 AttributeHandle。
-- [ ] 未被 effect 写入的属性回落到 profile/default/base look。
-- [ ] Preview 只读取它能展示的属性，但不得改变源 Frame。
+- [x] `FixtureOutput` 改为通用 typed attribute frame。
+- [x] 编译阶段把属性字符串解析为内部 AttributeHandle。
+- [x] 未被 effect 写入的属性回落到 profile/default/base look。
+- [x] Preview 只读取它能展示的属性，但不得改变源 Frame。
 
 #### 3.3 Mixer
 
@@ -508,9 +508,9 @@ trait OutputSink {
 
 #### 3.5 兼容迁移
 
-- [ ] 当前 `color/dimmer` 模板自动映射到新属性。
-- [ ] 明确 pan/tilt 模板此前被忽略的行为变更。
-- [ ] 旧 Canvas 可在过渡期通过 adapter 消费新 Frame。
+- [x] 当前 `color/dimmer` 模板自动映射到新属性。
+- [x] 明确 pan/tilt 模板此前被忽略的行为变更。
+- [x] 旧 Canvas 可在过渡期通过 adapter 消费新 Frame。
 
 ### 验证
 
@@ -1081,14 +1081,14 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 ## Handoff
 
 - Current Stage: Stage 3 · Fixture Attribute、Mixer 与 Output 抽象（in_progress）；Stage 2 已在 `06e14e3` 完成，未进入 Stage 4。
-- Slice completed: 接受 ADR-0004；新增 Generic RGB/RGBW/Moving Head profile registry，完整声明 typed capabilities、默认值、物理范围、默认 mix policy、protocol channel mapping 和 Preview metadata；ShowDocument V2 patch 改用 `profile_id`，V1 `pixel/spot` 显式迁移为 `generic-rgb/generic-moving-head`；compiler 使用 profile handle；layout 文档保持纯空间描述；V1/V2 schema/TS 与 profile capability artifacts 同步生成/check；18 个模板升级到 V2。
-- Commits: Stage 2 strict contract `06e14e3`；Stage 3 Fixture Profile + V2 migration（本切片提交）。
-- Files changed: ADR-0004、profile registry/tests、ShowDocument V1→V2 migration/validator/compiler、versioned schema/TS/capability artifacts、frontend V2 validator/types、18 templates 与 golden fixture、计划状态/ledger/handoff。
-- Validation: `rustup run stable pnpm check:all` 通过（schema/check、Prettier、TypeScript/Vite、16 Vitest、52 Rust tests/contracts、strict Clippy）；18/18 V2 templates 无 migration report 且通过 Rust compile/render contract；profile uniqueness、physical range、protocol channel 和 handle resolution tests 通过。
-- ADRs added/updated: ADR-0004 Accepted；ADR-0002 保留为 Stage 2 V1 权威来源决策。
-- Risks opened/closed: R-002 维持 closed；R-003 仍 open，profile 已提供 policy 元数据但 runtime 尚未切换到通用 Attribute Frame/Mixer。
-- Remaining exit criteria: 通用 typed Attribute Frame/AttributeHandle/default fallback、HTP/LTP/Add/Multiply/Mask 与 conflict inspection、Null/Preview/Recording OutputSink、旧模板/Canvas adapter 和 Stage 3 最终验证矩阵。
-- Recommended next slice: Stage 3 Attribute Frame 垂直切片——把 `FixtureOutput` 替换为 profile-backed typed attribute frame，compile attribute handles，未写属性回落 profile default，并通过只读 adapter 保持旧 Canvas；随后再接 Mixer。
+- Slice completed: 新增 profile-backed `FixtureFrame`、typed `AttributeValue` 与紧凑 `AttributeHandle`；compiler 按目标 profile 预编译 attribute writes，并对不支持属性/物理范围返回稳定 Diagnostic；render、diff、blackout、IPC payload、golden/baseline 全部移除核心硬编码 `FixtureOutput`；未写属性从 profile default 建帧；Moving Head pan/tilt 现在进入逻辑 Frame；Canvas 通过纯只读 adapter 投影 `intensity/color.rgb/position.*`，不修改源 Frame。
+- Commits: Stage 2 strict contract `06e14e3`；Stage 3 Fixture Profile + V2 migration `cab82e2`；Stage 3 Attribute Frame + Canvas adapter（本切片提交）。
+- Files changed: attribute frame/value interpolation、profile-specific phaser compiler、renderer/frame publisher/scheduler/state、Rust golden 与 release harness、bridge payload contract、Canvas adapter/tests、ADR-0004、Stage checklist/ledger/handoff。
+- Validation: schema generation check、Prettier、`pnpm build`、18 Vitest、strict Rust fmt/Clippy、58 Rust tests/contracts 全通过；Moving Head typed pan/tilt、capability/range Diagnostic、wrong-type write rejection、profile-aware topology diff、Canvas adapter immutability 均有测试；release harness 完成 36k ticks/18m fixture evaluations，0.012ms drift、79.95× realtime、208.45µs mean render+publish。
+- ADRs added/updated: ADR-0004 补充已落地的 descriptor-order frame/IPC adapter 约束；ADR-0002 保持不变。
+- Risks opened/closed: R-002 维持 closed；R-003 仍 open，通用 Frame 已落地，但完整 Mixer policy、稳定 LTP tie-break 和冲突检查尚未完成。
+- Remaining exit criteria: HTP/LTP/Add/Multiply/Mask、write metadata 与 conflict inspection；Null/Preview/Recording OutputSink；Stage 3 最终混合/同 revision sink 验证矩阵与全局 DoD 复验。
+- Recommended next slice: Stage 3 Mixer 垂直切片——引入携带 layer/priority/activation order/weight/override 的 attribute writes，由单一 Mixer 实现 HTP/LTP/Add/Multiply/Mask、稳定 tie-break 和 conflict inspection。
 
 ## 19. ADR 规范
 
@@ -1156,6 +1156,9 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 2        | Strict contract gate  | completed | `06e14e3`   | `check:all`；48 Rust/16 frontend；18/18 templates；0.012ms drift | Stage 2 全部退出条件满足；R-002 closed        | Stage 3 ADR-0004 + Fixture Profile          |
 | 2026-08-02 | 3        | Fixture Profile + V2  | failed    | none        | Rust 52 项通过；frontend 2 项仍断言 schema V1                    | 测试期望未随 V2 更新；实现/contract 无回归    | 修正版本断言并复跑统一门禁                  |
 | 2026-08-02 | 3        | Fixture Profile + V2  | completed | 本切片提交  | `check:all`；52 Rust/16 frontend；18/18 V2 templates             | ADR-0004 accepted；R-003 仍 open              | typed Attribute Frame + Canvas adapter      |
+| 2026-08-02 | 3        | Attribute Frame       | failed    | none        | 新增 range contract 初跑受 `expect_err` 的 `Debug` bound 阻止    | 测试写法问题；改为显式匹配 `Result`           | 复跑 Rust 全目标测试                        |
+| 2026-08-02 | 3        | Attribute Frame gate  | failed    | none        | 58 Rust/18 frontend 通过；Clippy 命中 `map_entry`                | 等价改用 `entry().or_insert_with()`           | 修正后复跑 strict Clippy 与完整门禁         |
+| 2026-08-02 | 3        | Attribute Frame       | completed | 本切片提交  | build/fmt/Clippy/schema；58 Rust/18 frontend；0.012ms drift      | 3.2/3.5 完成；R-003 仍 open                   | attribute Mixer + conflict inspection       |
 
 ## 21. Open Risks
 

@@ -1,9 +1,14 @@
 use lumina_ai_lib::compiler::{
-    CompiledGroup, CompiledPhaser, CompiledShow, CompiledStep, Fixture, PhaseConfig,
+    CompiledGroup, CompiledPhaser, CompiledProfilePhaser, CompiledShow, CompiledStep, Fixture,
+    PhaseConfig,
 };
+use lumina_ai_lib::engine::attribute::{resolve_attribute, FixtureFrame};
 use lumina_ai_lib::engine::clock::ManualClock;
 use lumina_ai_lib::engine::frame::FramePublisher;
-use lumina_ai_lib::engine::profile::{profile_handle_by_id, GENERIC_RGB_PROFILE_ID};
+use lumina_ai_lib::engine::profile::{
+    profile_by_handle, profile_handle_by_id, AttributeValue, FixtureProfileHandle,
+    COLOR_RGB_ATTRIBUTE, GENERIC_RGB_PROFILE_ID, INTENSITY_ATTRIBUTE,
+};
 use lumina_ai_lib::engine::render::{render_at, LivePhaser, RenderSource, RenderTime};
 use lumina_ai_lib::engine::transport::{OutputRate, RealtimeCore};
 use serde::Serialize;
@@ -138,6 +143,7 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
         .map(|id| Fixture {
             id: id as u32,
             profile,
+            intensity: resolve_attribute(profile, INTENSITY_ATTRIBUTE),
         })
         .collect();
     let group = CompiledGroup {
@@ -151,24 +157,16 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
         name: "Loaded runtime".to_string(),
         target: "all".to_string().into(),
         multiplier: Some(1.0),
-        steps: vec![
-            CompiledStep {
-                color: (255, 255, 255),
-                dimmer: 1.0,
-                width: 50.0,
-                transition: 100.0,
-                accel: 0,
-                decel: 0,
-            },
-            CompiledStep {
-                color: (0, 0, 0),
-                dimmer: 0.0,
-                width: 50.0,
-                transition: 100.0,
-                accel: 0,
-                decel: 0,
-            },
-        ],
+        profile_steps: HashMap::from([(
+            profile,
+            profile_phaser(
+                profile,
+                vec![
+                    ([255, 255, 255], 1.0, 50.0, 100.0),
+                    ([0, 0, 0], 0.0, 50.0, 100.0),
+                ],
+            ),
+        )]),
         phase: PhaseConfig::Spread {
             from: 0.0,
             to: 100.0,
@@ -183,14 +181,63 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
     }
 }
 
-fn frame_checksum(frame: &[lumina_ai_lib::engine::FixtureOutput]) -> u64 {
+fn profile_phaser(
+    profile: FixtureProfileHandle,
+    definitions: Vec<([u8; 3], f32, f64, f64)>,
+) -> CompiledProfilePhaser {
+    let intensity = resolve_attribute(profile, INTENSITY_ATTRIBUTE);
+    let color = resolve_attribute(profile, COLOR_RGB_ATTRIBUTE);
+    let attribute_count = profile_by_handle(profile).attributes.len();
+    let steps = definitions
+        .into_iter()
+        .map(|(color_value, intensity_value, width, transition)| {
+            let mut values = vec![None; attribute_count];
+            values[intensity.expect("intensity").index()] =
+                Some(AttributeValue::Scalar(intensity_value));
+            values[color.expect("color").index()] = Some(AttributeValue::Color(color_value));
+            CompiledStep {
+                values,
+                width,
+                transition,
+                accel: 0,
+                decel: 0,
+            }
+        })
+        .collect();
+    CompiledProfilePhaser {
+        steps,
+        intensity,
+        color,
+        pan: None,
+        tilt: None,
+    }
+}
+
+fn frame_checksum(frame: &[FixtureFrame]) -> u64 {
     frame.iter().fold(0_u64, |checksum, output| {
-        checksum
-            .wrapping_mul(16_777_619)
-            .wrapping_add(u64::from(output.id))
-            .wrapping_add(u64::from(output.r) << 8)
-            .wrapping_add(u64::from(output.g) << 16)
-            .wrapping_add(u64::from(output.b) << 24)
-            .wrapping_add(u64::from(output.dimmer.to_bits()))
+        output.values().iter().fold(
+            checksum
+                .wrapping_mul(16_777_619)
+                .wrapping_add(u64::from(output.id))
+                .wrapping_add(output.profile.index() as u64),
+            |value_checksum, value| {
+                value_checksum
+                    .wrapping_mul(16_777_619)
+                    .wrapping_add(value_bits(value))
+            },
+        )
     })
+}
+
+fn value_bits(value: &AttributeValue) -> u64 {
+    match value {
+        AttributeValue::Scalar(value) | AttributeValue::Angle(value) => u64::from(value.to_bits()),
+        AttributeValue::Color([red, green, blue]) => {
+            u64::from(*red) | (u64::from(*green) << 8) | (u64::from(*blue) << 16)
+        }
+        AttributeValue::Enum(value) => value.bytes().fold(0_u64, |checksum, byte| {
+            checksum.wrapping_mul(257).wrapping_add(u64::from(byte))
+        }),
+        AttributeValue::Boolean(value) => u64::from(*value),
+    }
 }

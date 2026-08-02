@@ -31,6 +31,8 @@ Stage 3 必须在不进入 EffectGraph（Stage 4）或真实网络协议（Stage
 - profile/attribute 新增必须同步 registry tests、capability metadata 和 protocol mapping；未知 profile/attribute fail closed。
 - 旧 Canvas 只通过 adapter 读取它能显示的 `intensity/color.rgb/position.*`，不得回写或修改 Frame。
 - Add/Multiply/Mask 不会因多 effect 重叠而隐式启用；只有 profile 或 write 显式指定才执行。
+- runtime `FixtureFrame` 以 profile descriptor 顺序保存 typed values，只有 compiler/runtime 内部 `AttributeHandle` 可以定位槽位；错误值类型被拒绝，未写槽位保留 profile default。
+- IPC 在 Frame 边界携带 `profile_id + [{ attribute id, typed value }]`；Canvas 的 preview adapter 只读投影可展示属性，不能形成第二份可回写的 runtime state。
 
 ## Migration and rollback
 
@@ -39,4 +41,5 @@ V1 patch 的 `type=pixel` 映射为 `profile_id=generic-rgb`，`type=spot` 映�
 ## Related commits
 
 - Stage 2 strict contract: `06e14e3`
-- Fixture Profile and V2 migration: 本切片提交
+- Fixture Profile and V2 migration: `cab82e2`
+- Typed Attribute Frame and Canvas adapter: 本切片提交

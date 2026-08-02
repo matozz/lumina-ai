@@ -1,8 +1,12 @@
 use lumina_ai_lib::compiler::{
-    parser::ShowDSL, CompiledGroup, CompiledPhaser, CompiledShow, CompiledStep, Compiler, Fixture,
-    PhaseConfig,
+    parser::ShowDSL, CompiledGroup, CompiledPhaser, CompiledProfilePhaser, CompiledShow,
+    CompiledStep, Compiler, Fixture, PhaseConfig,
 };
-use lumina_ai_lib::engine::profile::{profile_handle_by_id, GENERIC_RGB_PROFILE_ID};
+use lumina_ai_lib::engine::attribute::{resolve_attribute, FixtureFrame};
+use lumina_ai_lib::engine::profile::{
+    profile_handle_by_id, AttributeValue, FixtureProfileHandle, COLOR_RGB_ATTRIBUTE,
+    GENERIC_RGB_PROFILE_ID, INTENSITY_ATTRIBUTE,
+};
 use lumina_ai_lib::engine::{animation::ParameterContext, compute_frame};
 use lumina_ai_lib::state::ActivePhaser;
 use serde::Serialize;
@@ -133,9 +137,7 @@ fn benchmark_compute_frame(fixture_count: usize) -> ComputeFrameReport {
         let frame = compute_frame(0.25, std::slice::from_ref(&active), &show, &parameters);
         let elapsed = started.elapsed();
         assert_eq!(frame.len(), fixture_count);
-        assert!(frame.iter().all(|output| {
-            output.r == 255 && output.g == 255 && output.b == 255 && output.dimmer == 1.0
-        }));
+        assert!(frame.iter().all(frame_is_full_white));
         black_box(frame);
         durations.push(elapsed);
     }
@@ -155,6 +157,7 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
         .map(|id| Fixture {
             id: id as u32,
             profile,
+            intensity: resolve_attribute(profile, INTENSITY_ATTRIBUTE),
         })
         .collect();
     let group = CompiledGroup {
@@ -168,14 +171,10 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
         name: "Baseline".to_string(),
         target: "all".to_string().into(),
         multiplier: Some(1.0),
-        steps: vec![CompiledStep {
-            color: (255, 255, 255),
-            dimmer: 1.0,
-            width: 100.0,
-            transition: 0.0,
-            accel: 0,
-            decel: 0,
-        }],
+        profile_steps: HashMap::from([(
+            profile,
+            profile_phaser(profile, vec![([255, 255, 255], 1.0, 100.0, 0.0)]),
+        )]),
         phase: PhaseConfig::Spread { from: 0.0, to: 0.0 },
     };
 
@@ -185,6 +184,47 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
         phasers: HashMap::from([(phaser.id.clone(), phaser)]),
         ..CompiledShow::default()
     }
+}
+
+fn profile_phaser(
+    profile: FixtureProfileHandle,
+    definitions: Vec<([u8; 3], f32, f64, f64)>,
+) -> CompiledProfilePhaser {
+    let intensity = resolve_attribute(profile, INTENSITY_ATTRIBUTE);
+    let color = resolve_attribute(profile, COLOR_RGB_ATTRIBUTE);
+    let attribute_count = lumina_ai_lib::engine::profile::profile_by_handle(profile)
+        .attributes
+        .len();
+    let steps = definitions
+        .into_iter()
+        .map(|(color_value, intensity_value, width, transition)| {
+            let mut values = vec![None; attribute_count];
+            values[intensity.expect("intensity").index()] =
+                Some(AttributeValue::Scalar(intensity_value));
+            values[color.expect("color").index()] = Some(AttributeValue::Color(color_value));
+            CompiledStep {
+                values,
+                width,
+                transition,
+                accel: 0,
+                decel: 0,
+            }
+        })
+        .collect();
+    CompiledProfilePhaser {
+        steps,
+        intensity,
+        color,
+        pan: None,
+        tilt: None,
+    }
+}
+
+fn frame_is_full_white(frame: &FixtureFrame) -> bool {
+    frame.value(resolve_attribute(frame.profile, COLOR_RGB_ATTRIBUTE).expect("color"))
+        == Some(&AttributeValue::Color([255, 255, 255]))
+        && frame.value(resolve_attribute(frame.profile, INTENSITY_ATTRIBUTE).expect("intensity"))
+            == Some(&AttributeValue::Scalar(1.0))
 }
 
 fn benchmark_templates(template_dir: &Path) -> TemplateCompileReport {

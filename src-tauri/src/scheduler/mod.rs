@@ -1,3 +1,4 @@
+use crate::engine::attribute::FixtureFrame;
 use crate::engine::frame::FramePayload;
 use crate::engine::render::{render_at, RenderSource, RenderTime};
 use crate::engine::transport::{OutputRate, TransportError, TransportSnapshot, TransportState};
@@ -331,7 +332,7 @@ async fn publish_blackout<R: Runtime>(
         .show
         .fixtures
         .iter()
-        .map(|fixture| crate::engine::FixtureOutput::black(fixture.id))
+        .map(|fixture| FixtureFrame::with_profile_defaults(fixture.id, fixture.profile))
         .collect();
     let payload: FramePayload = state.runtime.write().await.frame_publisher.publish_full(
         show_snapshot.revision,
@@ -652,9 +653,14 @@ mod tests {
     }
 
     fn fixture(id: u32) -> Fixture {
+        let profile = profile_handle_by_id(GENERIC_RGB_PROFILE_ID).expect("built-in RGB profile");
         Fixture {
             id,
-            profile: profile_handle_by_id(GENERIC_RGB_PROFILE_ID).expect("built-in RGB profile"),
+            profile,
+            intensity: crate::engine::attribute::resolve_attribute(
+                profile,
+                crate::engine::profile::INTENSITY_ATTRIBUTE,
+            ),
         }
     }
 }

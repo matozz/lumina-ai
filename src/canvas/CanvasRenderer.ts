@@ -1,6 +1,7 @@
-import type { LayoutCoord, FixtureOutput } from "../bridge/types";
+import type { FixtureFramePayload, LayoutCoord } from "../bridge/types";
 import { Camera } from "./Camera";
 import { FixtureVisual } from "./FixtureVisual";
+import { toPreviewOutput } from "./previewFrame";
 
 export class CanvasRenderer {
   private canvas: HTMLCanvasElement;
@@ -25,8 +26,9 @@ export class CanvasRenderer {
     this.camera.fitToContent(coords);
   }
 
-  applyFrame(outputs: FixtureOutput[], _full: boolean): void {
-    for (const out of outputs) {
+  applyFrame(outputs: FixtureFramePayload[], _full: boolean): void {
+    for (const frame of outputs) {
+      const out = toPreviewOutput(frame);
       const visual = this.fixtures.get(out.id);
       if (visual) {
         visual.applyOutput(out.r, out.g, out.b, out.dimmer);

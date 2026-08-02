@@ -29,12 +29,22 @@ export type FullDSL = ShowDocumentV2;
 export type FromTo = AnimatableValueDSL;
 export type Easing = EasingDSL;
 
-export interface FixtureOutput {
+export type AttributeValue =
+  | { type: "scalar"; value: number }
+  | { type: "color"; value: [number, number, number] }
+  | { type: "angle"; value: number }
+  | { type: "enum"; value: string }
+  | { type: "boolean"; value: boolean };
+
+export interface AttributePayload {
+  id: string;
+  value: AttributeValue;
+}
+
+export interface FixtureFramePayload {
   id: number;
-  r: number;
-  g: number;
-  b: number;
-  dimmer: number;
+  profile_id: string;
+  attributes: AttributePayload[];
 }
 
 export interface FramePayload {
@@ -42,7 +52,7 @@ export interface FramePayload {
   frame_sequence: number;
   logical_beat: number;
   full: boolean;
-  outputs: FixtureOutput[];
+  outputs: FixtureFramePayload[];
 }
 
 export interface LayoutCoord {

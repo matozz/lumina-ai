@@ -1,10 +1,11 @@
 use super::animation::{ease, AnimatableValue, ParameterContext};
+use super::attribute::{AttributeHandle, FixtureFrame};
 use super::phaser::{calculate_progress_delay, evaluate_phaser_at};
-use super::FixtureOutput;
 use crate::compiler::{
     CompiledAutomationTarget, CompiledEffectParameter, CompiledShow, CompiledTimelineAction,
     CompiledTimelineEvent, EffectInstanceHandle,
 };
+use crate::engine::profile::{profile_by_handle, AttributeValue, MixPolicy};
 use rayon::prelude::*;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -44,7 +45,7 @@ pub fn render_at(
     show: &CompiledShow,
     time: RenderTime,
     source: RenderSource<'_>,
-) -> Vec<FixtureOutput> {
+) -> Vec<FixtureFrame> {
     let (active_phasers, parameters) = match source {
         RenderSource::Timeline => resolve_timeline_at(show, time),
         RenderSource::Live(active) => (
@@ -67,11 +68,11 @@ pub(crate) fn render_resolved(
     show: &CompiledShow,
     active_phasers: &[ResolvedPhaser],
     parameters: &ParameterContext,
-) -> Vec<FixtureOutput> {
+) -> Vec<FixtureFrame> {
     show.fixtures
         .par_iter()
         .map(|fixture| {
-            let mut output = FixtureOutput::black(fixture.id);
+            let mut output = FixtureFrame::with_profile_defaults(fixture.id, fixture.profile);
 
             for active in active_phasers {
                 let Some(phaser) = show.phasers.get(active.instance.as_str()) else {
@@ -83,6 +84,9 @@ pub(crate) fn render_resolved(
                 let Some(fixture_index) = group.index_of(fixture.id) else {
                     continue;
                 };
+                let Some(profile_phaser) = phaser.profile_steps.get(&fixture.profile) else {
+                    continue;
+                };
 
                 let progress_delay = calculate_progress_delay(
                     fixture_index,
@@ -90,7 +94,7 @@ pub(crate) fn render_resolved(
                     &phaser.phase,
                     group.block_index_of(fixture.id),
                 );
-                let total_width: f64 = phaser.steps.iter().map(|step| step.width).sum();
+                let total_width: f64 = profile_phaser.steps.iter().map(|step| step.width).sum();
                 if total_width <= 0.0 {
                     continue;
                 }
@@ -101,28 +105,78 @@ pub(crate) fn render_resolved(
                 }
 
                 let normalized = (raw_cycle % 1.0) * total_width;
-                let (mut color, dimmer) =
-                    evaluate_phaser_at(normalized, &phaser.steps, total_width);
+                let mut values = evaluate_phaser_at(normalized, &profile_phaser.steps, total_width);
 
-                if let Some(override_color) =
-                    parameters.get_effect_color(&active.instance, CompiledEffectParameter::Color)
-                {
-                    color = override_color;
+                if let (Some(handle), Some((red, green, blue))) = (
+                    profile_phaser.color,
+                    parameters.get_effect_color(&active.instance, CompiledEffectParameter::Color),
+                ) {
+                    values[handle.index()] = Some(AttributeValue::Color([red, green, blue]));
                 }
+                apply_scalar_override(
+                    &mut values,
+                    profile_phaser.intensity,
+                    parameters.get_effect_float(&active.instance, CompiledEffectParameter::Dimmer),
+                    AttributeValue::Scalar,
+                );
+                apply_scalar_override(
+                    &mut values,
+                    profile_phaser.pan,
+                    parameters.get_effect_float(&active.instance, CompiledEffectParameter::Pan),
+                    AttributeValue::Angle,
+                );
+                apply_scalar_override(
+                    &mut values,
+                    profile_phaser.tilt,
+                    parameters.get_effect_float(&active.instance, CompiledEffectParameter::Tilt),
+                    AttributeValue::Angle,
+                );
 
-                output.r = output.r.max(color.0);
-                output.g = output.g.max(color.1);
-                output.b = output.b.max(color.2);
-                output.dimmer = output.dimmer.max(dimmer);
+                for (index, value) in values.into_iter().enumerate() {
+                    let (Some(handle), Some(value)) = (AttributeHandle::from_index(index), value)
+                    else {
+                        continue;
+                    };
+                    apply_profile_write(&mut output, handle, value);
+                }
             }
 
-            if let Some(global_dimmer) = parameters.global_master_dimmer() {
-                output.dimmer *= global_dimmer as f32;
+            if let (Some(handle), Some(global_dimmer)) =
+                (fixture.intensity, parameters.global_master_dimmer())
+            {
+                if let Some(AttributeValue::Scalar(intensity)) = output.value(handle).cloned() {
+                    output.set(
+                        handle,
+                        AttributeValue::Scalar(intensity * global_dimmer as f32),
+                    );
+                }
             }
 
             output
         })
         .collect()
+}
+
+fn apply_scalar_override(
+    values: &mut [Option<AttributeValue>],
+    handle: Option<AttributeHandle>,
+    value: Option<f64>,
+    convert: impl FnOnce(f32) -> AttributeValue,
+) {
+    if let (Some(handle), Some(value)) = (handle, value) {
+        values[handle.index()] = Some(convert(value as f32));
+    }
+}
+
+fn apply_profile_write(frame: &mut FixtureFrame, handle: AttributeHandle, value: AttributeValue) {
+    let descriptor = &profile_by_handle(frame.profile).attributes[handle.index()];
+    let resolved = match (descriptor.mix_policy, frame.value(handle), &value) {
+        (MixPolicy::Htp, Some(AttributeValue::Scalar(current)), AttributeValue::Scalar(next)) => {
+            AttributeValue::Scalar(current.max(*next))
+        }
+        _ => value,
+    };
+    frame.set(handle, resolved);
 }
 
 fn resolve_timeline_at(
@@ -347,7 +401,8 @@ mod tests {
     use crate::compiler::{
         parser::ShowDSL, CompiledAutomationTarget, CompiledEffectParameter, Compiler,
     };
-    use crate::engine::FixtureOutput;
+    use crate::engine::attribute::{resolve_attribute, FixtureFrame};
+    use crate::engine::profile::{AttributeValue, COLOR_RGB_ATTRIBUTE, INTENSITY_ATTRIBUTE};
 
     fn compiled_show() -> crate::compiler::CompiledShow {
         let dsl: ShowDSL = serde_json::from_str(
@@ -429,24 +484,77 @@ mod tests {
         let after_sequential_render = render_at(&show, target, RenderSource::Timeline);
 
         assert_eq!(direct, after_sequential_render);
+        assert_eq!(direct.len(), 1);
+        assert_eq!(direct[0].id, 1);
         assert_eq!(
-            direct,
-            vec![FixtureOutput {
-                id: 1,
-                r: 255,
-                g: 255,
-                b: 255,
-                dimmer: 0.6875,
-            }]
+            attribute(&direct[0], COLOR_RGB_ATTRIBUTE),
+            &AttributeValue::Color([255, 255, 255])
+        );
+        assert_eq!(
+            attribute(&direct[0], INTENSITY_ATTRIBUTE),
+            &AttributeValue::Scalar(0.6875)
         );
     }
 
     #[test]
     fn timeline_event_end_rebuilds_to_blackout() {
         let show = compiled_show();
+        let frame = render_at(&show, RenderTime { beat: 4.0 }, RenderSource::Timeline);
+        assert_eq!(frame.len(), 1);
         assert_eq!(
-            render_at(&show, RenderTime { beat: 4.0 }, RenderSource::Timeline),
-            vec![FixtureOutput::black(1)]
+            attribute(&frame[0], COLOR_RGB_ATTRIBUTE),
+            &AttributeValue::Color([0, 0, 0])
         );
+        assert_eq!(
+            attribute(&frame[0], INTENSITY_ATTRIBUTE),
+            &AttributeValue::Scalar(0.0)
+        );
+    }
+
+    #[test]
+    fn moving_head_effects_render_profile_specific_angle_attributes() {
+        let dsl: ShowDSL = serde_json::from_str(
+            r##"{
+                "schema_version": 2,
+                "meta": { "name": "moving attributes" },
+                "patch": [{ "profile_id": "generic-moving-head", "id_range": [1, 1] }],
+                "layout": { "type": "generator", "generator": {
+                    "shape": "matrix", "rows": 1, "columns": 1, "spacing": 1
+                }},
+                "groups": [{ "id": "all", "name": "All", "fixtures": [1] }],
+                "phasers": [{
+                    "id": "position", "name": "Position", "target": "all",
+                    "steps": [{
+                        "values": {
+                            "color": "#ff0000", "dimmer": 0.8, "pan": 90, "tilt": -45
+                        },
+                        "width": 100, "transition": 0
+                    }],
+                    "phase": { "mode": "spread", "spread": { "from": 0, "to": 0 } }
+                }],
+                "timeline": { "events": [{
+                    "beat": 0, "duration": 2,
+                    "action": { "type": "phaser", "phaser": "position" }
+                }]}
+            }"##,
+        )
+        .expect("moving-head DSL");
+        let show = Compiler::compile_document(dsl).expect("compiled moving-head show");
+        let frame = render_at(&show, RenderTime { beat: 0.5 }, RenderSource::Timeline);
+
+        assert_eq!(
+            attribute(&frame[0], crate::engine::profile::PAN_ATTRIBUTE),
+            &AttributeValue::Angle(90.0)
+        );
+        assert_eq!(
+            attribute(&frame[0], crate::engine::profile::TILT_ATTRIBUTE),
+            &AttributeValue::Angle(-45.0)
+        );
+    }
+
+    fn attribute<'a>(frame: &'a FixtureFrame, id: &str) -> &'a AttributeValue {
+        frame
+            .value(resolve_attribute(frame.profile, id).expect("profile attribute"))
+            .expect("frame attribute")
     }
 }

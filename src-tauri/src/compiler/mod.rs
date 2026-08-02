@@ -2,11 +2,16 @@ pub mod diagnostic;
 pub mod parser;
 
 use crate::document::{DocumentValidator, ValidatedShow};
+use crate::engine::attribute::{resolve_attribute, AttributeHandle};
 use crate::engine::color::parse_hex_color;
-use crate::engine::profile::{profile_by_handle, profile_handle_by_id, FixtureProfileHandle};
+use crate::engine::profile::{
+    profile_by_handle, profile_handle_by_id, AttributeValue, FixtureProfileHandle,
+    COLOR_RGB_ATTRIBUTE, INTENSITY_ATTRIBUTE, PAN_ATTRIBUTE, TILT_ATTRIBUTE,
+};
 use diagnostic::{
-    Diagnostic, DiagnosticSeverity, DOC_FORMULA_INVALID, DOC_INVALID_COLOR, DOC_PROFILE_NOT_FOUND,
-    DSL_DUPLICATE_FIXTURE_ID, DSL_TARGET_GROUP_NOT_FOUND,
+    Diagnostic, DiagnosticSeverity, DOC_ATTRIBUTE_NOT_SUPPORTED, DOC_ATTRIBUTE_OUT_OF_RANGE,
+    DOC_FORMULA_INVALID, DOC_INVALID_COLOR, DOC_PROFILE_NOT_FOUND, DSL_DUPLICATE_FIXTURE_ID,
+    DSL_TARGET_GROUP_NOT_FOUND,
 };
 use fasteval::{Compiler as FastevalCompiler, Evaler};
 use parser::*;
@@ -55,6 +60,7 @@ impl From<String> for EffectInstanceHandle {
 pub struct Fixture {
     pub id: u32,
     pub profile: FixtureProfileHandle,
+    pub intensity: Option<AttributeHandle>,
 }
 
 #[derive(serde::Serialize, Clone, Debug)]
@@ -108,14 +114,22 @@ pub struct CompiledPhaser {
     pub name: String,
     pub target: GroupHandle,
     pub multiplier: Option<f64>,
-    pub steps: Vec<CompiledStep>,
+    pub profile_steps: HashMap<FixtureProfileHandle, CompiledProfilePhaser>,
     pub phase: PhaseConfig,
 }
 
 #[derive(Clone, Debug)]
+pub struct CompiledProfilePhaser {
+    pub steps: Vec<CompiledStep>,
+    pub intensity: Option<AttributeHandle>,
+    pub color: Option<AttributeHandle>,
+    pub pan: Option<AttributeHandle>,
+    pub tilt: Option<AttributeHandle>,
+}
+
+#[derive(Clone, Debug)]
 pub struct CompiledStep {
-    pub color: (u8, u8, u8),
-    pub dimmer: f32,
+    pub values: Vec<Option<AttributeValue>>,
     pub width: f64,
     pub transition: f64,
     pub accel: i32,
@@ -192,7 +206,7 @@ impl Compiler {
         let fixtures = Self::compile_patch(&dsl.patch, &mut errors);
         let coords = Self::compile_layout(&dsl.layout, &fixtures, &mut errors);
         let groups = Self::compile_groups(&dsl.groups, &fixtures, &coords, &mut errors);
-        let phasers = Self::compile_phasers(&dsl.phasers, &groups, &mut errors);
+        let phasers = Self::compile_phasers(&dsl.phasers, &groups, &fixtures, &mut errors);
 
         let timeline = dsl.timeline.map(Self::compile_timeline);
 
@@ -234,7 +248,11 @@ impl Compiler {
                         "Use a unique fixture ID across all patch ranges.",
                     ));
                 }
-                fixtures.push(Fixture { id, profile });
+                fixtures.push(Fixture {
+                    id,
+                    profile,
+                    intensity: resolve_attribute(profile, INTENSITY_ATTRIBUTE),
+                });
             }
         }
         fixtures
@@ -731,11 +749,17 @@ impl Compiler {
     fn compile_phasers(
         phasers: &[PhaserDSL],
         groups: &HashMap<String, CompiledGroup>,
+        fixtures: &[Fixture],
         errors: &mut Vec<Diagnostic>,
     ) -> HashMap<String, CompiledPhaser> {
         let mut map = HashMap::new();
+        let fixture_profiles: HashMap<_, _> = fixtures
+            .iter()
+            .map(|fixture| (fixture.id, fixture.profile))
+            .collect();
         for p in phasers {
-            if !groups.contains_key(&p.target) {
+            let group = groups.get(&p.target);
+            if group.is_none() {
                 errors.push(Diagnostic::error(
                     DSL_TARGET_GROUP_NOT_FOUND,
                     format!("phasers[name={}]", p.name),
@@ -755,36 +779,17 @@ impl Compiler {
                 },
             };
 
-            let steps = p
-                .steps
-                .iter()
-                .enumerate()
-                .map(|(step_index, s)| {
-                    let color_hex = s.values.color.as_deref().unwrap_or("#000000");
-                    let dimmer = s.values.dimmer.unwrap_or(1.0);
-                    let color = match parse_hex_color(color_hex) {
-                        Ok(color) => color,
-                        Err(error) => {
-                            errors.push(Diagnostic::error(
-                                DOC_INVALID_COLOR,
-                                format!("phasers[id={}].steps[{step_index}].values.color", p.id),
-                                error.to_string(),
-                                "Use a color in #RRGGBB format.",
-                            ));
-                            (0, 0, 0)
-                        }
+            let mut profile_steps = HashMap::new();
+            if let Some(group) = group {
+                for fixture_id in &group.sorted_fixture_ids {
+                    let Some(profile) = fixture_profiles.get(fixture_id).copied() else {
+                        continue;
                     };
-
-                    CompiledStep {
-                        color,
-                        dimmer,
-                        width: s.width.unwrap_or(100.0),
-                        transition: s.transition.unwrap_or(100.0),
-                        accel: s.accel.unwrap_or(0),
-                        decel: s.decel.unwrap_or(0),
-                    }
-                })
-                .collect();
+                    profile_steps
+                        .entry(profile)
+                        .or_insert_with(|| compile_profile_phaser(p, profile, errors));
+                }
+            }
 
             map.insert(
                 p.id.clone(),
@@ -793,7 +798,7 @@ impl Compiler {
                     name: p.name.clone(),
                     target: p.target.clone().into(),
                     multiplier: p.multiplier,
-                    steps,
+                    profile_steps,
                     phase,
                 },
             );
@@ -828,6 +833,137 @@ impl Compiler {
             .collect();
         CompiledTimeline { events }
     }
+}
+
+fn compile_profile_phaser(
+    phaser: &PhaserDSL,
+    profile_handle: FixtureProfileHandle,
+    errors: &mut Vec<Diagnostic>,
+) -> CompiledProfilePhaser {
+    let profile = profile_by_handle(profile_handle);
+    let intensity = resolve_attribute(profile_handle, INTENSITY_ATTRIBUTE);
+    let color = resolve_attribute(profile_handle, COLOR_RGB_ATTRIBUTE);
+    let pan = resolve_attribute(profile_handle, PAN_ATTRIBUTE);
+    let tilt = resolve_attribute(profile_handle, TILT_ATTRIBUTE);
+    let writes_pan = phaser.steps.iter().any(|step| step.values.pan.is_some());
+    let writes_tilt = phaser.steps.iter().any(|step| step.values.tilt.is_some());
+
+    for (attribute_id, required, handle) in [
+        (INTENSITY_ATTRIBUTE, true, intensity),
+        (COLOR_RGB_ATTRIBUTE, true, color),
+        (PAN_ATTRIBUTE, writes_pan, pan),
+        (TILT_ATTRIBUTE, writes_tilt, tilt),
+    ] {
+        if required && handle.is_none() {
+            errors.push(Diagnostic::error(
+                DOC_ATTRIBUTE_NOT_SUPPORTED,
+                format!("phasers[id={}].steps.values", phaser.id),
+                format!(
+                    "Fixture profile {:?} does not support attribute {attribute_id:?}.",
+                    profile.id
+                ),
+                "Retarget the effect or choose a profile with the required capability.",
+            ));
+        }
+    }
+
+    let steps = phaser
+        .steps
+        .iter()
+        .enumerate()
+        .map(|(step_index, step)| {
+            let mut values = vec![None; profile.attributes.len()];
+            if let Some(handle) = intensity {
+                values[handle.index()] =
+                    Some(AttributeValue::Scalar(step.values.dimmer.unwrap_or(1.0)));
+            }
+            if let Some(handle) = color {
+                let color_hex = step.values.color.as_deref().unwrap_or("#000000");
+                let parsed = match parse_hex_color(color_hex) {
+                    Ok((red, green, blue)) => AttributeValue::Color([red, green, blue]),
+                    Err(error) => {
+                        errors.push(Diagnostic::error(
+                            DOC_INVALID_COLOR,
+                            format!("phasers[id={}].steps[{step_index}].values.color", phaser.id),
+                            error.to_string(),
+                            "Use a color in #RRGGBB format.",
+                        ));
+                        AttributeValue::Color([0, 0, 0])
+                    }
+                };
+                values[handle.index()] = Some(parsed);
+            }
+            set_angle_value(
+                &mut values,
+                profile_handle,
+                pan,
+                writes_pan,
+                step.values.pan,
+                format!("phasers[id={}].steps[{step_index}].values.pan", phaser.id),
+                errors,
+            );
+            set_angle_value(
+                &mut values,
+                profile_handle,
+                tilt,
+                writes_tilt,
+                step.values.tilt,
+                format!("phasers[id={}].steps[{step_index}].values.tilt", phaser.id),
+                errors,
+            );
+
+            CompiledStep {
+                values,
+                width: step.width.unwrap_or(100.0),
+                transition: step.transition.unwrap_or(100.0),
+                accel: step.accel.unwrap_or(0),
+                decel: step.decel.unwrap_or(0),
+            }
+        })
+        .collect();
+
+    CompiledProfilePhaser {
+        steps,
+        intensity,
+        color,
+        pan,
+        tilt,
+    }
+}
+
+fn set_angle_value(
+    values: &mut [Option<AttributeValue>],
+    profile_handle: FixtureProfileHandle,
+    handle: Option<AttributeHandle>,
+    is_written: bool,
+    document_value: Option<f32>,
+    path: String,
+    errors: &mut Vec<Diagnostic>,
+) {
+    if !is_written {
+        return;
+    }
+    let Some(handle) = handle else {
+        return;
+    };
+    let descriptor = &profile_by_handle(profile_handle).attributes[handle.index()];
+    let value = document_value
+        .map(AttributeValue::Angle)
+        .unwrap_or_else(|| descriptor.default_value.clone());
+    if let (AttributeValue::Angle(value), Some(range)) = (&value, &descriptor.physical_range) {
+        if *value < range.min || *value > range.max {
+            errors.push(Diagnostic::error(
+                DOC_ATTRIBUTE_OUT_OF_RANGE,
+                path,
+                format!(
+                    "Attribute {:?} value {value} is outside [{}, {}] {}.",
+                    descriptor.id, range.min, range.max, range.unit
+                ),
+                "Keep the effect value inside the target fixture profile's physical range.",
+            ));
+        }
+    }
+    values[handle.index()] = Some(value);
 }
 
 fn compile_automation_target(target: AutomationTargetDSL) -> CompiledAutomationTarget {
@@ -873,10 +1009,14 @@ fn non_finite_formula_diagnostic(path: &str) -> Diagnostic {
 #[cfg(test)]
 mod tests {
     use super::{
-        diagnostic::{DSL_DUPLICATE_FIXTURE_ID, DSL_TARGET_GROUP_NOT_FOUND},
+        diagnostic::{
+            DOC_ATTRIBUTE_NOT_SUPPORTED, DOC_ATTRIBUTE_OUT_OF_RANGE, DSL_DUPLICATE_FIXTURE_ID,
+            DSL_TARGET_GROUP_NOT_FOUND,
+        },
         parser::ShowDSL,
         Compiler, PhaseConfig,
     };
+    use crate::engine::profile::AttributeValue;
 
     const VALID_SHOW: &str = r##"
     {
@@ -932,8 +1072,18 @@ mod tests {
 
         let phaser = show.phasers.get("pulse").expect("compiled pulse phaser");
         assert_eq!(phaser.multiplier, Some(2.0));
-        assert_eq!(phaser.steps[0].color, (255, 0, 0));
-        assert_eq!(phaser.steps[0].dimmer, 0.5);
+        let profile_phaser = phaser
+            .profile_steps
+            .get(&show.fixtures[0].profile)
+            .expect("profile-specific phaser");
+        assert_eq!(
+            profile_phaser.steps[0].values[profile_phaser.color.expect("color").index()],
+            Some(AttributeValue::Color([255, 0, 0]))
+        );
+        assert_eq!(
+            profile_phaser.steps[0].values[profile_phaser.intensity.expect("intensity").index()],
+            Some(AttributeValue::Scalar(0.5))
+        );
         assert!(matches!(
             phaser.phase,
             PhaseConfig::Spread {
@@ -969,5 +1119,35 @@ mod tests {
         assert_eq!(errors[1].code, DSL_TARGET_GROUP_NOT_FOUND);
         assert_eq!(errors[1].path, "phasers[0].target");
         assert_eq!(errors[1].message, "Target group not found: Missing");
+    }
+
+    #[test]
+    fn validates_effect_attributes_against_each_target_profile() {
+        let unsupported = VALID_SHOW.replace(
+            "\"color\": \"#ff0000\", \"dimmer\": 0.5",
+            "\"color\": \"#ff0000\", \"dimmer\": 0.5, \"pan\": 90",
+        );
+        let unsupported_errors = match Compiler::compile_document(
+            serde_json::from_str(&unsupported).expect("syntactically valid unsupported show"),
+        ) {
+            Ok(_) => panic!("RGB profile must reject pan writes"),
+            Err(errors) => errors,
+        };
+        assert!(unsupported_errors
+            .iter()
+            .any(|error| error.code == DOC_ATTRIBUTE_NOT_SUPPORTED));
+
+        let out_of_range = unsupported
+            .replace("generic-rgb", "generic-moving-head")
+            .replace("\"pan\": 90", "\"pan\": 300");
+        let range_errors = match Compiler::compile_document(
+            serde_json::from_str(&out_of_range).expect("syntactically valid range show"),
+        ) {
+            Ok(_) => panic!("moving-head profile must enforce its physical pan range"),
+            Err(errors) => errors,
+        };
+        assert!(range_errors
+            .iter()
+            .any(|error| error.code == DOC_ATTRIBUTE_OUT_OF_RANGE));
     }
 }
