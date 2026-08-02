@@ -27,6 +27,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -37,6 +38,7 @@
       "sort_by": "none"
     },
     {
+      "id": "byangle",
       "name": "ByAngle",
       "fixtures": {
         "range": [
@@ -51,7 +53,7 @@
     {
       "id": "sync_flyout",
       "name": "Sync Flyout",
-      "target": "All",
+      "target": "all",
       "multiplier": 0.5,
       "steps": [
         {
@@ -86,7 +88,7 @@
     {
       "id": "chaos_snap",
       "name": "Chaos Snap",
-      "target": "ByAngle",
+      "target": "byangle",
       "multiplier": 2,
       "steps": [
         {

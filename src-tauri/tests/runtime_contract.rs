@@ -1,4 +1,5 @@
 use lumina_ai_lib::compiler::{parser::ShowDSL, Compiler};
+use lumina_ai_lib::document::load_document;
 use lumina_ai_lib::engine::render::{render_at, LivePhaser, RenderSource, RenderTime};
 use std::fs;
 use std::path::PathBuf;
@@ -19,8 +20,10 @@ fn all_templates_render_deterministically_with_the_stage_one_renderer() {
 
     for path in paths {
         let source = fs::read_to_string(&path).expect("template source");
-        let dsl: ShowDSL = serde_json::from_str(&source).expect("template JSON");
-        let show = Compiler::compile(dsl).expect("template compile");
+        let loaded = load_document(&source).expect("template document");
+        assert!(loaded.migration_report.changes.is_empty());
+        let dsl: ShowDSL = loaded.document;
+        let show = Compiler::compile_document(dsl).expect("template compile");
         let time = RenderTime { beat: 8.25 };
 
         let timeline_frame = render_at(&show, time, RenderSource::Timeline);

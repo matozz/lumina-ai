@@ -30,6 +30,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -40,6 +41,7 @@
       "sort_by": "none"
     },
     {
+      "id": "byy",
       "name": "ByY",
       "fixtures": {
         "range": [
@@ -54,7 +56,7 @@
     {
       "id": "snake_run",
       "name": "Snake Run",
-      "target": "All",
+      "target": "all",
       "multiplier": 1,
       "steps": [
         {
@@ -93,7 +95,7 @@
     {
       "id": "y_axis_gradient",
       "name": "Y-Axis Gradient",
-      "target": "ByY",
+      "target": "byy",
       "multiplier": 0.5,
       "steps": [
         {

@@ -27,6 +27,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -37,6 +38,7 @@
       "sort_by": "angle_center"
     },
     {
+      "id": "odd",
       "name": "Odd",
       "fixtures": [
         2,
@@ -49,6 +51,7 @@
       "sort_by": "none"
     },
     {
+      "id": "even",
       "name": "Even",
       "fixtures": [
         3,
@@ -65,7 +68,7 @@
     {
       "id": "odd_bump",
       "name": "Odd Bump",
-      "target": "Odd",
+      "target": "odd",
       "multiplier": 2,
       "steps": [
         {
@@ -96,7 +99,7 @@
     {
       "id": "even_bump",
       "name": "Even Bump",
-      "target": "Even",
+      "target": "even",
       "multiplier": 2,
       "steps": [
         {
@@ -127,7 +130,7 @@
     {
       "id": "sweep_flash",
       "name": "Sweep Flash",
-      "target": "All",
+      "target": "all",
       "multiplier": 0.5,
       "steps": [
         {

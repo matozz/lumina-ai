@@ -6,7 +6,7 @@ use lumina_ai_lib::state::ActivePhaser;
 fn compiles_dsl_and_renders_expected_frame_at_known_beat() {
     let dsl: ShowDSL = serde_json::from_str(include_str!("fixtures/golden_show.json"))
         .expect("golden fixture must remain valid JSON DSL");
-    let show = Compiler::compile(dsl).expect("golden fixture must compile");
+    let show = Compiler::compile_document(dsl).expect("golden fixture must compile");
     let sample_beat = 0.75;
     let active = ActivePhaser {
         id: "chase".to_string(),

@@ -1,5 +1,5 @@
-use lumina_ai_lib::document::ShowDocumentV1;
-use serde_json::{Map, Value};
+use lumina_ai_lib::document::{ShowDocumentV1, CURRENT_SCHEMA_VERSION};
+use serde_json::{json, Map, Value};
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;
@@ -10,22 +10,45 @@ fn main() {
         .expect("src-tauri must have a repository parent")
         .to_path_buf();
     let schema_path = repository_root.join("schemas/show-document-v1.schema.json");
+    let capabilities_path = repository_root.join("schemas/show-capabilities-v1.json");
     let typescript_path = repository_root.join("src/generated/show-document-v1.ts");
     let schema = schemars::schema_for!(ShowDocumentV1);
     let mut contents = serde_json::to_string_pretty(&schema).expect("schema serializes");
     contents.push('\n');
     let schema_value = serde_json::to_value(&schema).expect("schema converts to JSON");
     let typescript = render_typescript(&schema_value);
+    let capabilities_value = json!({
+        "metadata_version": 1,
+        "document_schema_version": CURRENT_SCHEMA_VERSION,
+        "document_schema": "show-document-v1.schema.json",
+        "document_contract": {
+            "fixture_types": ["spot", "pixel"],
+            "layout_shapes": ["matrix", "circle", "formula", "svg_path", "custom"],
+            "phase_modes": ["spread", "grouped"],
+            "step_attributes": ["color", "dimmer", "pan", "tilt"],
+            "automation_targets": {
+                "global": ["master_dimmer"],
+                "effect_instance": ["multiplier", "color", "dimmer", "pan", "tilt"]
+            }
+        }
+    });
+    let mut capabilities =
+        serde_json::to_string_pretty(&capabilities_value).expect("capability metadata serializes");
+    capabilities.push('\n');
 
     if std::env::args().any(|argument| argument == "--check") {
-        let schema_is_current = fs::read_to_string(&schema_path).unwrap_or_default() == contents;
+        let schema_is_current = fs::read_to_string(&schema_path)
+            .ok()
+            .and_then(|source| serde_json::from_str::<Value>(&source).ok())
+            .is_some_and(|checked_in| checked_in == schema_value);
+        let capabilities_are_current = fs::read_to_string(&capabilities_path)
+            .ok()
+            .and_then(|source| serde_json::from_str::<Value>(&source).ok())
+            .is_some_and(|checked_in| checked_in == capabilities_value);
         let typescript_is_current =
             fs::read_to_string(&typescript_path).unwrap_or_default() == typescript;
-        if !schema_is_current || !typescript_is_current {
-            eprintln!(
-                "{} is stale; run pnpm schema:generate",
-                schema_path.display()
-            );
+        if !schema_is_current || !capabilities_are_current || !typescript_is_current {
+            eprintln!("generated document contracts are stale; run pnpm schema:generate");
             std::process::exit(1);
         }
         return;
@@ -34,12 +57,14 @@ fn main() {
     fs::create_dir_all(schema_path.parent().expect("schema parent"))
         .expect("schema directory is writable");
     fs::write(&schema_path, contents).expect("schema artifact is writable");
+    fs::write(&capabilities_path, capabilities).expect("capability metadata is writable");
     fs::create_dir_all(typescript_path.parent().expect("TypeScript parent"))
         .expect("TypeScript directory is writable");
     fs::write(&typescript_path, typescript).expect("TypeScript artifact is writable");
     println!(
-        "generated {} and {}",
+        "generated {}, {}, and {}",
         schema_path.display(),
+        capabilities_path.display(),
         typescript_path.display()
     );
 }
@@ -96,11 +121,19 @@ fn render_type(schema: &Value, indent: usize) -> String {
         }
     }
     if let Some(values) = schema.get("enum").and_then(Value::as_array) {
-        return values
+        let rendered = values
             .iter()
             .map(|value| serde_json::to_string(value).expect("enum value serializes"))
-            .collect::<Vec<_>>()
-            .join(" | ");
+            .collect::<Vec<_>>();
+        let inline = rendered.join(" | ");
+        if inline.len() > 80 {
+            return format!(
+                "\n{}| {}",
+                " ".repeat(indent + 2),
+                rendered.join(&format!("\n{}| ", " ".repeat(indent + 2)))
+            );
+        }
+        return inline;
     }
     for keyword in ["oneOf", "anyOf"] {
         if let Some(variants) = schema.get(keyword).and_then(Value::as_array) {

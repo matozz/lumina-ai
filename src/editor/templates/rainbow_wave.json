@@ -27,6 +27,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -41,7 +42,7 @@
     {
       "id": "rainbow_colors",
       "name": "Rainbow Colors",
-      "target": "All",
+      "target": "all",
       "multiplier": 0.5,
       "steps": [
         {
@@ -98,7 +99,7 @@
     {
       "id": "dimmer_sweep",
       "name": "Dimmer Sweep",
-      "target": "All",
+      "target": "all",
       "multiplier": 1,
       "steps": [
         {

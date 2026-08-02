@@ -1,8 +1,11 @@
 pub mod diagnostic;
 pub mod parser;
 
+use crate::document::{DocumentValidator, ValidatedShow};
+use crate::engine::color::parse_hex_color;
 use diagnostic::{
-    Diagnostic, DiagnosticSeverity, DSL_DUPLICATE_FIXTURE_ID, DSL_TARGET_GROUP_NOT_FOUND,
+    Diagnostic, DiagnosticSeverity, DOC_FORMULA_INVALID, DOC_INVALID_COLOR,
+    DSL_DUPLICATE_FIXTURE_ID, DSL_TARGET_GROUP_NOT_FOUND,
 };
 use fasteval::{Compiler as FastevalCompiler, Evaler};
 use parser::*;
@@ -15,6 +18,36 @@ pub struct CompiledShow {
     pub groups: HashMap<String, CompiledGroup>,
     pub phasers: HashMap<String, CompiledPhaser>,
     pub timeline: Option<CompiledTimeline>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct GroupHandle(String);
+
+impl GroupHandle {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<String> for GroupHandle {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct EffectInstanceHandle(String);
+
+impl EffectInstanceHandle {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<String> for EffectInstanceHandle {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -34,6 +67,7 @@ pub struct LayoutCoord {
 
 #[derive(Clone, Debug)]
 pub struct CompiledGroup {
+    pub id: String,
     pub name: String,
     pub sorted_fixture_ids: Vec<u32>,
     pub blocks: Vec<usize>, // number of fixtures in each unique sort block
@@ -71,7 +105,7 @@ impl CompiledGroup {
 pub struct CompiledPhaser {
     pub id: String,
     pub name: String,
-    pub target: String,
+    pub target: GroupHandle,
     pub multiplier: Option<f64>,
     pub steps: Vec<CompiledStep>,
     pub phase: PhaseConfig,
@@ -101,13 +135,57 @@ pub enum PhaseConfig {
 
 #[derive(Clone, Debug)]
 pub struct CompiledTimeline {
-    pub events: Vec<TimelineEventDSL>,
+    pub events: Vec<CompiledTimelineEvent>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CompiledTimelineEvent {
+    pub beat: f64,
+    pub duration: Option<f64>,
+    pub action: CompiledTimelineAction,
+}
+
+#[derive(Clone, Debug)]
+pub enum CompiledTimelineAction {
+    Phaser {
+        phaser: EffectInstanceHandle,
+    },
+    Animate {
+        target: CompiledAutomationTarget,
+        from: AnimatableValueDSL,
+        to: AnimatableValueDSL,
+        easing: Option<EasingDSL>,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum CompiledAutomationTarget {
+    GlobalMasterDimmer,
+    EffectInstance {
+        instance: EffectInstanceHandle,
+        parameter: CompiledEffectParameter,
+    },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CompiledEffectParameter {
+    Multiplier,
+    Color,
+    Dimmer,
+    Pan,
+    Tilt,
 }
 
 pub struct Compiler;
 
 impl Compiler {
-    pub fn compile(dsl: ShowDSL) -> Result<CompiledShow, Vec<Diagnostic>> {
+    pub fn compile_document(document: ShowDSL) -> Result<CompiledShow, Vec<Diagnostic>> {
+        let validated = DocumentValidator::validate(document)?;
+        Self::compile(validated)
+    }
+
+    pub fn compile(validated: ValidatedShow) -> Result<CompiledShow, Vec<Diagnostic>> {
+        let dsl = validated.into_document();
         let mut errors = Vec::new();
 
         let fixtures = Self::compile_patch(&dsl.patch, &mut errors);
@@ -115,9 +193,7 @@ impl Compiler {
         let groups = Self::compile_groups(&dsl.groups, &fixtures, &coords, &mut errors);
         let phasers = Self::compile_phasers(&dsl.phasers, &groups, &mut errors);
 
-        let timeline = dsl
-            .timeline
-            .map(|tl| CompiledTimeline { events: tl.events });
+        let timeline = dsl.timeline.map(Self::compile_timeline);
 
         if !errors.is_empty()
             && errors
@@ -150,7 +226,7 @@ impl Compiler {
                 }
                 fixtures.push(Fixture {
                     id,
-                    type_: p.type_.clone(),
+                    type_: p.type_.as_str().to_string(),
                 });
             }
         }
@@ -160,7 +236,7 @@ impl Compiler {
     fn compile_layout(
         layout_dsl: &LayoutDSL,
         fixtures: &[Fixture],
-        _errors: &mut Vec<Diagnostic>,
+        errors: &mut Vec<Diagnostic>,
     ) -> Vec<LayoutCoord> {
         let mut coords = Vec::new();
         let fix_ids: Vec<u32> = fixtures.iter().map(|f| f.id).collect();
@@ -236,12 +312,24 @@ impl Compiler {
                 let mut slab_x = fasteval::Slab::new();
                 let mut slab_y = fasteval::Slab::new();
 
-                let compiled_x = fasteval::Parser::new()
-                    .parse(&formula.x, &mut slab_x.ps)
-                    .map(|expr| expr.from(&slab_x.ps).compile(&slab_x.ps, &mut slab_x.cs));
-                let compiled_y = fasteval::Parser::new()
-                    .parse(&formula.y, &mut slab_y.ps)
-                    .map(|expr| expr.from(&slab_y.ps).compile(&slab_y.ps, &mut slab_y.cs));
+                let compiled_x = match fasteval::Parser::new().parse(&formula.x, &mut slab_x.ps) {
+                    Ok(expression) => expression
+                        .from(&slab_x.ps)
+                        .compile(&slab_x.ps, &mut slab_x.cs),
+                    Err(error) => {
+                        errors.push(formula_diagnostic("layout.generator.formula.x", error));
+                        return coords;
+                    }
+                };
+                let compiled_y = match fasteval::Parser::new().parse(&formula.y, &mut slab_y.ps) {
+                    Ok(expression) => expression
+                        .from(&slab_y.ps)
+                        .compile(&slab_y.ps, &mut slab_y.cs),
+                    Err(error) => {
+                        errors.push(formula_diagnostic("layout.generator.formula.y", error));
+                        return coords;
+                    }
+                };
 
                 for i in 0..formula.count {
                     if (i as usize) < fix_ids.len() {
@@ -263,14 +351,34 @@ impl Compiler {
                             }
                         };
 
-                        let x = match &compiled_x {
-                            Ok(instr) => instr.eval(&slab_x, &mut cb).unwrap_or(0.0) * scale,
-                            Err(_) => t * scale,
+                        let x = match compiled_x.eval(&slab_x, &mut cb) {
+                            Ok(value) if value.is_finite() => value * scale,
+                            Ok(_) => {
+                                errors.push(non_finite_formula_diagnostic(
+                                    "layout.generator.formula.x",
+                                ));
+                                return coords;
+                            }
+                            Err(error) => {
+                                errors
+                                    .push(formula_diagnostic("layout.generator.formula.x", error));
+                                return coords;
+                            }
                         };
 
-                        let y = match &compiled_y {
-                            Ok(instr) => instr.eval(&slab_y, &mut cb).unwrap_or(0.0) * scale,
-                            Err(_) => t * scale,
+                        let y = match compiled_y.eval(&slab_y, &mut cb) {
+                            Ok(value) if value.is_finite() => value * scale,
+                            Ok(_) => {
+                                errors.push(non_finite_formula_diagnostic(
+                                    "layout.generator.formula.y",
+                                ));
+                                return coords;
+                            }
+                            Err(error) => {
+                                errors
+                                    .push(formula_diagnostic("layout.generator.formula.y", error));
+                                return coords;
+                            }
                         };
 
                         coords.push(LayoutCoord {
@@ -294,7 +402,14 @@ impl Compiler {
                     });
                 }
             }
-            _ => {}
+            GeneratorDSL::SvgPath { .. } => {
+                errors.push(Diagnostic::error(
+                    crate::compiler::diagnostic::DOC_SVG_PATH_INVALID,
+                    "layout.generator.svgPath.d",
+                    "SVG path compilation is not supported by this engine build.",
+                    "Use matrix, circle, formula, or custom layout until SVG sampling is implemented.",
+                ));
+            }
         }
         coords
     }
@@ -323,7 +438,8 @@ impl Compiler {
             let mut blocks = Vec::new();
 
             if let Some(sort_by) = &g.sort_by {
-                match sort_by.as_str() {
+                let sort_by = sort_by.as_str();
+                match sort_by {
                     "x" => {
                         ids.sort_by(|a, b| {
                             let xa = coord_map.get(a).map(|c| c.x).unwrap_or(0.0);
@@ -588,8 +704,9 @@ impl Compiler {
             }
 
             groups.insert(
-                g.name.clone(),
+                g.id.clone(),
                 CompiledGroup {
+                    id: g.id.clone(),
                     name: g.name.clone(),
                     sorted_fixture_ids: ids,
                     blocks,
@@ -615,37 +732,39 @@ impl Compiler {
                 ));
             }
 
-            let phase = match p.phase.mode.as_str() {
-                "spread" => {
-                    let spread = p.phase.spread.as_ref().unwrap();
-                    PhaseConfig::Spread {
-                        from: spread.from,
-                        to: spread.to,
-                    }
-                }
-                "grouped" => {
-                    let g = p.phase.grouped.as_ref().unwrap();
-                    PhaseConfig::Grouped {
-                        group_size: g.group_size as usize,
-                        spread: g.spread,
-                    }
-                }
-                _ => PhaseConfig::Spread { from: 0.0, to: 0.0 },
+            let phase = match &p.phase {
+                PhaseConfigDSL::Spread { spread } => PhaseConfig::Spread {
+                    from: spread.from,
+                    to: spread.to,
+                },
+                PhaseConfigDSL::Grouped { grouped } => PhaseConfig::Grouped {
+                    group_size: grouped.group_size as usize,
+                    spread: grouped.spread,
+                },
             };
 
             let steps = p
                 .steps
                 .iter()
-                .map(|s| {
+                .enumerate()
+                .map(|(step_index, s)| {
                     let color_hex = s.values.color.as_deref().unwrap_or("#000000");
                     let dimmer = s.values.dimmer.unwrap_or(1.0);
-
-                    let r = u8::from_str_radix(&color_hex[1..3], 16).unwrap_or(0);
-                    let g = u8::from_str_radix(&color_hex[3..5], 16).unwrap_or(0);
-                    let b = u8::from_str_radix(&color_hex[5..7], 16).unwrap_or(0);
+                    let color = match parse_hex_color(color_hex) {
+                        Ok(color) => color,
+                        Err(error) => {
+                            errors.push(Diagnostic::error(
+                                DOC_INVALID_COLOR,
+                                format!("phasers[id={}].steps[{step_index}].values.color", p.id),
+                                error.to_string(),
+                                "Use a color in #RRGGBB format.",
+                            ));
+                            (0, 0, 0)
+                        }
+                    };
 
                     CompiledStep {
-                        color: (r, g, b),
+                        color,
                         dimmer,
                         width: s.width.unwrap_or(100.0),
                         transition: s.transition.unwrap_or(100.0),
@@ -660,7 +779,7 @@ impl Compiler {
                 CompiledPhaser {
                     id: p.id.clone(),
                     name: p.name.clone(),
-                    target: p.target.clone(),
+                    target: p.target.clone().into(),
                     multiplier: p.multiplier,
                     steps,
                     phase,
@@ -669,6 +788,74 @@ impl Compiler {
         }
         map
     }
+
+    fn compile_timeline(timeline: TimelineDSL) -> CompiledTimeline {
+        let events = timeline
+            .events
+            .into_iter()
+            .map(|event| CompiledTimelineEvent {
+                beat: event.beat,
+                duration: event.duration,
+                action: match event.action {
+                    TimelineActionDefDSL::Phaser { phaser } => CompiledTimelineAction::Phaser {
+                        phaser: phaser.into(),
+                    },
+                    TimelineActionDefDSL::Animate {
+                        target,
+                        from,
+                        to,
+                        easing,
+                    } => CompiledTimelineAction::Animate {
+                        target: compile_automation_target(target),
+                        from,
+                        to,
+                        easing,
+                    },
+                },
+            })
+            .collect();
+        CompiledTimeline { events }
+    }
+}
+
+fn compile_automation_target(target: AutomationTargetDSL) -> CompiledAutomationTarget {
+    match target {
+        AutomationTargetDSL::Global { .. } => CompiledAutomationTarget::GlobalMasterDimmer,
+        AutomationTargetDSL::EffectInstance {
+            instance_id,
+            parameter_id,
+        } => {
+            let parameter = match parameter_id {
+                EffectParameterDSL::Multiplier => CompiledEffectParameter::Multiplier,
+                EffectParameterDSL::Color => CompiledEffectParameter::Color,
+                EffectParameterDSL::Dimmer => CompiledEffectParameter::Dimmer,
+                EffectParameterDSL::Pan => CompiledEffectParameter::Pan,
+                EffectParameterDSL::Tilt => CompiledEffectParameter::Tilt,
+            };
+            CompiledAutomationTarget::EffectInstance {
+                instance: instance_id.into(),
+                parameter,
+            }
+        }
+    }
+}
+
+fn formula_diagnostic(path: &str, error: impl std::fmt::Display) -> Diagnostic {
+    Diagnostic::error(
+        DOC_FORMULA_INVALID,
+        path,
+        format!("Formula cannot be evaluated: {error}"),
+        "Use t, sin, cos, and pow in a valid finite numeric expression.",
+    )
+}
+
+fn non_finite_formula_diagnostic(path: &str) -> Diagnostic {
+    Diagnostic::error(
+        DOC_FORMULA_INVALID,
+        path,
+        "Formula produced a non-finite coordinate.",
+        "Adjust the expression and range to produce finite coordinates.",
+    )
 }
 
 #[cfg(test)]
@@ -694,11 +881,11 @@ mod tests {
           "origin": [5.0, 6.0]
         }
       },
-      "groups": [{ "name": "Line", "fixtures": { "range": [1, 2] }, "sort_by": "x" }],
+      "groups": [{ "id": "line", "name": "Line", "fixtures": { "range": [1, 2] }, "sort_by": "x" }],
       "phasers": [{
         "id": "pulse",
         "name": "Pulse",
-        "target": "Line",
+        "target": "line",
         "multiplier": 2.0,
         "steps": [{
           "values": { "color": "#ff0000", "dimmer": 0.5 },
@@ -720,14 +907,14 @@ mod tests {
     #[test]
     fn compiles_fixture_group_phaser_and_timeline_outputs() {
         let dsl: ShowDSL = serde_json::from_str(VALID_SHOW).expect("valid baseline DSL");
-        let show = Compiler::compile(dsl).expect("baseline show should compile");
+        let show = Compiler::compile_document(dsl).expect("baseline show should compile");
 
         assert_eq!(show.fixtures.len(), 2);
         assert_eq!(show.fixtures[0].id, 1);
         assert_eq!(show.coords.len(), 2);
         assert_eq!((show.coords[1].x, show.coords[1].y), (15.0, 6.0));
 
-        let group = show.groups.get("Line").expect("compiled Line group");
+        let group = show.groups.get("line").expect("compiled line group");
         assert_eq!(group.sorted_fixture_ids, vec![1, 2]);
         assert_eq!(group.blocks, vec![1, 1]);
 
@@ -752,23 +939,23 @@ mod tests {
                 "[{ \"type\": \"pixel\", \"id_range\": [1, 2] }]",
                 "[{ \"type\": \"pixel\", \"id_range\": [1, 2] }, { \"type\": \"pixel\", \"id_range\": [2, 3] }]",
             )
-            .replace("\"target\": \"Line\"", "\"target\": \"Missing\"");
+            .replace("\"target\": \"line\"", "\"target\": \"Missing\"");
         let dsl: ShowDSL = serde_json::from_str(&invalid_show).expect("syntactically valid DSL");
-        let errors = match Compiler::compile(dsl) {
+        let errors = match Compiler::compile_document(dsl) {
             Ok(_) => panic!("invalid show must not compile"),
             Err(errors) => errors,
         };
 
         assert_eq!(errors.len(), 2);
         assert_eq!(errors[0].code, DSL_DUPLICATE_FIXTURE_ID);
-        assert_eq!(errors[0].path, "patch.id_range");
+        assert_eq!(errors[0].path, "patch[1].id_range");
         assert_eq!(errors[0].message, "Duplicate fixture ID: 2");
         assert_eq!(
             errors[0].hint.as_deref(),
             Some("Use a unique fixture ID across all patch ranges.")
         );
         assert_eq!(errors[1].code, DSL_TARGET_GROUP_NOT_FOUND);
-        assert_eq!(errors[1].path, "phasers[name=Pulse]");
+        assert_eq!(errors[1].path, "phasers[0].target");
         assert_eq!(errors[1].message, "Target group not found: Missing");
     }
 }

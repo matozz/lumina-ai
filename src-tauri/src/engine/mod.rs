@@ -41,7 +41,7 @@ pub fn compute_frame(
     let resolved: Vec<_> = active_phasers
         .iter()
         .map(|active| render::ResolvedPhaser {
-            id: active.id.clone(),
+            instance: active.id.clone().into(),
             phase: active.accumulated_beat,
         })
         .collect();

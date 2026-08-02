@@ -45,14 +45,7 @@
     }
   },
   "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "meta",
-    "patch",
-    "layout",
-    "groups",
-    "phasers"
-  ],
+  "required": ["schema_version", "meta", "patch", "layout", "groups", "phasers"],
   "$defs": {
     "AnimatableValueDSL": {
       "anyOf": [
@@ -65,13 +58,48 @@
         }
       ]
     },
+    "AutomationTargetDSL": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "parameter_id": {
+              "$ref": "#/$defs/GlobalParameterDSL"
+            },
+            "scope": {
+              "type": "string",
+              "const": "global"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["scope", "parameter_id"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "instance_id": {
+              "type": "string"
+            },
+            "parameter_id": {
+              "$ref": "#/$defs/EffectParameterDSL"
+            },
+            "scope": {
+              "type": "string",
+              "const": "effect_instance"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["scope", "instance_id", "parameter_id"]
+        }
+      ]
+    },
     "CustomFixturePos": {
       "type": "object",
       "properties": {
         "id": {
           "type": "integer",
           "format": "uint32",
-          "minimum": 0
+          "minimum": 1
         },
         "x": {
           "type": "number",
@@ -83,20 +111,15 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "x",
-        "y"
-      ]
+      "required": ["id", "x", "y"]
     },
     "EasingDSL": {
       "type": "string",
-      "enum": [
-        "linear",
-        "ease_in",
-        "ease_out",
-        "ease_in_out"
-      ]
+      "enum": ["linear", "ease_in", "ease_out", "ease_in_out"]
+    },
+    "EffectParameterDSL": {
+      "type": "string",
+      "enum": ["multiplier", "color", "dimmer", "pan", "tilt"]
     },
     "FormulaDef": {
       "type": "object",
@@ -104,13 +127,11 @@
         "count": {
           "type": "integer",
           "format": "uint32",
-          "minimum": 0
+          "maximum": 1000000,
+          "minimum": 1
         },
         "scale": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "format": "double"
         },
         "t_range": {
@@ -136,12 +157,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "x",
-        "y",
-        "t_range",
-        "count"
-      ]
+      "required": ["x", "y", "t_range", "count"]
     },
     "GeneratorDSL": {
       "oneOf": [
@@ -151,13 +167,10 @@
             "columns": {
               "type": "integer",
               "format": "uint32",
-              "minimum": 0
+              "minimum": 1
             },
             "origin": {
-              "type": [
-                "array",
-                "null"
-              ],
+              "type": ["array", "null"],
               "maxItems": 2,
               "minItems": 2,
               "prefixItems": [
@@ -174,7 +187,7 @@
             "rows": {
               "type": "integer",
               "format": "uint32",
-              "minimum": 0
+              "minimum": 1
             },
             "shape": {
               "type": "string",
@@ -182,25 +195,18 @@
             },
             "spacing": {
               "type": "number",
-              "format": "double"
+              "format": "double",
+              "minimum": 1e-6
             }
           },
           "additionalProperties": false,
-          "required": [
-            "shape",
-            "rows",
-            "columns",
-            "spacing"
-          ]
+          "required": ["shape", "rows", "columns", "spacing"]
         },
         {
           "type": "object",
           "properties": {
             "center": {
-              "type": [
-                "array",
-                "null"
-              ],
+              "type": ["array", "null"],
               "maxItems": 2,
               "minItems": 2,
               "prefixItems": [
@@ -216,17 +222,18 @@
             },
             "gap": {
               "type": "number",
-              "format": "double"
+              "format": "double",
+              "minimum": 1e-6
             },
             "increment": {
               "type": "integer",
               "format": "uint32",
-              "minimum": 0
+              "minimum": 1
             },
             "rings": {
               "type": "integer",
               "format": "uint32",
-              "minimum": 0
+              "minimum": 1
             },
             "shape": {
               "type": "string",
@@ -234,12 +241,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "shape",
-            "rings",
-            "increment",
-            "gap"
-          ]
+          "required": ["shape", "rings", "increment", "gap"]
         },
         {
           "type": "object",
@@ -253,10 +255,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "shape",
-            "formula"
-          ]
+          "required": ["shape", "formula"]
         },
         {
           "type": "object",
@@ -270,10 +269,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "shape",
-            "svgPath"
-          ]
+          "required": ["shape", "svgPath"]
         },
         {
           "type": "object",
@@ -290,12 +286,13 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "shape",
-            "fixtures"
-          ]
+          "required": ["shape", "fixtures"]
         }
       ]
+    },
+    "GlobalParameterDSL": {
+      "type": "string",
+      "enum": ["master_dimmer"]
     },
     "GroupDSL": {
       "type": "object",
@@ -303,21 +300,25 @@
         "fixtures": {
           "$ref": "#/$defs/GroupFixturesDSL"
         },
+        "id": {
+          "type": "string"
+        },
         "name": {
           "type": "string"
         },
         "sort_by": {
-          "type": [
-            "string",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SortByDSL"
+            },
+            {
+              "type": "null"
+            }
           ]
         }
       },
       "additionalProperties": false,
-      "required": [
-        "name",
-        "fixtures"
-      ]
+      "required": ["id", "name", "fixtures"]
     },
     "GroupFixturesDSL": {
       "anyOf": [
@@ -356,9 +357,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "range"
-      ]
+      "required": ["range"]
     },
     "LayoutDSL": {
       "type": "object",
@@ -367,14 +366,19 @@
           "$ref": "#/$defs/GeneratorDSL"
         },
         "type": {
-          "type": "string"
+          "$ref": "#/$defs/LayoutType"
         }
       },
       "additionalProperties": false,
-      "required": [
-        "type",
-        "generator"
-      ]
+      "required": ["type", "generator"]
+    },
+    "LayoutType": {
+      "type": "string",
+      "enum": ["generator"]
+    },
+    "LegacyFixtureType": {
+      "type": "string",
+      "enum": ["spot", "pixel"]
     },
     "MetaDSL": {
       "type": "object",
@@ -384,9 +388,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "name"
-      ]
+      "required": ["name"]
     },
     "PatchDSL": {
       "type": "object",
@@ -409,45 +411,42 @@
           ]
         },
         "type": {
-          "type": "string"
+          "$ref": "#/$defs/LegacyFixtureType"
         }
       },
       "additionalProperties": false,
-      "required": [
-        "type",
-        "id_range"
-      ]
+      "required": ["type", "id_range"]
     },
     "PhaseConfigDSL": {
-      "type": "object",
-      "properties": {
-        "grouped": {
-          "anyOf": [
-            {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "spread"
+            },
+            "spread": {
+              "$ref": "#/$defs/PhaseSpreadDSL"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["mode", "spread"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "grouped": {
               "$ref": "#/$defs/PhaseGroupedDSL"
             },
-            {
-              "type": "null"
+            "mode": {
+              "type": "string",
+              "const": "grouped"
             }
-          ]
-        },
-        "mode": {
-          "type": "string"
-        },
-        "spread": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/PhaseSpreadDSL"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          },
+          "additionalProperties": false,
+          "required": ["mode", "grouped"]
         }
-      },
-      "additionalProperties": false,
-      "required": [
-        "mode"
       ]
     },
     "PhaseGroupedDSL": {
@@ -456,7 +455,7 @@
         "group_size": {
           "type": "integer",
           "format": "uint32",
-          "minimum": 0
+          "minimum": 1
         },
         "spread": {
           "type": "array",
@@ -475,28 +474,26 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "group_size",
-        "spread"
-      ]
+      "required": ["group_size", "spread"]
     },
     "PhaseSpreadDSL": {
       "type": "object",
       "properties": {
         "from": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "maximum": 100.0,
+          "minimum": 0.0
         },
         "to": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "maximum": 100.0,
+          "minimum": 0.0
         }
       },
       "additionalProperties": false,
-      "required": [
-        "from",
-        "to"
-      ]
+      "required": ["from", "to"]
     },
     "PhaserDSL": {
       "type": "object",
@@ -505,11 +502,9 @@
           "type": "string"
         },
         "multiplier": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "format": "double"
+          "type": ["number", "null"],
+          "format": "double",
+          "minimum": 1e-6
         },
         "name": {
           "type": "string"
@@ -528,82 +523,73 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "id",
-        "name",
-        "target",
-        "steps",
-        "phase"
-      ]
+      "required": ["id", "name", "target", "steps", "phase"]
     },
     "PhaserStepDSL": {
       "type": "object",
       "properties": {
         "accel": {
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": ["integer", "null"],
           "format": "int32"
         },
         "decel": {
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": ["integer", "null"],
           "format": "int32"
         },
         "transition": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "format": "double"
+          "type": ["number", "null"],
+          "format": "double",
+          "maximum": 100.0,
+          "minimum": 0.0
         },
         "values": {
           "$ref": "#/$defs/StepValuesDSL"
         },
         "width": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "format": "double"
+          "type": ["number", "null"],
+          "format": "double",
+          "maximum": 100.0,
+          "minimum": 0.0
         }
       },
       "additionalProperties": false,
-      "required": [
-        "values"
+      "required": ["values"]
+    },
+    "SortByDSL": {
+      "type": "string",
+      "enum": [
+        "none",
+        "x",
+        "-x",
+        "y",
+        "-y",
+        "distance_center",
+        "-distance_center",
+        "angle_center",
+        "-angle_center",
+        "random",
+        "x+y",
+        "-(x+y)"
       ]
     },
     "StepValuesDSL": {
       "type": "object",
       "properties": {
         "color": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "dimmer": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "format": "float"
+          "type": ["number", "null"],
+          "format": "float",
+          "maximum": 1.0,
+          "minimum": 0.0
         },
         "pan": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "format": "float"
         },
         "tilt": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "format": "float"
         }
       },
@@ -618,21 +604,16 @@
         "sample_count": {
           "type": "integer",
           "format": "uint32",
-          "minimum": 0
+          "maximum": 1000000,
+          "minimum": 1
         },
         "scale": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "format": "double"
         }
       },
       "additionalProperties": false,
-      "required": [
-        "d",
-        "sample_count"
-      ]
+      "required": ["d", "sample_count"]
     },
     "TimelineActionDefDSL": {
       "oneOf": [
@@ -648,10 +629,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type",
-            "phaser"
-          ]
+          "required": ["type", "phaser"]
         },
         {
           "type": "object",
@@ -670,7 +648,7 @@
               "$ref": "#/$defs/AnimatableValueDSL"
             },
             "target": {
-              "type": "string"
+              "$ref": "#/$defs/AutomationTargetDSL"
             },
             "to": {
               "$ref": "#/$defs/AnimatableValueDSL"
@@ -681,12 +659,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type",
-            "target",
-            "from",
-            "to"
-          ]
+          "required": ["type", "target", "from", "to"]
         }
       ]
     },
@@ -701,9 +674,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "events"
-      ]
+      "required": ["events"]
     },
     "TimelineEventDSL": {
       "type": "object",
@@ -713,21 +684,17 @@
         },
         "beat": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "minimum": 0.0
         },
         "duration": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "format": "double"
+          "type": ["number", "null"],
+          "format": "double",
+          "minimum": 1e-6
         }
       },
       "additionalProperties": false,
-      "required": [
-        "beat",
-        "action"
-      ]
+      "required": ["beat", "action"]
     }
   }
 }

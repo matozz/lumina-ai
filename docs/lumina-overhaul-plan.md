@@ -220,7 +220,7 @@ flowchart TD
 | ----- | --------------------------------------- | ----------- | ---- | ------------------------------------------- |
 | 0     | Baseline 与质量护栏                     | completed   | 无   | 测试框架、基线和 CI 可用                    |
 | 1     | 实时内核与 Transport                    | completed   | 0    | Clock/Play/Pause/Stop/Seek 确定且无重复线程 |
-| 2     | Versioned Document 与统一 Schema        | in_progress | 1    | 单一 schema 契约、migration、零 panic       |
+| 2     | Versioned Document 与统一 Schema        | completed   | 1    | 单一 schema 契约、migration、零 panic       |
 | 3     | Fixture Attribute、Mixer 与 Output 抽象 | not_started | 2    | 通用属性、HTP/LTP、Null/Preview Sink        |
 | 4     | 可扩展 Effect Engine                    | not_started | 3    | EffectGraph/参数/空间相位可确定性求值       |
 | 5     | Timeline、Keyframe 与 Undo/Redo         | not_started | 4    | 多关键帧、seek/replay、无隐式数据破坏       |
@@ -375,19 +375,19 @@ flowchart TD
 #### 2.1 三层模型
 
 - [x] `ShowDocumentV1`：用户文件格式。
-- [ ] `ValidatedShow`：所有引用和范围已验证。
+- [x] `ValidatedShow`：所有引用和范围已验证。
 - [x] `CompiledShow`：运行时优化 IR。
 - [x] 禁止 UI 类型直接等同于 Runtime 类型。
 
 #### 2.2 严格验证
 
 - [x] document struct 默认拒绝未知字段。
-- [ ] mode 使用 tagged enum，避免 `mode=spread` 但 spread 缺失。
-- [ ] 颜色使用安全 parser，支持的格式必须明确。
-- [ ] 验证 fixture ID、group、effect、timeline target 的存在性和唯一性。
-- [ ] 验证数值：BPM、width、transition、dimmer、group size、duration、tick。
-- [ ] 禁止 `unwrap/expect/panic` 处理用户或 AI 输入。
-- [ ] Formula/SVG 无法编译时返回 Diagnostic，不得 fallback 成另一条曲线。
+- [x] mode 使用 tagged enum，避免 `mode=spread` 但 spread 缺失。
+- [x] 颜色使用安全 parser，支持的格式必须明确。
+- [x] 验证 fixture ID、group、effect、timeline target 的存在性和唯一性。
+- [x] 验证数值：BPM、width、transition、dimmer、group size、duration、tick（当前文档字段全部覆盖；BPM 沿用 Stage 1 validator，整数 tick 在 Stage 5 引入时执行）。
+- [x] 禁止 `unwrap/expect/panic` 处理用户或 AI 输入。
+- [x] Formula/SVG 无法编译时返回 Diagnostic，不得 fallback 成另一条曲线。
 
 #### 2.3 Schema 版本和 Migration
 
@@ -415,15 +415,15 @@ flowchart TD
 }
 ```
 
-- [ ] ID 与 display name 完全分离。
-- [ ] 所有引用在 compile 时解析为 typed handle/index。
+- [x] ID 与 display name 完全分离。
+- [x] 所有引用在 compile 时解析为 typed handle/index。
 
 #### 2.5 Tooling
 
 - [x] 增加 schema generation/check 命令。
 - [x] CI 检查生成文件是否与 Rust 类型同步。
 - [x] Monaco 使用生成的 schema 做路径、enum、范围和补全提示。
-- [ ] AI 可直接读取同一 JSON Schema 和 capability metadata。
+- [x] AI 可直接读取同一 JSON Schema 和 capability metadata。
 
 ### 退出条件
 
@@ -1013,7 +1013,7 @@ flowchart LR
 
 任何任务只有同时满足以下条件才可以在 Progress Ledger 标记完成：
 
-以下勾选状态对应 2026-08-02 的 Stage 0+1 收口及 Stage 2 版本化契约切片；后续切片必须重新验证并更新。
+以下勾选状态对应 2026-08-02 的 Stage 0+1 收口及 Stage 2 最终收口；后续切片必须重新验证并更新。
 
 - [x] 实现与当前 Stage 设计一致；若偏离，已有 ADR。
 - [x] 没有无关重构、调试日志、死代码或生成噪音。
@@ -1080,15 +1080,15 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 
 ## Handoff
 
-- Current Stage: Stage 2 · Versioned Document 与统一 Schema（in_progress）；Stage 0/1 交接已独立复核，未进入 Stage 3。
-- Slice completed: 接受 ADR-0002；建立 Rust 权威 `ShowDocumentV1`、显式 V0→V1 migration/report、未知版本 fail-closed、默认拒绝未知字段、checked-in JSON Schema/TypeScript 生成链、AJV runtime validator 与 Monaco schema；18 个模板升级到 V1；Tauri load/validate/save/load-file 全部走统一 document loader。
-- Commits: Stage 0/1 交接基线 `7fc1edc`；Stage 2 versioned contract（本切片提交）。
-- Files changed: Rust document/migration/diagnostics、schema generator/artifacts、Tauri document commands、generated TypeScript contract/AJV/Monaco、18 templates、tests、ADR-0002、Stage/ledger/risk/handoff。
-- Validation: `schema:check`、Prettier、TypeScript/Vite、14 Vitest、38 Rust tests/contracts、strict Clippy、`pnpm build`；18/18 templates 同时通过 AJV/Rust compile/render contract。Stage 0 release baseline 与 Stage 1 10 分钟 loaded harness 复核通过（36,000 ticks、18,000,000 evaluations、约 0.012ms drift、checksum `14677128193208807216`）。
-- ADRs added/updated: ADR-0002 Accepted；ADR-0001 不变。
-- Risks opened/closed: R-002 保持 open，但单一权威、deny unknown、生成/check 和模板版本化缓解项已完成；剩余 phase/color/reference/range/无 panic 验证归后续 Stage 2 切片。R-003 未触碰，归 Stage 3。
-- Remaining exit criteria: `ValidatedShow`、tagged phase、严格数值/引用/颜色/formula/SVG diagnostics、structured references、fuzz/property no-panic，以及 Stage 2 最终 contract exit review。
-- Recommended next slice: Stage 2 strict validation 垂直切片——引入 `ValidatedShow`，将 phase 改为 tagged enum，安全解析 color，并为 ID/reference/range/formula/SVG 失败提供稳定 Diagnostic 与 no-panic property tests。
+- Current Stage: Stage 2 · Versioned Document 与统一 Schema（completed）；Stage 0/1 交接和 Stage 2 全部退出条件已复核，Stage 3 尚未开始。
+- Slice completed: 引入 `ValidatedShow` semantic gate、tagged phase、安全 color/formula 解析、严格 ID/reference/range 检查和稳定 diagnostics；group/effect/automation 引用在 compile 后成为 typed handle；V0 migration 补齐稳定 group ID 与 structured automation target，V1 malformed input 不被修补；提供原子保存与 migration CLI；18 个模板转为当前严格契约；生成并检查 AI 可读 capability metadata；property/fuzz-like 输入覆盖 load/compile 无 panic。
+- Commits: Stage 0/1 交接基线 `7fc1edc`；Stage 2 versioned contract `0ce3cbb`；Stage 2 strict validation（本切片提交）。
+- Files changed: Rust document/validator/migration/diagnostics/compiler typed handles、safe color/formula、typed parameter context、atomic save/migration CLI、schema/capability/TypeScript artifacts、18 templates、frontend structured-reference helpers/tests、contract/property tests、ADR-0002 与本计划。
+- Validation: `rustup run stable pnpm check:all` 通过（schema/check、Prettier、TypeScript/Vite、16 Vitest、48 Rust tests/contracts、strict Clippy）；18/18 templates 无 migration report 且通过 Rust compile/render contract；Stage 1 release loaded harness 复核为 36,000 ticks、18,000,000 evaluations、约 0.012ms drift、约 150.7× realtime、checksum `14677128193208807216`。
+- ADRs added/updated: ADR-0002 补充 strict semantic gate、typed handle 和 capability artifact；ADR-0001 不变。
+- Risks opened/closed: R-002 closed；R-003 保持 open，必须由 Stage 3 属性级 mix policy 收口；SVG sampling 仍未实现但已从静默 fallback 改为稳定 `DOC_SVG_PATH_INVALID`，实现归对应 layout 能力切片而非 Stage 3。
+- Remaining exit criteria: Stage 2 无；长期 Goal 仍需完成 Stage 3 的全部退出条件和全局 Definition of Done。
+- Recommended next slice: Stage 3 最早垂直切片——先接受 ADR-0004，再定义内置 Generic RGB/RGBW/Moving Head `FixtureProfile` 与 profile-backed patch/capability metadata，并迁移现有模板；不得进入 Stage 4。
 
 ## 19. ADR 规范
 
@@ -1120,57 +1120,59 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 
 每次追加一行，不删除历史记录。验证失败也应记录，并在后续行注明关闭。
 
-| Date       | Stage    | Slice                 | Status    | Commit(s)   | Validation                                                    | Decisions/Risks                               | Next                                        |
-| ---------- | -------- | --------------------- | --------- | ----------- | ------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------- |
-| 2026-08-02 | Planning | 建立分阶段改造规格    | completed | docs commit | 基线审计：`pnpm build` 通过；`cargo test` 为 0 tests          | 当前系统定位为 PoC；实时可信度优先于 AI 功能  | Stage 0：建立 Rust/Frontend 测试与 baseline |
-| 2026-08-02 | 0        | Rust 行为基线         | failed    | none        | 首次严格 Clippy 发现 13 个存量 lint                           | 等价机械清理，不改变 scheduler 行为           | 清理后复跑全部 Rust 门槛                    |
-| 2026-08-02 | 0        | Rust 行为基线         | completed | 本切片提交  | `pnpm build`；fmt；Clippy；`cargo test` 10 passed             | 新增 R-009；无 ADR                            | 前端测试 runner + 18 模板 contract          |
-| 2026-08-02 | 0        | 前端 runner + 模板    | failed    | none        | jsdom 30 在 Node 20 无法启动 Vitest worker                    | 记录 R-010；改用 Vitest 官方 happy-dom        | 复跑前端与 Rust template contract           |
-| 2026-08-02 | 0        | 前端 runner + 模板    | completed | 本切片提交  | `pnpm test` 3 passed；`cargo test` 11 passed；build           | R-010 closed；18/18 双侧 contract             | release benchmark + 10 秒 drift baseline    |
-| 2026-08-02 | 0        | release 基线          | completed | 本切片提交  | 4 档 fixture + 18 模板 + bundle + 10 秒 drift                 | 新增 R-011；基线 source `f1cdbb0`             | Transport/topology 回归夹具                 |
-| 2026-08-02 | 0        | Transport 回归夹具    | completed | 本切片提交  | `cargo test` 16 passed；MockRuntime 生命周期可执行            | 确认 R-001/R-009；新增 R-012                  | toolchain + unified checks + CI             |
-| 2026-08-02 | 0        | toolchain + checks    | failed    | none        | 4 个存量 Prettier 文件；sandbox 阻止 rustup temp              | 纯格式化；记录 R-013                          | 复跑统一前端/Rust 门槛                      |
-| 2026-08-02 | 0        | toolchain + checks    | completed | 本切片提交  | `pnpm check`；同版本 stable `pnpm check:rust`                 | R-013 closed；CI 调用同一命令                 | Diagnostic contract + UI error              |
-| 2026-08-02 | 0        | Diagnostic contract   | failed    | none        | serde 错误文本断言错误地假设固定措辞/列号                     | 改为验证稳定 code、path、hint 与实际位置      | 修正断言并复跑统一门槛                      |
-| 2026-08-02 | 0        | Diagnostic contract   | completed | 本切片提交  | `pnpm check:all`；真实窗口 error/keyboard/ARIA 验证           | R-014 closed；Stage 0 全部退出条件满足        | Stage 1：ADR-0001 + ManualClock/Transport   |
-| 2026-08-02 | 1        | Clock + Transport     | failed    | none        | Cargo 不接受两个位置测试过滤参数                              | 改为执行完整 Rust test suite                  | 全量验证 Clock/Transport 与存量契约         |
-| 2026-08-02 | 1        | Clock + Transport     | completed | 本切片提交  | `cargo test` 24 passed；ManualClock 10 分钟零累计误差         | ADR-0001 accepted；既有 Stage 1 风险仍 open   | 纯 `render_at` + Seek/template contract     |
-| 2026-08-02 | 1        | 纯 render_at          | completed | 本切片提交  | `pnpm check:all`；28 Rust tests/contracts；18/18 模板         | Seek=顺序求值；automation/multiplier 时间重建 | revision snapshot + Frame publisher         |
-| 2026-08-02 | 1        | Snapshot + Frame      | completed | 本切片提交  | `pnpm check:all`；32 Rust/8 frontend tests                    | R-009 closed；revision/sequence/full resync   | 单 Tokio worker + Transport integration     |
-| 2026-08-02 | 1        | 单 worker integration | failed    | none        | paused Tokio timer 每两次 advance 才调度 worker               | 测试调度假设错误；改用真实 30/60/120Hz 窗口   | 复跑实际发布频率与完整 checks               |
-| 2026-08-02 | 1        | 单 worker integration | completed | 本切片提交  | `pnpm check:all`；33 Rust/8 frontend tests                    | R-012 closed；R-001/R-011 待压力验证          | concurrent stress + loaded drift artifact   |
-| 2026-08-02 | 1        | loaded runtime 验证   | failed    | none        | 精确 toolchain 受 managed sandbox 的 rustup temp 阻止         | 复用 R-013 缓解：以同版本 stable 执行         | stable release harness                      |
-| 2026-08-02 | 1        | loaded runtime 验证   | failed    | none        | 整数纳秒 tick 使零漂移断言产生 0.012ms 量化误差               | 基线容差定为 0.1ms，保留量化误差可观测值      | 复跑 release harness                        |
-| 2026-08-02 | 1        | 并发 + loaded runtime | completed | 本切片提交  | stress 通过；36k ticks/18m evaluations；0.012ms drift         | R-001/R-011 closed；artifact source `c73a54a` | Preview raw Frame + 真实 Tauri 验收         |
-| 2026-08-02 | 1        | 并发 + loaded runtime | failed    | none        | Prettier 无 Rust parser，组合命令在 checks 前退出             | Rust 改由 Cargo fmt；前端/文档仍用 Prettier   | 分离格式化后复跑统一门禁                    |
-| 2026-08-02 | 1        | 并发 + loaded runtime | failed    | none        | 未覆盖环境的 Cargo fmt 再触发 rustup temp 权限错误            | 所有本地 Rust 命令统一显式使用同版本 stable   | stable fmt 后复跑统一门禁                   |
-| 2026-08-02 | 1        | 并发 + loaded runtime | completed | 本切片提交  | `pnpm check:all`；34 Rust/8 frontend tests                    | 格式化/toolchain 执行问题均关闭               | Preview raw Frame + 真实 Tauri 验收         |
-| 2026-08-02 | 1        | Preview raw Frame     | completed | 本切片提交  | `pnpm check:all`；34 Rust/10 frontend tests                   | R-004 closed；移除隐式 80ms 插值              | 真实 Tauri 窗口验收                         |
-| 2026-08-02 | 1        | 真实 Tauri 窗口验收   | failed    | none        | 窗口/IPC 正常；宿主前台为 loginwindow，输入不可投递           | 属验证环境限制；不改变 runtime 架构           | 自动化 UI command + shutdown 回归           |
-| 2026-08-02 | 1        | UI + app lifecycle    | completed | 本切片提交  | native revision 1/Quit 0；35 Rust/12 frontend tests           | 临时观测日志已移除；无新产品风险              | 最终 Stage 0+1 验证与文档收口               |
-| 2026-08-02 | 0+1      | scoped Goal 收口      | completed | 本切片提交  | 35 Rust/12 frontend；build；S0/S1 release baselines           | 全局 DoD 通过；Stage 2 保持 not_started       | 停止，不进入 Stage 2                        |
-| 2026-08-02 | 0+1      | 新 Goal 交接审计      | failed    | none        | frontend 12 passed；pinned Rust 因 sandbox rustup temp 被阻止 | 复用 R-013 同版本 stable 缓解，不视为产品回归 | stable 工具链复跑门禁与 release harness     |
-| 2026-08-02 | 0+1      | 新 Goal 交接审计      | completed | none        | 35 Rust/12 frontend；S0/S1 release harness；0.012ms drift     | Stage 0/1 全部退出条件确认；开始 Stage 2      | ADR-0002 + versioned contract               |
-| 2026-08-02 | 2        | Versioned contract    | completed | 本切片提交  | schema check；38 Rust/14 frontend；18/18 V1 templates         | ADR-0002 accepted；R-002 部分缓解仍 open      | `ValidatedShow` + strict diagnostics        |
+| Date       | Stage    | Slice                 | Status    | Commit(s)   | Validation                                                       | Decisions/Risks                               | Next                                        |
+| ---------- | -------- | --------------------- | --------- | ----------- | ---------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------- |
+| 2026-08-02 | Planning | 建立分阶段改造规格    | completed | docs commit | 基线审计：`pnpm build` 通过；`cargo test` 为 0 tests             | 当前系统定位为 PoC；实时可信度优先于 AI 功能  | Stage 0：建立 Rust/Frontend 测试与 baseline |
+| 2026-08-02 | 0        | Rust 行为基线         | failed    | none        | 首次严格 Clippy 发现 13 个存量 lint                              | 等价机械清理，不改变 scheduler 行为           | 清理后复跑全部 Rust 门槛                    |
+| 2026-08-02 | 0        | Rust 行为基线         | completed | 本切片提交  | `pnpm build`；fmt；Clippy；`cargo test` 10 passed                | 新增 R-009；无 ADR                            | 前端测试 runner + 18 模板 contract          |
+| 2026-08-02 | 0        | 前端 runner + 模板    | failed    | none        | jsdom 30 在 Node 20 无法启动 Vitest worker                       | 记录 R-010；改用 Vitest 官方 happy-dom        | 复跑前端与 Rust template contract           |
+| 2026-08-02 | 0        | 前端 runner + 模板    | completed | 本切片提交  | `pnpm test` 3 passed；`cargo test` 11 passed；build              | R-010 closed；18/18 双侧 contract             | release benchmark + 10 秒 drift baseline    |
+| 2026-08-02 | 0        | release 基线          | completed | 本切片提交  | 4 档 fixture + 18 模板 + bundle + 10 秒 drift                    | 新增 R-011；基线 source `f1cdbb0`             | Transport/topology 回归夹具                 |
+| 2026-08-02 | 0        | Transport 回归夹具    | completed | 本切片提交  | `cargo test` 16 passed；MockRuntime 生命周期可执行               | 确认 R-001/R-009；新增 R-012                  | toolchain + unified checks + CI             |
+| 2026-08-02 | 0        | toolchain + checks    | failed    | none        | 4 个存量 Prettier 文件；sandbox 阻止 rustup temp                 | 纯格式化；记录 R-013                          | 复跑统一前端/Rust 门槛                      |
+| 2026-08-02 | 0        | toolchain + checks    | completed | 本切片提交  | `pnpm check`；同版本 stable `pnpm check:rust`                    | R-013 closed；CI 调用同一命令                 | Diagnostic contract + UI error              |
+| 2026-08-02 | 0        | Diagnostic contract   | failed    | none        | serde 错误文本断言错误地假设固定措辞/列号                        | 改为验证稳定 code、path、hint 与实际位置      | 修正断言并复跑统一门槛                      |
+| 2026-08-02 | 0        | Diagnostic contract   | completed | 本切片提交  | `pnpm check:all`；真实窗口 error/keyboard/ARIA 验证              | R-014 closed；Stage 0 全部退出条件满足        | Stage 1：ADR-0001 + ManualClock/Transport   |
+| 2026-08-02 | 1        | Clock + Transport     | failed    | none        | Cargo 不接受两个位置测试过滤参数                                 | 改为执行完整 Rust test suite                  | 全量验证 Clock/Transport 与存量契约         |
+| 2026-08-02 | 1        | Clock + Transport     | completed | 本切片提交  | `cargo test` 24 passed；ManualClock 10 分钟零累计误差            | ADR-0001 accepted；既有 Stage 1 风险仍 open   | 纯 `render_at` + Seek/template contract     |
+| 2026-08-02 | 1        | 纯 render_at          | completed | 本切片提交  | `pnpm check:all`；28 Rust tests/contracts；18/18 模板            | Seek=顺序求值；automation/multiplier 时间重建 | revision snapshot + Frame publisher         |
+| 2026-08-02 | 1        | Snapshot + Frame      | completed | 本切片提交  | `pnpm check:all`；32 Rust/8 frontend tests                       | R-009 closed；revision/sequence/full resync   | 单 Tokio worker + Transport integration     |
+| 2026-08-02 | 1        | 单 worker integration | failed    | none        | paused Tokio timer 每两次 advance 才调度 worker                  | 测试调度假设错误；改用真实 30/60/120Hz 窗口   | 复跑实际发布频率与完整 checks               |
+| 2026-08-02 | 1        | 单 worker integration | completed | 本切片提交  | `pnpm check:all`；33 Rust/8 frontend tests                       | R-012 closed；R-001/R-011 待压力验证          | concurrent stress + loaded drift artifact   |
+| 2026-08-02 | 1        | loaded runtime 验证   | failed    | none        | 精确 toolchain 受 managed sandbox 的 rustup temp 阻止            | 复用 R-013 缓解：以同版本 stable 执行         | stable release harness                      |
+| 2026-08-02 | 1        | loaded runtime 验证   | failed    | none        | 整数纳秒 tick 使零漂移断言产生 0.012ms 量化误差                  | 基线容差定为 0.1ms，保留量化误差可观测值      | 复跑 release harness                        |
+| 2026-08-02 | 1        | 并发 + loaded runtime | completed | 本切片提交  | stress 通过；36k ticks/18m evaluations；0.012ms drift            | R-001/R-011 closed；artifact source `c73a54a` | Preview raw Frame + 真实 Tauri 验收         |
+| 2026-08-02 | 1        | 并发 + loaded runtime | failed    | none        | Prettier 无 Rust parser，组合命令在 checks 前退出                | Rust 改由 Cargo fmt；前端/文档仍用 Prettier   | 分离格式化后复跑统一门禁                    |
+| 2026-08-02 | 1        | 并发 + loaded runtime | failed    | none        | 未覆盖环境的 Cargo fmt 再触发 rustup temp 权限错误               | 所有本地 Rust 命令统一显式使用同版本 stable   | stable fmt 后复跑统一门禁                   |
+| 2026-08-02 | 1        | 并发 + loaded runtime | completed | 本切片提交  | `pnpm check:all`；34 Rust/8 frontend tests                       | 格式化/toolchain 执行问题均关闭               | Preview raw Frame + 真实 Tauri 验收         |
+| 2026-08-02 | 1        | Preview raw Frame     | completed | 本切片提交  | `pnpm check:all`；34 Rust/10 frontend tests                      | R-004 closed；移除隐式 80ms 插值              | 真实 Tauri 窗口验收                         |
+| 2026-08-02 | 1        | 真实 Tauri 窗口验收   | failed    | none        | 窗口/IPC 正常；宿主前台为 loginwindow，输入不可投递              | 属验证环境限制；不改变 runtime 架构           | 自动化 UI command + shutdown 回归           |
+| 2026-08-02 | 1        | UI + app lifecycle    | completed | 本切片提交  | native revision 1/Quit 0；35 Rust/12 frontend tests              | 临时观测日志已移除；无新产品风险              | 最终 Stage 0+1 验证与文档收口               |
+| 2026-08-02 | 0+1      | scoped Goal 收口      | completed | 本切片提交  | 35 Rust/12 frontend；build；S0/S1 release baselines              | 全局 DoD 通过；Stage 2 保持 not_started       | 停止，不进入 Stage 2                        |
+| 2026-08-02 | 0+1      | 新 Goal 交接审计      | failed    | none        | frontend 12 passed；pinned Rust 因 sandbox rustup temp 被阻止    | 复用 R-013 同版本 stable 缓解，不视为产品回归 | stable 工具链复跑门禁与 release harness     |
+| 2026-08-02 | 0+1      | 新 Goal 交接审计      | completed | none        | 35 Rust/12 frontend；S0/S1 release harness；0.012ms drift        | Stage 0/1 全部退出条件确认；开始 Stage 2      | ADR-0002 + versioned contract               |
+| 2026-08-02 | 2        | Versioned contract    | completed | `0ce3cbb`   | schema check；38 Rust/14 frontend；18/18 V1 templates            | ADR-0002 accepted；R-002 部分缓解仍 open      | `ValidatedShow` + strict diagnostics        |
+| 2026-08-02 | 2        | Strict contract gate  | failed    | none        | frontend/build 通过；strict Clippy 命中 `filter_map_bool_then`   | 等价迭代器写法修正；无行为或架构变化          | 修正后重跑统一门禁                          |
+| 2026-08-02 | 2        | Strict contract gate  | completed | 本切片提交  | `check:all`；48 Rust/16 frontend；18/18 templates；0.012ms drift | Stage 2 全部退出条件满足；R-002 closed        | Stage 3 ADR-0004 + Fixture Profile          |
 
 ## 21. Open Risks
 
-| ID    | Risk                                               | Severity | Owner Stage | Mitigation                                                                      | Status |
-| ----- | -------------------------------------------------- | -------- | ----------- | ------------------------------------------------------------------------------- | ------ |
-| R-001 | scheduler 重复线程或锁反转导致演出冻结             | critical | 1           | 单 worker、统一锁策略、压力测试                                                 | closed |
-| R-002 | schema 漂移导致用户/AI 字段静默丢失                | critical | 2           | Rust 权威/schema generation/deny unknown 已完成；剩余 semantic/TS exit contract | open   |
-| R-003 | 所有属性使用 max 混合产生错误颜色/运动             | high     | 3           | 属性级 HTP/LTP/mix policy                                                       | open   |
-| R-004 | Preview 80ms 插值掩盖真实频闪输出                  | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                                            | closed |
-| R-005 | Raw DSL 热编译破坏 Live active show                | critical | 6           | Stage 1 immutable revision；Stage 6 显式 Draft/Live 发布                        | open   |
-| R-006 | 没有歌曲时间模型导致 AI 编排不可复现               | high     | 5/7         | 整数 tick + TempoMap + SongAnalysis                                             | open   |
-| R-007 | AI 直接生成无效或不安全效果                        | critical | 8           | typed plan、capability、validator、safety budget                                | open   |
-| R-008 | 硬件故障时无法自动 Blackout                        | critical | 9           | 独立 safety controller 和 fail-safe tests                                       | open   |
-| R-009 | 首帧或 fixture topology 变化被 zip diff 丢弃       | high     | 1           | revision/topology 强制 full frame，并按 fixture ID diff                         | closed |
-| R-010 | jsdom 30 无法在固定 Node 20 启动测试 worker        | medium   | 0           | 改用 Vitest 官方支持的 happy-dom                                                | closed |
-| R-011 | timer-only 漂移基线未覆盖 Tauri/锁/render load     | medium   | 1           | ManualClock 确定性测试 + loaded runtime 压力测试                                | closed |
-| R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失 | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command                                   | closed |
-| R-013 | managed sandbox 内精确 toolchain 恢复下载超时      | low      | 0           | 同版本 stable 完整验证；干净 CI 执行 pin                                        | closed |
-| R-014 | compile/bridge 异常只写 console，用户无法定位      | high     | 0           | 稳定 Diagnostic envelope、前端 normalizer 与错误 Alert                          | closed |
+| ID    | Risk                                               | Severity | Owner Stage | Mitigation                                                                    | Status |
+| ----- | -------------------------------------------------- | -------- | ----------- | ----------------------------------------------------------------------------- | ------ |
+| R-001 | scheduler 重复线程或锁反转导致演出冻结             | critical | 1           | 单 worker、统一锁策略、压力测试                                               | closed |
+| R-002 | schema 漂移导致用户/AI 字段静默丢失                | critical | 2           | Rust 权威、strict semantic gate、generated schema/TS/capability、AJV contract | closed |
+| R-003 | 所有属性使用 max 混合产生错误颜色/运动             | high     | 3           | 属性级 HTP/LTP/mix policy                                                     | open   |
+| R-004 | Preview 80ms 插值掩盖真实频闪输出                  | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                                          | closed |
+| R-005 | Raw DSL 热编译破坏 Live active show                | critical | 6           | Stage 1 immutable revision；Stage 6 显式 Draft/Live 发布                      | open   |
+| R-006 | 没有歌曲时间模型导致 AI 编排不可复现               | high     | 5/7         | 整数 tick + TempoMap + SongAnalysis                                           | open   |
+| R-007 | AI 直接生成无效或不安全效果                        | critical | 8           | typed plan、capability、validator、safety budget                              | open   |
+| R-008 | 硬件故障时无法自动 Blackout                        | critical | 9           | 独立 safety controller 和 fail-safe tests                                     | open   |
+| R-009 | 首帧或 fixture topology 变化被 zip diff 丢弃       | high     | 1           | revision/topology 强制 full frame，并按 fixture ID diff                       | closed |
+| R-010 | jsdom 30 无法在固定 Node 20 启动测试 worker        | medium   | 0           | 改用 Vitest 官方支持的 happy-dom                                              | closed |
+| R-011 | timer-only 漂移基线未覆盖 Tauri/锁/render load     | medium   | 1           | ManualClock 确定性测试 + loaded runtime 压力测试                              | closed |
+| R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失 | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command                                 | closed |
+| R-013 | managed sandbox 内精确 toolchain 恢复下载超时      | low      | 0           | 同版本 stable 完整验证；干净 CI 执行 pin                                      | closed |
+| R-014 | compile/bridge 异常只写 console，用户无法定位      | high     | 0           | 稳定 Diagnostic envelope、前端 normalizer 与错误 Alert                        | closed |
 
 ## 22. Deferred Backlog
 

@@ -27,6 +27,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -41,7 +42,7 @@
     {
       "id": "sine_fly",
       "name": "Sine Fly",
-      "target": "All",
+      "target": "all",
       "multiplier": 1,
       "steps": [
         {

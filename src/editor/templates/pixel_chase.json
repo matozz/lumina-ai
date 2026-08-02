@@ -27,6 +27,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -41,7 +42,7 @@
     {
       "id": "knight_rider",
       "name": "Knight Rider",
-      "target": "All",
+      "target": "all",
       "multiplier": 1,
       "steps": [
         {
@@ -72,7 +73,7 @@
     {
       "id": "matrix_rain",
       "name": "Matrix Rain",
-      "target": "All",
+      "target": "all",
       "multiplier": 2,
       "steps": [
         {

@@ -27,6 +27,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -37,6 +38,7 @@
       "sort_by": "x"
     },
     {
+      "id": "byy",
       "name": "ByY",
       "fixtures": {
         "range": [
@@ -47,6 +49,7 @@
       "sort_by": "y"
     },
     {
+      "id": "bycenter",
       "name": "ByCenter",
       "fixtures": {
         "range": [
@@ -61,7 +64,7 @@
     {
       "id": "horizontal_color_band",
       "name": "Horizontal Color Band",
-      "target": "All",
+      "target": "all",
       "multiplier": 1,
       "steps": [
         {
@@ -92,7 +95,7 @@
     {
       "id": "vertical_rain",
       "name": "Vertical Rain",
-      "target": "ByY",
+      "target": "byy",
       "multiplier": 2,
       "steps": [
         {
@@ -123,7 +126,7 @@
     {
       "id": "center_pulse",
       "name": "Center Pulse",
-      "target": "ByCenter",
+      "target": "bycenter",
       "multiplier": 0.5,
       "steps": [
         {

@@ -29,4 +29,33 @@ describe("generated ShowDocumentV1 validator", () => {
 
     expect(result.success).toBe(false);
   });
+
+  it("accepts structured automation targets and rejects legacy target paths", () => {
+    const action = {
+      type: "animate",
+      target: { scope: "global", parameter_id: "master_dimmer" },
+      from: 0,
+      to: 1,
+    };
+    const withTimeline = {
+      ...document,
+      timeline: { events: [{ beat: 0, duration: 1, action }] },
+    };
+
+    expect(validateShowDocument(withTimeline).success).toBe(true);
+    expect(
+      validateShowDocument({
+        ...withTimeline,
+        timeline: {
+          events: [
+            {
+              beat: 0,
+              duration: 1,
+              action: { ...action, target: "global.master_dimmer" },
+            },
+          ],
+        },
+      }).success,
+    ).toBe(false);
+  });
 });

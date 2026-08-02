@@ -1,11 +1,11 @@
-use crate::compiler::{parser::TimelineActionDefDSL, CompiledTimeline};
+use crate::compiler::{CompiledAutomationTarget, CompiledTimeline, CompiledTimelineAction};
 use crate::engine::animation::{ease, AnimatableValue};
 
 #[derive(Clone)]
 pub enum TimelineAction {
-    Start(usize, TimelineActionDefDSL),
-    Stop(usize, TimelineActionDefDSL),
-    UpdateParameter(String, AnimatableValue),
+    Start(usize, CompiledTimelineAction),
+    Stop(usize, CompiledTimelineAction),
+    UpdateParameter(CompiledAutomationTarget, AnimatableValue),
 }
 
 pub struct TimelineExecutor {
@@ -53,7 +53,7 @@ impl TimelineExecutor {
         // 3. Process running updates (interpolations for animation tracks)
         for (i, start) in &self.active_events {
             let event = &self.timeline.events[*i];
-            if let TimelineActionDefDSL::Animate {
+            if let CompiledTimelineAction::Animate {
                 target,
                 from,
                 to,
@@ -96,25 +96,27 @@ impl TimelineExecutor {
 #[cfg(test)]
 mod tests {
     use super::{TimelineAction, TimelineExecutor};
-    use crate::compiler::{parser::TimelineActionDefDSL, CompiledTimeline};
+    use crate::compiler::{
+        CompiledAutomationTarget, CompiledTimeline, CompiledTimelineAction, CompiledTimelineEvent,
+    };
     use crate::document::{AnimatableValueDSL, EasingDSL};
     use crate::engine::animation::AnimatableValue;
 
     fn timeline() -> CompiledTimeline {
         CompiledTimeline {
             events: vec![
-                crate::compiler::parser::TimelineEventDSL {
+                CompiledTimelineEvent {
                     beat: 1.0,
                     duration: Some(1.0),
-                    action: TimelineActionDefDSL::Phaser {
-                        phaser: "pulse".to_string(),
+                    action: CompiledTimelineAction::Phaser {
+                        phaser: "pulse".to_string().into(),
                     },
                 },
-                crate::compiler::parser::TimelineEventDSL {
+                CompiledTimelineEvent {
                     beat: 2.0,
                     duration: Some(2.0),
-                    action: TimelineActionDefDSL::Animate {
-                        target: "global.master_dimmer".to_string(),
+                    action: CompiledTimelineAction::Animate {
+                        target: CompiledAutomationTarget::GlobalMasterDimmer,
                         from: AnimatableValueDSL::Float(0.0),
                         to: AnimatableValueDSL::Float(1.0),
                         easing: Some(EasingDSL::Linear),
@@ -134,8 +136,8 @@ mod tests {
             starts.as_slice(),
             [TimelineAction::Start(
                 0,
-                TimelineActionDefDSL::Phaser { phaser }
-            )] if phaser == "pulse"
+                CompiledTimelineAction::Phaser { phaser }
+            )] if phaser.as_str() == "pulse"
         ));
 
         let at_end = executor.tick(2.0);
@@ -143,8 +145,8 @@ mod tests {
             at_end.first(),
             Some(TimelineAction::Stop(
                 0,
-                TimelineActionDefDSL::Phaser { phaser }
-            )) if phaser == "pulse"
+                CompiledTimelineAction::Phaser { phaser }
+            )) if phaser.as_str() == "pulse"
         ));
     }
 
@@ -158,7 +160,8 @@ mod tests {
             matches!(
                 action,
                 TimelineAction::UpdateParameter(target, AnimatableValue::Float(value))
-                    if target == "global.master_dimmer" && (*value - 0.5).abs() < 1e-12
+                    if target == &CompiledAutomationTarget::GlobalMasterDimmer
+                        && (*value - 0.5).abs() < 1e-12
             )
         }));
     }

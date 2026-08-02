@@ -139,6 +139,7 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
         })
         .collect();
     let group = CompiledGroup {
+        id: "all".to_string(),
         name: "All".to_string(),
         sorted_fixture_ids: fixtures.iter().map(|fixture| fixture.id).collect(),
         blocks: vec![1; fixture_count],
@@ -146,7 +147,7 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
     let phaser = CompiledPhaser {
         id: "loaded".to_string(),
         name: "Loaded runtime".to_string(),
-        target: "All".to_string(),
+        target: "all".to_string().into(),
         multiplier: Some(1.0),
         steps: vec![
             CompiledStep {
@@ -174,7 +175,7 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
 
     CompiledShow {
         fixtures,
-        groups: HashMap::from([(group.name.clone(), group)]),
+        groups: HashMap::from([(group.id.clone(), group)]),
         phasers: HashMap::from([(phaser.id.clone(), phaser)]),
         ..CompiledShow::default()
     }

@@ -27,6 +27,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -37,6 +38,7 @@
       "sort_by": "none"
     },
     {
+      "id": "bycenter",
       "name": "ByCenter",
       "fixtures": {
         "range": [
@@ -47,6 +49,7 @@
       "sort_by": "distance_center"
     },
     {
+      "id": "byangle",
       "name": "ByAngle",
       "fixtures": {
         "range": [
@@ -61,7 +64,7 @@
     {
       "id": "target_lock",
       "name": "Target Lock",
-      "target": "ByCenter",
+      "target": "bycenter",
       "multiplier": 1,
       "steps": [
         {
@@ -92,7 +95,7 @@
     {
       "id": "radar_sweep",
       "name": "Radar Sweep",
-      "target": "ByAngle",
+      "target": "byangle",
       "multiplier": 0.5,
       "steps": [
         {

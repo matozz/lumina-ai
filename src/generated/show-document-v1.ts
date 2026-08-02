@@ -2,6 +2,17 @@
 
 export type AnimatableValueDSL = number | string;
 
+export type AutomationTargetDSL =
+  | {
+      parameter_id: GlobalParameterDSL;
+      scope: "global";
+    }
+  | {
+      instance_id: string;
+      parameter_id: EffectParameterDSL;
+      scope: "effect_instance";
+    };
+
 export interface CustomFixturePos {
   id: number;
   x: number;
@@ -9,6 +20,8 @@ export interface CustomFixturePos {
 }
 
 export type EasingDSL = "linear" | "ease_in" | "ease_out" | "ease_in_out";
+
+export type EffectParameterDSL = "multiplier" | "color" | "dimmer" | "pan" | "tilt";
 
 export interface FormulaDef {
   count: number;
@@ -46,10 +59,13 @@ export type GeneratorDSL =
       shape: "custom";
     };
 
+export type GlobalParameterDSL = "master_dimmer";
+
 export interface GroupDSL {
   fixtures: GroupFixturesDSL;
+  id: string;
   name: string;
-  sort_by?: string | null;
+  sort_by?: SortByDSL | null;
 }
 
 export type GroupFixturesDSL = Array<number> | GroupRangeDSL;
@@ -60,8 +76,12 @@ export interface GroupRangeDSL {
 
 export interface LayoutDSL {
   generator: GeneratorDSL;
-  type: string;
+  type: LayoutType;
 }
+
+export type LayoutType = "generator";
+
+export type LegacyFixtureType = "spot" | "pixel";
 
 export interface MetaDSL {
   name: string;
@@ -69,14 +89,18 @@ export interface MetaDSL {
 
 export interface PatchDSL {
   id_range: [number, number];
-  type: string;
+  type: LegacyFixtureType;
 }
 
-export interface PhaseConfigDSL {
-  grouped?: PhaseGroupedDSL | null;
-  mode: string;
-  spread?: PhaseSpreadDSL | null;
-}
+export type PhaseConfigDSL =
+  | {
+      mode: "spread";
+      spread: PhaseSpreadDSL;
+    }
+  | {
+      grouped: PhaseGroupedDSL;
+      mode: "grouped";
+    };
 
 export interface PhaseGroupedDSL {
   group_size: number;
@@ -105,6 +129,20 @@ export interface PhaserStepDSL {
   width?: number | null;
 }
 
+export type SortByDSL =
+  | "none"
+  | "x"
+  | "-x"
+  | "y"
+  | "-y"
+  | "distance_center"
+  | "-distance_center"
+  | "angle_center"
+  | "-angle_center"
+  | "random"
+  | "x+y"
+  | "-(x+y)";
+
 export interface StepValuesDSL {
   color?: string | null;
   dimmer?: number | null;
@@ -126,7 +164,7 @@ export type TimelineActionDefDSL =
   | {
       easing?: EasingDSL | null;
       from: AnimatableValueDSL;
-      target: string;
+      target: AutomationTargetDSL;
       to: AnimatableValueDSL;
       type: "animate";
     };

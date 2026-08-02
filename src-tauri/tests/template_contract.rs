@@ -1,4 +1,5 @@
 use lumina_ai_lib::compiler::{parser::ShowDSL, Compiler};
+use lumina_ai_lib::document::load_document;
 use std::fs;
 use std::path::PathBuf;
 
@@ -19,15 +20,21 @@ fn all_editor_templates_parse_and_compile_with_fixture_outputs() {
 
     for path in template_paths {
         let source = fs::read_to_string(&path).expect("template must be readable");
-        let dsl: ShowDSL = serde_json::from_str(&source)
-            .unwrap_or_else(|error| panic!("{} must parse: {error}", path.display()));
+        let loaded = load_document(&source)
+            .unwrap_or_else(|error| panic!("{} must load: {error}", path.display()));
+        assert!(
+            loaded.migration_report.changes.is_empty(),
+            "{} must already use the current document contract",
+            path.display()
+        );
+        let dsl: ShowDSL = loaded.document;
         let expected_fixture_count: usize = dsl
             .patch
             .iter()
             .map(|patch| (patch.id_range.1 - patch.id_range.0 + 1) as usize)
             .sum();
         let expected_phaser_count = dsl.phasers.len();
-        let show = Compiler::compile(dsl)
+        let show = Compiler::compile_document(dsl)
             .unwrap_or_else(|errors| panic!("{} must compile: {errors:?}", path.display()));
 
         assert_eq!(

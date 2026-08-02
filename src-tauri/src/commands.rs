@@ -3,8 +3,12 @@ use crate::document::{load_document, MigrationReport, ShowDocumentV1};
 use crate::engine::render::{LivePhaser, RenderTime};
 use crate::engine::transport::OutputRate;
 use crate::state::EngineState;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tauri::{AppHandle, State};
+
+static SAVE_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
 #[derive(serde::Serialize, Clone)]
 pub struct PhaserInfo {
@@ -56,7 +60,7 @@ pub async fn load_dsl(
         }
     }
 
-    let compiled = Compiler::compile(dsl);
+    let compiled = Compiler::compile_document(dsl);
 
     let mut result = CompileResult {
         success: false,
@@ -97,7 +101,7 @@ pub async fn load_dsl(
 #[tauri::command]
 pub async fn validate_dsl(dsl_json: String) -> Result<Vec<Diagnostic>, Diagnostic> {
     let dsl = load_document(&dsl_json)?.document;
-    let compiled = Compiler::compile(dsl);
+    let compiled = Compiler::compile_document(dsl);
     match compiled {
         Ok(_) => Ok(vec![]),
         Err(e) => Ok(e),
@@ -209,9 +213,7 @@ pub async fn save_show(path: String, dsl_json: String) -> Result<(), String> {
     let loaded = load_document(&dsl_json).map_err(|error| error.to_string())?;
     let serialized = serde_json::to_string_pretty(&loaded.document)
         .map_err(|error| format!("Document serialization error: {error}"))?;
-    tokio::fs::write(&path, serialized.as_bytes())
-        .await
-        .map_err(|e| format!("File write error: {}", e))?;
+    atomic_write(Path::new(&path), serialized.as_bytes()).await?;
     Ok(())
 }
 
@@ -259,4 +261,75 @@ pub async fn get_layout_coords(
 pub async fn request_full_frame(state: State<'_, Arc<EngineState>>) -> Result<(), String> {
     state.runtime.write().await.frame_publisher.request_full();
     Ok(())
+}
+
+async fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), String> {
+    let parent = path.parent().unwrap_or_else(|| Path::new("."));
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| "Show path must end with a valid UTF-8 file name.".to_string())?;
+    let sequence = SAVE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let temporary_path: PathBuf = parent.join(format!(
+        ".{file_name}.lumina-{}-{sequence}.tmp",
+        std::process::id()
+    ));
+
+    tokio::fs::write(&temporary_path, contents)
+        .await
+        .map_err(|error| format!("Temporary show write error: {error}"))?;
+    if let Err(error) = tokio::fs::rename(&temporary_path, path).await {
+        let _ = tokio::fs::remove_file(&temporary_path).await;
+        return Err(format!("Atomic show replace error: {error}"));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{atomic_write, SAVE_SEQUENCE};
+    use std::sync::atomic::Ordering;
+
+    #[tokio::test]
+    async fn atomically_replaces_a_show_without_leaving_temporary_files() {
+        let sequence = SAVE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let directory = std::env::temp_dir().join(format!(
+            "lumina-atomic-save-{}-{sequence}",
+            std::process::id()
+        ));
+        tokio::fs::create_dir(&directory)
+            .await
+            .expect("test directory");
+        let show_path = directory.join("show.json");
+        tokio::fs::write(&show_path, b"old")
+            .await
+            .expect("initial show");
+
+        atomic_write(&show_path, b"new")
+            .await
+            .expect("atomic replacement");
+
+        assert_eq!(
+            tokio::fs::read_to_string(&show_path)
+                .await
+                .expect("saved show"),
+            "new"
+        );
+        let mut entries = tokio::fs::read_dir(&directory)
+            .await
+            .expect("test directory");
+        let mut entry_count = 0;
+        while entries
+            .next_entry()
+            .await
+            .expect("directory entry")
+            .is_some()
+        {
+            entry_count += 1;
+        }
+        assert_eq!(entry_count, 1);
+        tokio::fs::remove_dir_all(directory)
+            .await
+            .expect("test cleanup");
+    }
 }

@@ -27,6 +27,7 @@
   },
   "groups": [
     {
+      "id": "toprow",
       "name": "TopRow",
       "fixtures": {
         "range": [
@@ -37,6 +38,7 @@
       "sort_by": "x"
     },
     {
+      "id": "bottomrow",
       "name": "BottomRow",
       "fixtures": {
         "range": [
@@ -47,6 +49,7 @@
       "sort_by": "x"
     },
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -61,7 +64,7 @@
     {
       "id": "top_fire",
       "name": "Top Fire",
-      "target": "TopRow",
+      "target": "toprow",
       "multiplier": 1,
       "steps": [
         {
@@ -94,7 +97,7 @@
     {
       "id": "bottom_fire",
       "name": "Bottom Fire",
-      "target": "BottomRow",
+      "target": "bottomrow",
       "multiplier": 1,
       "steps": [
         {

@@ -30,6 +30,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -40,6 +41,7 @@
       "sort_by": "none"
     },
     {
+      "id": "byx",
       "name": "ByX",
       "fixtures": {
         "range": [
@@ -50,6 +52,7 @@
       "sort_by": "x"
     },
     {
+      "id": "byangle",
       "name": "ByAngle",
       "fixtures": {
         "range": [
@@ -64,7 +67,7 @@
     {
       "id": "heart_beat",
       "name": "Heart Beat",
-      "target": "All",
+      "target": "all",
       "steps": [
         {
           "values": {
@@ -96,7 +99,7 @@
     {
       "id": "chase",
       "name": "Chase",
-      "target": "ByAngle",
+      "target": "byangle",
       "multiplier": 2,
       "steps": [
         {

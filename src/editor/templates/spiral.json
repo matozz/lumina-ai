@@ -30,6 +30,7 @@
   },
   "groups": [
     {
+      "id": "path",
       "name": "Path",
       "fixtures": {
         "range": [
@@ -40,6 +41,7 @@
       "sort_by": "none"
     },
     {
+      "id": "byangle",
       "name": "ByAngle",
       "fixtures": {
         "range": [
@@ -54,7 +56,7 @@
     {
       "id": "inward_flow",
       "name": "Inward Flow",
-      "target": "Path",
+      "target": "path",
       "multiplier": 2,
       "steps": [
         {
@@ -93,7 +95,7 @@
     {
       "id": "windmill",
       "name": "Windmill",
-      "target": "ByAngle",
+      "target": "byangle",
       "multiplier": 1,
       "steps": [
         {

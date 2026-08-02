@@ -12,11 +12,11 @@
       "origin": [0.0, 0.0]
     }
   },
-  "groups": [{ "name": "Line", "fixtures": { "range": [1, 3] }, "sort_by": "none" }],
+  "groups": [{ "id": "line", "name": "Line", "fixtures": { "range": [1, 3] }, "sort_by": "none" }],
   "phasers": [{
     "id": "chase",
     "name": "Chase",
-    "target": "Line",
+    "target": "line",
     "steps": [
       {
         "values": { "color": "#ff0000", "dimmer": 1.0 },

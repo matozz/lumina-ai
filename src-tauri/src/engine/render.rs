@@ -1,8 +1,10 @@
 use super::animation::{ease, AnimatableValue, ParameterContext};
 use super::phaser::{calculate_progress_delay, evaluate_phaser_at};
 use super::FixtureOutput;
-use crate::compiler::parser::{TimelineActionDefDSL, TimelineEventDSL};
-use crate::compiler::CompiledShow;
+use crate::compiler::{
+    CompiledAutomationTarget, CompiledEffectParameter, CompiledShow, CompiledTimelineAction,
+    CompiledTimelineEvent, EffectInstanceHandle,
+};
 use rayon::prelude::*;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -34,7 +36,7 @@ pub enum RenderSource<'a> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct ResolvedPhaser {
-    pub id: String,
+    pub instance: EffectInstanceHandle,
     pub phase: f64,
 }
 
@@ -48,8 +50,9 @@ pub fn render_at(
         RenderSource::Live(active) => (
             active
                 .iter()
+                .filter(|phaser| show.phasers.contains_key(&phaser.id))
                 .map(|phaser| ResolvedPhaser {
-                    id: phaser.id.clone(),
+                    instance: phaser.id.clone().into(),
                     phase: phaser.phase_at(time),
                 })
                 .collect(),
@@ -71,10 +74,10 @@ pub(crate) fn render_resolved(
             let mut output = FixtureOutput::black(fixture.id);
 
             for active in active_phasers {
-                let Some(phaser) = show.phasers.get(&active.id) else {
+                let Some(phaser) = show.phasers.get(active.instance.as_str()) else {
                     continue;
                 };
-                let Some(group) = show.groups.get(&phaser.target) else {
+                let Some(group) = show.groups.get(phaser.target.as_str()) else {
                     continue;
                 };
                 let Some(fixture_index) = group.index_of(fixture.id) else {
@@ -102,7 +105,7 @@ pub(crate) fn render_resolved(
                     evaluate_phaser_at(normalized, &phaser.steps, total_width);
 
                 if let Some(override_color) =
-                    parameters.get_color(&format!("phaser:{}.color", active.id))
+                    parameters.get_effect_color(&active.instance, CompiledEffectParameter::Color)
                 {
                     color = override_color;
                 }
@@ -113,7 +116,7 @@ pub(crate) fn render_resolved(
                 output.dimmer = output.dimmer.max(dimmer);
             }
 
-            if let Some(global_dimmer) = parameters.get_float("global.master_dimmer") {
+            if let Some(global_dimmer) = parameters.global_master_dimmer() {
                 output.dimmer *= global_dimmer as f32;
             }
 
@@ -132,7 +135,7 @@ fn resolve_timeline_at(
 
     let mut active_phasers = Vec::new();
     for event in &timeline.events {
-        let TimelineActionDefDSL::Phaser { phaser } = &event.action else {
+        let CompiledTimelineAction::Phaser { phaser } = &event.action else {
             continue;
         };
         if !event_is_active(event, time.beat) {
@@ -141,12 +144,15 @@ fn resolve_timeline_at(
 
         let default_multiplier = show
             .phasers
-            .get(phaser)
+            .get(phaser.as_str())
             .and_then(|compiled| compiled.multiplier)
             .unwrap_or(1.0);
-        let target = format!("phaser:{phaser}.multiplier");
+        let target = CompiledAutomationTarget::EffectInstance {
+            instance: phaser.clone(),
+            parameter: CompiledEffectParameter::Multiplier,
+        };
         active_phasers.push(ResolvedPhaser {
-            id: phaser.clone(),
+            instance: phaser.clone(),
             phase: integrate_float_parameter(
                 &timeline.events,
                 &target,
@@ -158,9 +164,10 @@ fn resolve_timeline_at(
     }
 
     let mut parameters = ParameterContext::new();
-    let mut resolved_parameters: HashMap<&str, (f64, usize, AnimatableValue)> = HashMap::new();
+    let mut resolved_parameters: HashMap<&CompiledAutomationTarget, (f64, usize, AnimatableValue)> =
+        HashMap::new();
     for (index, event) in timeline.events.iter().enumerate() {
-        let TimelineActionDefDSL::Animate {
+        let CompiledTimelineAction::Animate {
             target,
             from,
             to,
@@ -182,24 +189,23 @@ fn resolve_timeline_at(
             continue;
         };
 
-        let replace =
-            resolved_parameters
-                .get(target.as_str())
-                .is_none_or(|(start, previous_index, _)| {
-                    event.beat > *start || (event.beat == *start && index > *previous_index)
-                });
+        let replace = resolved_parameters
+            .get(target)
+            .is_none_or(|(start, previous_index, _)| {
+                event.beat > *start || (event.beat == *start && index > *previous_index)
+            });
         if replace {
             resolved_parameters.insert(target, (event.beat, index, value));
         }
     }
     for (target, (_, _, value)) in resolved_parameters {
-        parameters.write_value(target, value);
+        parameters.write_value(target.clone(), value);
     }
 
     (active_phasers, parameters)
 }
 
-fn event_is_active(event: &TimelineEventDSL, beat: f64) -> bool {
+fn event_is_active(event: &CompiledTimelineEvent, beat: f64) -> bool {
     if beat < event.beat {
         return false;
     }
@@ -209,7 +215,7 @@ fn event_is_active(event: &TimelineEventDSL, beat: f64) -> bool {
 }
 
 fn evaluate_animation_at(
-    event: &TimelineEventDSL,
+    event: &CompiledTimelineEvent,
     from: &crate::document::AnimatableValueDSL,
     to: &crate::document::AnimatableValueDSL,
     easing: Option<&str>,
@@ -227,8 +233,8 @@ fn evaluate_animation_at(
 }
 
 fn integrate_float_parameter(
-    events: &[TimelineEventDSL],
-    target: &str,
+    events: &[CompiledTimelineEvent],
+    target: &CompiledAutomationTarget,
     from_beat: f64,
     to_beat: f64,
     default_value: f64,
@@ -241,7 +247,7 @@ fn integrate_float_parameter(
         .iter()
         .enumerate()
         .filter_map(|(index, event)| match &event.action {
-            TimelineActionDefDSL::Animate {
+            CompiledTimelineAction::Animate {
                 target: event_target,
                 from,
                 to,
@@ -301,7 +307,7 @@ fn integrate_float_parameter(
 }
 
 fn integrate_animation_segment(
-    event: &TimelineEventDSL,
+    event: &CompiledTimelineEvent,
     from: &crate::document::AnimatableValueDSL,
     to: &crate::document::AnimatableValueDSL,
     easing: Option<&str>,
@@ -338,7 +344,9 @@ fn easing_antiderivative(value: f64, easing: &str) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::{integrate_float_parameter, render_at, RenderSource, RenderTime};
-    use crate::compiler::{parser::ShowDSL, Compiler};
+    use crate::compiler::{
+        parser::ShowDSL, CompiledAutomationTarget, CompiledEffectParameter, Compiler,
+    };
     use crate::engine::FixtureOutput;
 
     fn compiled_show() -> crate::compiler::CompiledShow {
@@ -350,9 +358,9 @@ mod tests {
                 "layout": { "type": "generator", "generator": {
                     "shape": "matrix", "rows": 1, "columns": 1, "spacing": 1
                 }},
-                "groups": [{ "name": "All", "fixtures": [1] }],
+                "groups": [{ "id": "all", "name": "All", "fixtures": [1] }],
                 "phasers": [{
-                    "id": "pulse", "name": "Pulse", "target": "All", "multiplier": 1,
+                    "id": "pulse", "name": "Pulse", "target": "all", "multiplier": 1,
                     "steps": [
                         { "values": { "color": "#ffffff", "dimmer": 1 }, "width": 50, "transition": 0 },
                         { "values": { "color": "#000000", "dimmer": 0 }, "width": 50, "transition": 0 }
@@ -362,35 +370,43 @@ mod tests {
                 "timeline": { "events": [
                     { "beat": 0, "duration": 4, "action": { "type": "phaser", "phaser": "pulse" } },
                     { "beat": 0, "duration": 2, "action": {
-                        "type": "animate", "target": "phaser:pulse.multiplier",
+                        "type": "animate", "target": {
+                            "scope": "effect_instance", "instance_id": "pulse", "parameter_id": "multiplier"
+                        },
                         "from": 1, "to": 3, "easing": "linear"
                     }},
                     { "beat": 0, "duration": 2, "action": {
-                        "type": "animate", "target": "global.master_dimmer",
+                        "type": "animate", "target": {
+                            "scope": "global", "parameter_id": "master_dimmer"
+                        },
                         "from": 1, "to": 0.5, "easing": "linear"
                     }}
                 ]}
             }"##,
         )
         .expect("test DSL");
-        Compiler::compile(dsl).expect("compiled test show")
+        Compiler::compile_document(dsl).expect("compiled test show")
     }
 
     #[test]
     fn multiplier_automation_is_integrated_over_musical_time() {
         let show = compiled_show();
         let events = &show.timeline.as_ref().expect("timeline").events;
+        let target = CompiledAutomationTarget::EffectInstance {
+            instance: "pulse".to_string().into(),
+            parameter: CompiledEffectParameter::Multiplier,
+        };
 
         assert_eq!(
-            integrate_float_parameter(events, "phaser:pulse.multiplier", 0.0, 1.0, 1.0),
+            integrate_float_parameter(events, &target, 0.0, 1.0, 1.0),
             1.5
         );
         assert_eq!(
-            integrate_float_parameter(events, "phaser:pulse.multiplier", 0.0, 2.0, 1.0),
+            integrate_float_parameter(events, &target, 0.0, 2.0, 1.0),
             4.0
         );
         assert_eq!(
-            integrate_float_parameter(events, "phaser:pulse.multiplier", 0.0, 3.0, 1.0),
+            integrate_float_parameter(events, &target, 0.0, 3.0, 1.0),
             7.0
         );
     }

@@ -27,6 +27,7 @@
   },
   "groups": [
     {
+      "id": "all",
       "name": "All",
       "fixtures": {
         "range": [
@@ -37,6 +38,7 @@
       "sort_by": "none"
     },
     {
+      "id": "bycenter",
       "name": "ByCenter",
       "fixtures": {
         "range": [
@@ -51,7 +53,7 @@
     {
       "id": "global_breathe",
       "name": "Global Breathe",
-      "target": "All",
+      "target": "all",
       "multiplier": 0.5,
       "steps": [
         {
@@ -86,7 +88,7 @@
     {
       "id": "center_out_breathe",
       "name": "Center Out Breathe",
-      "target": "ByCenter",
+      "target": "bycenter",
       "multiplier": 0.5,
       "steps": [
         {
