@@ -726,7 +726,7 @@ Keyframe 至少包含：
 #### 6.2 Stage Setup
 
 - [x] Fixture Profile 选择、数量、ID/universe/channel 设置。
-- [ ] matrix/circle/formula/custom 布局可视化编辑。
+- [x] matrix/circle/formula/custom 布局可视化编辑。
 - [x] group 创建、空间筛选、排序和测试点亮。
 - [x] fixture capability 和 patch 冲突实时提示。
 
@@ -755,10 +755,10 @@ Keyframe 至少包含：
 
 #### 6.6 Accessibility
 
-- [ ] 所有 icon-only button 有可访问名称。
-- [ ] timeline block、keyframe、resize、delete 支持键盘替代。
-- [ ] 交互目标尺寸、对比度、focus ring 和 reduced motion 满足基线。
-- [ ] 不以双击作为唯一删除入口。
+- [x] 所有 icon-only button 有可访问名称。
+- [x] timeline block、keyframe、resize、delete 支持键盘替代。
+- [x] 交互目标尺寸、对比度、focus ring 和 reduced motion 满足基线。
+- [x] 不以双击作为唯一删除入口。
 
 ### 用户验收路径
 
@@ -1082,14 +1082,14 @@ flowchart LR
 ## Handoff
 
 - Current Stage: Stage 6 `in_progress`；严格止于 Stage 7。
-- Slice completed: Stage 6 baseline/snapshots/Shell/Stage Setup/Effect Lab/Arrange，以及只读取 immutable Live Snapshot 的 quantized Live Pad、四种行为语义、latched Blackout 与输出诊断。
-- Commits: 分支 `codex/song-driven-dj-workspace`；基线 `3b709a0`；snapshot `e9a32d8`；Shell `a490908`；Stage Setup `00e2148`；Effect Lab `bc4e050`；Arrange `949b831`；Live/Rehearse 为当前切片提交。
-- Files changed: ShowStore/Tauri bridge、single scheduler quantized queue/blackout state、runtime diagnostics、Live Snapshot catalog、persistent pad config、Live transport/pads/settings/diagnostics 与 tests/evidence。
-- Validation: Live/Rehearse `check:all` 全绿：43 frontend files/96 tests、80 Rust unit + 12 contracts、schema/format/typecheck/build/strict Clippy；1440×900 与 1100×720 browser empty-state QA；Rust 验证 beat/bar、one-shot、exclusive、momentary cancel 和 Blackout latch。
+- Slice completed: Stage 6 baseline/snapshots/Shell/Stage Setup/Effect Lab/Arrange/Live，以及 matrix/circle/formula/custom 参数化布局、键盘 resize/track expand 与 accessibility 审计。
+- Commits: 分支 `codex/song-driven-dj-workspace`；基线 `3b709a0`；snapshot `e9a32d8`；Shell `a490908`；Stage Setup `00e2148`；Effect Lab `bc4e050`；Arrange `949b831`；Live/Rehearse `7062d2e`；layout/accessibility 为当前切片提交。
+- Files changed: 可持久化 Stage layout 参数模型与 minimap、Custom 坐标表单、layout diagnostics、timeline keyboard resize、track header keyboard toggle、相关 tests/evidence。
+- Validation: 当前 `check:all` 全绿：45 frontend files/101 tests、80 Rust unit + 12 contracts、schema/format/typecheck/build/strict Clippy；Stage layout 1440×900 与 1100×720 browser QA；键盘 resize 保持 PPQ tick 精度并只产生一个 Undo transaction。
 - ADRs added/updated: ADR-0006 accepted；Draft 发布不改变 Live，只有显式 Take live 激活 revision。
 - Risks opened/closed: R-005 closed；原生 Publish 得到 `Published r2 / Live r1`，只有显式 Take live 后变为 `Live r2`。
-- Remaining exit criteria: Stage Setup 补齐 layout 参数/Custom 坐标编辑；完成 accessibility 审计与完整原生用户路径；之后才进入 Stage 7 Audio/TempoMap/SongAnalysis。
-- Recommended next slice: Stage Setup layout visual editor + Stage 6 accessibility/native closure。
+- Remaining exit criteria: 在真实 Tauri 中复核 Stage 6 无 DSL 完整用户路径；随后才进入 Stage 7 Audio/TempoMap/SongAnalysis。project/show/song 名称中的 song/save state 随 Stage 7 asset persistence 一并关闭。
+- Recommended next slice: Stage 6 原生路径 closure，然后进入 Stage 7 AudioAsset 与 versioned SongAnalysis contract。
 
 ## 19. ADR 规范
 
@@ -1204,6 +1204,7 @@ flowchart LR
 | 2026-08-02 | 6        | Effect Lab implementation | completed | 本切片提交  | `check:all`；84 frontend；88 Rust；1440×900 browser QA                   | atomic revision；one compile；rAF Canvas；A/B cache         | Arrange placement                           |
 | 2026-08-02 | 6        | Arrange visual workflow   | completed | 本切片提交  | `check:all`；90 frontend；88 Rust；1440×900 + min browser QA             | Draft revision 直入 Library；native drag；统一 snap         | Live Pad + safety hierarchy                 |
 | 2026-08-02 | 6        | Live/Rehearse controls    | completed | 本切片提交  | `check:all`；96 frontend；92 Rust；max/min browser QA                    | quantize queue；Blackout latch；Live catalog                | layout + accessibility                      |
+| 2026-08-02 | 6        | Layout + accessibility    | completed | 本切片提交  | `check:all`；101 frontend；92 Rust；1440×900/min browser QA              | visual layout params；keyboard resize 单 Undo；无嵌套控件   | Stage 6 原生路径 closure                    |
 
 ## 21. Open Risks
 

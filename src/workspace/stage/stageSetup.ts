@@ -1,5 +1,5 @@
 import fixtureProfileCatalog from "../../../schemas/fixture-profiles-v1.json";
-import type { GroupDSL, LayoutDSL, PatchDSL } from "@/bridge/types";
+import type { CustomFixturePos, GroupDSL, LayoutDSL, PatchDSL } from "@/bridge/types";
 import type { PatchAddress } from "@/stores/workspace";
 
 interface FixtureProfileAttribute {
@@ -95,22 +95,152 @@ export function diagnosePatch(patch: PatchDSL[], addresses: PatchAddress[]): Pat
 export type EditableLayoutShape = "matrix" | "circle" | "formula" | "custom";
 export type SpatialFilter = "all" | "left" | "right" | "top" | "bottom";
 
+export interface StageLayoutParameters {
+  columns: number;
+  spacing: number;
+  originX: number;
+  originY: number;
+  rings: number;
+  increment: number;
+  gap: number;
+  centerX: number;
+  centerY: number;
+  formulaX: string;
+  formulaY: string;
+  tStart: number;
+  tEnd: number;
+  scale: number;
+  customFixtures: CustomFixturePos[];
+}
+
+export function layoutParametersFromLayout(
+  layout: LayoutDSL | null | undefined,
+  fixtureIds: number[],
+): StageLayoutParameters {
+  const defaults = defaultLayoutParameters(fixtureIds);
+  const generator = layout?.generator;
+  if (!generator) return defaults;
+  if (generator.shape === "matrix") {
+    return {
+      ...defaults,
+      columns: generator.columns,
+      spacing: generator.spacing,
+      originX: generator.origin?.[0] ?? 0,
+      originY: generator.origin?.[1] ?? 0,
+    };
+  }
+  if (generator.shape === "circle") {
+    return {
+      ...defaults,
+      rings: generator.rings,
+      increment: generator.increment,
+      gap: generator.gap,
+      centerX: generator.center?.[0] ?? 0,
+      centerY: generator.center?.[1] ?? 0,
+    };
+  }
+  if (generator.shape === "formula") {
+    return {
+      ...defaults,
+      formulaX: generator.formula.x,
+      formulaY: generator.formula.y,
+      tStart: generator.formula.t_range[0],
+      tEnd: generator.formula.t_range[1],
+      scale: generator.formula.scale ?? 1,
+    };
+  }
+  if (generator.shape === "custom") {
+    return { ...defaults, customFixtures: generator.fixtures };
+  }
+  return defaults;
+}
+
+export function diagnoseLayout(
+  shape: EditableLayoutShape,
+  fixtureIds: number[],
+  parameters: StageLayoutParameters,
+): PatchDiagnostic[] {
+  const invalidNumber = (value: number) => !Number.isFinite(value);
+  if (shape === "matrix") {
+    if (!Number.isInteger(parameters.columns) || parameters.columns < 1) {
+      return [{ severity: "error", message: "Layout columns must be a positive integer." }];
+    }
+    if (invalidNumber(parameters.spacing) || parameters.spacing <= 0) {
+      return [{ severity: "error", message: "Matrix spacing must be greater than zero." }];
+    }
+    if (invalidNumber(parameters.originX) || invalidNumber(parameters.originY)) {
+      return [{ severity: "error", message: "Matrix origin must use finite coordinates." }];
+    }
+  }
+  if (shape === "circle") {
+    if (
+      !Number.isInteger(parameters.rings) ||
+      parameters.rings < 1 ||
+      !Number.isInteger(parameters.increment) ||
+      parameters.increment < 1
+    ) {
+      return [
+        { severity: "error", message: "Circle rings and increment must be positive integers." },
+      ];
+    }
+    if (invalidNumber(parameters.gap) || parameters.gap <= 0) {
+      return [{ severity: "error", message: "Circle ring gap must be greater than zero." }];
+    }
+    if (invalidNumber(parameters.centerX) || invalidNumber(parameters.centerY)) {
+      return [{ severity: "error", message: "Circle center must use finite coordinates." }];
+    }
+    const capacity = 1 + (parameters.increment * parameters.rings * (parameters.rings + 1)) / 2;
+    if (capacity < fixtureIds.length) {
+      return [
+        {
+          severity: "error",
+          message: `Circle layout fits ${capacity} fixtures; increase rings or increment for ${fixtureIds.length}.`,
+        },
+      ];
+    }
+  }
+  if (shape === "formula") {
+    if (!parameters.formulaX.trim() || !parameters.formulaY.trim()) {
+      return [{ severity: "error", message: "Formula X and Y expressions are required." }];
+    }
+    if (
+      invalidNumber(parameters.tStart) ||
+      invalidNumber(parameters.tEnd) ||
+      parameters.tEnd <= parameters.tStart
+    ) {
+      return [{ severity: "error", message: "Formula t end must be greater than t start." }];
+    }
+    if (invalidNumber(parameters.scale) || parameters.scale <= 0) {
+      return [{ severity: "error", message: "Formula scale must be greater than zero." }];
+    }
+  }
+  if (shape === "custom") {
+    const positions = reconcileCustomFixtures(fixtureIds, parameters);
+    if (positions.some(({ x, y }) => invalidNumber(x) || invalidNumber(y))) {
+      return [
+        { severity: "error", message: "Every custom fixture needs finite X and Y coordinates." },
+      ];
+    }
+  }
+  return [];
+}
+
 export function buildLayout(
   shape: EditableLayoutShape,
   fixtureIds: number[],
-  columns: number,
+  parameters: StageLayoutParameters,
 ): LayoutDSL {
   const count = fixtureIds.length;
-  const safeColumns = Math.max(1, Math.min(columns, Math.max(count, 1)));
+  const safeColumns = Math.max(1, Math.min(parameters.columns, Math.max(count, 1)));
   if (shape === "circle") {
     return {
       type: "generator",
       generator: {
         shape: "circle",
-        rings: 1,
-        increment: Math.max(1, count - 1),
-        gap: 96,
-        center: [0, 0],
+        rings: parameters.rings,
+        increment: parameters.increment,
+        gap: parameters.gap,
+        center: [parameters.centerX, parameters.centerY],
       },
     };
   }
@@ -120,10 +250,11 @@ export function buildLayout(
       generator: {
         shape: "formula",
         formula: {
-          x: "cos(t) * 128",
-          y: "sin(t) * 128",
-          t_range: [0, Math.PI * 2],
+          x: parameters.formulaX,
+          y: parameters.formulaY,
+          t_range: [parameters.tStart, parameters.tEnd],
           count: Math.max(1, count),
+          scale: parameters.scale,
         },
       },
     };
@@ -133,11 +264,7 @@ export function buildLayout(
       type: "generator",
       generator: {
         shape: "custom",
-        fixtures: fixtureIds.map((id, index) => ({
-          id,
-          x: (index % safeColumns) * 64,
-          y: Math.floor(index / safeColumns) * 64,
-        })),
+        fixtures: reconcileCustomFixtures(fixtureIds, parameters),
       },
     };
   }
@@ -147,8 +274,8 @@ export function buildLayout(
       shape: "matrix",
       rows: Math.max(1, Math.ceil(count / safeColumns)),
       columns: safeColumns,
-      spacing: 64,
-      origin: [0, 0],
+      spacing: parameters.spacing,
+      origin: [parameters.originX, parameters.originY],
     },
   };
 }
@@ -190,7 +317,7 @@ export function fixtureIdsBySpatialFilter(
     .map((position) => position.id);
 }
 
-function layoutPositions(layout: LayoutDSL, fixtureIds: number[]) {
+export function layoutPositions(layout: LayoutDSL, fixtureIds: number[]) {
   const generator = layout.generator;
   if (generator.shape === "custom") return generator.fixtures;
   if (generator.shape === "matrix") {
@@ -220,6 +347,47 @@ function layoutPositions(layout: LayoutDSL, fixtureIds: number[]) {
     return positions;
   }
   return [];
+}
+
+function defaultLayoutParameters(fixtureIds: number[]): StageLayoutParameters {
+  const columns = Math.max(1, Math.ceil(Math.sqrt(Math.max(1, fixtureIds.length))));
+  return {
+    columns,
+    spacing: 64,
+    originX: 0,
+    originY: 0,
+    rings: 1,
+    increment: Math.max(1, fixtureIds.length - 1),
+    gap: 96,
+    centerX: 0,
+    centerY: 0,
+    formulaX: "cos(t) * 128",
+    formulaY: "sin(t) * 128",
+    tStart: 0,
+    tEnd: Math.PI * 2,
+    scale: 1,
+    customFixtures: fixtureIds.map((id, index) => ({
+      id,
+      x: (index % columns) * 64,
+      y: Math.floor(index / columns) * 64,
+    })),
+  };
+}
+
+function reconcileCustomFixtures(
+  fixtureIds: number[],
+  parameters: StageLayoutParameters,
+): CustomFixturePos[] {
+  const existing = new Map(parameters.customFixtures.map((fixture) => [fixture.id, fixture]));
+  const columns = Math.max(1, Math.min(parameters.columns, Math.max(1, fixtureIds.length)));
+  return fixtureIds.map(
+    (id, index) =>
+      existing.get(id) ?? {
+        id,
+        x: parameters.originX + (index % columns) * parameters.spacing,
+        y: parameters.originY + Math.floor(index / columns) * parameters.spacing,
+      },
+  );
 }
 
 export function uniqueGroupId(name: string, groups: GroupDSL[]) {

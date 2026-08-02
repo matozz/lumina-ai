@@ -262,6 +262,28 @@ export const useTimelineEvents = ({ beatWidth, scrollRef }: TimelineEventsOption
     [parsedDsl, timelineEvents],
   );
 
+  const resizeEventBy = useCallback(
+    (originalIndex: number, deltaBeats: number) => {
+      if (!parsedDsl?.timeline) return;
+      const view = timelineEvents[originalIndex];
+      if (view?.action.type !== "effect" || !view.source_track_id || !view.source_item_id) return;
+      const currentDuration = beatsToTicks(view.duration ?? 4, parsedDsl.timeline.ppq);
+      const deltaTick = beatsToTicks(deltaBeats, parsedDsl.timeline.ppq);
+      engineActions.applyDocumentTransaction(
+        transaction("Resize timeline item", {
+          type: "resize_clip",
+          track_id: view.source_track_id,
+          clip_id: view.source_item_id,
+          duration_tick: Math.max(
+            Math.round(parsedDsl.timeline.ppq / 4),
+            currentDuration + deltaTick,
+          ),
+        }),
+      );
+    },
+    [parsedDsl?.timeline, timelineEvents],
+  );
+
   const trimClipOverlaps = useCallback(
     (originalIndex: number) => {
       if (!parsedDsl) return;
@@ -514,6 +536,7 @@ export const useTimelineEvents = ({ beatWidth, scrollRef }: TimelineEventsOption
     addAutomationLane,
     deleteEvent,
     nudgeEvent,
+    resizeEventBy,
     trimClipOverlaps,
     replaceClipOverlaps,
     addKeyframe,

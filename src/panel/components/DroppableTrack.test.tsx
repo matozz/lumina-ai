@@ -12,6 +12,7 @@ const actions: TimelineActions = {
   onResizeStart: vi.fn(),
   onDelete: vi.fn(),
   onNudge: vi.fn(),
+  onResizeBy: vi.fn(),
   onTrimClipOverlaps: vi.fn(),
   onReplaceClipOverlaps: vi.fn(),
   onAddKeyframe: vi.fn(),

@@ -11,6 +11,7 @@ function renderBlock() {
     onResizeStart: vi.fn(),
     onDelete: vi.fn(),
     onNudge: vi.fn(),
+    onResizeBy: vi.fn(),
     onTrimClipOverlaps: vi.fn(),
     onReplaceClipOverlaps: vi.fn(),
     onAddKeyframe: vi.fn(),
@@ -51,6 +52,7 @@ describe("DraggableBlock keyboard controls", () => {
 
     fireEvent.keyDown(block, { key: "ArrowRight" });
     fireEvent.keyDown(block, { key: "ArrowLeft", shiftKey: true });
+    fireEvent.keyDown(block, { key: "ArrowRight", altKey: true });
     const editorInput = document.createElement("input");
     block.append(editorInput);
     fireEvent.keyDown(editorInput, { key: "Delete" });
@@ -61,6 +63,7 @@ describe("DraggableBlock keyboard controls", () => {
 
     expect(actions.onNudge).toHaveBeenNthCalledWith(1, 7, 0.5);
     expect(actions.onNudge).toHaveBeenNthCalledWith(2, 7, -4);
+    expect(actions.onResizeBy).toHaveBeenCalledWith(7, 0.5);
     expect(actions.onDelete).toHaveBeenCalledWith(7);
   });
 });

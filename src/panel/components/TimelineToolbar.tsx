@@ -106,6 +106,7 @@ export const TimelineToolbar = (props: ToolbarProps) => {
               <Shortcut keys="Click / drag" action="Place selected effect at snap" />
               <Shortcut keys="← / →" action="Nudge clip by 1/2 beat" />
               <Shortcut keys="Shift + ← / →" action="Nudge clip by 4 beats" />
+              <Shortcut keys="Alt + ← / →" action="Resize clip by 1/2 beat" />
               <Shortcut keys="Delete" action="Remove focused clip" />
               <Shortcut keys="⌘/Ctrl + Z" action="Undo timeline edit" />
             </dl>

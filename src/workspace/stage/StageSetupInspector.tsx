@@ -22,12 +22,15 @@ import { StageGroupEditor } from "./StageGroupEditor";
 import {
   buildLayout,
   channelFootprint,
+  diagnoseLayout,
   diagnosePatch,
   type EditableLayoutShape,
   fixtureIdsForPatch,
   fixtureProfiles,
+  layoutParametersFromLayout,
   profileById,
 } from "./stageSetup";
+import { StageLayoutEditor } from "./StageLayoutEditor";
 
 export function StageSetupInspector() {
   const document = useEngineStore(engineSelectors.parsedDsl);
@@ -37,8 +40,9 @@ export function StageSetupInspector() {
   const [profileId, setProfileId] = useState(firstPatch?.profile_id ?? "generic-rgb");
   const [firstId, setFirstId] = useState(firstPatch?.id_range[0] ?? 1);
   const [count, setCount] = useState(initialCount);
-  const [columns, setColumns] = useState(
-    document?.layout.generator.shape === "matrix" ? document.layout.generator.columns : 4,
+  const initialFixtureIds = firstPatch ? fixtureIdsForPatch([firstPatch]) : [1];
+  const [layoutParameters, setLayoutParameters] = useState(() =>
+    layoutParametersFromLayout(document?.layout, initialFixtureIds),
   );
   const [shape, setShape] = useState<EditableLayoutShape>(editableShape(document));
   const address = patchAddresses[0] ?? { universe: 1, startChannel: 1 };
@@ -52,11 +56,10 @@ export function StageSetupInspector() {
     ],
     [count, firstId, profileId],
   );
+  const fixtureIds = useMemo(() => fixtureIdsForPatch(patch), [patch]);
   const diagnostics = [
     ...diagnosePatch(patch, [address]),
-    ...(!Number.isInteger(columns) || columns < 1
-      ? [{ severity: "error" as const, message: "Layout columns must be a positive integer." }]
-      : []),
+    ...diagnoseLayout(shape, fixtureIds, layoutParameters),
   ];
   const invalid = diagnostics.some((diagnostic) => diagnostic.severity === "error");
 
@@ -70,16 +73,15 @@ export function StageSetupInspector() {
   useEffect(() => {
     if (!document) return;
     setShape(editableShape(document));
-    if (document.layout.generator.shape === "matrix") {
-      setColumns(document.layout.generator.columns);
-    }
+    setLayoutParameters(
+      layoutParametersFromLayout(document.layout, fixtureIdsForPatch(document.patch)),
+    );
   }, [document]);
 
   const applySetup = async () => {
     if (!document || invalid) return;
-    const fixtureIds = fixtureIdsForPatch(patch);
     const groups = reconcileGroups(document, fixtureIds);
-    const layout = buildLayout(shape, fixtureIds, columns);
+    const layout = buildLayout(shape, fixtureIds, layoutParameters);
     try {
       engineActions.applyDocumentTransaction({
         id: crypto.randomUUID(),
@@ -168,27 +170,31 @@ export function StageSetupInspector() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <Field label="Layout" id="stage-layout">
-                <Select
-                  value={shape}
-                  onValueChange={(value) => value && setShape(value as EditableLayoutShape)}
-                >
-                  <SelectTrigger id="stage-layout" size="sm" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="matrix">Matrix</SelectItem>
-                      <SelectItem value="circle">Circle</SelectItem>
-                      <SelectItem value="formula">Formula</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <NumberField label="Columns" value={columns} min={1} onChange={setColumns} />
-            </div>
+            <Field label="Layout" id="stage-layout">
+              <Select
+                value={shape}
+                onValueChange={(value) => value && setShape(value as EditableLayoutShape)}
+              >
+                <SelectTrigger id="stage-layout" size="sm" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="matrix">Matrix</SelectItem>
+                    <SelectItem value="circle">Circle</SelectItem>
+                    <SelectItem value="formula">Formula</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <StageLayoutEditor
+              shape={shape}
+              fixtureIds={fixtureIds}
+              parameters={layoutParameters}
+              onChange={setLayoutParameters}
+            />
 
             <div className="flex flex-wrap gap-1">
               {profile.attributes.map((attribute) => (

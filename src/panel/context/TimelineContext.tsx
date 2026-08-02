@@ -8,6 +8,7 @@ export interface TimelineActions {
   onResizeStart: (e: React.PointerEvent, originalIndex: number, element: HTMLElement) => void;
   onDelete: (originalIndex: number) => void;
   onNudge: (originalIndex: number, deltaBeats: number) => void;
+  onResizeBy: (originalIndex: number, deltaBeats: number) => void;
   onTrimClipOverlaps: (originalIndex: number) => void;
   onReplaceClipOverlaps: (originalIndex: number) => void;
   onAddKeyframe: (
