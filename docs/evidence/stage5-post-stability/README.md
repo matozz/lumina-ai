@@ -60,6 +60,13 @@
 - 播放中拖拽：先确认 transport 按钮为 `PAUSE`，随后把 keyframe 从 tick 16320 拖到 17280 并成功提交；播放到 document 末尾后回到 `PLAY`。
 - popover 编辑键：React portal 中的 input keyboard event 原先会继续冒泡到 automation row/document shortcut。现在所有时间轴快捷键先排除 `input/textarea/select/contenteditable`；真实 Time tick 输入框中输入再 Backspace 后，3 个 Speed keyframe 和 Effect Clips 全部仍在。[`popover-delete-preserves-timeline.png`](./popover-delete-preserves-timeline.png) 保留了打开的编辑器与完整时间轴。
 
-## 尚待本 Goal 完成的证据
+## 最终统一门禁
 
-- 完整统一门禁、最终增量提交和文档收口。
+`pnpm check:all` 一次通过：
+
+- schema generation drift check、Prettier、TypeScript typecheck 与 Vite production build 通过。
+- 前端 30 个测试文件、61 项测试通过。
+- Rust fmt、全 targets strict Clippy 和 85 项 Rust tests/contracts 通过。
+- 输出只包含项目声明 Node `20.19.3` 与当前 host Node `22.20.0` 的版本提示，以及既有 Vite chunk-size 警告；两者均未形成产品回归。
+
+本专项未改变 Stage 5 完成状态，也没有实现 Stage 6 workspace 能力。
