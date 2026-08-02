@@ -1087,9 +1087,9 @@ flowchart LR
 - Files changed: 可持久化 Stage layout 参数模型与 minimap、Custom 坐标表单、layout diagnostics、timeline keyboard resize、track header keyboard toggle、相关 tests/evidence。
 - Validation: 当前 `check:all` 全绿：45 frontend files/101 tests、80 Rust unit + 12 contracts、schema/format/typecheck/build/strict Clippy；Stage layout 1440×900 与 1100×720 browser QA；键盘 resize 保持 PPQ tick 精度并只产生一个 Undo transaction。
 - ADRs added/updated: ADR-0006 accepted；Draft 发布不改变 Live，只有显式 Take live 激活 revision。
-- Risks opened/closed: R-005 closed；原生 Publish 得到 `Published r2 / Live r1`，只有显式 Take live 后变为 `Live r2`。
-- Remaining exit criteria: 在真实 Tauri 中复核 Stage 6 无 DSL 完整用户路径；随后才进入 Stage 7 Audio/TempoMap/SongAnalysis。project/show/song 名称中的 song/save state 随 Stage 7 asset persistence 一并关闭。
-- Recommended next slice: Stage 6 原生路径 closure，然后进入 Stage 7 AudioAsset 与 versioned SongAnalysis contract。
+- Risks opened/closed: R-005 closed；原生 Publish 得到 `Published r2 / Live r1`，只有显式 Take live 后变为 `Live r2`。当前 macOS GUI 会话锁屏，AX 不暴露窗口内容；这是验收环境阻塞，不归类为产品风险。
+- Remaining exit criteria: GUI 会话解锁后，在真实 Tauri 中复核 Stage 6 无 DSL 完整用户路径；随后才进入 Stage 7 Audio/TempoMap/SongAnalysis。project/show/song 名称中的 song/save state 随 Stage 7 asset persistence 一并关闭。
+- Recommended next slice: 解锁 GUI 后立即完成 Stage 6 原生路径 closure，然后进入 Stage 7 AudioAsset 与 versioned SongAnalysis contract。
 
 ## 19. ADR 规范
 
@@ -1205,6 +1205,7 @@ flowchart LR
 | 2026-08-02 | 6        | Arrange visual workflow   | completed | 本切片提交  | `check:all`；90 frontend；88 Rust；1440×900 + min browser QA             | Draft revision 直入 Library；native drag；统一 snap         | Live Pad + safety hierarchy                 |
 | 2026-08-02 | 6        | Live/Rehearse controls    | completed | 本切片提交  | `check:all`；96 frontend；92 Rust；max/min browser QA                    | quantize queue；Blackout latch；Live catalog                | layout + accessibility                      |
 | 2026-08-02 | 6        | Layout + accessibility    | completed | 本切片提交  | `check:all`；101 frontend；92 Rust；1440×900/min browser QA              | visual layout params；keyboard resize 单 Undo；无嵌套控件   | Stage 6 原生路径 closure                    |
+| 2026-08-03 | 6        | 原生路径收口复核          | blocked   | none        | debug `.app` 构建通过；CG window `1512×892`；AX `0 windows`；系统锁屏    | GUI 会话锁定；不以 browser 截图替代 Tauri 证据              | 解锁后重跑无 DSL 完整路径                   |
 
 ## 21. Open Risks
 
