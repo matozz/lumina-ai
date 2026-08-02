@@ -12,6 +12,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { TimelinePanel } from "@/panel/TimelinePanel";
 import { engineSelectors, useEngineStore } from "@/stores/engine";
 import type { WorkspaceId } from "@/stores/workspace";
+import { EffectLabPreview } from "./effect-lab/EffectLabPreview";
 
 export function WorkspaceContent({ workspace }: { workspace: WorkspaceId }) {
   if (workspace === "arrange") {
@@ -29,6 +30,7 @@ export function WorkspaceContent({ workspace }: { workspace: WorkspaceId }) {
   }
 
   if (workspace === "song") return <SongPlaceholder />;
+  if (workspace === "effect-lab") return <EffectLabPreview />;
 
   return <WorkspaceSurface workspace={workspace} />;
 }

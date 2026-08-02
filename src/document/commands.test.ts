@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { FullDSL } from "@/bridge/types";
+import { createEffectPair, reviseEffectPair } from "@/workspace/effect-lab/effectFactory";
+import { createStarterProject } from "@/workspace/defaultProject";
 import {
   applyDocumentTransaction,
   DocumentCommandError,
@@ -46,6 +48,77 @@ function transaction(commands: DocumentTransaction["commands"]): DocumentTransac
 }
 
 describe("DocumentCommand transactions", () => {
+  it("creates, revises, and deletes one reusable effect atomically", () => {
+    const source = createStarterProject();
+    const pair = createEffectPair(source);
+    const created = applyDocumentTransaction(
+      source,
+      transaction([{ type: "create_effect", ...pair }]),
+    );
+    const revisedPair = reviseEffectPair(pair.definition, pair.instance, {
+      name: "Red Pulse Renamed",
+      targetGroupId: "all-fixtures",
+      attributeMode: "intensity_color",
+      waveform: "triangle",
+      speed: 2,
+      phase: 0.5,
+      width: 75,
+      transition: 25,
+      color: "#ff0000",
+    });
+    const revised = applyDocumentTransaction(
+      created,
+      transaction([
+        {
+          type: "revise_effect",
+          definition_id: pair.definition.id,
+          definition: revisedPair.definition,
+          primary_instance: revisedPair.instance,
+        },
+      ]),
+    );
+    const deleted = applyDocumentTransaction(
+      revised,
+      transaction([{ type: "delete_effect", definition_id: pair.definition.id }]),
+    );
+
+    expect(source.effect_definitions).toHaveLength(0);
+    expect(created.effect_definitions[0].revision).toBe(1);
+    expect(revised.effect_definitions[0]).toMatchObject({
+      id: pair.definition.id,
+      name: "Red Pulse Renamed",
+      revision: 2,
+    });
+    expect(revised.effect_instances[0]).toMatchObject({
+      definition_revision: 2,
+      target_group_id: "all-fixtures",
+    });
+    expect(deleted.effect_definitions).toHaveLength(0);
+    expect(deleted.effect_instances).toHaveLength(0);
+  });
+
+  it("protects effect revisions that are referenced by Arrange", () => {
+    const source = createStarterProject();
+    const pair = createEffectPair(source);
+    const created = applyDocumentTransaction(
+      source,
+      transaction([{ type: "create_effect", ...pair }]),
+    );
+    created.timeline!.tracks[0].clips!.push({
+      id: "red-pulse-clip",
+      instance_id: pair.instance.id,
+      start_tick: 0,
+      duration_tick: 960,
+    });
+
+    expect(() =>
+      applyDocumentTransaction(
+        created,
+        transaction([{ type: "delete_effect", definition_id: pair.definition.id }]),
+      ),
+    ).toThrow("Remove this effect from Arrange");
+  });
+
   it("replaces patch, layout, and groups as one undoable stage setup command", () => {
     const source = document();
     const next = applyDocumentTransaction(

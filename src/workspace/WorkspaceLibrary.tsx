@@ -15,6 +15,7 @@ import {
   workspaceActions,
   workspaceSelectors,
 } from "@/stores/workspace";
+import { EffectCatalogLibrary } from "./effect-lab/EffectCatalogLibrary";
 
 export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   const document = useEngineStore(engineSelectors.parsedDsl);
@@ -34,7 +35,9 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
               <LibraryRow key={group.id} label={group.name} meta={fixtureCount(group.fixtures)} />
             ))}
 
-          {(workspace === "effect-lab" || workspace === "live") &&
+          {workspace === "effect-lab" && document && <EffectCatalogLibrary document={document} />}
+
+          {workspace === "live" &&
             document?.effect_definitions.map((effect) => (
               <Button
                 key={effect.id}
@@ -59,14 +62,13 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
 
           {workspace === "song" && <SongEmptyState />}
 
-          {(workspace === "effect-lab" || workspace === "live") &&
-            document?.effect_definitions.length === 0 && (
-              <CompactEmpty
-                icon={Boxes}
-                title="No effects yet"
-                description="Create the first reusable look in Effect Lab."
-              />
-            )}
+          {workspace === "live" && document?.effect_definitions.length === 0 && (
+            <CompactEmpty
+              icon={Boxes}
+              title="No effects yet"
+              description="Create the first reusable look in Effect Lab."
+            />
+          )}
         </div>
       </ScrollArea>
     </aside>

@@ -1,7 +1,8 @@
 use crate::compiler::{diagnostic::Diagnostic, Compiler, LayoutCoord};
 use crate::document::{load_document, MigrationReport, ShowDocumentV4};
-use crate::engine::effect::{EffectCatalog, EffectCatalogQuery, EffectSource};
-use crate::engine::render::{LivePhaser, RenderTime};
+use crate::engine::attribute::FixtureFramePayload;
+use crate::engine::effect::{EffectCatalog, EffectCatalogQuery, EffectSource, SPEED_PARAMETER_ID};
+use crate::engine::render::{render_at, LivePhaser, RenderSource, RenderTime};
 use crate::engine::transport::OutputRate;
 use crate::state::EngineState;
 use std::path::{Path, PathBuf};
@@ -112,6 +113,56 @@ pub async fn publish_dsl(
 pub fn preview_dsl(dsl_json: String) -> Result<CompileResult, Diagnostic> {
     let (result, _) = compile_dsl(&dsl_json)?;
     Ok(result)
+}
+
+#[tauri::command]
+pub async fn preview_effect_loop(
+    dsl_json: String,
+    instance_id: String,
+    frame_count: usize,
+) -> Result<Vec<Vec<FixtureFramePayload>>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let (result, compiled) = compile_dsl(&dsl_json).map_err(|error| error.to_string())?;
+        let show = compiled.ok_or_else(|| {
+            result
+                .errors
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join("\n")
+        })?;
+        let instance = show
+            .effect_instances
+            .get(&instance_id)
+            .ok_or_else(|| format!("Effect instance not found: {instance_id}"))?;
+        let definition = show
+            .effect_definitions
+            .get(instance.definition.index())
+            .ok_or_else(|| format!("Effect definition not found for instance: {instance_id}"))?;
+        let multiplier = definition
+            .parameter_handle(SPEED_PARAMETER_ID)
+            .and_then(|handle| instance.resolve_parameter(definition, handle))
+            .and_then(|value| value.as_scalar())
+            .unwrap_or(1.0);
+        let live = [LivePhaser {
+            id: instance_id,
+            start_beat: 0.0,
+            phase_offset: 0.0,
+            multiplier,
+        }];
+        let frame_count = frame_count.clamp(8, 128);
+        Ok((0..frame_count)
+            .map(|index| {
+                let beat = index as f64 / frame_count as f64 * 4.0;
+                render_at(&show, RenderTime { beat }, RenderSource::Live(&live))
+                    .into_iter()
+                    .map(|frame| frame.to_payload())
+                    .collect()
+            })
+            .collect())
+    })
+    .await
+    .map_err(|error| format!("Effect preview worker failed: {error}"))?
 }
 
 #[tauri::command]
@@ -394,7 +445,7 @@ async fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{atomic_write, preview_dsl, SAVE_SEQUENCE};
+    use super::{atomic_write, preview_dsl, preview_effect_loop, SAVE_SEQUENCE};
     use std::sync::atomic::Ordering;
 
     #[tokio::test]
@@ -458,5 +509,54 @@ mod tests {
         assert_eq!(result.show_revision, None);
         assert_eq!(result.fixture_count, 4);
         assert_eq!(result.layout_coords.len(), 4);
+    }
+
+    #[tokio::test]
+    async fn effect_loop_preview_renders_without_publishing() {
+        let source = r##"{
+          "schema_version": 4,
+          "meta": { "name": "Preview" },
+          "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 1] }],
+          "layout": { "type": "generator", "generator": { "shape": "matrix", "rows": 1, "columns": 1, "spacing": 64 } },
+          "groups": [{ "id": "all", "name": "All", "fixtures": { "range": [1, 1] } }],
+          "effect_definitions": [{
+            "id": "project.red-pulse", "name": "Red Pulse", "revision": 1, "source": "project_local",
+            "parameters": [
+              { "id": "speed", "name": "Speed", "value_type": "scalar", "default_value": { "type": "scalar", "value": 1.0 }, "range": [0.125, 8.0], "unit": "multiplier", "ui_hint": "slider", "automation": "continuous" },
+              { "id": "phase", "name": "Phase", "value_type": "scalar", "default_value": { "type": "scalar", "value": 0.0 }, "range": [-1.0, 1.0], "unit": "cycles", "ui_hint": "slider", "automation": "continuous" },
+              { "id": "width", "name": "Width", "value_type": "scalar", "default_value": { "type": "scalar", "value": 100.0 }, "range": [1.0, 100.0], "unit": "percent", "ui_hint": "slider", "automation": "continuous" },
+              { "id": "transition", "name": "Transition", "value_type": "scalar", "default_value": { "type": "scalar", "value": 20.0 }, "range": [0.0, 100.0], "unit": "percent", "ui_hint": "slider", "automation": "continuous" },
+              { "id": "color", "name": "Color", "value_type": "color", "default_value": { "type": "color", "value": "#ff0000" }, "unit": "color", "ui_hint": "color", "automation": "continuous" }
+            ],
+            "graph": { "nodes": [
+              { "type": "time", "id": "time" },
+              { "type": "step_sequence", "id": "shape-pulse", "phase": { "node_id": "time", "port": "scalar" }, "steps": [
+                { "values": { "dimmer": 1.0, "color": "#ff0000" }, "width": 50.0, "transition": 0.0 },
+                { "values": { "dimmer": 0.0, "color": "#ff0000" }, "width": 50.0, "transition": 0.0 }
+              ] },
+              { "type": "attribute_writer", "id": "output", "input": { "node_id": "shape-pulse", "port": "attribute_set" } }
+            ] },
+            "catalog": { "energy": 0.7, "density": 0.5, "motion": "pulse", "colorfulness": 1.0, "strobe_risk": "low", "required_attributes": ["intensity", "color.rgb"] }
+          }],
+          "effect_instances": [{ "id": "red-pulse", "definition_id": "project.red-pulse", "definition_revision": 1, "target_group_id": "all", "seed": "0000000000000001" }],
+          "timeline": { "ppq": 960, "tempo_map": { "points": [{ "time_tick": 0, "bpm": 120 }] }, "tracks": [] }
+        }"##;
+
+        let frames = preview_effect_loop(source.to_string(), "red-pulse".to_string(), 16)
+            .await
+            .expect("effect preview");
+        assert_eq!(frames.len(), 16);
+        assert!(frames.iter().all(|frame| frame.len() == 1));
+        let intensities: Vec<_> = frames
+            .iter()
+            .filter_map(|frame| {
+                frame[0]
+                    .attributes
+                    .iter()
+                    .find(|attribute| attribute.id == "intensity")
+                    .map(|attribute| attribute.value.clone())
+            })
+            .collect();
+        assert!(intensities.windows(2).any(|pair| pair[0] != pair[1]));
     }
 }

@@ -32,6 +32,7 @@ export type {
   KeyframeInterpolationDSL,
   KeyframeTangentDSL,
   OverlapPolicyDSL,
+  OscillatorWaveformDSL,
   ShowDocumentV4,
   SortByDSL,
   StepValuesDSL,

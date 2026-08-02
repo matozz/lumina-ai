@@ -732,11 +732,11 @@ Keyframe 至少包含：
 
 #### 6.3 Effect Lab
 
-- [ ] 新建、复制、重命名、删除、收藏 effect。
-- [ ] 目标 group、属性、波形、速度、phase、width、transition 和 color controls。
-- [ ] 单效果 loop preview、scrub 和 A/B comparison。
-- [ ] EffectGraph 高级编辑器可后置；首版优先参数化表单和预览。
-- [ ] 保存时生成 revision 和 capability/risk metadata。
+- [x] 新建、复制、重命名、删除、收藏 effect。
+- [x] 目标 group、属性、波形、速度、phase、width、transition 和 color controls。
+- [x] 单效果 loop preview、scrub 和 A/B comparison。
+- [x] EffectGraph 高级编辑器可后置；首版优先参数化表单和预览。
+- [x] 保存时生成 revision 和 capability/risk metadata。
 
 #### 6.4 Arrange
 
@@ -1082,14 +1082,14 @@ flowchart LR
 ## Handoff
 
 - Current Stage: Stage 6 `in_progress`；严格止于 Stage 7。
-- Slice completed: `main@3a690c0` 原生基线、Draft/Published/Live immutable snapshot 边界、紧凑五工作区 Shell、Raw DSL Advanced Mode、4×4 starter project，以及 profile/patch/layout/group/capability/conflict Stage Setup。
-- Commits: 分支 `codex/song-driven-dj-workspace`；原生基线 `3b709a0`；snapshot contract `e9a32d8`；Workspace Shell `a490908`；Stage Setup 为当前切片提交。
-- Files changed: ShowStore/Tauri commands/bridge、ADR-0006、workspace state、Workspace Shell、side-effect-free Draft preview、generated profile adapter、atomic Stage Setup command、Canvas outline/test preview、tests 与原生截图证据。
-- Validation: Workspace Shell `pnpm check:all` 全绿；Stage Setup 36 frontend files/76 tests、Rust preview test、strict Clippy、`pnpm build`；真实 Tauri max/min/test-light 与 `r2/r1 → r2/r2` revision 截图/AX。既有 PointerEvents/DOM ref/snap/duration/Undo 代码未改写。
+- Slice completed: `main@3a690c0` 原生基线、immutable snapshot 边界、紧凑五工作区 Shell、Stage Setup，以及完整参数化 Effect Lab CRUD/revision/loop/scrub/A-B。
+- Commits: 分支 `codex/song-driven-dj-workspace`；基线 `3b709a0`；snapshot `e9a32d8`；Shell `a490908`；Stage Setup `00e2148`；Effect Lab 为当前切片提交。
+- Files changed: ShowStore/Tauri bridge、Workspace Shell、Stage Setup、effect factory + catalog + inspector、atomic effect commands、blocking multi-frame Draft renderer、Canvas rAF loop 与 tests/evidence。
+- Validation: Effect Lab `check:all` 全绿：39 frontend files/84 tests、76 Rust unit + 12 contracts、schema/format/typecheck/build/strict Clippy；1440×900 browser design QA。原生窗口当前 AX/Space capture failed，未把黑屏当证据，完整原生路径后续重跑。
 - ADRs added/updated: ADR-0006 accepted；Draft 发布不改变 Live，只有显式 Take live 激活 revision。
 - Risks opened/closed: R-005 closed；原生 Publish 得到 `Published r2 / Live r1`，只有显式 Take live 后变为 `Live r2`。
-- Remaining exit criteria: Stage Setup 继续补 layout 参数/Custom 坐标编辑；完整 Effect Lab、Arrange place/empty/help、Live Pad modes/Blackout、全路径 accessibility；之后才进入 Stage 7 Audio/TempoMap/SongAnalysis。
-- Recommended next slice: Effect Lab 的 catalog CRUD、参数表单、Draft loop preview 与 revision metadata。
+- Remaining exit criteria: Stage Setup 继续补 layout 参数/Custom 坐标编辑；Arrange place/empty/help、Live Pad modes/Blackout、完整原生路径与 accessibility；之后才进入 Stage 7 Audio/TempoMap/SongAnalysis。
+- Recommended next slice: Arrange 的 click/drag placement、用户 track 名称、empty/error/help 与 Effect revision handoff。
 
 ## 19. ADR 规范
 
@@ -1200,6 +1200,8 @@ flowchart LR
 | 2026-08-02 | 6        | Stage Setup 组件首测      | failed    | none        | happy-dom 缺 `getAnimations`；ScrollArea cleanup failed                  | 测试 mock layout；产品仍用真实 ScrollArea                   | 重跑全 frontend                             |
 | 2026-08-02 | 6        | Stage Setup + preview     | completed | 本切片提交  | `check:all`；76 frontend；87 Rust；max/min native + test light           | generated profiles；pure preview；atomic command            | Effect Lab                                  |
 | 2026-08-02 | 6        | revision 原生点击复核     | completed | 本切片提交  | native AX/screens：`r2/r1 → r2/r2`                                       | R-005 closed；显式 Publish 与 Take live                     | 保持边界进入 Effect Lab                     |
+| 2026-08-02 | 6        | Effect Lab 原生留证       | failed    | none        | clean Tauri ×2；CG window 存在；AX 0 windows；capture 黑 WebView         | 无效截图不提交；browser 仅做 design QA                      | Arrange/Live 后重跑完整 native path         |
+| 2026-08-02 | 6        | Effect Lab implementation | completed | 本切片提交  | `check:all`；84 frontend；88 Rust；1440×900 browser QA                   | atomic revision；one compile；rAF Canvas；A/B cache         | Arrange placement                           |
 
 ## 21. Open Risks
 

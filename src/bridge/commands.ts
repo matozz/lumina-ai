@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   CompileResult,
   Diagnostic,
+  FixtureFramePayload,
   LayoutCoord,
   FullDSL,
   LoadShowResult,
@@ -14,6 +15,13 @@ export const engine = {
   publishDSL: (json: string) => invoke<CompileResult>("publish_dsl", { dslJson: json }),
 
   previewDSL: (json: string) => invoke<CompileResult>("preview_dsl", { dslJson: json }),
+
+  previewEffectLoop: (json: string, instanceId: string, frameCount = 64) =>
+    invoke<FixtureFramePayload[][]>("preview_effect_loop", {
+      dslJson: json,
+      instanceId,
+      frameCount,
+    }),
 
   activateShowRevision: (revision: number) =>
     invoke<ShowSnapshotState>("activate_show_revision", { revision }),

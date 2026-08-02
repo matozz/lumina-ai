@@ -6,12 +6,14 @@ import { ControlPanel } from "@/panel/ControlPanel";
 import { engineSelectors, useEngineStore } from "@/stores/engine";
 import type { WorkspaceId } from "@/stores/workspace";
 import { StageSetupInspector } from "./stage/StageSetupInspector";
+import { EffectLabInspector } from "./effect-lab/EffectLabInspector";
 
 export function WorkspaceInspector({ workspace }: { workspace: WorkspaceId }) {
   const document = useEngineStore(engineSelectors.parsedDsl);
   const compileErrors = useEngineStore(engineSelectors.compileErrors);
 
   if (workspace === "stage") return <StageSetupInspector />;
+  if (workspace === "effect-lab") return <EffectLabInspector />;
   if (workspace === "live") return <ControlPanel embedded />;
 
   return (
