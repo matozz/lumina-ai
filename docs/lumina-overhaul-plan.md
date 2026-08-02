@@ -2,7 +2,8 @@
 
 > - 文档状态：Active
 > - 基线分支：`main`
-> - 基线提交：`d1d718e`
+> - 当前实现基线：`main@3a690c0`
+> - 原始规划基线：`d1d718e`
 > - 建立日期：2026-08-02
 > - 适用范围：Rust/Tauri 实时引擎、JSON DSL、React 编辑器、时间轴、歌曲分析、AI 编排与舞台输出
 
@@ -224,7 +225,7 @@ flowchart TD
 | 3     | Fixture Attribute、Mixer 与 Output 抽象 | completed   | 2    | 通用属性、HTP/LTP、Null/Preview Sink        |
 | 4     | 可扩展 Effect Engine                    | completed   | 3    | EffectGraph/参数/空间相位可确定性求值       |
 | 5     | Timeline、Keyframe 与 Undo/Redo         | completed   | 4    | 多关键帧、seek/replay、无隐式数据破坏       |
-| 6     | 用户工作区与 Effect Lab                 | not_started | 5    | Stage→Effect→Arrange→Live 主路径可用        |
+| 6     | 用户工作区与 Effect Lab                 | in_progress | 5    | Stage→Effect→Arrange→Live 主路径可用        |
 | 7     | Audio、TempoMap 与歌曲分析              | not_started | 5    | 波形、节拍、段落和灯光同步可验证            |
 | 8     | AI 整曲编排                             | not_started | 6、7 | AI 计划可验证、可解释、可预览、可撤销       |
 | 9     | 舞台输出、安全与 Release                | not_started | 3、8 | Art-Net/sACN、故障保护和发布门槛完成        |
@@ -1189,6 +1190,7 @@ flowchart LR
 | 2026-08-02 | 5 后置   | Popover keyboard boundary | completed | 本切片提交  | focused 3 files/5 tests；build；native input Delete/Backspace            | R-018 closed；portal 编辑事件不再进入时间轴快捷键           | 完整统一门禁                                |
 | 2026-08-02 | 5 后置   | Native drag matrix        | completed | 本切片提交  | clip move/cross/resize；keyframe snap/cancel/play；Undo/Redo；screens    | preview=commit tick；move duration/width 保持               | 完整统一门禁                                |
 | 2026-08-02 | 5 后置   | scoped Goal final gate    | completed | 本切片提交  | Node 22.20.0；`check:all`；61 frontend；85 Rust；全门禁                  | R-016/R-017/R-018 closed；Stage 6 not_started               | 停止；等待显式 publish 指令                 |
+| 2026-08-02 | 6        | 原生 UI 与路径基线        | completed | 本切片提交  | 6 native screenshots；max/common/min；DSL→Timeline→Play/Stop             | `main@3a690c0`；R-005 open；Stage 6 in_progress             | Workspace Shell + revisions                 |
 
 ## 21. Open Risks
 
