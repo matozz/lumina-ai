@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { validateShowDocument } from "../document/showDocument";
 import type { CompileResult, Diagnostic, FullDSL, TransportState } from "../bridge/types";
+import { applyDocumentTransaction, type DocumentTransaction } from "../document/commands";
 
 export type SequencerMode = "live" | "timeline";
 export type CompileStatus = "idle" | "compiling" | "success" | "error";
@@ -21,7 +22,18 @@ export interface EngineState {
   compileStatus: CompileStatus;
   currentDslCode: string;
   parsedDsl: FullDSL | null;
+  documentHistory: DocumentHistoryEntry[];
+  historyCursor: number;
+  savedHistoryCursor: number | null;
+  isDocumentDirty: boolean;
   sequencerMode: SequencerMode;
+}
+
+export interface DocumentHistoryEntry {
+  id: string;
+  label: string;
+  before: FullDSL;
+  after: FullDSL;
 }
 
 export const useEngineStore = create<EngineState>()(() => ({
@@ -35,6 +47,10 @@ export const useEngineStore = create<EngineState>()(() => ({
   compileStatus: "idle",
   currentDslCode: "",
   parsedDsl: null,
+  documentHistory: [],
+  historyCursor: 0,
+  savedHistoryCursor: 0,
+  isDocumentDirty: false,
   sequencerMode: "live",
 }));
 
@@ -49,14 +65,76 @@ export const engineActions = {
   setCompileErrors: (errors: Diagnostic[]) => useEngineStore.setState({ compileErrors: errors }),
   setCompileStatus: (status: CompileStatus) => useEngineStore.setState({ compileStatus: status }),
   setCurrentDslCode: (code: string) => {
-    let parsed: FullDSL | null = null;
-    try {
-      const validation = validateShowDocument(JSON.parse(code));
-      parsed = validation.success ? validation.data : null;
-    } catch {
-      parsed = null;
-    }
-    useEngineStore.setState({ currentDslCode: code, parsedDsl: parsed });
+    if (useEngineStore.getState().currentDslCode === code) return;
+    useEngineStore.setState({
+      currentDslCode: code,
+      parsedDsl: parseDslCode(code),
+      documentHistory: [],
+      historyCursor: 0,
+      savedHistoryCursor: null,
+      isDocumentDirty: true,
+    });
+  },
+  loadCurrentDslCode: (code: string) =>
+    useEngineStore.setState({
+      currentDslCode: code,
+      parsedDsl: parseDslCode(code),
+      documentHistory: [],
+      historyCursor: 0,
+      savedHistoryCursor: 0,
+      isDocumentDirty: false,
+    }),
+  applyDocumentTransaction: (transaction: DocumentTransaction) => {
+    const state = useEngineStore.getState();
+    if (!state.parsedDsl) throw new Error("Cannot edit an invalid show document");
+    const before = state.parsedDsl;
+    const after = applyDocumentTransaction(before, transaction);
+    if (after === before || JSON.stringify(after) === JSON.stringify(before)) return;
+    const validation = validateShowDocument(after);
+    if (!validation.success) throw new Error("DocumentCommand produced an invalid V4 document");
+    const retainedHistory = state.documentHistory.slice(0, state.historyCursor);
+    const savedHistoryCursor =
+      state.savedHistoryCursor !== null && state.savedHistoryCursor > state.historyCursor
+        ? null
+        : state.savedHistoryCursor;
+    retainedHistory.push({
+      id: transaction.id,
+      label: transaction.label,
+      before,
+      after: validation.data,
+    });
+    const historyCursor = retainedHistory.length;
+    setDocumentState(validation.data, {
+      documentHistory: retainedHistory,
+      historyCursor,
+      savedHistoryCursor,
+      isDocumentDirty: savedHistoryCursor !== historyCursor,
+    });
+  },
+  undoDocument: () => {
+    const state = useEngineStore.getState();
+    if (state.historyCursor === 0) return;
+    const historyCursor = state.historyCursor - 1;
+    setDocumentState(state.documentHistory[historyCursor].before, {
+      historyCursor,
+      isDocumentDirty: state.savedHistoryCursor !== historyCursor,
+    });
+  },
+  redoDocument: () => {
+    const state = useEngineStore.getState();
+    if (state.historyCursor >= state.documentHistory.length) return;
+    const historyCursor = state.historyCursor + 1;
+    setDocumentState(state.documentHistory[state.historyCursor].after, {
+      historyCursor,
+      isDocumentDirty: state.savedHistoryCursor !== historyCursor,
+    });
+  },
+  markDocumentSaved: () => {
+    const historyCursor = useEngineStore.getState().historyCursor;
+    useEngineStore.setState({
+      savedHistoryCursor: historyCursor,
+      isDocumentDirty: false,
+    });
   },
   setSequencerMode: (mode: SequencerMode) => useEngineStore.setState({ sequencerMode: mode }),
 };
@@ -73,5 +151,25 @@ export const engineSelectors = {
   compileStatus: (state: EngineState) => state.compileStatus,
   currentDslCode: (state: EngineState) => state.currentDslCode,
   parsedDsl: (state: EngineState) => state.parsedDsl,
+  canUndo: (state: EngineState) => state.historyCursor > 0,
+  canRedo: (state: EngineState) => state.historyCursor < state.documentHistory.length,
+  isDocumentDirty: (state: EngineState) => state.isDocumentDirty,
   sequencerMode: (state: EngineState) => state.sequencerMode,
 };
+
+function parseDslCode(code: string): FullDSL | null {
+  try {
+    const validation = validateShowDocument(JSON.parse(code));
+    return validation.success ? validation.data : null;
+  } catch {
+    return null;
+  }
+}
+
+function setDocumentState(document: FullDSL, state: Partial<EngineState>) {
+  useEngineStore.setState({
+    ...state,
+    currentDslCode: JSON.stringify(document, null, 2),
+    parsedDsl: document,
+  });
+}

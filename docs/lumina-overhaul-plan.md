@@ -657,19 +657,19 @@ Keyframe 至少包含：
 - [x] 删除当前自动裁剪 overlap 的隐式行为。
 - [x] 明确 track overlap policy：layer、replace、reject 或 crossfade。
 - [ ] 所有裁剪/替换必须在 UI 预览并可 Undo。
-- [ ] 多选、复制、粘贴、duplicate、split、trim、loop 进入 command model。
+- [x] 多选、复制、粘贴、duplicate、split、trim、loop 进入 command model。
 
 #### 5.3 Undo/Redo
 
-- [ ] 建立 DocumentCommand 与 transaction。
-- [ ] drag 全过程只产生一个最终 history entry。
-- [ ] AI Apply 产生一个 transaction。
-- [ ] 保存点和 dirty state 可追踪。
+- [x] 建立 DocumentCommand 与 transaction。
+- [x] drag 全过程只产生一个最终 history entry。
+- [x] AI Apply 产生一个 transaction。
+- [x] 保存点和 dirty state 可追踪。
 
 #### 5.4 时间轴性能
 
 - [ ] pointer move 使用 DOM refs/transform 预览，不逐帧写 Zustand。
-- [ ] pointer up 时一次性提交 command。
+- [x] pointer up 时一次性提交 command。
 - [ ] 大量 clip 使用可见区域裁剪或 virtualization。
 - [ ] playhead 更新不触发所有 block React re-render。
 
@@ -1081,14 +1081,14 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 ## Handoff
 
 - Current Stage: Stage 5 · Timeline、Keyframe 与 Undo/Redo（in_progress）；Stage 4 已在 `d338c08` 满足全部退出条件。
-- Slice completed: compiler 直接生成整数 tick arrangement、TempoMap、prefix-max clip 索引与 typed lane 索引；renderer 纯查询目标 tick，支持多关键帧 hold/linear/ease/Hermite、LAB 颜色、direction hold、speed 解析积分、source offset，以及 layer/replace/reject/crossfade；删除旧 `TimelineExecutor` 和全部 compiled f64 event/action。
-- Commits: Stage 4 through `d338c08`；MusicalTime/TempoMap `13645ec`；V4 contract `11955ab`；pure indexed tick evaluator（本切片提交）。
-- Files changed: compiler timeline IR、pure timeline query/interpolation、renderer/mixer metadata、V3→V4 单 target lane 合并 migration、`combined.json` 规范化、validator 与 runtime/contract tests、ADR/Ledger/Handoff。
-- Validation: `pnpm check:all`；73 Rust unit + 12 integration/contract + 18 frontend tests；100 次随机 Seek=顺序 tick frame、精确终点、LAB/Hermite/discrete、多 overlap policy 与 1,000 clip 索引均有测试。
-- ADRs added/updated: ADR-0003 的 pure target-time evaluator、显式 overlap runtime policy 和旧 executor 删除决策已落地。
-- Risks opened/closed: 无新风险；R-006 的 Stage 5 确定性时间/Seek 部分完成，Stage 7 仍负责 SongAnalysis 接入。
-- Remaining exit criteria: bar.beat.tick/seconds UI、DocumentCommand transaction、Undo/Redo/save point/dirty、timeline DOM-only pointer preview、virtualization、playhead render isolation、Automation UI、键盘/焦点路径与 1,000 clip UI 性能 gate。
-- Recommended next slice: 建立纯 DocumentCommand/history store，覆盖 add/delete/move/resize/duplicate/split/trim/loop 与单次 drag transaction，并加入保存点、dirty、Undo/Redo 测试。
+- Slice completed: 新增 fail-closed 的纯 `DocumentCommand`/transaction 层，覆盖 clip add/delete/move/resize/duplicate/split/trim/loop、lane add/delete/replace/move/scale 及多关键帧 add/move/delete；timeline 编辑全部在 pointer-up 提交一次 transaction；snapshot history 支持 Undo/Redo、分支失效、save point、dirty 与 no-op 抑制，toolbar/键盘提供 Undo/Redo。
+- Commits: Stage 4 through `d338c08`；MusicalTime `13645ec`；V4 contract `11955ab`；pure evaluator `aa37595`；DocumentCommand/history（本切片提交）。
+- Files changed: pure document commands/tests、engine document history/tests、timeline command adapter、Undo/Redo toolbar/keyboard、DSL load/edit dirty 边界、ADR/Ledger/Handoff。
+- Validation: `pnpm check:all`；85 Rust tests/contracts + 25 frontend tests；多命令单 transaction、原子失败、无损 overlap、duplicate/split/trim/loop、多关键帧批量编辑、单 entry Undo/Redo、save/dirty/branch/no-op 均有测试。
+- ADRs added/updated: ADR-0003 的 command transaction、history/save point 与单次 drag commit 已落地；Stage 8 AI Apply 可直接以一组 commands 形成一个 entry。
+- Risks opened/closed: 无新风险；R-006 维持 open 至 Stage 7 SongAnalysis，但 Stage 5 arrangement/history 已可复现。
+- Remaining exit criteria: bar.beat.tick/seconds UI、overlap 裁剪/替换的 UI 预览路径、timeline DOM-only pointer preview、virtualization、playhead render isolation、Automation UI、键盘选择/移动/删除与可见 focus、1,000 clip UI 性能 gate。
+- Recommended next slice: 把 drag/resize preview 和 playhead 移到 DOM ref transform，加入可见区域裁剪与 1,000 clip 性能 harness；随后在同一基础上完成 Automation keyframe UI 与键盘路径。
 
 ## 19. ADR 规范
 
@@ -1174,6 +1174,7 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 5        | MusicalTime + TempoMap  | completed | 本切片提交  | strict Clippy；77 Rust tests/contracts；整数/分段 tempo roundtrip     | ADR-0003 accepted；Stage 5 in_progress             | V4 arrangement contract + pure tick query   |
 | 2026-08-02 | 5        | V4 arrangement contract | completed | 本切片提交  | `check:all`；80 Rust tests/contracts；18 frontend；18/18 V4 templates | typed keyframes；无损 layer/reject；R-006 部分缓解 | pure indexed tick evaluator                 |
 | 2026-08-02 | 5        | Pure tick evaluator     | completed | 本切片提交  | `check:all`；85 Rust tests/contracts；100 Seek；1,000 clip index      | 删除 stateful executor；四类 overlap；LAB/Hermite  | DocumentCommand + history                   |
+| 2026-08-02 | 5        | DocumentCommand/history | completed | 本切片提交  | `check:all`；85 Rust/25 frontend；atomic transactions；Undo/Redo      | drag 单 entry；save/dirty；AI Apply 边界           | timeline DOM/performance + Automation UI    |
 
 ## 21. Open Risks
 

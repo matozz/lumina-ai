@@ -46,4 +46,5 @@ V4 migration 先生成整数时间和 arrangement contract，再切换 compiler/
 - MusicalTime/TempoMap core: 本切片提交
 - V4 arrangement contract and migration: 本切片提交
 - Pure indexed tick evaluator and old executor removal: 本切片提交
-- Timeline command/history and UI performance: pending
+- DocumentCommand transaction/history/save point: 本切片提交
+- Timeline DOM preview/virtualization: pending

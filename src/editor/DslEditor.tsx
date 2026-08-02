@@ -34,7 +34,7 @@ export const DslEditor = () => {
       // Find the first valid template to set as default
       const firstValidTemplate = templates.find((t) => !t.disabled) || templates[0];
       if (firstValidTemplate) {
-        engineActions.setCurrentDslCode(firstValidTemplate.dsl);
+        engineActions.loadCurrentDslCode(firstValidTemplate.dsl);
         setSelectedTemplateKey(firstValidTemplate.key);
       }
     }
@@ -77,7 +77,7 @@ export const DslEditor = () => {
     if (!key || key === "custom") return;
     const template = templates.find((t) => t.key === key);
     if (template && !template.disabled) {
-      engineActions.setCurrentDslCode(template.dsl);
+      engineActions.loadCurrentDslCode(template.dsl);
       setSelectedTemplateKey(key);
     }
   };

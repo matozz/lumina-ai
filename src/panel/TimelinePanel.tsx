@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import { useEngineStore, engineSelectors } from "@/stores/engine";
+import { useEngineStore, engineActions, engineSelectors } from "@/stores/engine";
 import { useTimelineStore, timelineActions, timelineSelectors } from "@/stores/timeline";
 import { cn } from "@/lib/utils";
 import { useTimelineEvents } from "./hooks/useTimelineEvents";
@@ -18,6 +18,9 @@ import {
 export const TimelinePanel = () => {
   const globalBeat = useEngineStore(engineSelectors.globalBeat);
   const compileResult = useEngineStore(engineSelectors.compileResult);
+  const canUndo = useEngineStore(engineSelectors.canUndo);
+  const canRedo = useEngineStore(engineSelectors.canRedo);
+  const isDocumentDirty = useEngineStore(engineSelectors.isDocumentDirty);
 
   const selectedPhaser = useTimelineStore(timelineSelectors.selectedPhaser);
   const expandedTracks = useTimelineStore(timelineSelectors.expandedTracks);
@@ -105,6 +108,19 @@ export const TimelinePanel = () => {
     onGridClick: handleGridClick,
   };
 
+  const handleHistoryKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!event.metaKey && !event.ctrlKey) return;
+    const key = event.key.toLowerCase();
+    if (key === "z") {
+      event.preventDefault();
+      if (event.shiftKey) engineActions.redoDocument();
+      else engineActions.undoDocument();
+    } else if (key === "y") {
+      event.preventDefault();
+      engineActions.redoDocument();
+    }
+  };
+
   const {
     totalBeats: TOTAL_BEATS,
     scrollWidth: SCROLL_WIDTH,
@@ -128,11 +144,20 @@ export const TimelinePanel = () => {
 
   return (
     <div
+      tabIndex={0}
+      onKeyDown={handleHistoryKeyDown}
       className={cn(
         "relative z-20 flex h-96 shrink-0 flex-col border-t border-zinc-800 bg-zinc-950 shadow-[0_-8px_20px_rgba(0,0,0,0.5)] select-none",
       )}
     >
-      <TimelineToolbar globalBeat={globalBeat} />
+      <TimelineToolbar
+        globalBeat={globalBeat}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        isDirty={isDocumentDirty}
+        onUndo={engineActions.undoDocument}
+        onRedo={engineActions.redoDocument}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         <TimelineResourcePanel

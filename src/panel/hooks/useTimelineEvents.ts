@@ -8,6 +8,7 @@ import type {
   TimelineEventDSL,
   TimelineTrackDSL,
 } from "@/bridge/types";
+import type { DocumentCommand, DocumentTransaction } from "@/document/commands";
 import { useEngineStore, engineActions, engineSelectors } from "@/stores/engine";
 import { BEAT_WIDTH } from "../context/TimelineContext";
 
@@ -30,7 +31,6 @@ export interface ResizingState {
 
 export const useTimelineEvents = () => {
   const parsedDsl = useEngineStore(engineSelectors.parsedDsl);
-  const currentDslCode = useEngineStore(engineSelectors.currentDslCode);
 
   const [moving, setMoving] = useState<MovingState | null>(null);
   const [resizing, setResizing] = useState<ResizingState | null>(null);
@@ -41,83 +41,71 @@ export const useTimelineEvents = () => {
 
   const addEvent = useCallback(
     (newEvent: TimelineEventDSL) => {
-      try {
-        const dslObj = JSON.parse(currentDslCode) as FullDSL;
-        if (!dslObj.timeline) {
-          dslObj.timeline = {
-            ppq: 960,
-            tempo_map: { points: [{ time_tick: 0, bpm: 120 }] },
-            tracks: [],
-          };
-        }
-        if (newEvent.action.type !== "effect") return;
-        let track = dslObj.timeline.tracks.find((candidate) => candidate.id === "effects");
-        if (!track) {
-          track = {
-            id: "effects",
-            name: "Effects",
-            overlap_policy: "layer",
-            clips: [],
-            automation_lanes: [],
-          };
-          dslObj.timeline.tracks.push(track);
-        }
-        track.clips ??= [];
-        track.clips.push({
-          id: stableId("clip"),
-          instance_id: newEvent.action.instance_id,
-          start_tick: beatsToTicks(newEvent.beat, dslObj.timeline.ppq),
-          duration_tick: Math.max(1, beatsToTicks(newEvent.duration ?? 4, dslObj.timeline.ppq)),
-          source_offset_tick: 0,
-          playback: "once",
-          layer: nextLayer(track),
-        });
-        engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
-      } catch (err) {
-        console.error("Failed to update DSL", err);
-      }
+      if (!parsedDsl || newEvent.action.type !== "effect") return;
+      const ppq = parsedDsl.timeline?.ppq ?? 960;
+      const track = parsedDsl.timeline?.tracks.find((candidate) => candidate.id === "effects");
+      engineActions.applyDocumentTransaction(
+        transaction("Add EffectClip", {
+          type: "add_clip",
+          track_id: "effects",
+          track_name: "Effects",
+          clip: {
+            id: stableId("clip"),
+            instance_id: newEvent.action.instance_id,
+            start_tick: beatsToTicks(newEvent.beat, ppq),
+            duration_tick: Math.max(1, beatsToTicks(newEvent.duration ?? 4, ppq)),
+            source_offset_tick: 0,
+            playback: "once",
+            layer: track ? nextLayer(track) : 0,
+          },
+        }),
+      );
     },
-    [currentDslCode],
+    [parsedDsl],
   );
 
   const deleteEvent = useCallback(
     (originalIndex: number) => {
-      try {
-        const dslObj = JSON.parse(currentDslCode) as FullDSL;
-        const view = timelineEvents[originalIndex];
-        if (!dslObj.timeline || !view?.source_track_id || !view.source_item_id) return;
-        const track = dslObj.timeline.tracks.find((item) => item.id === view.source_track_id);
-        if (!track) return;
-        if (view.action.type === "effect") {
-          track.clips = (track.clips ?? []).filter((clip) => clip.id !== view.source_item_id);
-        } else {
-          track.automation_lanes = (track.automation_lanes ?? []).filter(
-            (lane) => lane.id !== view.source_item_id,
-          );
-        }
-        engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
-      } catch {}
+      const view = timelineEvents[originalIndex];
+      if (!view?.source_track_id || !view.source_item_id) return;
+      const command: DocumentCommand =
+        view.action.type === "effect"
+          ? {
+              type: "delete_clip",
+              track_id: view.source_track_id,
+              clip_id: view.source_item_id,
+            }
+          : {
+              type: "delete_automation_lane",
+              track_id: view.source_track_id,
+              lane_id: view.source_item_id,
+            };
+      engineActions.applyDocumentTransaction(transaction("Delete timeline item", command));
     },
-    [currentDslCode, timelineEvents],
+    [timelineEvents],
   );
 
   const updateAnimationBlock = useCallback(
     (eventIndex: number, fromValue: FromTo, toValue: FromTo, easing: string) => {
-      try {
-        const dslObj = JSON.parse(currentDslCode) as FullDSL;
-        const view = timelineEvents[eventIndex];
-        const lane = findLane(dslObj, view);
-        if (!lane || lane.keyframes.length === 0) return;
-        lane.keyframes[0].value = toParameterValue(fromValue, lane.keyframes[0].value);
-        lane.keyframes[0].interpolation = easing as Easing;
-        const last = lane.keyframes[lane.keyframes.length - 1];
-        if (last) last.value = toParameterValue(toValue, last.value);
-        engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
-      } catch (err) {
-        console.error("Failed to update animation block", err);
-      }
+      if (!parsedDsl) return;
+      const view = timelineEvents[eventIndex];
+      const lane = findLane(parsedDsl, view);
+      if (!lane || lane.keyframes.length === 0 || !view.source_track_id) return;
+      const nextLane = structuredClone(lane);
+      nextLane.keyframes[0].value = toParameterValue(fromValue, nextLane.keyframes[0].value);
+      nextLane.keyframes[0].interpolation = easing as Easing;
+      const last = nextLane.keyframes[nextLane.keyframes.length - 1];
+      if (last) last.value = toParameterValue(toValue, last.value);
+      engineActions.applyDocumentTransaction(
+        transaction("Update AutomationLane", {
+          type: "replace_automation_lane",
+          track_id: view.source_track_id,
+          lane_id: nextLane.id,
+          lane: nextLane,
+        }),
+      );
     },
-    [currentDslCode, timelineEvents],
+    [parsedDsl, timelineEvents],
   );
 
   useEffect(() => {
@@ -161,56 +149,60 @@ export const useTimelineEvents = () => {
           Math.round((resizing.startDuration + deltaBeats) * 2) / 2,
         );
 
-        try {
-          const dslObj = JSON.parse(currentDslCode) as FullDSL;
-          const view = timelineEvents[resizing.originalIndex];
-          if (dslObj.timeline && view) {
-            const durationTick = Math.max(1, beatsToTicks(newDuration, dslObj.timeline.ppq));
-            const clip = findClip(dslObj, view);
-            if (clip) clip.duration_tick = durationTick;
-            const lane = findLane(dslObj, view);
-            if (lane && lane.keyframes.length > 1) {
-              const start = lane.keyframes[0].time_tick;
-              const oldDuration = Math.max(
-                1,
-                lane.keyframes[lane.keyframes.length - 1].time_tick - start,
-              );
-              for (const keyframe of lane.keyframes.slice(1)) {
-                keyframe.time_tick =
-                  start + Math.round(((keyframe.time_tick - start) / oldDuration) * durationTick);
-              }
-            }
-            if (clip || lane) engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
-          }
-        } catch {}
+        const view = timelineEvents[resizing.originalIndex];
+        if (parsedDsl?.timeline && view?.source_track_id && view.source_item_id) {
+          const durationTick = Math.max(1, beatsToTicks(newDuration, parsedDsl.timeline.ppq));
+          const command: DocumentCommand =
+            view.action.type === "effect"
+              ? {
+                  type: "resize_clip",
+                  track_id: view.source_track_id,
+                  clip_id: view.source_item_id,
+                  duration_tick: durationTick,
+                }
+              : {
+                  type: "scale_automation_lane",
+                  track_id: view.source_track_id,
+                  lane_id: view.source_item_id,
+                  start_tick: beatsToTicks(view.beat, parsedDsl.timeline.ppq),
+                  duration_tick: durationTick,
+                };
+          engineActions.applyDocumentTransaction(transaction("Resize timeline item", command));
+        }
       }
 
       if (moving) {
         const deltaBeats = moving.currentDeltaX / BEAT_WIDTH;
         const newBeat = Math.max(0, Math.floor((moving.startBeat + deltaBeats) * 2) / 2);
 
-        try {
-          const dslObj = JSON.parse(currentDslCode) as FullDSL;
-          const view = timelineEvents[moving.originalIndex];
-          if (dslObj.timeline && view) {
-            const newTick = beatsToTicks(newBeat, dslObj.timeline.ppq);
-            const clip = findClip(dslObj, view);
-            if (clip) {
-              clip.start_tick = newTick;
-              if (moving.activeTrackName?.startsWith("phaser:")) {
-                clip.instance_id = moving.activeTrackName.replace("phaser:", "");
-              }
-            }
-            const lane = findLane(dslObj, view);
-            if (lane && lane.keyframes.length > 0) {
-              const delta = newTick - lane.keyframes[0].time_tick;
-              for (const keyframe of lane.keyframes) {
-                keyframe.time_tick = Math.max(0, keyframe.time_tick + delta);
-              }
-            }
-            if (clip || lane) engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
+        const view = timelineEvents[moving.originalIndex];
+        if (parsedDsl?.timeline && view?.source_track_id && view.source_item_id) {
+          const newTick = beatsToTicks(newBeat, parsedDsl.timeline.ppq);
+          const clip = findClip(parsedDsl, view);
+          const lane = findLane(parsedDsl, view);
+          let command: DocumentCommand | undefined;
+          if (clip) {
+            command = {
+              type: "move_clip",
+              track_id: view.source_track_id,
+              clip_id: view.source_item_id,
+              start_tick: newTick,
+              instance_id: moving.activeTrackName?.startsWith("phaser:")
+                ? moving.activeTrackName.replace("phaser:", "")
+                : undefined,
+            };
+          } else if (lane && lane.keyframes.length > 0) {
+            command = {
+              type: "move_automation_lane",
+              track_id: view.source_track_id,
+              lane_id: view.source_item_id,
+              delta_tick: newTick - lane.keyframes[0].time_tick,
+            };
           }
-        } catch {}
+          if (command) {
+            engineActions.applyDocumentTransaction(transaction("Move timeline item", command));
+          }
+        }
       }
 
       setResizing(null);
@@ -228,7 +220,7 @@ export const useTimelineEvents = () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [resizing, moving, currentDslCode, timelineEvents]);
+  }, [resizing, moving, parsedDsl, timelineEvents]);
 
   return {
     timelineEvents,
@@ -307,6 +299,10 @@ function nextLayer(track: TimelineTrackDSL) {
 
 function stableId(prefix: string) {
   return `${prefix}-${globalThis.crypto.randomUUID()}`;
+}
+
+function transaction(label: string, ...commands: DocumentCommand[]): DocumentTransaction {
+  return { id: stableId("transaction"), label, commands };
 }
 
 function fromParameterValue(value: ParameterValueDSL): FromTo {
