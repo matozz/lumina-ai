@@ -13,7 +13,7 @@ describe("TimelinePlayhead", () => {
     let commitCount = 0;
     const { container } = render(
       <Profiler id="playhead" onRender={() => (commitCount += 1)}>
-        <TimelinePlayhead scrollRef={createRef<HTMLDivElement>()} />
+        <TimelinePlayhead beatWidth={40} scrollRef={createRef<HTMLDivElement>()} />
       </Profiler>,
     );
     const playhead = container.firstElementChild as HTMLElement;

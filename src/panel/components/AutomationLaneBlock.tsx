@@ -2,13 +2,14 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyframeInterpolationDSL } from "@/bridge/types";
 import { engineSelectors, useEngineStore } from "@/stores/engine";
 import { resolveAutomationParameter } from "../automationParameters";
-import { BEAT_WIDTH, useTimelineActions } from "../context/TimelineContext";
+import { useTimelineActions } from "../context/TimelineContext";
+import { clampKeyframeDelta, keyframeMoveBounds, keyframeTransform } from "../keyframeGeometry";
 import {
-  clampKeyframeDelta,
-  keyframeMoveBounds,
-  keyframeTransform,
-  snapKeyframeDelta,
-} from "../keyframeGeometry";
+  pointerDeltaWithScroll,
+  snappedTickForPointerDelta,
+  ticksToPixels,
+  type TimelineGeometry,
+} from "../timelineGeometry";
 import type { UITimelineEvent } from "../types";
 import type { TimelineViewport } from "../virtualization";
 import { AutomationCurveSegment } from "./AutomationCurveSegment";
@@ -22,10 +23,15 @@ interface AutomationLaneBlockProps {
 
 interface KeyframeMoveInteraction {
   bounds: ReturnType<typeof keyframeMoveBounds>;
+  anchorTick: number;
+  currentClientX: number;
   deltaTick: number;
+  geometry: TimelineGeometry;
   keyframeIds: string[];
   laneId: string;
+  scrollElement: HTMLElement | null;
   startClientX: number;
+  startScrollLeft: number;
   trackId: string;
 }
 
@@ -44,6 +50,7 @@ export const AutomationLaneBlock = memo(({ event, viewport }: AutomationLaneBloc
   const keyframeRefs = useRef(new Map<string, HTMLElement>());
   const moveInteraction = useRef<KeyframeMoveInteraction | null>(null);
   const boxInteraction = useRef<BoxInteraction | null>(null);
+  const animationFrame = useRef<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [inspectorId, setInspectorId] = useState<string | null>(null);
 
@@ -84,38 +91,68 @@ export const AutomationLaneBlock = memo(({ event, viewport }: AutomationLaneBloc
     const resetMarquee = () => {
       if (marqueeRef.current) marqueeRef.current.style.display = "none";
     };
-    const handlePointerMove = (pointerEvent: PointerEvent) => {
+
+    const applyPointerPreview = () => {
       const moving = moveInteraction.current;
       const currentSource = sourceRef.current;
-      if (moving && currentSource && document?.timeline) {
-        const rawDelta = snapKeyframeDelta(
-          pointerEvent.clientX - moving.startClientX,
-          document.timeline.ppq,
-          BEAT_WIDTH,
+      if (moving && currentSource) {
+        const deltaPixels = pointerDeltaWithScroll(
+          moving.startClientX,
+          moving.currentClientX,
+          moving.startScrollLeft,
+          moving.scrollElement?.scrollLeft ?? moving.startScrollLeft,
         );
+        const snappedTick = snappedTickForPointerDelta(
+          moving.anchorTick,
+          deltaPixels,
+          moving.geometry,
+        );
+        const rawDelta = snappedTick - moving.anchorTick;
         moving.deltaTick = clampKeyframeDelta(rawDelta, moving.bounds);
-        const translateX = (moving.deltaTick / document.timeline.ppq) * BEAT_WIDTH;
+        const translateX = ticksToPixels(moving.deltaTick, moving.geometry);
         for (const id of moving.keyframeIds) {
           const element = keyframeRefs.current.get(id);
           if (element) element.style.transform = keyframeTransform(translateX);
         }
+        actionsRef.current.onSnapPreview(moving.anchorTick + moving.deltaTick);
         return;
       }
 
       const boxing = boxInteraction.current;
-      const row = rowRef.current;
-      if (!boxing || !row || !marqueeRef.current) return;
-      boxing.currentX = pointerEvent.clientX - row.getBoundingClientRect().left;
+      if (!boxing || !marqueeRef.current) return;
       const left = Math.min(boxing.startX, boxing.currentX);
       marqueeRef.current.style.display = "block";
       marqueeRef.current.style.left = `${left}px`;
       marqueeRef.current.style.width = `${Math.abs(boxing.currentX - boxing.startX)}px`;
     };
+
+    const flushPointerPreview = () => {
+      animationFrame.current = null;
+      applyPointerPreview();
+    };
+
+    const handlePointerMove = (pointerEvent: PointerEvent) => {
+      const moving = moveInteraction.current;
+      if (moving) moving.currentClientX = pointerEvent.clientX;
+      const boxing = boxInteraction.current;
+      const row = rowRef.current;
+      if (boxing && row) boxing.currentX = pointerEvent.clientX - row.getBoundingClientRect().left;
+      if ((moving || boxing) && animationFrame.current === null) {
+        animationFrame.current = globalThis.requestAnimationFrame(flushPointerPreview);
+      }
+    };
+
     const finishPointerInteraction = (commit: boolean) => {
+      if (animationFrame.current !== null) {
+        globalThis.cancelAnimationFrame(animationFrame.current);
+        animationFrame.current = null;
+        applyPointerPreview();
+      }
       const moving = moveInteraction.current;
       if (moving) {
         resetMovePreview();
         moveInteraction.current = null;
+        actionsRef.current.onSnapPreviewEnd();
         if (commit && moving.deltaTick !== 0) {
           actionsRef.current.onMoveKeyframes(
             moving.trackId,
@@ -130,8 +167,12 @@ export const AutomationLaneBlock = memo(({ event, viewport }: AutomationLaneBloc
       const currentSource = sourceRef.current;
       const ppq = document?.timeline?.ppq;
       if (boxing && currentSource && ppq && commit) {
-        const firstTick = Math.round((Math.min(boxing.startX, boxing.currentX) / BEAT_WIDTH) * ppq);
-        const lastTick = Math.round((Math.max(boxing.startX, boxing.currentX) / BEAT_WIDTH) * ppq);
+        const firstTick = Math.round(
+          (Math.min(boxing.startX, boxing.currentX) / actionsRef.current.geometry.beatWidth) * ppq,
+        );
+        const lastTick = Math.round(
+          (Math.max(boxing.startX, boxing.currentX) / actionsRef.current.geometry.beatWidth) * ppq,
+        );
         setSelectedIds(
           new Set(
             currentSource.lane.keyframes
@@ -148,13 +189,22 @@ export const AutomationLaneBlock = memo(({ event, viewport }: AutomationLaneBloc
 
     const handlePointerUp = () => finishPointerInteraction(true);
     const handlePointerCancel = () => finishPointerInteraction(false);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && (moveInteraction.current || boxInteraction.current)) {
+        event.preventDefault();
+        finishPointerInteraction(false);
+      }
+    };
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
     window.addEventListener("pointercancel", handlePointerCancel);
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
+      if (animationFrame.current !== null) globalThis.cancelAnimationFrame(animationFrame.current);
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerCancel);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [document?.timeline]);
 
@@ -226,7 +276,7 @@ export const AutomationLaneBlock = memo(({ event, viewport }: AutomationLaneBloc
         mouseEvent.preventDefault();
         const x = mouseEvent.clientX - row.getBoundingClientRect().left;
         const step = Math.max(1, Math.round(ppq / 4));
-        addAtTick(Math.round(((x / BEAT_WIDTH) * ppq) / step) * step);
+        addAtTick(Math.round(((x / actions.geometry.beatWidth) * ppq) / step) * step);
       }}
       onKeyDown={(keyboardEvent) => {
         if ((keyboardEvent.metaKey || keyboardEvent.ctrlKey) && keyboardEvent.key === "a") {
@@ -255,6 +305,7 @@ export const AutomationLaneBlock = memo(({ event, viewport }: AutomationLaneBloc
             end={next}
             definition={parameter.definition}
             ppq={ppq}
+            beatWidth={actions.geometry.beatWidth}
           />
         );
       })}
@@ -276,15 +327,23 @@ export const AutomationLaneBlock = memo(({ event, viewport }: AutomationLaneBloc
             onInspectorOpenChange={(open) => setInspectorId(open ? keyframe.id : null)}
             onSelectionChange={setSelectedIds}
             onStartMove={(pointerEvent, selection) => {
+              const scrollElement =
+                pointerEvent.currentTarget.closest<HTMLElement>("[data-timeline-scroll]");
               moveInteraction.current = {
                 bounds: keyframeMoveBounds(lane.keyframes, selection),
+                anchorTick: keyframe.time_tick,
+                currentClientX: pointerEvent.clientX,
                 deltaTick: 0,
+                geometry: actions.geometry,
                 keyframeIds: Array.from(selection),
                 laneId: lane.id,
+                scrollElement,
                 startClientX: pointerEvent.clientX,
+                startScrollLeft: scrollElement?.scrollLeft ?? 0,
                 trackId: track.id,
               };
             }}
+            beatWidth={actions.geometry.beatWidth}
             ppq={ppq}
             selectedIds={selectedIds}
             tempoMap={tempoMap}
@@ -296,6 +355,7 @@ export const AutomationLaneBlock = memo(({ event, viewport }: AutomationLaneBloc
       <AutomationLaneAddButton
         definitionName={parameter.definition.name}
         viewport={viewport}
+        beatWidth={actions.geometry.beatWidth}
         onAdd={() => addAtTick(Math.round(useEngineStore.getState().globalBeat * ppq))}
       />
 

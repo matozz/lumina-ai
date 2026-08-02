@@ -2,7 +2,7 @@ import { memo, useMemo } from "react";
 import { DraggableBlock } from "./DraggableBlock";
 import { cn } from "@/lib/utils";
 import type { TimelineTrackData } from "../types";
-import { useTimelineActions, BEAT_WIDTH } from "../context/TimelineContext";
+import { useTimelineActions } from "../context/TimelineContext";
 import { visibleTimelineEvents, type TimelineViewport } from "../virtualization";
 import { AutomationLaneBlock } from "./AutomationLaneBlock";
 
@@ -11,10 +11,11 @@ interface TrackProps {
   isExpanded?: boolean;
   selectedPhaser: string | null;
   viewport: TimelineViewport;
+  beatWidth: number;
 }
 
 export const DroppableTrack = memo((props: TrackProps) => {
-  const { track, isExpanded, selectedPhaser, viewport } = props;
+  const { track, isExpanded, selectedPhaser, viewport, beatWidth } = props;
 
   const actions = useTimelineActions();
   const visibleEvents = useMemo(
@@ -37,7 +38,7 @@ export const DroppableTrack = memo((props: TrackProps) => {
         )}
 
         {visibleEvents.map((e) => (
-          <DraggableBlock key={e.id} event={e} beatWidth={BEAT_WIDTH} />
+          <DraggableBlock key={e.id} event={e} beatWidth={beatWidth} />
         ))}
       </div>
 

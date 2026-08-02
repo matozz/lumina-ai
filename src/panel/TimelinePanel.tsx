@@ -4,9 +4,10 @@ import { useTimelineStore, timelineActions, timelineSelectors } from "@/stores/t
 import { cn } from "@/lib/utils";
 import { useTimelineEvents } from "./hooks/useTimelineEvents";
 import { useTimelineTracks } from "./hooks/useTimelineTracks";
-import { TimelineActionContext, BEAT_WIDTH } from "./context/TimelineContext";
+import { TimelineActionContext } from "./context/TimelineContext";
 import { calculateTimelineDimensions } from "./utils";
 import { viewportFromScroll, type TimelineViewport } from "./virtualization";
+import { BEAT_WIDTH_STEP, clampBeatWidth, pixelsToTicks, snapTick } from "./timelineGeometry";
 import {
   TimelineToolbar,
   TimelineResourcePanel,
@@ -24,6 +25,7 @@ export const TimelinePanel = () => {
 
   const selectedPhaser = useTimelineStore(timelineSelectors.selectedPhaser);
   const expandedTracks = useTimelineStore(timelineSelectors.expandedTracks);
+  const beatWidth = useTimelineStore(timelineSelectors.beatWidth);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackHeadersScrollRef = useRef<HTMLDivElement>(null);
@@ -36,8 +38,12 @@ export const TimelinePanel = () => {
 
   const {
     document,
+    geometry,
     timelineEvents,
     interactionState,
+    snapGuideRef,
+    showSnapPreview,
+    hideSnapPreview,
     startMoving,
     startResizing,
     addEvent,
@@ -50,21 +56,24 @@ export const TimelinePanel = () => {
     moveKeyframes,
     deleteKeyframes,
     updateKeyframe,
-  } = useTimelineEvents();
+  } = useTimelineEvents({ beatWidth, scrollRef });
 
   const tracks = useTimelineTracks(timelineEvents);
 
-  const updateViewport = useCallback((container: HTMLDivElement) => {
-    const next = viewportFromScroll(container.scrollLeft, container.clientWidth, BEAT_WIDTH);
-    setViewport((current) =>
-      current.startBeat === next.startBeat &&
-      current.endBeat === next.endBeat &&
-      current.visibleStartBeat === next.visibleStartBeat &&
-      current.visibleEndBeat === next.visibleEndBeat
-        ? current
-        : next,
-    );
-  }, []);
+  const updateViewport = useCallback(
+    (container: HTMLDivElement) => {
+      const next = viewportFromScroll(container.scrollLeft, container.clientWidth, beatWidth);
+      setViewport((current) =>
+        current.startBeat === next.startBeat &&
+        current.endBeat === next.endBeat &&
+        current.visibleStartBeat === next.visibleStartBeat &&
+        current.visibleEndBeat === next.visibleEndBeat
+          ? current
+          : next,
+      );
+    },
+    [beatWidth],
+  );
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     updateViewport(e.currentTarget);
@@ -102,47 +111,53 @@ export const TimelinePanel = () => {
       if (interactionState.current.isInteracting) return;
       if (!selectedPhaser) return;
 
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const scrollLeft = scrollRef.current?.scrollLeft || 0;
-
-      const rawBeat = (x + scrollLeft) / BEAT_WIDTH;
-      const snappedBeat = Math.floor(rawBeat);
+      const container = scrollRef.current;
+      if (!container) return;
+      const x = e.clientX - container.getBoundingClientRect().left + container.scrollLeft;
+      const snappedTick = snapTick(pixelsToTicks(x, geometry), geometry);
 
       addEvent({
-        beat: snappedBeat,
+        beat: snappedTick / geometry.ppq,
         duration: 4,
         action: { type: "effect", instance_id: selectedPhaser },
       });
     },
-    [addEvent, interactionState, selectedPhaser],
+    [addEvent, geometry, interactionState, selectedPhaser],
+  );
+
+  const handleZoom = useCallback(
+    (requestedBeatWidth: number) => {
+      const nextBeatWidth = clampBeatWidth(requestedBeatWidth);
+      const container = scrollRef.current;
+      const centerBeat = container
+        ? (container.scrollLeft + container.clientWidth / 2) / beatWidth
+        : 0;
+      timelineActions.setBeatWidth(nextBeatWidth);
+      globalThis.requestAnimationFrame(() => {
+        if (!container) return;
+        container.scrollLeft = Math.max(0, centerBeat * nextBeatWidth - container.clientWidth / 2);
+        updateViewport(container);
+      });
+    },
+    [beatWidth, updateViewport],
   );
 
   const timelineActionsValue = useMemo(
     () => ({
-      onDragStart: (
-        e: React.PointerEvent,
-        originalIndex: number,
-        startBeat: number,
-        element: HTMLElement,
-      ) => {
+      geometry,
+      onDragStart: (e: React.PointerEvent, originalIndex: number, element: HTMLElement) => {
         startMoving(
           originalIndex,
           e.clientX,
           e.clientY,
-          startBeat,
           tracks.find((track) =>
             track.events.some((event) => event.originalIndex === originalIndex),
           )?.id,
           element,
         );
       },
-      onResizeStart: (
-        e: React.PointerEvent,
-        originalIndex: number,
-        startDuration: number,
-        element: HTMLElement,
-      ) => startResizing(originalIndex, e.clientX, startDuration, element),
+      onResizeStart: (e: React.PointerEvent, originalIndex: number, element: HTMLElement) =>
+        startResizing(originalIndex, e.clientX, element),
       onDelete: deleteEvent,
       onNudge: nudgeEvent,
       onTrimClipOverlaps: trimClipOverlaps,
@@ -152,15 +167,20 @@ export const TimelinePanel = () => {
       onDeleteKeyframes: deleteKeyframes,
       onUpdateKeyframe: updateKeyframe,
       onGridClick: handleGridClick,
+      onSnapPreview: showSnapPreview,
+      onSnapPreviewEnd: hideSnapPreview,
     }),
     [
       deleteEvent,
       deleteKeyframes,
       handleGridClick,
+      geometry,
+      hideSnapPreview,
       addKeyframe,
       moveKeyframes,
       nudgeEvent,
       replaceClipOverlaps,
+      showSnapPreview,
       startMoving,
       startResizing,
       tracks,
@@ -182,7 +202,7 @@ export const TimelinePanel = () => {
     }
   };
 
-  const { scrollWidth: SCROLL_WIDTH } = calculateTimelineDimensions(tracks, 0);
+  const { scrollWidth: SCROLL_WIDTH } = calculateTimelineDimensions(tracks, 0, beatWidth);
 
   return (
     <div
@@ -198,6 +218,10 @@ export const TimelinePanel = () => {
         isDirty={isDocumentDirty}
         onUndo={engineActions.undoDocument}
         onRedo={engineActions.redoDocument}
+        beatWidth={beatWidth}
+        snapBeats={geometry.snapTicks / geometry.ppq}
+        onZoomIn={() => handleZoom(beatWidth + BEAT_WIDTH_STEP)}
+        onZoomOut={() => handleZoom(beatWidth - BEAT_WIDTH_STEP)}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -220,10 +244,11 @@ export const TimelinePanel = () => {
           <div
             ref={scrollRef}
             onScroll={handleScroll}
+            data-timeline-scroll
             className="custom-scrollbar relative flex-1 overflow-x-auto overflow-y-auto overscroll-none bg-[#0a0a0c]"
           >
             <div style={{ width: SCROLL_WIDTH, height: "100%", position: "relative" }}>
-              <TimelineGrid beatWidth={BEAT_WIDTH} viewport={viewport} />
+              <TimelineGrid geometry={geometry} viewport={viewport} />
 
               <div className="relative z-0 flex flex-col">
                 {tracks.map((t) => (
@@ -233,6 +258,7 @@ export const TimelinePanel = () => {
                     isExpanded={expandedTracks[t.name]}
                     selectedPhaser={selectedPhaser}
                     viewport={viewport}
+                    beatWidth={beatWidth}
                   />
                 ))}
                 {/* Spacer matching the extra padding in TrackHeaders */}
@@ -247,7 +273,19 @@ export const TimelinePanel = () => {
                 />
               </div>
 
-              <TimelinePlayhead scrollRef={scrollRef} />
+              <div
+                ref={snapGuideRef}
+                className="pointer-events-none absolute top-0 bottom-0 z-30 hidden w-px bg-amber-300 shadow-[0_0_8px_rgba(252,211,77,0.75)]"
+                aria-hidden="true"
+                data-testid="timeline-snap-guide"
+              >
+                <span
+                  data-snap-label
+                  className="absolute top-1 left-1 rounded bg-amber-300 px-1 py-0.5 font-mono text-[9px] whitespace-nowrap text-black"
+                />
+              </div>
+
+              <TimelinePlayhead beatWidth={beatWidth} scrollRef={scrollRef} />
             </div>
           </div>
         </TimelineActionContext.Provider>

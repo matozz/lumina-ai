@@ -1,21 +1,11 @@
 import { createContext, useContext } from "react";
 import type { KeyframeDSL, KeyframeInterpolationDSL, ParameterValueDSL } from "@/bridge/types";
-
-export const BEAT_WIDTH = 40;
+import type { TimelineGeometry } from "../timelineGeometry";
 
 export interface TimelineActions {
-  onDragStart: (
-    e: React.PointerEvent,
-    originalIndex: number,
-    startBeat: number,
-    element: HTMLElement,
-  ) => void;
-  onResizeStart: (
-    e: React.PointerEvent,
-    originalIndex: number,
-    startDuration: number,
-    element: HTMLElement,
-  ) => void;
+  geometry: TimelineGeometry;
+  onDragStart: (e: React.PointerEvent, originalIndex: number, element: HTMLElement) => void;
+  onResizeStart: (e: React.PointerEvent, originalIndex: number, element: HTMLElement) => void;
   onDelete: (originalIndex: number) => void;
   onNudge: (originalIndex: number, deltaBeats: number) => void;
   onTrimClipOverlaps: (originalIndex: number) => void;
@@ -41,6 +31,8 @@ export interface TimelineActions {
     changes: Partial<Pick<KeyframeDSL, "time_tick" | "value" | "interpolation">>,
   ) => void;
   onGridClick: (e: React.MouseEvent<HTMLDivElement>, trackName: string) => void;
+  onSnapPreview: (tick: number) => void;
+  onSnapPreviewEnd: () => void;
 }
 
 export const TimelineActionContext = createContext<TimelineActions | null>(null);

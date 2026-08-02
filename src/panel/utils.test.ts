@@ -35,6 +35,6 @@ describe("calculateTimelineDimensions", () => {
       },
     ];
 
-    expect(calculateTimelineDimensions(tracks, 0).totalBeats).toBe(76);
+    expect(calculateTimelineDimensions(tracks, 0, 40).totalBeats).toBe(76);
   });
 });

@@ -4,12 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import type { TimelineActions } from "../context/TimelineContext";
-import { BEAT_WIDTH } from "../context/TimelineContext";
 import { keyframeMoveBounds, keyframeTransform, keyframeValueY } from "../keyframeGeometry";
 import { AutomationKeyframeInspector } from "./AutomationKeyframeInspector";
 
 interface AutomationKeyframeControlProps {
   actions: TimelineActions;
+  beatWidth: number;
   definition: ParameterDefinitionDSL;
   inspectorOpen: boolean;
   keyframe: KeyframeDSL;
@@ -29,6 +29,7 @@ const ROW_HEIGHT = 32;
 
 export const AutomationKeyframeControl = ({
   actions,
+  beatWidth,
   definition,
   inspectorOpen,
   keyframe,
@@ -59,7 +60,7 @@ export const AutomationKeyframeControl = ({
               selected && "ring-primary/40 ring-2",
             )}
             style={{
-              left: (keyframe.time_tick / ppq) * BEAT_WIDTH,
+              left: (keyframe.time_tick / ppq) * beatWidth,
               top: keyframeValueY(keyframe.value, definition, ROW_HEIGHT),
               transform: keyframeTransform(0),
             }}

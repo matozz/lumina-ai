@@ -1,10 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TimelineActionContext, type TimelineActions } from "../context/TimelineContext";
+import { createTimelineGeometry } from "../timelineGeometry";
 import { DraggableBlock } from "./DraggableBlock";
 
 function renderBlock() {
   const actions: TimelineActions = {
+    geometry: createTimelineGeometry(960, 40),
     onDragStart: vi.fn(),
     onResizeStart: vi.fn(),
     onDelete: vi.fn(),
@@ -16,6 +18,8 @@ function renderBlock() {
     onDeleteKeyframes: vi.fn(),
     onUpdateKeyframe: vi.fn(),
     onGridClick: vi.fn(),
+    onSnapPreview: vi.fn(),
+    onSnapPreviewEnd: vi.fn(),
   };
   render(
     <TimelineActionContext.Provider value={actions}>

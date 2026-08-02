@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { KeyframeDSL } from "@/bridge/types";
-import {
-  clampKeyframeDelta,
-  keyframeMoveBounds,
-  keyframeValueY,
-  snapKeyframeDelta,
-} from "./keyframeGeometry";
+import { clampKeyframeDelta, keyframeMoveBounds, keyframeValueY } from "./keyframeGeometry";
 
 const keyframes: KeyframeDSL[] = [0, 480, 960, 1_440].map((time_tick, index) => ({
   id: `key-${index}`,
@@ -21,8 +16,7 @@ describe("keyframe geometry", () => {
     expect(clampKeyframeDelta(-960, bounds)).toBe(-479);
   });
 
-  it("snaps pointer motion to quarter beats and maps scalar ranges vertically", () => {
-    expect(snapKeyframeDelta(10, 960, 40)).toBe(240);
+  it("maps scalar ranges vertically", () => {
     expect(
       keyframeValueY(
         { type: "scalar", value: 50 },

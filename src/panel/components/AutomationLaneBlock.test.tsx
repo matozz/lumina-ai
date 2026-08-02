@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FullDSL } from "@/bridge/types";
 import { useEngineStore } from "@/stores/engine";
 import { TimelineActionContext, type TimelineActions } from "../context/TimelineContext";
+import { createTimelineGeometry } from "../timelineGeometry";
 import type { UITimelineEvent } from "../types";
 import { AutomationLaneBlock } from "./AutomationLaneBlock";
 
@@ -76,13 +77,13 @@ function documentFixture(): FullDSL {
                 },
                 {
                   id: "speed-1",
-                  time_tick: 960,
+                  time_tick: 1_920,
                   value: { type: "scalar", value: 0.5 },
                   interpolation: "ease_in_out",
                 },
                 {
                   id: "speed-2",
-                  time_tick: 1_920,
+                  time_tick: 3_840,
                   value: { type: "scalar", value: 1 },
                   interpolation: "hold",
                 },
@@ -97,6 +98,7 @@ function documentFixture(): FullDSL {
 
 function actions(): TimelineActions {
   return {
+    geometry: createTimelineGeometry(960, 40),
     onDragStart: vi.fn(),
     onResizeStart: vi.fn(),
     onDelete: vi.fn(),
@@ -108,6 +110,8 @@ function actions(): TimelineActions {
     onDeleteKeyframes: vi.fn(),
     onUpdateKeyframe: vi.fn(),
     onGridClick: vi.fn(),
+    onSnapPreview: vi.fn(),
+    onSnapPreviewEnd: vi.fn(),
   };
 }
 
@@ -115,7 +119,7 @@ const event: UITimelineEvent = {
   id: "speed-lane",
   originalIndex: 0,
   beat: 0,
-  duration: 2,
+  duration: 4,
   action: {
     type: "animate",
     target: { scope: "effect_instance", instance_id: "front", parameter_id: "speed" },
@@ -128,12 +132,27 @@ const event: UITimelineEvent = {
 };
 
 describe("AutomationLaneBlock", () => {
+  let frameCallbacks: FrameRequestCallback[];
+
   beforeEach(() => {
+    frameCallbacks = [];
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
     useEngineStore.setState(
       { ...useEngineStore.getInitialState(), parsedDsl: documentFixture() },
       true,
     );
   });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  const flushAnimationFrame = () => {
+    const callbacks = frameCallbacks.splice(0);
+    callbacks.forEach((callback) => callback(0));
+  };
 
   it("previews drag in the DOM, commits once, box-selects, and supports keyboard edits", () => {
     const timelineActions = actions();
@@ -142,25 +161,28 @@ describe("AutomationLaneBlock", () => {
         <AutomationLaneBlock event={event} viewport={{ startBeat: 0, endBeat: 8 }} />
       </TimelineActionContext.Provider>,
     );
-    const middle = screen.getByRole("button", { name: "Speed keyframe at tick 960" });
+    const middle = screen.getByRole("button", { name: "Speed keyframe at tick 1920" });
 
-    fireEvent.pointerDown(middle, { button: 0, clientX: 40 });
+    fireEvent.pointerDown(middle, { button: 0, clientX: 80 });
     expect(document.activeElement).toBe(middle);
-    fireEvent.pointerMove(window, { clientX: 50 });
-    expect(middle.style.transform).toContain("10px");
+    fireEvent.pointerMove(window, { clientX: 121 });
+    flushAnimationFrame();
+    expect(middle.style.transform).toContain("40px");
+    expect(timelineActions.onSnapPreview).toHaveBeenCalledWith(2_880);
     expect(timelineActions.onMoveKeyframes).not.toHaveBeenCalled();
     fireEvent.pointerUp(window);
     expect(timelineActions.onMoveKeyframes).toHaveBeenCalledWith(
       "automation",
       "speed-lane",
       ["speed-1"],
-      240,
+      960,
     );
 
     const row = screen.getByRole("group", { name: /Speed automation lane/ });
     fireEvent.pointerDown(row, { button: 0, clientX: 0 });
     expect(document.activeElement).toBe(row);
-    fireEvent.pointerMove(window, { clientX: 50 });
+    fireEvent.pointerMove(window, { clientX: 121 });
+    flushAnimationFrame();
     fireEvent.pointerUp(window);
     expect(
       screen.getByRole("button", { name: "Speed keyframe at tick 0" }).getAttribute("aria-pressed"),
@@ -185,9 +207,29 @@ describe("AutomationLaneBlock", () => {
     expect(timelineActions.onAddKeyframe).toHaveBeenCalledWith(
       "automation",
       "speed-lane",
-      3_840,
+      4_080,
       { type: "scalar", value: 1 },
       "linear",
     );
+  });
+
+  it("restores a keyframe preview on Escape without committing", () => {
+    const timelineActions = actions();
+    render(
+      <TimelineActionContext.Provider value={timelineActions}>
+        <AutomationLaneBlock event={event} viewport={{ startBeat: 0, endBeat: 8 }} />
+      </TimelineActionContext.Provider>,
+    );
+    const middle = screen.getByRole("button", { name: "Speed keyframe at tick 1920" });
+
+    fireEvent.pointerDown(middle, { button: 0, clientX: 80 });
+    fireEvent.pointerMove(window, { clientX: 121 });
+    flushAnimationFrame();
+    expect(middle.style.transform).toContain("40px");
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(middle.style.transform).toContain("0px");
+    expect(timelineActions.onMoveKeyframes).not.toHaveBeenCalled();
+    expect(timelineActions.onSnapPreviewEnd).toHaveBeenCalledOnce();
   });
 });

@@ -61,9 +61,9 @@ export const DraggableBlock = memo(({ event, beatWidth }: BlockProps) => {
               pointerEvent.preventDefault();
               pointerEvent.stopPropagation();
               ref.current?.focus();
-              (pointerEvent.target as HTMLElement).setPointerCapture(pointerEvent.pointerId);
+              pointerEvent.currentTarget.setPointerCapture(pointerEvent.pointerId);
               if (ref.current) {
-                actions.onDragStart(pointerEvent, event.originalIndex, event.beat, ref.current);
+                actions.onDragStart(pointerEvent, event.originalIndex, ref.current);
               }
             }}
           >
@@ -80,9 +80,9 @@ export const DraggableBlock = memo(({ event, beatWidth }: BlockProps) => {
               onPointerDown={(pointerEvent) => {
                 pointerEvent.preventDefault();
                 pointerEvent.stopPropagation();
-                (pointerEvent.target as HTMLElement).setPointerCapture(pointerEvent.pointerId);
+                pointerEvent.currentTarget.setPointerCapture(pointerEvent.pointerId);
                 if (ref.current) {
-                  actions.onResizeStart(pointerEvent, event.originalIndex, duration, ref.current);
+                  actions.onResizeStart(pointerEvent, event.originalIndex, ref.current);
                 }
               }}
             />

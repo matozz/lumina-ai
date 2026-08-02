@@ -1,12 +1,15 @@
 import { cn } from "@/lib/utils";
 import type { TimelineViewport } from "../virtualization";
+import { ticksToPixels, type TimelineGeometry } from "../timelineGeometry";
 
 interface GridProps {
-  beatWidth: number;
+  geometry: TimelineGeometry;
   viewport: TimelineViewport;
 }
 
-export const TimelineGrid = ({ beatWidth, viewport }: GridProps) => {
+export const TimelineGrid = ({ geometry, viewport }: GridProps) => {
+  const { beatWidth } = geometry;
+  const snapWidth = ticksToPixels(geometry.snapTicks, geometry);
   const firstBarBeat = Math.max(0, Math.floor(viewport.startBeat / 4) * 4);
   const lastBarBeat = Math.ceil(viewport.endBeat / 4) * 4;
   const labels = Array.from(
@@ -22,9 +25,12 @@ export const TimelineGrid = ({ beatWidth, viewport }: GridProps) => {
           backgroundImage: [
             "linear-gradient(to right, rgba(63,63,70,0.4) 1px, transparent 1px)",
             "linear-gradient(to right, rgba(39,39,42,0.3) 1px, transparent 1px)",
+            "linear-gradient(to right, rgba(39,39,42,0.18) 1px, transparent 1px)",
           ].join(","),
-          backgroundSize: `${beatWidth * 4}px 100%, ${beatWidth}px 100%`,
+          backgroundSize: `${beatWidth * 4}px 100%, ${beatWidth}px 100%, ${snapWidth}px 100%`,
         }}
+        data-snap-ticks={geometry.snapTicks}
+        data-snap-width={snapWidth}
       />
 
       <div
