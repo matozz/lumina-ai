@@ -1082,9 +1082,9 @@ flowchart LR
 
 - Current Stage: Stage 5 先前已完成；“Stage 5 后置稳定性修复”已完成，Stage 6 保持 `not_started`。
 - Slice completed: rAF DOM preview/shared snap、clip duration/width 保持、单 command/cancel、popover 编辑键边界、默认真实最大化/min-size/响应式布局、聚焦回归与真实 Tauri 全矩阵均完成。
-- Commits: 当前分支 `fix/timeline-drag-window-experience` stacked 在未合并的 Stage 5 最终提交 `6ffce7a`；拖拽 `f5e7faa`；窗口 `254974b`；popover/真实矩阵 `b8d84f8`；最终治理为本切片提交。
-- Files changed: shared TimelineGeometry、clip/keyframe rAF interaction、grid/toolbar、editable-target guard、Tauri window lifecycle/config、responsive Editor/Canvas/Control/Timeline/Library、tests、screenshots、Evidence/Ledger/Open Risks/Handoff。
-- Validation: `pnpm check:all` 通过；30 frontend files/61 tests；Rust fmt/strict Clippy/85 tests/contracts；schema/typecheck/Vite build；真实 keyframe snap/cancel/play、clip move/cross/resize、Undo/Redo、popover Backspace，以及 max/common/min window matrix 全部通过。
+- Commits: 当前分支 `fix/timeline-drag-window-experience` stacked 在未合并的 Stage 5 最终提交 `6ffce7a`；拖拽 `f5e7faa`；窗口 `254974b`；popover/真实矩阵 `b8d84f8`；治理 `28c8966`；Node 22.20.0 alignment `e79abae`。
+- Files changed: shared TimelineGeometry、clip/keyframe rAF interaction、grid/toolbar、editable-target guard、Tauri window lifecycle/config、responsive Editor/Canvas/Control/Timeline/Library、Node runtime pin/docs、tests、screenshots、Evidence/Ledger/Open Risks/Handoff。
+- Validation: Node 22.20.0 下 `pnpm check:all` 通过且无 engine mismatch；30 frontend files/61 tests；Rust fmt/strict Clippy/85 tests/contracts；schema/typecheck/Vite build；真实 keyframe snap/cancel/play、clip move/cross/resize、Undo/Redo、popover Backspace，以及 max/common/min window matrix 全部通过。
 - ADRs added/updated: 无；本切片遵循 ADR-0003 的原生 PointerEvent、DOM preview、单次 document transaction 与 history 边界，不改变 Stage 5 架构。
 - Risks opened/closed: R-016、R-017、R-018 已关闭。
 - Remaining exit criteria: 无；本 scoped Goal 的实现、回归、真实窗口证据、文档与统一门禁均完成。
@@ -1188,7 +1188,7 @@ flowchart LR
 | 2026-08-02 | 5 后置   | Window + layout matrix    | completed | 本切片提交  | window/panel/canvas 20 files/37 tests；build；max/common/min native AX   | R-017 closed；Ready 后执行真实非全屏 Zoom                   | popover 编辑键事件边界                      |
 | 2026-08-02 | 5 后置   | Popover keyboard boundary | completed | 本切片提交  | focused 3 files/5 tests；build；native input Delete/Backspace            | R-018 closed；portal 编辑事件不再进入时间轴快捷键           | 完整统一门禁                                |
 | 2026-08-02 | 5 后置   | Native drag matrix        | completed | 本切片提交  | clip move/cross/resize；keyframe snap/cancel/play；Undo/Redo；screens    | preview=commit tick；move duration/width 保持               | 完整统一门禁                                |
-| 2026-08-02 | 5 后置   | scoped Goal final gate    | completed | 本切片提交  | `check:all`；61 frontend；85 Rust；schema/type/build/fmt/Clippy          | R-016/R-017/R-018 closed；Stage 6 not_started               | 停止；等待显式 publish 指令                 |
+| 2026-08-02 | 5 后置   | scoped Goal final gate    | completed | 本切片提交  | Node 22.20.0；`check:all`；61 frontend；85 Rust；全门禁                  | R-016/R-017/R-018 closed；Stage 6 not_started               | 停止；等待显式 publish 指令                 |
 
 ## 21. Open Risks
 

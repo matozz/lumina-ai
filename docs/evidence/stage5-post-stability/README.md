@@ -67,6 +67,7 @@
 - schema generation drift check、Prettier、TypeScript typecheck 与 Vite production build 通过。
 - 前端 30 个测试文件、61 项测试通过。
 - Rust fmt、全 targets strict Clippy 和 85 项 Rust tests/contracts 通过。
-- 输出只包含项目声明 Node `20.19.3` 与当前 host Node `22.20.0` 的版本提示，以及既有 Vite chunk-size 警告；两者均未形成产品回归。
+- `.nvmrc`、`package.json`、README 和 development guide 已统一 Node `22.20.0`；重跑时不再产生 engine mismatch。
+- 输出只保留既有 Vite chunk-size 警告，未形成产品回归。
 
 本专项未改变 Stage 5 完成状态，也没有实现 Stage 6 workspace 能力。
