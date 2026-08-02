@@ -379,7 +379,7 @@ pub enum AutomationTargetDSL {
     },
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum GlobalParameterDSL {
     MasterDimmer,
@@ -548,7 +548,7 @@ fn migrate_timeline_to_arrangement(
                 )
             })?;
         let mut clips = Vec::new();
-        let mut lanes = Vec::new();
+        let mut lanes: Vec<serde_json::Value> = Vec::new();
         for (index, event) in events.iter().enumerate() {
             let beat = event
                 .get("beat")
@@ -651,11 +651,28 @@ fn migrate_timeline_to_arrangement(
                             "interpolation": "hold"
                         }));
                     }
-                    lanes.push(serde_json::json!({
-                        "id": format!("automation-{index}"),
-                        "target": target,
-                        "keyframes": keyframes
-                    }));
+                    if let Some(existing) = lanes
+                        .iter_mut()
+                        .find(|lane| lane.get("target") == Some(&target))
+                    {
+                        existing
+                            .get_mut("keyframes")
+                            .and_then(serde_json::Value::as_array_mut)
+                            .expect("migrated lane keyframes")
+                            .extend(keyframes);
+                        changes.push(MigrationChange {
+                            code: "MIGRATION_MERGE_AUTOMATION_LANE".to_string(),
+                            path: format!("timeline.events[{index}].action.target"),
+                            message: "Merged sequential V3 automation events into one typed lane."
+                                .to_string(),
+                        });
+                    } else {
+                        lanes.push(serde_json::json!({
+                            "id": format!("automation-{index}"),
+                            "target": target,
+                            "keyframes": keyframes
+                        }));
+                    }
                 }
                 _ => {
                     return Err(Diagnostic::error(
@@ -666,6 +683,34 @@ fn migrate_timeline_to_arrangement(
                     ));
                 }
             }
+        }
+        for lane in &mut lanes {
+            let keyframes = lane
+                .get_mut("keyframes")
+                .and_then(serde_json::Value::as_array_mut)
+                .expect("migrated lane keyframes");
+            keyframes.sort_by_key(|keyframe| {
+                keyframe
+                    .get("time_tick")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or(0)
+            });
+            let mut deduplicated: Vec<serde_json::Value> = Vec::with_capacity(keyframes.len());
+            for keyframe in keyframes.drain(..) {
+                let time_tick = keyframe
+                    .get("time_tick")
+                    .and_then(serde_json::Value::as_u64);
+                if deduplicated.last().and_then(|previous| {
+                    previous
+                        .get("time_tick")
+                        .and_then(serde_json::Value::as_u64)
+                }) == time_tick
+                {
+                    deduplicated.pop();
+                }
+                deduplicated.push(keyframe);
+            }
+            *keyframes = deduplicated;
         }
         let mut tracks = Vec::new();
         if !clips.is_empty() {
@@ -1506,6 +1551,11 @@ mod tests {
                     "type": "animate",
                     "target": { "scope": "effect_instance", "instance_id": "pulse", "parameter_id": "multiplier" },
                     "from": 1, "to": 2
+                  } },
+                  { "beat": 2, "duration": 2, "action": {
+                    "type": "animate",
+                    "target": { "scope": "effect_instance", "instance_id": "pulse", "parameter_id": "multiplier" },
+                    "from": 2, "to": 1
                   } }
                 ] }"##,
             )
@@ -1529,7 +1579,8 @@ mod tests {
             AutomationTargetV3DSL::EffectInstance { ref parameter_id, .. }
                 if parameter_id == "speed"
         ));
-        assert_eq!(timeline.tracks[1].automation_lanes[0].keyframes.len(), 2);
+        assert_eq!(timeline.tracks[1].automation_lanes.len(), 1);
+        assert_eq!(timeline.tracks[1].automation_lanes[0].keyframes.len(), 3);
         assert!(loaded
             .migration_report
             .changes
@@ -1540,6 +1591,11 @@ mod tests {
             .changes
             .iter()
             .any(|change| change.code == "MIGRATION_ENABLE_POSITION_ATTRIBUTES"));
+        assert!(loaded
+            .migration_report
+            .changes
+            .iter()
+            .any(|change| change.code == "MIGRATION_MERGE_AUTOMATION_LANE"));
     }
 
     #[test]

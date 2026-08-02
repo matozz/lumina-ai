@@ -16,8 +16,9 @@ Stage 5 需要更换时间与 arrangement contract，同时保持 Stage 1 Transp
 - `TempoMap` 从 Stage 5 起成为稳定接口。文档保存按 tick 排序的 tempo points；每个点的 BPM 在 compiler 中量化为整数 microseconds-per-quarter，tick↔microseconds 的分段换算不累计浮点 tick 误差。Stage 7 可以增加检测和编辑能力，但不更换接口。
 - ShowDocument V4 用 Track、EffectClip、AutomationLane 和任意多个 Keyframe 替代 V3 event 列表。clip 和 keyframe 的 start/duration/boundary/snap 都是 tick；V3→V4 migration 使用 PPQ=960 对 beat 做最近 tick 量化，并报告任何非精确转换。
 - Keyframe interpolation 支持 hold、linear、ease-in、ease-out、ease-in-out 和 cubic-bezier/Hermite tangents。颜色继续使用 LAB；direction/discrete 参数使用 hold。clip 结束 tick 不再 active，而 automation 在最后一个 keyframe 及其后精确保持终值。
+- 每个 typed automation target 在一个文档中只有一条权威 `AutomationLane`；migration 合并旧的连续 event 段并在相同 tick 保留后写入的关键帧，避免运行时按遍历顺序选择多个真值。scalar bezier 以 in/out tangent 的 value/time 斜率做解析 Hermite 求值和积分；color 保持 LAB 插值，并因 tangent value 只对 scalar 有定义而使用确定性 smoothstep 进度。
 - renderer 从目标 tick 通过只读索引查询 active clips 和 lanes。顺序播放、直接 Seek 和 Replay 都调用同一个纯函数，不保存 `active_events` 真相；旧 `TimelineExecutor` 在 Stage 5 内删除。
-- overlap policy 是 Track 的显式字段：layer、replace、reject 或 crossfade。默认 migration 为 `layer`，编辑命令绝不隐式修改相邻 clip；replace/reject/crossfade 只影响求值或显式命令结果。
+- overlap policy 是 Track 的显式字段：layer、replace、reject 或 crossfade。默认 migration 为 `layer`，编辑命令绝不隐式修改相邻 clip；replace 选择 `(layer, start_tick, stable source order)` 最大者，reject 在 validation 失败关闭，crossfade 对最高两层 active clip 按实际 overlap 区间线性配重，且这些策略只影响求值或显式命令结果。
 - 时间轴编辑统一经过 `DocumentCommand` transaction。drag/resize pointer move 只更新 DOM transform/width preview，pointer up 提交一个 transaction；history 保存 undo/redo、save point 和 dirty state。
 - 1,000 clips 的性能 gate 同时覆盖 compiled active-range query 和前端可见区域裁剪。playhead 通过独立 DOM ref 更新，不能让全部 block 随 60Hz cursor 重渲染。
 
@@ -44,5 +45,5 @@ V4 migration 先生成整数时间和 arrangement contract，再切换 compiler/
 - Stage 4 baseline: `d338c08`
 - MusicalTime/TempoMap core: 本切片提交
 - V4 arrangement contract and migration: 本切片提交
-- Pure indexed tick evaluator: pending
+- Pure indexed tick evaluator and old executor removal: 本切片提交
 - Timeline command/history and UI performance: pending

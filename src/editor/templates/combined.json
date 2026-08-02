@@ -6,10 +6,7 @@
   "patch": [
     {
       "profile_id": "generic-moving-head",
-      "id_range": [
-        1,
-        200
-      ]
+      "id_range": [1, 200]
     }
   ],
   "layout": {
@@ -1025,10 +1022,7 @@
       "id": "all",
       "name": "All",
       "fixtures": {
-        "range": [
-          1,
-          200
-        ]
+        "range": [1, 200]
       },
       "sort_by": "none"
     },
@@ -1036,10 +1030,7 @@
       "id": "centercircle",
       "name": "CenterCircle",
       "fixtures": {
-        "range": [
-          1,
-          40
-        ]
+        "range": [1, 40]
       },
       "sort_by": "distance_center"
     },
@@ -1047,10 +1038,7 @@
       "id": "recttopleft",
       "name": "RectTopLeft",
       "fixtures": {
-        "range": [
-          41,
-          80
-        ]
+        "range": [41, 80]
       },
       "sort_by": "distance_center"
     },
@@ -1058,10 +1046,7 @@
       "id": "recttopright",
       "name": "RectTopRight",
       "fixtures": {
-        "range": [
-          81,
-          120
-        ]
+        "range": [81, 120]
       },
       "sort_by": "distance_center"
     },
@@ -1069,10 +1054,7 @@
       "id": "rectbottomleft",
       "name": "RectBottomLeft",
       "fixtures": {
-        "range": [
-          121,
-          160
-        ]
+        "range": [121, 160]
       },
       "sort_by": "distance_center"
     },
@@ -1080,10 +1062,7 @@
       "id": "rectbottomright",
       "name": "RectBottomRight",
       "fixtures": {
-        "range": [
-          161,
-          200
-        ]
+        "range": [161, 200]
       },
       "sort_by": "distance_center"
     }
@@ -1103,10 +1082,7 @@
             "type": "scalar",
             "value": 1.0
           },
-          "range": [
-            0.01,
-            64.0
-          ],
+          "range": [0.01, 64.0],
           "unit": "multiplier",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1119,10 +1095,7 @@
             "type": "scalar",
             "value": 0.0
           },
-          "range": [
-            -1.0,
-            1.0
-          ],
+          "range": [-1.0, 1.0],
           "unit": "cycles",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1135,10 +1108,7 @@
             "type": "scalar",
             "value": 100.0
           },
-          "range": [
-            0.0,
-            100.0
-          ],
+          "range": [0.0, 100.0],
           "unit": "percent",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1151,10 +1121,7 @@
             "type": "scalar",
             "value": 100.0
           },
-          "range": [
-            0.0,
-            100.0
-          ],
+          "range": [0.0, 100.0],
           "unit": "percent",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1167,10 +1134,7 @@
             "type": "scalar",
             "value": 1.0
           },
-          "range": [
-            0.0,
-            1.0
-          ],
+          "range": [0.0, 1.0],
           "unit": "normalized",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1207,10 +1171,7 @@
             "type": "scalar",
             "value": 0.0
           },
-          "range": [
-            -540.0,
-            540.0
-          ],
+          "range": [-540.0, 540.0],
           "unit": "degrees",
           "ui_hint": "angle",
           "automation": "continuous"
@@ -1223,10 +1184,7 @@
             "type": "scalar",
             "value": 0.0
           },
-          "range": [
-            -270.0,
-            270.0
-          ],
+          "range": [-270.0, 270.0],
           "unit": "degrees",
           "ui_hint": "angle",
           "automation": "continuous"
@@ -1292,10 +1250,7 @@
         "motion": "pulse",
         "colorfulness": 0.5,
         "strobe_risk": "none",
-        "required_attributes": [
-          "intensity",
-          "color.rgb"
-        ]
+        "required_attributes": ["intensity", "color.rgb"]
       }
     },
     {
@@ -1312,10 +1267,7 @@
             "type": "scalar",
             "value": 1.0
           },
-          "range": [
-            0.01,
-            64.0
-          ],
+          "range": [0.01, 64.0],
           "unit": "multiplier",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1328,10 +1280,7 @@
             "type": "scalar",
             "value": 0.0
           },
-          "range": [
-            -1.0,
-            1.0
-          ],
+          "range": [-1.0, 1.0],
           "unit": "cycles",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1344,10 +1293,7 @@
             "type": "scalar",
             "value": 100.0
           },
-          "range": [
-            0.0,
-            100.0
-          ],
+          "range": [0.0, 100.0],
           "unit": "percent",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1360,10 +1306,7 @@
             "type": "scalar",
             "value": 100.0
           },
-          "range": [
-            0.0,
-            100.0
-          ],
+          "range": [0.0, 100.0],
           "unit": "percent",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1376,10 +1319,7 @@
             "type": "scalar",
             "value": 1.0
           },
-          "range": [
-            0.0,
-            1.0
-          ],
+          "range": [0.0, 1.0],
           "unit": "normalized",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1416,10 +1356,7 @@
             "type": "scalar",
             "value": 0.0
           },
-          "range": [
-            -540.0,
-            540.0
-          ],
+          "range": [-540.0, 540.0],
           "unit": "degrees",
           "ui_hint": "angle",
           "automation": "continuous"
@@ -1432,10 +1369,7 @@
             "type": "scalar",
             "value": 0.0
           },
-          "range": [
-            -270.0,
-            270.0
-          ],
+          "range": [-270.0, 270.0],
           "unit": "degrees",
           "ui_hint": "angle",
           "automation": "continuous"
@@ -1501,10 +1435,7 @@
         "motion": "pulse",
         "colorfulness": 0.5,
         "strobe_risk": "none",
-        "required_attributes": [
-          "intensity",
-          "color.rgb"
-        ]
+        "required_attributes": ["intensity", "color.rgb"]
       }
     },
     {
@@ -1521,10 +1452,7 @@
             "type": "scalar",
             "value": 1.0
           },
-          "range": [
-            0.01,
-            64.0
-          ],
+          "range": [0.01, 64.0],
           "unit": "multiplier",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1537,10 +1465,7 @@
             "type": "scalar",
             "value": 0.0
           },
-          "range": [
-            -1.0,
-            1.0
-          ],
+          "range": [-1.0, 1.0],
           "unit": "cycles",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1553,10 +1478,7 @@
             "type": "scalar",
             "value": 100.0
           },
-          "range": [
-            0.0,
-            100.0
-          ],
+          "range": [0.0, 100.0],
           "unit": "percent",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1569,10 +1491,7 @@
             "type": "scalar",
             "value": 100.0
           },
-          "range": [
-            0.0,
-            100.0
-          ],
+          "range": [0.0, 100.0],
           "unit": "percent",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1585,10 +1504,7 @@
             "type": "scalar",
             "value": 1.0
           },
-          "range": [
-            0.0,
-            1.0
-          ],
+          "range": [0.0, 1.0],
           "unit": "normalized",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1625,10 +1541,7 @@
             "type": "scalar",
             "value": 0.0
           },
-          "range": [
-            -540.0,
-            540.0
-          ],
+          "range": [-540.0, 540.0],
           "unit": "degrees",
           "ui_hint": "angle",
           "automation": "continuous"
@@ -1641,10 +1554,7 @@
             "type": "scalar",
             "value": 0.0
           },
-          "range": [
-            -270.0,
-            270.0
-          ],
+          "range": [-270.0, 270.0],
           "unit": "degrees",
           "ui_hint": "angle",
           "automation": "continuous"
@@ -1710,10 +1620,7 @@
         "motion": "pulse",
         "colorfulness": 0.5,
         "strobe_risk": "none",
-        "required_attributes": [
-          "intensity",
-          "color.rgb"
-        ]
+        "required_attributes": ["intensity", "color.rgb"]
       }
     },
     {
@@ -1730,10 +1637,7 @@
             "type": "scalar",
             "value": 1.0
           },
-          "range": [
-            0.01,
-            64.0
-          ],
+          "range": [0.01, 64.0],
           "unit": "multiplier",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1746,10 +1650,7 @@
             "type": "scalar",
             "value": 0.0
           },
-          "range": [
-            -1.0,
-            1.0
-          ],
+          "range": [-1.0, 1.0],
           "unit": "cycles",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1762,10 +1663,7 @@
             "type": "scalar",
             "value": 100.0
           },
-          "range": [
-            0.0,
-            100.0
-          ],
+          "range": [0.0, 100.0],
           "unit": "percent",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1778,10 +1676,7 @@
             "type": "scalar",
             "value": 100.0
           },
-          "range": [
-            0.0,
-            100.0
-          ],
+          "range": [0.0, 100.0],
           "unit": "percent",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1794,10 +1689,7 @@
             "type": "scalar",
             "value": 1.0
           },
-          "range": [
-            0.0,
-            1.0
-          ],
+          "range": [0.0, 1.0],
           "unit": "normalized",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1834,10 +1726,7 @@
             "type": "scalar",
             "value": 0.0
           },
-          "range": [
-            -540.0,
-            540.0
-          ],
+          "range": [-540.0, 540.0],
           "unit": "degrees",
           "ui_hint": "angle",
           "automation": "continuous"
@@ -1850,10 +1739,7 @@
             "type": "scalar",
             "value": 0.0
           },
-          "range": [
-            -270.0,
-            270.0
-          ],
+          "range": [-270.0, 270.0],
           "unit": "degrees",
           "ui_hint": "angle",
           "automation": "continuous"
@@ -1919,10 +1805,7 @@
         "motion": "pulse",
         "colorfulness": 0.5,
         "strobe_risk": "none",
-        "required_attributes": [
-          "intensity",
-          "color.rgb"
-        ]
+        "required_attributes": ["intensity", "color.rgb"]
       }
     },
     {
@@ -1939,10 +1822,7 @@
             "type": "scalar",
             "value": 1.0
           },
-          "range": [
-            0.01,
-            64.0
-          ],
+          "range": [0.01, 64.0],
           "unit": "multiplier",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1955,10 +1835,7 @@
             "type": "scalar",
             "value": 0.0
           },
-          "range": [
-            -1.0,
-            1.0
-          ],
+          "range": [-1.0, 1.0],
           "unit": "cycles",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1971,10 +1848,7 @@
             "type": "scalar",
             "value": 100.0
           },
-          "range": [
-            0.0,
-            100.0
-          ],
+          "range": [0.0, 100.0],
           "unit": "percent",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1987,10 +1861,7 @@
             "type": "scalar",
             "value": 100.0
           },
-          "range": [
-            0.0,
-            100.0
-          ],
+          "range": [0.0, 100.0],
           "unit": "percent",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -2003,10 +1874,7 @@
             "type": "scalar",
             "value": 1.0
           },
-          "range": [
-            0.0,
-            1.0
-          ],
+          "range": [0.0, 1.0],
           "unit": "normalized",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -2043,10 +1911,7 @@
             "type": "scalar",
             "value": 0.0
           },
-          "range": [
-            -540.0,
-            540.0
-          ],
+          "range": [-540.0, 540.0],
           "unit": "degrees",
           "ui_hint": "angle",
           "automation": "continuous"
@@ -2059,10 +1924,7 @@
             "type": "scalar",
             "value": 0.0
           },
-          "range": [
-            -270.0,
-            270.0
-          ],
+          "range": [-270.0, 270.0],
           "unit": "degrees",
           "ui_hint": "angle",
           "automation": "continuous"
@@ -2128,10 +1990,7 @@
         "motion": "pulse",
         "colorfulness": 0.5,
         "strobe_risk": "none",
-        "required_attributes": [
-          "intensity",
-          "color.rgb"
-        ]
+        "required_attributes": ["intensity", "color.rgb"]
       }
     }
   ],
@@ -2258,25 +2117,6 @@
                 "interpolation": "ease_in_out"
               },
               {
-                "id": "keyframe-1-end",
-                "time_tick": 15360,
-                "value": {
-                  "type": "scalar",
-                  "value": 4.0
-                },
-                "interpolation": "hold"
-              }
-            ]
-          },
-          {
-            "id": "automation-2",
-            "target": {
-              "scope": "effect_instance",
-              "instance_id": "circle_ripple",
-              "parameter_id": "speed"
-            },
-            "keyframes": [
-              {
                 "id": "keyframe-2-start",
                 "time_tick": 15360,
                 "value": {
@@ -2313,25 +2153,6 @@
                 },
                 "interpolation": "linear"
               },
-              {
-                "id": "keyframe-3-end",
-                "time_tick": 15360,
-                "value": {
-                  "type": "color",
-                  "value": "#00ff00"
-                },
-                "interpolation": "hold"
-              }
-            ]
-          },
-          {
-            "id": "automation-4",
-            "target": {
-              "scope": "effect_instance",
-              "instance_id": "circle_ripple",
-              "parameter_id": "color"
-            },
-            "keyframes": [
               {
                 "id": "keyframe-4-start",
                 "time_tick": 15360,
@@ -2370,25 +2191,6 @@
                 "interpolation": "ease_out"
               },
               {
-                "id": "keyframe-6-end",
-                "time_tick": 17280,
-                "value": {
-                  "type": "scalar",
-                  "value": 2.0
-                },
-                "interpolation": "hold"
-              }
-            ]
-          },
-          {
-            "id": "automation-7",
-            "target": {
-              "scope": "effect_instance",
-              "instance_id": "tl_spread",
-              "parameter_id": "speed"
-            },
-            "keyframes": [
-              {
                 "id": "keyframe-7-start",
                 "time_tick": 17280,
                 "value": {
@@ -2425,25 +2227,6 @@
                 },
                 "interpolation": "ease_out"
               },
-              {
-                "id": "keyframe-9-end",
-                "time_tick": 19200,
-                "value": {
-                  "type": "scalar",
-                  "value": 2.0
-                },
-                "interpolation": "hold"
-              }
-            ]
-          },
-          {
-            "id": "automation-10",
-            "target": {
-              "scope": "effect_instance",
-              "instance_id": "tr_spread",
-              "parameter_id": "speed"
-            },
-            "keyframes": [
               {
                 "id": "keyframe-10-start",
                 "time_tick": 19200,
@@ -2482,25 +2265,6 @@
                 "interpolation": "ease_out"
               },
               {
-                "id": "keyframe-12-end",
-                "time_tick": 21120,
-                "value": {
-                  "type": "scalar",
-                  "value": 2.0
-                },
-                "interpolation": "hold"
-              }
-            ]
-          },
-          {
-            "id": "automation-13",
-            "target": {
-              "scope": "effect_instance",
-              "instance_id": "bl_spread",
-              "parameter_id": "speed"
-            },
-            "keyframes": [
-              {
                 "id": "keyframe-13-start",
                 "time_tick": 21120,
                 "value": {
@@ -2538,25 +2302,6 @@
                 "interpolation": "ease_out"
               },
               {
-                "id": "keyframe-15-end",
-                "time_tick": 23040,
-                "value": {
-                  "type": "scalar",
-                  "value": 2.0
-                },
-                "interpolation": "hold"
-              }
-            ]
-          },
-          {
-            "id": "automation-16",
-            "target": {
-              "scope": "effect_instance",
-              "instance_id": "br_spread",
-              "parameter_id": "speed"
-            },
-            "keyframes": [
-              {
                 "id": "keyframe-16-start",
                 "time_tick": 23040,
                 "value": {
@@ -2592,24 +2337,6 @@
                 },
                 "interpolation": "ease_in_out"
               },
-              {
-                "id": "keyframe-17-end",
-                "time_tick": 23040,
-                "value": {
-                  "type": "scalar",
-                  "value": 0.2
-                },
-                "interpolation": "hold"
-              }
-            ]
-          },
-          {
-            "id": "automation-18",
-            "target": {
-              "scope": "global",
-              "parameter_id": "master_dimmer"
-            },
-            "keyframes": [
               {
                 "id": "keyframe-18-start",
                 "time_tick": 23040,

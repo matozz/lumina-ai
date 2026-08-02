@@ -1,5 +1,5 @@
 use crate::compiler::{CompiledAutomationTarget, EffectInstanceHandle};
-use crate::document::{AnimatableValueDSL, DirectionDSL, ParameterValueDSL};
+use crate::document::{DirectionDSL, ParameterValueDSL};
 use crate::engine::color::{lerp_color_lab, parse_hex_color};
 use crate::engine::effect::ParameterHandle;
 use std::collections::HashMap;
@@ -12,15 +12,6 @@ pub enum AnimatableValue {
 }
 
 impl AnimatableValue {
-    pub fn from_document(value: &AnimatableValueDSL) -> Option<Self> {
-        let AnimatableValueDSL::Color(color) = value else {
-            return value.as_f64().map(Self::Float);
-        };
-        parse_hex_color(color)
-            .ok()
-            .map(|(red, green, blue)| Self::Color(red, green, blue))
-    }
-
     pub fn from_parameter_document(value: &ParameterValueDSL) -> Option<Self> {
         match value {
             ParameterValueDSL::Scalar(value) => Some(Self::Float(*value)),

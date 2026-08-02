@@ -286,3 +286,38 @@ fn reject_overlap_policy_fails_closed_without_rewriting_clips() {
         original_starts,
     );
 }
+
+#[test]
+fn rejects_multiple_automation_lanes_for_one_typed_target() {
+    let mut document = load_document(VALID_DOCUMENT)
+        .expect("valid source")
+        .document;
+    let lane = AutomationLaneDSL {
+        id: "master-a".to_string(),
+        target: AutomationTargetV3DSL::Global {
+            parameter_id: GlobalParameterDSL::MasterDimmer,
+        },
+        keyframes: vec![KeyframeDSL {
+            id: "master-a-0".to_string(),
+            time_tick: 0,
+            value: ParameterValueDSL::Scalar(1.0),
+            interpolation: KeyframeInterpolationDSL::Hold,
+            in_tangent: None,
+            out_tangent: None,
+        }],
+    };
+    let track = &mut document.timeline.as_mut().expect("timeline").tracks[0];
+    track.automation_lanes.push(lane.clone());
+    track.automation_lanes.push(AutomationLaneDSL {
+        id: "master-b".to_string(),
+        keyframes: vec![KeyframeDSL {
+            id: "master-b-0".to_string(),
+            ..lane.keyframes[0].clone()
+        }],
+        ..lane
+    });
+
+    assert!(compile_errors(document)
+        .iter()
+        .any(|diagnostic| diagnostic.code == DOC_TIMELINE_TARGET_INVALID));
+}

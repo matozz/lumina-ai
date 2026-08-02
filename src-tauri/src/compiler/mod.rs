@@ -2,6 +2,7 @@ pub mod diagnostic;
 pub mod parser;
 
 use crate::document::{DocumentValidator, ValidatedShow};
+use crate::engine::animation::AnimatableValue;
 use crate::engine::attribute::{resolve_attribute, AttributeHandle};
 use crate::engine::color::parse_hex_color;
 use crate::engine::effect::{
@@ -12,6 +13,7 @@ use crate::engine::effect::{
     ParameterHandle, ParameterUiHint, ParameterUnit, ParameterValue, ParameterValueType,
     SpatialBasis, StrobeRisk,
 };
+use crate::engine::musical_time::{MusicalTime, TempoMap, TempoPoint};
 use crate::engine::profile::{
     profile_by_handle, profile_handle_by_id, AttributeValue, FixtureProfileHandle,
     COLOR_RGB_ATTRIBUTE, INTENSITY_ATTRIBUTE, PAN_ATTRIBUTE, TILT_ATTRIBUTE,
@@ -145,31 +147,63 @@ impl CompiledGroup {
 
 #[derive(Clone, Debug)]
 pub struct CompiledTimeline {
-    pub events: Vec<CompiledTimelineEvent>,
+    pub ppq: u32,
+    pub tempo_map: TempoMap,
+    pub tracks: Vec<CompiledTimelineTrack>,
+    pub automation_lanes: Vec<CompiledAutomationLane>,
+    pub automation_index: HashMap<CompiledAutomationTarget, usize>,
 }
 
 #[derive(Clone, Debug)]
-pub struct CompiledTimelineEvent {
-    pub beat: f64,
-    pub duration: Option<f64>,
-    pub action: CompiledTimelineAction,
+pub struct CompiledTimelineTrack {
+    pub id: String,
+    pub overlap_policy: OverlapPolicyDSL,
+    pub clips: Vec<CompiledEffectClip>,
+    pub prefix_max_end: Vec<u64>,
 }
 
 #[derive(Clone, Debug)]
-pub enum CompiledTimelineAction {
-    Phaser {
-        phaser: EffectInstanceHandle,
-    },
-    Animate {
-        target: CompiledAutomationTarget,
-        from: AnimatableValueDSL,
-        to: AnimatableValueDSL,
-        easing: Option<EasingDSL>,
-    },
-    SetParameter {
-        target: CompiledAutomationTarget,
-        value: ParameterValueDSL,
-    },
+pub struct CompiledEffectClip {
+    pub id: String,
+    pub instance: EffectInstanceHandle,
+    pub start: MusicalTime,
+    pub duration_ticks: u64,
+    pub source_offset_ticks: u64,
+    pub playback: ClipPlaybackDSL,
+    pub layer: i32,
+    pub stable_order: u32,
+}
+
+impl CompiledEffectClip {
+    pub fn end(&self) -> MusicalTime {
+        self.start
+            .checked_add(self.duration_ticks)
+            .unwrap_or(MusicalTime::from_ticks(u64::MAX))
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct CompiledAutomationLane {
+    pub id: String,
+    pub target: CompiledAutomationTarget,
+    pub keyframes: Vec<CompiledKeyframe>,
+    pub stable_order: u32,
+}
+
+#[derive(Clone, Debug)]
+pub struct CompiledKeyframe {
+    pub id: String,
+    pub time: MusicalTime,
+    pub value: AnimatableValue,
+    pub interpolation: KeyframeInterpolationDSL,
+    pub in_tangent: Option<CompiledKeyframeTangent>,
+    pub out_tangent: Option<CompiledKeyframeTangent>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct CompiledKeyframeTangent {
+    pub time: f64,
+    pub value: f64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -757,105 +791,105 @@ impl Compiler {
         instances: &HashMap<String, EffectInstance>,
         errors: &mut Vec<Diagnostic>,
     ) -> CompiledTimeline {
-        let ppq = f64::from(timeline.ppq);
-        let mut events = Vec::new();
-        let mut automation_index = 0;
-        for track in timeline.tracks {
-            for clip in track.clips {
-                events.push(CompiledTimelineEvent {
-                    beat: f64::from(clip.start_tick) / ppq,
-                    duration: Some(f64::from(clip.duration_tick) / ppq),
-                    action: CompiledTimelineAction::Phaser {
-                        phaser: clip.instance_id.into(),
-                    },
-                });
-            }
-            for lane in track.automation_lanes {
-                let target = compile_automation_target(
-                    lane.target,
-                    definitions,
-                    instances,
-                    automation_index,
-                    errors,
-                );
-                automation_index += 1;
-                for pair in lane.keyframes.windows(2) {
-                    if matches!(pair[0].interpolation, KeyframeInterpolationDSL::Hold) {
-                        events.push(CompiledTimelineEvent {
-                            beat: f64::from(pair[0].time_tick) / ppq,
-                            duration: None,
-                            action: CompiledTimelineAction::SetParameter {
-                                target: target.clone(),
-                                value: pair[0].value.clone(),
-                            },
-                        });
-                        continue;
-                    }
-                    let Some((from, to)) = keyframe_animatable_pair(&pair[0].value, &pair[1].value)
-                    else {
-                        events.push(CompiledTimelineEvent {
-                            beat: f64::from(pair[0].time_tick) / ppq,
-                            duration: None,
-                            action: CompiledTimelineAction::SetParameter {
-                                target: target.clone(),
-                                value: pair[0].value.clone(),
-                            },
-                        });
-                        continue;
+        let ppq = timeline.ppq;
+        let tempo_points = timeline
+            .tempo_map
+            .points
+            .into_iter()
+            .map(|point| {
+                TempoPoint::from_bpm(
+                    MusicalTime::from_ticks(u64::from(point.time_tick)),
+                    point.bpm,
+                )
+                .expect("validated tempo point")
+            })
+            .collect();
+        let tempo_map = TempoMap::new(ppq, tempo_points).expect("validated tempo map");
+        let mut compiled_tracks = Vec::with_capacity(timeline.tracks.len());
+        let mut automation_lanes = Vec::new();
+        let mut automation_index = HashMap::new();
+        let mut clip_order = 0_u32;
+        let mut lane_order = 0_u32;
+
+        for (track_index, track) in timeline.tracks.into_iter().enumerate() {
+            let mut clips: Vec<_> = track
+                .clips
+                .into_iter()
+                .map(|clip| {
+                    let compiled = CompiledEffectClip {
+                        id: clip.id,
+                        instance: clip.instance_id.into(),
+                        start: MusicalTime::from_ticks(u64::from(clip.start_tick)),
+                        duration_ticks: u64::from(clip.duration_tick),
+                        source_offset_ticks: u64::from(clip.source_offset_tick),
+                        playback: clip.playback,
+                        layer: clip.layer,
+                        stable_order: clip_order,
                     };
-                    events.push(CompiledTimelineEvent {
-                        beat: f64::from(pair[0].time_tick) / ppq,
-                        duration: Some(f64::from(pair[1].time_tick - pair[0].time_tick) / ppq),
-                        action: CompiledTimelineAction::Animate {
-                            target: target.clone(),
-                            from,
-                            to,
-                            easing: Some(keyframe_easing(pair[0].interpolation)),
-                        },
-                    });
-                }
-                if let Some(last) = lane.keyframes.last() {
-                    events.push(CompiledTimelineEvent {
-                        beat: f64::from(last.time_tick) / ppq,
-                        duration: None,
-                        action: CompiledTimelineAction::SetParameter {
-                            target: target.clone(),
-                            value: last.value.clone(),
-                        },
-                    });
-                }
+                    clip_order = clip_order.saturating_add(1);
+                    compiled
+                })
+                .collect();
+            clips.sort_by_key(|clip| (clip.start, clip.layer, clip.stable_order));
+            let mut maximum_end = 0_u64;
+            let prefix_max_end = clips
+                .iter()
+                .map(|clip| {
+                    maximum_end = maximum_end.max(clip.end().ticks());
+                    maximum_end
+                })
+                .collect();
+
+            for (lane_index, lane) in track.automation_lanes.into_iter().enumerate() {
+                let path =
+                    format!("timeline.tracks[{track_index}].automation_lanes[{lane_index}].target");
+                let target =
+                    compile_automation_target(lane.target, definitions, instances, &path, errors);
+                let keyframes = lane
+                    .keyframes
+                    .into_iter()
+                    .map(|keyframe| CompiledKeyframe {
+                        id: keyframe.id,
+                        time: MusicalTime::from_ticks(u64::from(keyframe.time_tick)),
+                        value: AnimatableValue::from_parameter_document(&keyframe.value)
+                            .expect("validated typed keyframe"),
+                        interpolation: keyframe.interpolation,
+                        in_tangent: keyframe.in_tangent.map(|tangent| CompiledKeyframeTangent {
+                            time: tangent.time,
+                            value: tangent.value,
+                        }),
+                        out_tangent: keyframe.out_tangent.map(|tangent| CompiledKeyframeTangent {
+                            time: tangent.time,
+                            value: tangent.value,
+                        }),
+                    })
+                    .collect();
+                let compiled_lane = CompiledAutomationLane {
+                    id: lane.id,
+                    target: target.clone(),
+                    keyframes,
+                    stable_order: lane_order,
+                };
+                automation_index.insert(target, automation_lanes.len());
+                automation_lanes.push(compiled_lane);
+                lane_order = lane_order.saturating_add(1);
             }
+
+            compiled_tracks.push(CompiledTimelineTrack {
+                id: track.id,
+                overlap_policy: track.overlap_policy,
+                clips,
+                prefix_max_end,
+            });
         }
-        events.sort_by(|left, right| left.beat.total_cmp(&right.beat));
-        CompiledTimeline { events }
-    }
-}
 
-fn keyframe_animatable_pair(
-    from: &ParameterValueDSL,
-    to: &ParameterValueDSL,
-) -> Option<(AnimatableValueDSL, AnimatableValueDSL)> {
-    match (from, to) {
-        (ParameterValueDSL::Scalar(from), ParameterValueDSL::Scalar(to)) => Some((
-            AnimatableValueDSL::Float(*from),
-            AnimatableValueDSL::Float(*to),
-        )),
-        (ParameterValueDSL::Color(from), ParameterValueDSL::Color(to)) => Some((
-            AnimatableValueDSL::Color(from.clone()),
-            AnimatableValueDSL::Color(to.clone()),
-        )),
-        _ => None,
-    }
-}
-
-fn keyframe_easing(interpolation: KeyframeInterpolationDSL) -> EasingDSL {
-    match interpolation {
-        KeyframeInterpolationDSL::Hold
-        | KeyframeInterpolationDSL::Linear
-        | KeyframeInterpolationDSL::Bezier => EasingDSL::Linear,
-        KeyframeInterpolationDSL::EaseIn => EasingDSL::EaseIn,
-        KeyframeInterpolationDSL::EaseOut => EasingDSL::EaseOut,
-        KeyframeInterpolationDSL::EaseInOut => EasingDSL::EaseInOut,
+        CompiledTimeline {
+            ppq,
+            tempo_map,
+            tracks: compiled_tracks,
+            automation_lanes,
+            automation_index,
+        }
     }
 }
 
@@ -994,7 +1028,7 @@ fn compile_automation_target(
     target: AutomationTargetV3DSL,
     definitions: &[EffectDefinition],
     instances: &HashMap<String, EffectInstance>,
-    event_index: usize,
+    path: &str,
     errors: &mut Vec<Diagnostic>,
 ) -> CompiledAutomationTarget {
     match target {
@@ -1011,7 +1045,7 @@ fn compile_automation_target(
             let Some(parameter) = parameter else {
                 errors.push(Diagnostic::error(
                     DOC_PARAMETER_INVALID,
-                    format!("timeline.events[{event_index}].action.target"),
+                    path,
                     format!(
                         "Cannot resolve effect parameter {parameter_id:?} for instance {instance_id:?}."
                     ),
@@ -1707,7 +1741,9 @@ mod tests {
             .spatial_offsets
             .values()
             .any(|offsets| offsets == &[0.0, 1.0]));
-        assert_eq!(show.timeline.expect("compiled timeline").events.len(), 1);
+        let timeline = show.timeline.expect("compiled timeline");
+        assert_eq!(timeline.tracks.len(), 1);
+        assert_eq!(timeline.tracks[0].clips.len(), 1);
     }
 
     #[test]

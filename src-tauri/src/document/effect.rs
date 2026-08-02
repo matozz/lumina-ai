@@ -372,7 +372,7 @@ pub enum TimelineActionV3DSL {
     },
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, Hash)]
 #[serde(tag = "scope", rename_all = "snake_case", deny_unknown_fields)]
 pub enum AutomationTargetV3DSL {
     Global {

@@ -863,6 +863,7 @@ fn validate_timeline(
 
     let mut track_ids = HashSet::new();
     let mut item_ids = HashSet::new();
+    let mut automation_targets = HashSet::new();
     for (track_index, track) in timeline.tracks.iter().enumerate() {
         let track_path = format!("timeline.tracks[{track_index}]");
         if track.id.trim().is_empty() || !track_ids.insert(track.id.as_str()) {
@@ -938,6 +939,14 @@ fn validate_timeline(
                         lane.id
                     ),
                     "Use a stable unique clip or lane ID.",
+                ));
+            }
+            if !automation_targets.insert(&lane.target) {
+                diagnostics.push(Diagnostic::error(
+                    DOC_TIMELINE_TARGET_INVALID,
+                    format!("{path}.target"),
+                    "A typed automation target can be owned by only one AutomationLane.",
+                    "Merge the keyframes into one lane for this target.",
                 ));
             }
             let Some(expected) =
