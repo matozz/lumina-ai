@@ -1,8 +1,10 @@
-use lumina_ai_lib::compiler::{
-    parser::ShowDSL, CompiledGroup, CompiledPhaser, CompiledProfilePhaser, CompiledShow,
-    CompiledStep, Compiler, Fixture, PhaseConfig,
-};
+use lumina_ai_lib::compiler::{CompiledGroup, CompiledShow, Compiler, Fixture};
 use lumina_ai_lib::engine::attribute::{resolve_attribute, FixtureFrame};
+use lumina_ai_lib::engine::effect::{
+    common_parameters, CompiledEffectGraph, CompiledEffectNode, CompiledEffectStep,
+    CompiledProfileSequence, EffectCatalog, EffectDefinition, EffectDefinitionHandle,
+    EffectInstance, EffectNodeHandle, EffectSource,
+};
 use lumina_ai_lib::engine::profile::{
     profile_handle_by_id, AttributeValue, FixtureProfileHandle, COLOR_RGB_ATTRIBUTE,
     GENERIC_RGB_PROFILE_ID, INTENSITY_ATTRIBUTE,
@@ -166,30 +168,54 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
         sorted_fixture_ids: fixtures.iter().map(|fixture| fixture.id).collect(),
         blocks: vec![1; fixture_count],
     };
-    let phaser = CompiledPhaser {
-        id: "baseline".to_string(),
+    let definition = EffectDefinition {
+        id: "benchmark.baseline".to_string(),
         name: "Baseline".to_string(),
-        target: "all".to_string().into(),
-        multiplier: Some(1.0),
-        profile_steps: HashMap::from([(
-            profile,
-            profile_phaser(profile, vec![([255, 255, 255], 1.0, 100.0, 0.0)]),
-        )]),
-        phase: PhaseConfig::Spread { from: 0.0, to: 0.0 },
+        revision: 1,
+        source: EffectSource::ProjectLocal,
+        parameters: common_parameters(1.0),
+        graph: CompiledEffectGraph {
+            nodes: vec![
+                CompiledEffectNode::Time,
+                CompiledEffectNode::StepSequence {
+                    phase: EffectNodeHandle::from_index(0).expect("time handle"),
+                    profiles: HashMap::from([(
+                        profile,
+                        profile_sequence(profile, vec![([255, 255, 255], 1.0, 100.0, 0.0)]),
+                    )]),
+                },
+                CompiledEffectNode::AttributeWriter {
+                    input: EffectNodeHandle::from_index(1).expect("sequence handle"),
+                    mask: None,
+                    attributes: HashMap::new(),
+                },
+            ],
+            writers: vec![EffectNodeHandle::from_index(2).expect("writer handle")],
+        },
+        catalog: EffectCatalog::default(),
+    };
+    let instance = EffectInstance {
+        id: "baseline".to_string(),
+        definition: EffectDefinitionHandle::from_index(0),
+        target_group_id: "all".to_string(),
+        parameter_overrides: HashMap::new(),
+        seed: EffectInstance::stable_seed("baseline"),
+        spatial_offsets: HashMap::new(),
     };
 
     CompiledShow {
         fixtures,
         groups: HashMap::from([(group.id.clone(), group)]),
-        phasers: HashMap::from([(phaser.id.clone(), phaser)]),
+        effect_definitions: vec![definition],
+        effect_instances: HashMap::from([(instance.id.clone(), instance)]),
         ..CompiledShow::default()
     }
 }
 
-fn profile_phaser(
+fn profile_sequence(
     profile: FixtureProfileHandle,
     definitions: Vec<([u8; 3], f32, f64, f64)>,
-) -> CompiledProfilePhaser {
+) -> CompiledProfileSequence {
     let intensity = resolve_attribute(profile, INTENSITY_ATTRIBUTE);
     let color = resolve_attribute(profile, COLOR_RGB_ATTRIBUTE);
     let attribute_count = lumina_ai_lib::engine::profile::profile_by_handle(profile)
@@ -202,7 +228,7 @@ fn profile_phaser(
             values[intensity.expect("intensity").index()] =
                 Some(AttributeValue::Scalar(intensity_value));
             values[color.expect("color").index()] = Some(AttributeValue::Color(color_value));
-            CompiledStep {
+            CompiledEffectStep {
                 values,
                 width,
                 transition,
@@ -211,7 +237,7 @@ fn profile_phaser(
             }
         })
         .collect();
-    CompiledProfilePhaser {
+    CompiledProfileSequence {
         steps,
         intensity,
         color,
@@ -248,7 +274,9 @@ fn benchmark_templates(template_dir: &Path) -> TemplateCompileReport {
     for _ in 0..samples {
         let started = Instant::now();
         for source in &sources {
-            let dsl: ShowDSL = serde_json::from_str(source).expect("template must parse");
+            let dsl = lumina_ai_lib::document::load_document(source)
+                .expect("template must parse")
+                .document;
             let show = Compiler::compile_document(dsl).expect("template must compile");
             assert!(!show.fixtures.is_empty());
             black_box(show);

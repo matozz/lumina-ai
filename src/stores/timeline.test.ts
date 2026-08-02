@@ -10,23 +10,23 @@ describe("timeline store", () => {
     timelineActions.addEvent({
       beat: 4,
       duration: 2,
-      action: { type: "phaser", phaser: "pulse" },
+      action: { type: "effect", instance_id: "pulse" },
     });
     timelineActions.addEvent({
       beat: 8,
-      action: { type: "phaser", phaser: "chase" },
+      action: { type: "effect", instance_id: "chase" },
     });
 
     expect(useTimelineStore.getState().events).toEqual([
       {
         beat: 4,
         duration: 2,
-        action: { type: "phaser", phaser: "pulse" },
+        action: { type: "effect", instance_id: "pulse" },
         originalIndex: 0,
       },
       {
         beat: 8,
-        action: { type: "phaser", phaser: "chase" },
+        action: { type: "effect", instance_id: "chase" },
         originalIndex: 1,
       },
     ]);
@@ -36,7 +36,7 @@ describe("timeline store", () => {
     expect(useTimelineStore.getState().events).toEqual([
       {
         beat: 8,
-        action: { type: "phaser", phaser: "chase" },
+        action: { type: "effect", instance_id: "chase" },
         originalIndex: 1,
       },
     ]);

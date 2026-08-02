@@ -2,10 +2,11 @@ pub mod animation;
 pub mod attribute;
 pub mod clock;
 pub mod color;
+pub mod effect;
 pub mod frame;
 pub mod mixer;
+pub mod musical_time;
 pub mod output;
-pub mod phaser;
 pub mod profile;
 pub mod render;
 pub mod timeline;
@@ -23,9 +24,15 @@ pub fn compute_frame(
 ) -> Vec<FixtureFrame> {
     let resolved: Vec<_> = active_phasers
         .iter()
-        .map(|active| render::ResolvedPhaser {
+        .enumerate()
+        .map(|(index, active)| render::ResolvedPhaser {
+            source_id: active.id.clone(),
             instance: active.id.clone().into(),
             phase: active.accumulated_beat,
+            layer: 0,
+            weight: None,
+            activation_order: index as u64,
+            stable_source_order: u32::try_from(index).unwrap_or(u32::MAX),
         })
         .collect();
     render::render_resolved(compiled_show, &resolved, parameter_context)

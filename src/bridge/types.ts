@@ -1,9 +1,13 @@
-import type { AnimatableValueDSL, EasingDSL, ShowDocumentV2 } from "@/generated/show-document-v2";
+import type {
+  AutomationTargetV3DSL,
+  ShowDocumentV4,
+  TimelineV4DSL,
+} from "@/generated/show-document-v4";
 
 export type {
-  AnimatableValueDSL,
+  AutomationLaneDSL,
   CustomFixturePos,
-  EasingDSL,
+  ClipPlaybackDSL,
   FormulaDef,
   GeneratorDSL,
   GroupDSL,
@@ -12,22 +16,46 @@ export type {
   LayoutDSL,
   MetaDSL,
   PatchDSL,
-  PhaseConfigDSL,
-  PhaseGroupedDSL,
-  PhaserDSL,
+  AutomationTargetV3DSL,
+  EffectCatalogDSL,
+  EffectDefinitionDSL,
+  EffectGraphDSL,
+  EffectInstanceDSL,
+  EffectNodeDSL,
+  EffectPortDSL,
+  EffectPortRefDSL,
+  ParameterDefinitionDSL,
+  ParameterValueDSL,
   PhaserStepDSL,
-  PhaseSpreadDSL,
-  ShowDocumentV2,
+  EffectClipDSL,
+  KeyframeDSL,
+  KeyframeInterpolationDSL,
+  KeyframeTangentDSL,
+  OverlapPolicyDSL,
+  ShowDocumentV4,
   StepValuesDSL,
   SvgPathDef,
-  TimelineActionDefDSL,
-  TimelineDSL,
-  TimelineEventDSL,
-} from "@/generated/show-document-v2";
+  TempoMapDSL,
+  TempoPointDSL,
+  TimelineTrackDSL,
+  TimelineV4DSL,
+} from "@/generated/show-document-v4";
 
-export type FullDSL = ShowDocumentV2;
-export type FromTo = AnimatableValueDSL;
-export type Easing = EasingDSL;
+export type FullDSL = ShowDocumentV4;
+export type TimelineDSL = TimelineV4DSL;
+export type FromTo = number | string;
+export type Easing = "hold" | "linear" | "ease_in" | "ease_out" | "ease_in_out" | "bezier";
+export type TimelineActionDSL =
+  | { type: "effect"; instance_id: string }
+  | { type: "animate"; target: AutomationTargetV3DSL; from: FromTo; to: FromTo; easing?: Easing };
+export interface TimelineEventDSL {
+  id?: string;
+  beat: number;
+  duration?: number;
+  action: TimelineActionDSL;
+  source_track_id?: string;
+  source_item_id?: string;
+}
 
 export type AttributeValue =
   | { type: "scalar"; value: number }
@@ -88,7 +116,7 @@ export interface MigrationReport {
 }
 
 export interface LoadShowResult {
-  document: ShowDocumentV2;
+  document: ShowDocumentV4;
   migration_report: MigrationReport;
 }
 

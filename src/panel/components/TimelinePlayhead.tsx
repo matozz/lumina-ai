@@ -1,18 +1,43 @@
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { useEngineStore } from "@/stores/engine";
+import { BEAT_WIDTH } from "../context/TimelineContext";
 
 interface PlayheadProps {
-  playheadX: number;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
-export const TimelinePlayhead = (props: PlayheadProps) => {
-  const { playheadX } = props;
+export const TimelinePlayhead = ({ scrollRef }: PlayheadProps) => {
+  const playheadRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let previousBeat = Number.NaN;
+    const update = (beat: number) => {
+      if (beat === previousBeat) return;
+      previousBeat = beat;
+      const playheadX = beat * BEAT_WIDTH;
+      if (playheadRef.current) {
+        playheadRef.current.style.transform = `translate3d(${playheadX}px, 0, 0)`;
+      }
+      const container = scrollRef.current;
+      if (!container) return;
+      if (playheadX > container.scrollLeft + container.clientWidth - 100) {
+        container.scrollTo({ left: Math.max(0, playheadX - 100), behavior: "auto" });
+      } else if (playheadX < container.scrollLeft) {
+        container.scrollTo({ left: Math.max(0, playheadX - 100), behavior: "auto" });
+      }
+    };
+    update(useEngineStore.getState().globalBeat);
+    return useEngineStore.subscribe((state) => update(state.globalBeat));
+  }, [scrollRef]);
 
   return (
     <div
+      ref={playheadRef}
       className={cn(
-        "pointer-events-none absolute top-0 bottom-0 z-20 w-0.5 bg-red-500/90 transition-transform duration-75",
+        "pointer-events-none absolute top-0 bottom-0 left-0 z-20 w-0.5 bg-red-500/90 will-change-transform",
       )}
-      style={{ left: playheadX, boxShadow: "0 0 10px rgba(239, 68, 68, 0.4)" }}
+      style={{ boxShadow: "0 0 10px rgba(239, 68, 68, 0.4)" }}
     >
       <div
         className={cn(

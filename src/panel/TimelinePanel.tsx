@@ -1,11 +1,12 @@
-import { useRef, useEffect } from "react";
-import { useEngineStore, engineSelectors } from "@/stores/engine";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEngineStore, engineActions, engineSelectors } from "@/stores/engine";
 import { useTimelineStore, timelineActions, timelineSelectors } from "@/stores/timeline";
 import { cn } from "@/lib/utils";
 import { useTimelineEvents } from "./hooks/useTimelineEvents";
 import { useTimelineTracks } from "./hooks/useTimelineTracks";
 import { TimelineActionContext, BEAT_WIDTH } from "./context/TimelineContext";
 import { calculateTimelineDimensions } from "./utils";
+import { viewportFromScroll, type TimelineViewport } from "./virtualization";
 import {
   TimelineToolbar,
   TimelineResourcePanel,
@@ -16,30 +17,57 @@ import {
 } from "./components";
 
 export const TimelinePanel = () => {
-  const globalBeat = useEngineStore(engineSelectors.globalBeat);
   const compileResult = useEngineStore(engineSelectors.compileResult);
+  const canUndo = useEngineStore(engineSelectors.canUndo);
+  const canRedo = useEngineStore(engineSelectors.canRedo);
+  const isDocumentDirty = useEngineStore(engineSelectors.isDocumentDirty);
 
   const selectedPhaser = useTimelineStore(timelineSelectors.selectedPhaser);
   const expandedTracks = useTimelineStore(timelineSelectors.expandedTracks);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackHeadersScrollRef = useRef<HTMLDivElement>(null);
+  const [viewport, setViewport] = useState<TimelineViewport>({
+    startBeat: 0,
+    endBeat: 40,
+    visibleStartBeat: 0,
+    visibleEndBeat: 32,
+  });
 
   const {
+    document,
     timelineEvents,
-    moving,
-    setMoving,
-    resizing,
-    setResizing,
     interactionState,
+    startMoving,
+    startResizing,
     addEvent,
+    addAutomationLane,
     deleteEvent,
-    updateAnimationBlock,
+    nudgeEvent,
+    trimClipOverlaps,
+    replaceClipOverlaps,
+    addKeyframe,
+    moveKeyframes,
+    deleteKeyframes,
+    updateKeyframe,
   } = useTimelineEvents();
 
-  const tracks = useTimelineTracks(timelineEvents, moving, resizing);
+  const tracks = useTimelineTracks(timelineEvents);
+
+  const updateViewport = useCallback((container: HTMLDivElement) => {
+    const next = viewportFromScroll(container.scrollLeft, container.clientWidth, BEAT_WIDTH);
+    setViewport((current) =>
+      current.startBeat === next.startBeat &&
+      current.endBeat === next.endBeat &&
+      current.visibleStartBeat === next.visibleStartBeat &&
+      current.visibleEndBeat === next.visibleEndBeat
+        ? current
+        : next,
+    );
+  }, []);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    updateViewport(e.currentTarget);
     if (trackHeadersScrollRef.current) {
       // Prevent macOS elastic scroll bounce from causing negative scrollTop
       const target = e.currentTarget;
@@ -51,6 +79,15 @@ export const TimelinePanel = () => {
   };
 
   useEffect(() => {
+    const update = () => {
+      if (scrollRef.current) updateViewport(scrollRef.current);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [updateViewport]);
+
+  useEffect(() => {
     if (selectedPhaser && compileResult?.phasers) {
       if (!compileResult.phasers.some((p) => p.id === selectedPhaser)) {
         timelineActions.setSelectedPhaser(null);
@@ -60,79 +97,108 @@ export const TimelinePanel = () => {
     }
   }, [compileResult, selectedPhaser]);
 
-  const handleGridClick = (e: React.MouseEvent<HTMLDivElement>, _trackName: string) => {
-    if (interactionState.current.isInteracting) return;
-    if (!selectedPhaser) return;
+  const handleGridClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>, _trackName: string) => {
+      if (interactionState.current.isInteracting) return;
+      if (!selectedPhaser) return;
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const scrollLeft = scrollRef.current?.scrollLeft || 0;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const scrollLeft = scrollRef.current?.scrollLeft || 0;
 
-    const rawBeat = (x + scrollLeft) / BEAT_WIDTH;
-    const snappedBeat = Math.floor(rawBeat);
+      const rawBeat = (x + scrollLeft) / BEAT_WIDTH;
+      const snappedBeat = Math.floor(rawBeat);
 
-    addEvent({
-      beat: snappedBeat,
-      duration: 4,
-      action: { type: "phaser", phaser: selectedPhaser },
-    });
-  };
-
-  const timelineActionsValue = {
-    onDragStart: (e: React.PointerEvent, originalIndex: number, startBeat: number) => {
-      setMoving({
-        originalIndex,
-        startClientX: e.clientX,
-        startClientY: e.clientY,
-        startBeat,
-        currentDeltaX: 0,
-        currentDeltaY: 0,
-        activeTrackName: tracks.find((t) =>
-          t.events.some((ev) => ev.originalIndex === originalIndex),
-        )?.id,
+      addEvent({
+        beat: snappedBeat,
+        duration: 4,
+        action: { type: "effect", instance_id: selectedPhaser },
       });
     },
-    onResizeStart: (e: React.PointerEvent, originalIndex: number, startDuration: number) => {
-      setResizing({
-        originalIndex,
-        startClientX: e.clientX,
-        startDuration,
-        currentDeltaX: 0,
-      });
-    },
-    onDelete: deleteEvent,
-    onUpdateAnimation: updateAnimationBlock,
-    onGridClick: handleGridClick,
-  };
+    [addEvent, interactionState, selectedPhaser],
+  );
 
-  const {
-    totalBeats: TOTAL_BEATS,
-    scrollWidth: SCROLL_WIDTH,
-    playheadX,
-  } = calculateTimelineDimensions(tracks, globalBeat);
+  const timelineActionsValue = useMemo(
+    () => ({
+      onDragStart: (
+        e: React.PointerEvent,
+        originalIndex: number,
+        startBeat: number,
+        element: HTMLElement,
+      ) => {
+        startMoving(
+          originalIndex,
+          e.clientX,
+          e.clientY,
+          startBeat,
+          tracks.find((track) =>
+            track.events.some((event) => event.originalIndex === originalIndex),
+          )?.id,
+          element,
+        );
+      },
+      onResizeStart: (
+        e: React.PointerEvent,
+        originalIndex: number,
+        startDuration: number,
+        element: HTMLElement,
+      ) => startResizing(originalIndex, e.clientX, startDuration, element),
+      onDelete: deleteEvent,
+      onNudge: nudgeEvent,
+      onTrimClipOverlaps: trimClipOverlaps,
+      onReplaceClipOverlaps: replaceClipOverlaps,
+      onAddKeyframe: addKeyframe,
+      onMoveKeyframes: moveKeyframes,
+      onDeleteKeyframes: deleteKeyframes,
+      onUpdateKeyframe: updateKeyframe,
+      onGridClick: handleGridClick,
+    }),
+    [
+      deleteEvent,
+      deleteKeyframes,
+      handleGridClick,
+      addKeyframe,
+      moveKeyframes,
+      nudgeEvent,
+      replaceClipOverlaps,
+      startMoving,
+      startResizing,
+      tracks,
+      trimClipOverlaps,
+      updateKeyframe,
+    ],
+  );
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      const container = scrollRef.current;
-      const scrollLeft = container.scrollLeft;
-      const containerWidth = container.clientWidth;
-
-      // Auto-scroll when playhead moves out of view
-      if (playheadX > scrollLeft + containerWidth - 100) {
-        container.scrollTo({ left: Math.max(0, playheadX - 100), behavior: "auto" });
-      } else if (playheadX < scrollLeft) {
-        container.scrollTo({ left: Math.max(0, playheadX - 100), behavior: "auto" });
-      }
+  const handleHistoryKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!event.metaKey && !event.ctrlKey) return;
+    const key = event.key.toLowerCase();
+    if (key === "z") {
+      event.preventDefault();
+      if (event.shiftKey) engineActions.redoDocument();
+      else engineActions.undoDocument();
+    } else if (key === "y") {
+      event.preventDefault();
+      engineActions.redoDocument();
     }
-  }, [playheadX]);
+  };
+
+  const { scrollWidth: SCROLL_WIDTH } = calculateTimelineDimensions(tracks, 0);
 
   return (
     <div
+      tabIndex={0}
+      onKeyDown={handleHistoryKeyDown}
       className={cn(
         "relative z-20 flex h-96 shrink-0 flex-col border-t border-zinc-800 bg-zinc-950 shadow-[0_-8px_20px_rgba(0,0,0,0.5)] select-none",
       )}
     >
-      <TimelineToolbar globalBeat={globalBeat} />
+      <TimelineToolbar
+        canUndo={canUndo}
+        canRedo={canRedo}
+        isDirty={isDocumentDirty}
+        onUndo={engineActions.undoDocument}
+        onRedo={engineActions.redoDocument}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         <TimelineResourcePanel
@@ -143,11 +209,11 @@ export const TimelinePanel = () => {
 
         <TimelineTrackHeaders
           tracks={tracks}
-          activeTrackName={moving?.activeTrackName}
           scrollRef={trackHeadersScrollRef}
-          globalBeat={globalBeat}
           expandedTracks={expandedTracks}
           setExpandedTracks={timelineActions.setExpandedTracks}
+          document={document}
+          onAddAutomationLane={addAutomationLane}
         />
 
         <TimelineActionContext.Provider value={timelineActionsValue}>
@@ -157,7 +223,7 @@ export const TimelinePanel = () => {
             className="custom-scrollbar relative flex-1 overflow-x-auto overflow-y-auto overscroll-none bg-[#0a0a0c]"
           >
             <div style={{ width: SCROLL_WIDTH, height: "100%", position: "relative" }}>
-              <TimelineGrid totalBeats={TOTAL_BEATS} beatWidth={BEAT_WIDTH} />
+              <TimelineGrid beatWidth={BEAT_WIDTH} viewport={viewport} />
 
               <div className="relative z-0 flex flex-col">
                 {tracks.map((t) => (
@@ -166,6 +232,7 @@ export const TimelinePanel = () => {
                     track={t}
                     isExpanded={expandedTracks[t.name]}
                     selectedPhaser={selectedPhaser}
+                    viewport={viewport}
                   />
                 ))}
                 {/* Spacer matching the extra padding in TrackHeaders */}
@@ -180,7 +247,7 @@ export const TimelinePanel = () => {
                 />
               </div>
 
-              <TimelinePlayhead playheadX={playheadX} />
+              <TimelinePlayhead scrollRef={scrollRef} />
             </div>
           </div>
         </TimelineActionContext.Provider>

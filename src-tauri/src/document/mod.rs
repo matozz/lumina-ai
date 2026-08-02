@@ -5,11 +5,15 @@ use crate::compiler::diagnostic::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+mod effect;
+mod timeline;
 mod validation;
 
+pub use effect::*;
+pub use timeline::*;
 pub use validation::{DocumentValidator, ValidatedShow};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 2;
+pub const CURRENT_SCHEMA_VERSION: u32 = 4;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(deny_unknown_fields)]
@@ -37,6 +41,36 @@ pub struct ShowDocumentV2 {
     pub phasers: Vec<PhaserDSL>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timeline: Option<TimelineDSL>,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ShowDocumentV3 {
+    #[schemars(range(min = 3, max = 3))]
+    pub schema_version: u32,
+    pub meta: MetaDSL,
+    pub patch: Vec<PatchDSL>,
+    pub layout: LayoutDSL,
+    pub groups: Vec<GroupDSL>,
+    pub effect_definitions: Vec<EffectDefinitionDSL>,
+    pub effect_instances: Vec<EffectInstanceDSL>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeline: Option<TimelineV3DSL>,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ShowDocumentV4 {
+    #[schemars(range(min = 4, max = 4))]
+    pub schema_version: u32,
+    pub meta: MetaDSL,
+    pub patch: Vec<PatchDSL>,
+    pub layout: LayoutDSL,
+    pub groups: Vec<GroupDSL>,
+    pub effect_definitions: Vec<EffectDefinitionDSL>,
+    pub effect_instances: Vec<EffectInstanceDSL>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeline: Option<TimelineV4DSL>,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
@@ -345,7 +379,7 @@ pub enum AutomationTargetDSL {
     },
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum GlobalParameterDSL {
     MasterDimmer,
@@ -413,7 +447,7 @@ pub struct MigrationReport {
 
 #[derive(Debug, Clone)]
 pub struct LoadedDocument {
-    pub document: ShowDocumentV2,
+    pub document: ShowDocumentV4,
     pub migration_report: MigrationReport,
 }
 
@@ -429,7 +463,7 @@ pub fn load_document(source: &str) -> Result<LoadedDocument, Diagnostic> {
             DOC_SCHEMA_INVALID,
             "$",
             error.to_string(),
-            "Update the document to match the generated ShowDocumentV2 schema.",
+            "Update the document to match the generated ShowDocumentV4 schema.",
         )
     })?;
 
@@ -471,6 +505,14 @@ pub fn migrate_document(
         migrate_fixture_profiles(&mut value, &mut changes)?;
         migrated_version = 2;
     }
+    if migrated_version == 2 {
+        migrate_phasers_to_effects(&mut value, &mut changes)?;
+        migrated_version = 3;
+    }
+    if migrated_version == 3 {
+        migrate_timeline_to_arrangement(&mut value, &mut changes)?;
+        migrated_version = 4;
+    }
     if migrated_version != CURRENT_SCHEMA_VERSION {
         return Err(unsupported_schema_version(migrated_version));
     }
@@ -483,6 +525,578 @@ pub fn migrate_document(
             changes,
         },
     ))
+}
+
+fn migrate_timeline_to_arrangement(
+    value: &mut serde_json::Value,
+    changes: &mut Vec<MigrationChange>,
+) -> Result<(), Diagnostic> {
+    let object = value
+        .as_object_mut()
+        .ok_or_else(top_level_object_diagnostic)?;
+    let timeline = object.remove("timeline");
+    if let Some(timeline) = timeline {
+        let events = timeline
+            .get("events")
+            .and_then(serde_json::Value::as_array)
+            .ok_or_else(|| {
+                Diagnostic::error(
+                    DOC_SCHEMA_INVALID,
+                    "timeline.events",
+                    "V3 timeline events must be an array.",
+                    "Repair the V3 timeline before migrating it to tracks and clips.",
+                )
+            })?;
+        let mut clips = Vec::new();
+        let mut lanes: Vec<serde_json::Value> = Vec::new();
+        for (index, event) in events.iter().enumerate() {
+            let beat = event
+                .get("beat")
+                .and_then(serde_json::Value::as_f64)
+                .unwrap_or(0.0);
+            let start_tick =
+                quantize_v3_beat(beat, format!("timeline.events[{index}].beat"), changes);
+            let duration = event.get("duration").and_then(serde_json::Value::as_f64);
+            let action = event
+                .get("action")
+                .and_then(serde_json::Value::as_object)
+                .ok_or_else(|| {
+                    Diagnostic::error(
+                        DOC_SCHEMA_INVALID,
+                        format!("timeline.events[{index}].action"),
+                        "V3 timeline action must be an object.",
+                        "Repair the V3 action before migration.",
+                    )
+                })?;
+            match action.get("type").and_then(serde_json::Value::as_str) {
+                Some("effect") => {
+                    let instance_id = action
+                        .get("instance_id")
+                        .and_then(serde_json::Value::as_str)
+                        .ok_or_else(|| {
+                            Diagnostic::error(
+                                DOC_SCHEMA_INVALID,
+                                format!("timeline.events[{index}].action.instance_id"),
+                                "V3 effect action requires instance_id.",
+                                "Repair the V3 action before migration.",
+                            )
+                        })?;
+                    let duration_tick = duration.map_or_else(
+                        || u32::MAX.saturating_sub(start_tick).max(1),
+                        |duration| {
+                            quantize_v3_beat(
+                                duration,
+                                format!("timeline.events[{index}].duration"),
+                                changes,
+                            )
+                            .max(1)
+                        },
+                    );
+                    clips.push(serde_json::json!({
+                        "id": format!("clip-{index}"),
+                        "instance_id": instance_id,
+                        "start_tick": start_tick,
+                        "duration_tick": duration_tick,
+                        "source_offset_tick": 0,
+                        "playback": "once",
+                        "layer": i32::try_from(index).unwrap_or(i32::MAX)
+                    }));
+                }
+                Some("animate") => {
+                    let target = action.get("target").cloned().ok_or_else(|| {
+                        Diagnostic::error(
+                            DOC_SCHEMA_INVALID,
+                            format!("timeline.events[{index}].action.target"),
+                            "V3 animate action requires a target.",
+                            "Repair the V3 action before migration.",
+                        )
+                    })?;
+                    let from = migrate_animatable_value(
+                        action.get("from"),
+                        format!("timeline.events[{index}].action.from"),
+                    )?;
+                    let to = migrate_animatable_value(
+                        action.get("to"),
+                        format!("timeline.events[{index}].action.to"),
+                    )?;
+                    let interpolation = action
+                        .get("easing")
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("linear");
+                    let mut keyframes = Vec::new();
+                    if let Some(duration) = duration {
+                        let duration_tick = quantize_v3_beat(
+                            duration,
+                            format!("timeline.events[{index}].duration"),
+                            changes,
+                        )
+                        .max(1);
+                        keyframes.push(serde_json::json!({
+                            "id": format!("keyframe-{index}-start"),
+                            "time_tick": start_tick,
+                            "value": from,
+                            "interpolation": interpolation
+                        }));
+                        keyframes.push(serde_json::json!({
+                            "id": format!("keyframe-{index}-end"),
+                            "time_tick": start_tick.saturating_add(duration_tick),
+                            "value": to,
+                            "interpolation": "hold"
+                        }));
+                    } else {
+                        keyframes.push(serde_json::json!({
+                            "id": format!("keyframe-{index}"),
+                            "time_tick": start_tick,
+                            "value": to,
+                            "interpolation": "hold"
+                        }));
+                    }
+                    if let Some(existing) = lanes
+                        .iter_mut()
+                        .find(|lane| lane.get("target") == Some(&target))
+                    {
+                        existing
+                            .get_mut("keyframes")
+                            .and_then(serde_json::Value::as_array_mut)
+                            .expect("migrated lane keyframes")
+                            .extend(keyframes);
+                        changes.push(MigrationChange {
+                            code: "MIGRATION_MERGE_AUTOMATION_LANE".to_string(),
+                            path: format!("timeline.events[{index}].action.target"),
+                            message: "Merged sequential V3 automation events into one typed lane."
+                                .to_string(),
+                        });
+                    } else {
+                        lanes.push(serde_json::json!({
+                            "id": format!("automation-{index}"),
+                            "target": target,
+                            "keyframes": keyframes
+                        }));
+                    }
+                }
+                _ => {
+                    return Err(Diagnostic::error(
+                        DOC_SCHEMA_INVALID,
+                        format!("timeline.events[{index}].action.type"),
+                        "V3 timeline action has an unsupported type.",
+                        "Use effect or animate before migration.",
+                    ));
+                }
+            }
+        }
+        for lane in &mut lanes {
+            let keyframes = lane
+                .get_mut("keyframes")
+                .and_then(serde_json::Value::as_array_mut)
+                .expect("migrated lane keyframes");
+            keyframes.sort_by_key(|keyframe| {
+                keyframe
+                    .get("time_tick")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or(0)
+            });
+            let mut deduplicated: Vec<serde_json::Value> = Vec::with_capacity(keyframes.len());
+            for keyframe in keyframes.drain(..) {
+                let time_tick = keyframe
+                    .get("time_tick")
+                    .and_then(serde_json::Value::as_u64);
+                if deduplicated.last().and_then(|previous| {
+                    previous
+                        .get("time_tick")
+                        .and_then(serde_json::Value::as_u64)
+                }) == time_tick
+                {
+                    deduplicated.pop();
+                }
+                deduplicated.push(keyframe);
+            }
+            *keyframes = deduplicated;
+        }
+        let mut tracks = Vec::new();
+        if !clips.is_empty() {
+            tracks.push(serde_json::json!({
+                "id": "effects",
+                "name": "Effects",
+                "overlap_policy": "layer",
+                "clips": clips,
+                "automation_lanes": []
+            }));
+        }
+        if !lanes.is_empty() {
+            tracks.push(serde_json::json!({
+                "id": "automation",
+                "name": "Automation",
+                "overlap_policy": "layer",
+                "clips": [],
+                "automation_lanes": lanes
+            }));
+        }
+        object.insert(
+            "timeline".to_string(),
+            serde_json::json!({
+                "ppq": DOCUMENT_DEFAULT_PPQ,
+                "tempo_map": { "points": [{ "time_tick": 0, "bpm": 120.0 }] },
+                "tracks": tracks
+            }),
+        );
+        changes.push(MigrationChange {
+            code: "MIGRATION_TIMELINE_V3_TO_V4".to_string(),
+            path: "timeline".to_string(),
+            message: "Converted V3 events to integer EffectClips and AutomationLanes.".to_string(),
+        });
+    }
+    object.insert("schema_version".to_string(), serde_json::Value::from(4));
+    changes.push(MigrationChange {
+        code: "MIGRATION_SCHEMA_V3_TO_V4".to_string(),
+        path: "schema_version".to_string(),
+        message: "Upgraded the show document from schema version 3 to 4.".to_string(),
+    });
+    Ok(())
+}
+
+fn quantize_v3_beat(beat: f64, path: String, changes: &mut Vec<MigrationChange>) -> u32 {
+    let raw = beat.max(0.0) * f64::from(DOCUMENT_DEFAULT_PPQ);
+    let tick = raw.round().clamp(0.0, f64::from(u32::MAX)) as u32;
+    if (raw - f64::from(tick)).abs() > 1e-9 {
+        changes.push(MigrationChange {
+            code: "MIGRATION_QUANTIZE_MUSICAL_TIME".to_string(),
+            path,
+            message: format!("Quantized beat {beat} to integer tick {tick}."),
+        });
+    }
+    tick
+}
+
+fn migrate_animatable_value(
+    value: Option<&serde_json::Value>,
+    path: String,
+) -> Result<serde_json::Value, Diagnostic> {
+    match value {
+        Some(serde_json::Value::Number(number)) => Ok(serde_json::json!({
+            "type": "scalar",
+            "value": number
+        })),
+        Some(serde_json::Value::String(color)) => Ok(serde_json::json!({
+            "type": "color",
+            "value": color
+        })),
+        _ => Err(Diagnostic::error(
+            DOC_SCHEMA_INVALID,
+            path,
+            "V3 animation value must be a finite number or color string.",
+            "Repair the animation value before migration.",
+        )),
+    }
+}
+
+fn migrate_phasers_to_effects(
+    value: &mut serde_json::Value,
+    changes: &mut Vec<MigrationChange>,
+) -> Result<(), Diagnostic> {
+    let object = value
+        .as_object_mut()
+        .ok_or_else(top_level_object_diagnostic)?;
+    let phasers = object
+        .remove("phasers")
+        .and_then(|value| value.as_array().cloned())
+        .ok_or_else(|| {
+            Diagnostic::error(
+                DOC_SCHEMA_INVALID,
+                "phasers",
+                "V2 phasers must be an array.",
+                "Repair the V2 document before migrating it to EffectDefinition/Instance.",
+            )
+        })?;
+
+    let mut definitions = Vec::with_capacity(phasers.len());
+    let mut instances = Vec::with_capacity(phasers.len());
+    for (index, phaser) in phasers.iter().enumerate() {
+        let phaser = phaser.as_object().ok_or_else(|| {
+            Diagnostic::error(
+                DOC_SCHEMA_INVALID,
+                format!("phasers[{index}]"),
+                "V2 phaser must be an object.",
+                "Repair the V2 phaser before migration.",
+            )
+        })?;
+        let string_field = |field: &str| {
+            phaser
+                .get(field)
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned)
+                .ok_or_else(|| {
+                    Diagnostic::error(
+                        DOC_SCHEMA_INVALID,
+                        format!("phasers[{index}].{field}"),
+                        format!("V2 phaser {field} must be a string."),
+                        "Repair the V2 phaser before migration.",
+                    )
+                })
+        };
+        let id = string_field("id")?;
+        let name = string_field("name")?;
+        let target = string_field("target")?;
+        let definition_id = format!("legacy.{id}");
+        let speed = phaser
+            .get("multiplier")
+            .and_then(serde_json::Value::as_f64)
+            .unwrap_or(1.0);
+        let steps = phaser
+            .get("steps")
+            .cloned()
+            .unwrap_or_else(|| serde_json::Value::Array(Vec::new()));
+        let position_behavior_changed = steps.as_array().is_some_and(|steps| {
+            steps.iter().any(|step| {
+                step.get("values").is_some_and(|values| {
+                    values.get("pan").is_some() || values.get("tilt").is_some()
+                })
+            })
+        });
+        let phase = phaser.get("phase").and_then(serde_json::Value::as_object);
+        let (from, to, group_size) = match phase
+            .and_then(|phase| phase.get("mode"))
+            .and_then(serde_json::Value::as_str)
+        {
+            Some("grouped") => {
+                let grouped = phase
+                    .and_then(|phase| phase.get("grouped"))
+                    .and_then(serde_json::Value::as_object);
+                let spread = grouped
+                    .and_then(|grouped| grouped.get("spread"))
+                    .and_then(serde_json::Value::as_array);
+                (
+                    spread
+                        .and_then(|spread| spread.first())
+                        .and_then(serde_json::Value::as_f64)
+                        .unwrap_or(0.0)
+                        / 100.0,
+                    spread
+                        .and_then(|spread| spread.get(1))
+                        .and_then(serde_json::Value::as_f64)
+                        .unwrap_or(0.0)
+                        / 100.0,
+                    grouped
+                        .and_then(|grouped| grouped.get("group_size"))
+                        .and_then(serde_json::Value::as_u64),
+                )
+            }
+            _ => {
+                let spread = phase
+                    .and_then(|phase| phase.get("spread"))
+                    .and_then(serde_json::Value::as_object);
+                (
+                    spread
+                        .and_then(|spread| spread.get("from"))
+                        .and_then(serde_json::Value::as_f64)
+                        .unwrap_or(0.0)
+                        / 100.0,
+                    spread
+                        .and_then(|spread| spread.get("to"))
+                        .and_then(serde_json::Value::as_f64)
+                        .unwrap_or(0.0)
+                        / 100.0,
+                    None,
+                )
+            }
+        };
+        let required_attributes = migrated_required_attributes(&steps);
+
+        definitions.push(serde_json::json!({
+            "id": definition_id,
+            "name": name,
+            "revision": 1,
+            "source": "project_local",
+            "parameters": migrated_common_parameters(speed),
+            "graph": { "nodes": [
+                { "type": "time", "id": "time" },
+                {
+                    "type": "spatial_phase",
+                    "id": "spatial",
+                    "input": { "node_id": "time", "port": "scalar" },
+                    "basis": "index",
+                    "from": from,
+                    "to": to,
+                    "wrap": true,
+                    "group_size": group_size
+                },
+                {
+                    "type": "step_sequence",
+                    "id": "sequence",
+                    "phase": { "node_id": "spatial", "port": "scalar" },
+                    "steps": steps
+                },
+                {
+                    "type": "attribute_writer",
+                    "id": "output",
+                    "input": { "node_id": "sequence", "port": "attribute_set" },
+                    "mask": null
+                }
+            ]},
+            "catalog": {
+                "mood": [],
+                "energy": 0.5,
+                "density": 0.5,
+                "motion": "pulse",
+                "colorfulness": 0.5,
+                "strobe_risk": "none",
+                "required_attributes": required_attributes
+            }
+        }));
+        instances.push(serde_json::json!({
+            "id": id,
+            "definition_id": format!("legacy.{id}"),
+            "definition_revision": 1,
+            "target_group_id": target,
+            "parameter_overrides": {},
+            "seed": format!("{:016x}", crate::engine::effect::EffectInstance::stable_seed(&id))
+        }));
+        changes.push(MigrationChange {
+            code: "MIGRATION_PHASER_TO_EFFECT".to_string(),
+            path: format!("effect_instances[{index}]"),
+            message: format!("Converted Phaser {id:?} to EffectDefinition/Instance."),
+        });
+        if position_behavior_changed {
+            changes.push(MigrationChange {
+                code: "MIGRATION_ENABLE_POSITION_ATTRIBUTES".to_string(),
+                path: format!("effect_definitions[{index}].graph"),
+                message: format!(
+                    "Phaser {id:?} pan/tilt values now write typed position attributes; older runtimes ignored them."
+                ),
+            });
+        }
+    }
+
+    object.insert(
+        "effect_definitions".to_string(),
+        serde_json::Value::Array(definitions),
+    );
+    object.insert(
+        "effect_instances".to_string(),
+        serde_json::Value::Array(instances),
+    );
+    migrate_v2_timeline_to_effects(object, changes);
+    object.insert("schema_version".to_string(), serde_json::Value::from(3));
+    changes.push(MigrationChange {
+        code: "MIGRATION_SCHEMA_V2_TO_V3".to_string(),
+        path: "schema_version".to_string(),
+        message: "Upgraded the show document from schema version 2 to 3.".to_string(),
+    });
+    Ok(())
+}
+
+fn migrated_common_parameters(speed: f64) -> serde_json::Value {
+    serde_json::json!([
+        migrated_scalar_parameter("speed", "Speed", speed, [0.01, 64.0], "multiplier", "slider"),
+        migrated_scalar_parameter("phase", "Phase", 0.0, [-1.0, 1.0], "cycles", "slider"),
+        migrated_scalar_parameter("width", "Width", 100.0, [0.0, 100.0], "percent", "slider"),
+        migrated_scalar_parameter("transition", "Transition", 100.0, [0.0, 100.0], "percent", "slider"),
+        migrated_scalar_parameter("intensity", "Intensity", 1.0, [0.0, 1.0], "normalized", "slider"),
+        {
+            "id": "color", "name": "Color", "value_type": "color",
+            "default_value": { "type": "color", "value": "#ffffff" },
+            "unit": "color", "ui_hint": "color", "automation": "continuous"
+        },
+        {
+            "id": "direction", "name": "Direction", "value_type": "direction",
+            "default_value": { "type": "direction", "value": "forward" },
+            "unit": "direction", "ui_hint": "segmented", "automation": "discrete"
+        },
+        migrated_scalar_parameter("pan", "Pan", 0.0, [-540.0, 540.0], "degrees", "angle"),
+        migrated_scalar_parameter("tilt", "Tilt", 0.0, [-270.0, 270.0], "degrees", "angle")
+    ])
+}
+
+fn migrated_scalar_parameter(
+    id: &str,
+    name: &str,
+    default_value: f64,
+    range: [f64; 2],
+    unit: &str,
+    ui_hint: &str,
+) -> serde_json::Value {
+    serde_json::json!({
+        "id": id,
+        "name": name,
+        "value_type": "scalar",
+        "default_value": { "type": "scalar", "value": default_value },
+        "range": range,
+        "unit": unit,
+        "ui_hint": ui_hint,
+        "automation": "continuous"
+    })
+}
+
+fn migrated_required_attributes(steps: &serde_json::Value) -> Vec<&'static str> {
+    let mut attributes = vec!["intensity", "color.rgb"];
+    for values in steps
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|step| step.get("values").and_then(serde_json::Value::as_object))
+    {
+        if values.contains_key("pan") && !attributes.contains(&"position.pan") {
+            attributes.push("position.pan");
+        }
+        if values.contains_key("tilt") && !attributes.contains(&"position.tilt") {
+            attributes.push("position.tilt");
+        }
+    }
+    attributes
+}
+
+fn migrate_v2_timeline_to_effects(
+    object: &mut serde_json::Map<String, serde_json::Value>,
+    changes: &mut Vec<MigrationChange>,
+) {
+    let Some(events) = object
+        .get_mut("timeline")
+        .and_then(|timeline| timeline.get_mut("events"))
+        .and_then(serde_json::Value::as_array_mut)
+    else {
+        return;
+    };
+    for (index, event) in events.iter_mut().enumerate() {
+        let Some(action) = event
+            .get_mut("action")
+            .and_then(serde_json::Value::as_object_mut)
+        else {
+            continue;
+        };
+        match action.get("type").and_then(serde_json::Value::as_str) {
+            Some("phaser") => {
+                if let Some(instance_id) = action.remove("phaser") {
+                    action.insert(
+                        "type".to_string(),
+                        serde_json::Value::String("effect".to_string()),
+                    );
+                    action.insert("instance_id".to_string(), instance_id);
+                    changes.push(MigrationChange {
+                        code: "MIGRATION_TIMELINE_EFFECT_REFERENCE".to_string(),
+                        path: format!("timeline.events[{index}].action"),
+                        message: "Converted Phaser action to EffectInstance reference.".to_string(),
+                    });
+                }
+            }
+            Some("animate") => {
+                let Some(parameter) = action
+                    .get_mut("target")
+                    .and_then(serde_json::Value::as_object_mut)
+                    .and_then(|target| target.get_mut("parameter_id"))
+                else {
+                    continue;
+                };
+                let mapped = match parameter.as_str() {
+                    Some("multiplier") => Some("speed"),
+                    Some("dimmer") => Some("intensity"),
+                    _ => None,
+                };
+                if let Some(mapped) = mapped {
+                    *parameter = serde_json::Value::String(mapped.to_string());
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 fn migrate_fixture_profiles(
@@ -787,7 +1401,7 @@ fn validate_phase_shapes(value: &serde_json::Value) -> Result<(), Diagnostic> {
 
 #[cfg(test)]
 mod tests {
-    use super::{load_document, AutomationTargetDSL, TimelineActionDefDSL, CURRENT_SCHEMA_VERSION};
+    use super::{load_document, AutomationTargetV3DSL, CURRENT_SCHEMA_VERSION};
     use crate::compiler::diagnostic::{DOC_SCHEMA_INVALID, DOC_UNSUPPORTED_SCHEMA_VERSION};
 
     const LEGACY_DOCUMENT: &str = r#"{
@@ -804,7 +1418,7 @@ mod tests {
 
         assert_eq!(loaded.document.schema_version, CURRENT_SCHEMA_VERSION);
         assert_eq!(loaded.migration_report.from_version, None);
-        assert_eq!(loaded.migration_report.changes.len(), 2);
+        assert_eq!(loaded.migration_report.changes.len(), 4);
         assert_eq!(
             loaded.migration_report.changes[0].code,
             "MIGRATION_ADD_SCHEMA_VERSION"
@@ -834,12 +1448,10 @@ mod tests {
 
     #[test]
     fn does_not_repair_a_malformed_current_version() {
-        let source = LEGACY_DOCUMENT
-            .replacen('{', "{\"schema_version\": 2,", 1)
-            .replace(
-                "\"groups\": []",
-                "\"groups\": [{ \"name\": \"Missing ID\", \"fixtures\": [] }]",
-            );
+        let loaded = load_document(LEGACY_DOCUMENT).expect("baseline migration");
+        let mut value = serde_json::to_value(loaded.document).expect("document JSON");
+        value["groups"] = serde_json::json!([{ "name": "Missing ID", "fixtures": [] }]);
+        let source = serde_json::to_string(&value).expect("malformed current document");
         let error = load_document(&source).expect_err("current versions must match their schema");
 
         assert_eq!(error.code, DOC_SCHEMA_INVALID);
@@ -853,15 +1465,10 @@ mod tests {
             "\"phasers\": [], \"timeline\": { \"events\": [{ \"beat\": 0, \"duration\": 1, \"action\": { \"type\": \"animate\", \"target\": \"global.master_dimmer\", \"from\": 0, \"to\": 1 } }] }",
         );
         let loaded = load_document(&source).expect("legacy target migrates");
-        let event = &loaded.document.timeline.as_ref().expect("timeline").events[0];
+        let lane =
+            &loaded.document.timeline.as_ref().expect("timeline").tracks[0].automation_lanes[0];
 
-        assert!(matches!(
-            &event.action,
-            TimelineActionDefDSL::Animate {
-                target: AutomationTargetDSL::Global { .. },
-                ..
-            }
-        ));
+        assert!(matches!(&lane.target, AutomationTargetV3DSL::Global { .. }));
         assert!(loaded
             .migration_report
             .changes
@@ -879,7 +1486,7 @@ mod tests {
             );
         let loaded = load_document(&source).expect("V1 fixture types migrate");
 
-        assert_eq!(loaded.document.schema_version, 2);
+        assert_eq!(loaded.document.schema_version, CURRENT_SCHEMA_VERSION);
         assert_eq!(loaded.document.patch[0].profile_id, "generic-rgb");
         assert_eq!(loaded.document.patch[1].profile_id, "generic-moving-head");
         assert_eq!(
@@ -908,12 +1515,126 @@ mod tests {
 
         assert_eq!(loaded.document.groups[0].id, "front-wash");
         assert_eq!(loaded.document.groups[0].name, "Front Wash");
-        assert_eq!(loaded.document.phasers[0].target, "front-wash");
+        assert_eq!(
+            loaded.document.effect_instances[0].target_group_id,
+            "front-wash"
+        );
+        assert_eq!(loaded.document.effect_definitions[0].id, "legacy.wash");
+        assert_eq!(
+            loaded.document.effect_instances[0].seed,
+            format!(
+                "{:016x}",
+                crate::engine::effect::EffectInstance::stable_seed("wash")
+            )
+        );
         assert!(loaded
             .migration_report
             .changes
             .iter()
             .any(|change| change.code == "MIGRATION_ADD_GROUP_ID"));
+    }
+
+    #[test]
+    fn migrates_v2_phasers_and_multiplier_to_v3_effect_identity() {
+        let source = LEGACY_DOCUMENT
+            .replacen('{', "{\"schema_version\": 2,", 1)
+            .replace(
+                "\"phasers\": []",
+                r##""phasers": [{
+                  "id": "pulse", "name": "Pulse", "target": "all", "multiplier": 2,
+                  "steps": [{ "values": { "color": "#ffffff", "dimmer": 1, "pan": 30, "tilt": -15 } }],
+                  "phase": { "mode": "spread", "spread": { "from": 0, "to": 100 } }
+                }],
+                "timeline": { "events": [
+                  { "beat": 0, "duration": 2, "action": { "type": "phaser", "phaser": "pulse" } },
+                  { "beat": 0, "duration": 2, "action": {
+                    "type": "animate",
+                    "target": { "scope": "effect_instance", "instance_id": "pulse", "parameter_id": "multiplier" },
+                    "from": 1, "to": 2
+                  } },
+                  { "beat": 2, "duration": 2, "action": {
+                    "type": "animate",
+                    "target": { "scope": "effect_instance", "instance_id": "pulse", "parameter_id": "multiplier" },
+                    "from": 2, "to": 1
+                  } }
+                ] }"##,
+            )
+            .replace(
+                "\"groups\": []",
+                "\"groups\": [{ \"id\": \"all\", \"name\": \"All\", \"fixtures\": [] }]",
+            );
+        let loaded = load_document(&source).expect("V2 Phaser migrates to V3 effects");
+
+        assert_eq!(loaded.document.effect_definitions[0].id, "legacy.pulse");
+        assert_eq!(loaded.document.effect_instances[0].id, "pulse");
+        assert_eq!(
+            loaded.document.effect_instances[0].definition_id,
+            "legacy.pulse"
+        );
+        let timeline = loaded.document.timeline.as_ref().expect("timeline");
+        assert_eq!(timeline.ppq, 960);
+        assert_eq!(timeline.tracks[0].clips[0].instance_id, "pulse");
+        assert!(matches!(
+            timeline.tracks[1].automation_lanes[0].target,
+            AutomationTargetV3DSL::EffectInstance { ref parameter_id, .. }
+                if parameter_id == "speed"
+        ));
+        assert_eq!(timeline.tracks[1].automation_lanes.len(), 1);
+        assert_eq!(timeline.tracks[1].automation_lanes[0].keyframes.len(), 3);
+        assert!(loaded
+            .migration_report
+            .changes
+            .iter()
+            .any(|change| change.code == "MIGRATION_PHASER_TO_EFFECT"));
+        assert!(loaded
+            .migration_report
+            .changes
+            .iter()
+            .any(|change| change.code == "MIGRATION_ENABLE_POSITION_ATTRIBUTES"));
+        assert!(loaded
+            .migration_report
+            .changes
+            .iter()
+            .any(|change| change.code == "MIGRATION_MERGE_AUTOMATION_LANE"));
+    }
+
+    #[test]
+    fn quantizes_v3_beats_and_reports_the_exact_tick() {
+        let source = r#"{
+          "schema_version": 3,
+          "meta": { "name": "Quantized timeline" },
+          "patch": [],
+          "layout": { "type": "generator", "generator": { "shape": "custom", "fixtures": [] } },
+          "groups": [],
+          "effect_definitions": [],
+          "effect_instances": [],
+          "timeline": { "events": [{
+            "beat": 0.333333,
+            "duration": 0.666667,
+            "action": {
+              "type": "animate",
+              "target": { "scope": "global", "parameter_id": "master_dimmer" },
+              "from": 0,
+              "to": 1
+            }
+          }] }
+        }"#;
+        let loaded = load_document(source).expect("V3 timeline migrates");
+        let timeline = loaded.document.timeline.expect("timeline");
+        let keyframes = &timeline.tracks[0].automation_lanes[0].keyframes;
+
+        assert_eq!(keyframes[0].time_tick, 320);
+        assert_eq!(keyframes[1].time_tick, 960);
+        assert!(loaded.migration_report.changes.iter().any(|change| {
+            change.code == "MIGRATION_QUANTIZE_MUSICAL_TIME"
+                && change.path == "timeline.events[0].beat"
+                && change.message.contains("tick 320")
+        }));
+        assert!(loaded
+            .migration_report
+            .changes
+            .iter()
+            .any(|change| change.code == "MIGRATION_SCHEMA_V3_TO_V4"));
     }
 
     #[test]

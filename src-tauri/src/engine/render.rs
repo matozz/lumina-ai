@@ -1,15 +1,20 @@
-use super::animation::{ease, AnimatableValue, ParameterContext};
+use super::animation::ParameterContext;
 use super::attribute::{AttributeHandle, FixtureFrame};
 use super::mixer::{mix_fixture, AttributeWrite};
-use super::phaser::{calculate_progress_delay, evaluate_phaser_at};
-use crate::compiler::{
-    CompiledAutomationTarget, CompiledEffectParameter, CompiledShow, CompiledTimelineAction,
-    CompiledTimelineEvent, EffectInstanceHandle,
+use super::musical_time::MusicalTime;
+use super::timeline::{active_clips_at, evaluate_lane_at, integrate_lane_scalar_ticks};
+use crate::compiler::{CompiledAutomationTarget, CompiledShow, EffectInstanceHandle};
+use crate::engine::effect::{
+    common_parameter_handle, evaluate_effect_graph, Direction, EffectEvaluationParameters,
+    ParameterValue, COLOR_PARAMETER_ID, DIRECTION_PARAMETER_ID, INTENSITY_PARAMETER_ID,
+    PAN_PARAMETER_ID, PHASE_PARAMETER_ID, SPEED_PARAMETER_ID, TILT_PARAMETER_ID,
+    TRANSITION_PARAMETER_ID, WIDTH_PARAMETER_ID,
 };
-use crate::engine::profile::AttributeValue;
+use crate::engine::profile::{
+    AttributeValue, COLOR_RGB_ATTRIBUTE, INTENSITY_ATTRIBUTE, PAN_ATTRIBUTE, TILT_ATTRIBUTE,
+};
 use rayon::prelude::*;
 use serde::Serialize;
-use std::collections::HashMap;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RenderTime {
@@ -38,8 +43,13 @@ pub enum RenderSource<'a> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct ResolvedPhaser {
+    pub source_id: String,
     pub instance: EffectInstanceHandle,
     pub phase: f64,
+    pub layer: i32,
+    pub weight: Option<f32>,
+    pub activation_order: u64,
+    pub stable_source_order: u32,
 }
 
 pub fn render_at(
@@ -52,10 +62,16 @@ pub fn render_at(
         RenderSource::Live(active) => (
             active
                 .iter()
-                .filter(|phaser| show.phasers.contains_key(&phaser.id))
-                .map(|phaser| ResolvedPhaser {
+                .filter(|phaser| show.effect_instances.contains_key(&phaser.id))
+                .enumerate()
+                .map(|(index, phaser)| ResolvedPhaser {
+                    source_id: phaser.id.clone(),
                     instance: phaser.id.clone().into(),
                     phase: phaser.phase_at(time),
+                    layer: 0,
+                    weight: None,
+                    activation_order: index as u64,
+                    stable_source_order: u32::try_from(index).unwrap_or(u32::MAX),
                 })
                 .collect(),
             ParameterContext::new(),
@@ -72,65 +88,136 @@ pub(crate) fn render_resolved(
 ) -> Vec<FixtureFrame> {
     show.fixtures
         .par_iter()
-        .map(|fixture| {
+        .enumerate()
+        .map(|(fixture_index, fixture)| {
             let output = FixtureFrame::with_profile_defaults(fixture.id, fixture.profile);
             let mut writes = Vec::new();
 
-            for (source_order, active) in active_phasers.iter().enumerate() {
-                let Some(phaser) = show.phasers.get(active.instance.as_str()) else {
+            for active in active_phasers {
+                let Some(instance) = show.effect_instances.get(active.instance.as_str()) else {
                     continue;
                 };
-                let Some(group) = show.groups.get(phaser.target.as_str()) else {
+                let Some(definition) = show.effect_definitions.get(instance.definition.index())
+                else {
                     continue;
                 };
-                let Some(fixture_index) = group.index_of(fixture.id) else {
+                let Some(group) = show.groups.get(&instance.target_group_id) else {
                     continue;
                 };
-                let Some(profile_phaser) = phaser.profile_steps.get(&fixture.profile) else {
+                if group.index_of(fixture.id).is_none() {
                     continue;
-                };
-
-                let progress_delay = calculate_progress_delay(
-                    fixture_index,
-                    group.len(),
-                    &phaser.phase,
-                    group.block_index_of(fixture.id),
+                }
+                let phase_offset = resolve_effect_scalar(
+                    definition,
+                    instance,
+                    &active.instance,
+                    parameters,
+                    PHASE_PARAMETER_ID,
+                    0.0,
                 );
-                let total_width: f64 = profile_phaser.steps.iter().map(|step| step.width).sum();
-                if total_width <= 0.0 {
-                    continue;
+                let direction = definition
+                    .parameter_handle(DIRECTION_PARAMETER_ID)
+                    .and_then(|handle| {
+                        parameters
+                            .get_effect_direction(&active.instance, handle)
+                            .map(|direction| match direction {
+                                crate::document::DirectionDSL::Forward => Direction::Forward,
+                                crate::document::DirectionDSL::Reverse => Direction::Reverse,
+                            })
+                            .or_else(|| {
+                                instance
+                                    .resolve_parameter(definition, handle)
+                                    .and_then(|value| match value {
+                                        ParameterValue::Direction(direction) => Some(*direction),
+                                        _ => None,
+                                    })
+                            })
+                    })
+                    .unwrap_or(Direction::Forward);
+                let phase = match direction {
+                    Direction::Forward => active.phase + phase_offset,
+                    Direction::Reverse => phase_offset - active.phase,
+                };
+                let mut values = vec![
+                    None;
+                    crate::engine::profile::profile_by_handle(fixture.profile)
+                        .attributes
+                        .len()
+                ];
+                for (handle, value) in evaluate_effect_graph(
+                    definition,
+                    instance,
+                    fixture.id,
+                    fixture_index,
+                    fixture.profile,
+                    phase,
+                    EffectEvaluationParameters {
+                        width_percent: resolve_effect_scalar(
+                            definition,
+                            instance,
+                            &active.instance,
+                            parameters,
+                            WIDTH_PARAMETER_ID,
+                            100.0,
+                        ),
+                        transition_percent: resolve_effect_scalar(
+                            definition,
+                            instance,
+                            &active.instance,
+                            parameters,
+                            TRANSITION_PARAMETER_ID,
+                            100.0,
+                        ),
+                    },
+                ) {
+                    values[handle.index()] = Some(value);
                 }
-
-                let raw_cycle = active.phase - progress_delay;
-                if raw_cycle < 0.0 {
-                    continue;
-                }
-
-                let normalized = (raw_cycle % 1.0) * total_width;
-                let mut values = evaluate_phaser_at(normalized, &profile_phaser.steps, total_width);
 
                 if let (Some(handle), Some((red, green, blue))) = (
-                    profile_phaser.color,
-                    parameters.get_effect_color(&active.instance, CompiledEffectParameter::Color),
+                    super::attribute::resolve_attribute(fixture.profile, COLOR_RGB_ATTRIBUTE),
+                    resolve_effect_color_override(
+                        definition,
+                        instance,
+                        &active.instance,
+                        parameters,
+                    ),
                 ) {
                     values[handle.index()] = Some(AttributeValue::Color([red, green, blue]));
                 }
                 apply_scalar_override(
                     &mut values,
-                    profile_phaser.intensity,
-                    parameters.get_effect_float(&active.instance, CompiledEffectParameter::Dimmer),
+                    super::attribute::resolve_attribute(fixture.profile, INTENSITY_ATTRIBUTE),
+                    resolve_effect_scalar_override(
+                        definition,
+                        instance,
+                        &active.instance,
+                        parameters,
+                        INTENSITY_PARAMETER_ID,
+                    ),
                     AttributeValue::Scalar,
                 );
                 apply_scalar_override(
                     &mut values,
-                    profile_phaser.pan,
-                    parameters.get_effect_float(&active.instance, CompiledEffectParameter::Pan),
+                    super::attribute::resolve_attribute(fixture.profile, PAN_ATTRIBUTE),
+                    resolve_effect_scalar_override(
+                        definition,
+                        instance,
+                        &active.instance,
+                        parameters,
+                        PAN_PARAMETER_ID,
+                    ),
                     AttributeValue::Angle,
                 );
                 apply_scalar_override(
                     &mut values,
-                    profile_phaser.tilt,
-                    parameters.get_effect_float(&active.instance, CompiledEffectParameter::Tilt),
+                    super::attribute::resolve_attribute(fixture.profile, TILT_ATTRIBUTE),
+                    resolve_effect_scalar_override(
+                        definition,
+                        instance,
+                        &active.instance,
+                        parameters,
+                        TILT_PARAMETER_ID,
+                    ),
                     AttributeValue::Angle,
                 );
 
@@ -142,12 +229,12 @@ pub(crate) fn render_resolved(
                     writes.push(AttributeWrite {
                         attribute: handle,
                         value,
-                        source_id: active.instance.as_str(),
-                        layer: 0,
+                        source_id: &active.source_id,
+                        layer: active.layer,
                         priority: 0,
-                        activation_order: source_order as u64,
-                        stable_source_order: u32::try_from(source_order).unwrap_or(u32::MAX),
-                        weight: None,
+                        activation_order: active.activation_order,
+                        stable_source_order: active.stable_source_order,
+                        weight: active.weight,
                         policy_override: None,
                     });
                 }
@@ -171,6 +258,56 @@ pub(crate) fn render_resolved(
         .collect()
 }
 
+fn resolve_effect_scalar(
+    definition: &crate::engine::effect::EffectDefinition,
+    instance: &crate::engine::effect::EffectInstance,
+    instance_handle: &EffectInstanceHandle,
+    parameters: &ParameterContext,
+    parameter_id: &str,
+    fallback: f64,
+) -> f64 {
+    let Some(handle) = definition.parameter_handle(parameter_id) else {
+        return fallback;
+    };
+    parameters
+        .get_effect_float(instance_handle, handle)
+        .or_else(|| instance.resolve_parameter(definition, handle)?.as_scalar())
+        .unwrap_or(fallback)
+}
+
+fn resolve_effect_scalar_override(
+    definition: &crate::engine::effect::EffectDefinition,
+    instance: &crate::engine::effect::EffectInstance,
+    instance_handle: &EffectInstanceHandle,
+    parameters: &ParameterContext,
+    parameter_id: &str,
+) -> Option<f64> {
+    let handle = definition.parameter_handle(parameter_id)?;
+    parameters
+        .get_effect_float(instance_handle, handle)
+        .or_else(|| {
+            instance
+                .parameter_overrides
+                .get(&handle)
+                .and_then(ParameterValue::as_scalar)
+        })
+}
+
+fn resolve_effect_color_override(
+    definition: &crate::engine::effect::EffectDefinition,
+    instance: &crate::engine::effect::EffectInstance,
+    instance_handle: &EffectInstanceHandle,
+    parameters: &ParameterContext,
+) -> Option<(u8, u8, u8)> {
+    let handle = definition.parameter_handle(COLOR_PARAMETER_ID)?;
+    parameters
+        .get_effect_color(instance_handle, handle)
+        .or_else(|| match instance.parameter_overrides.get(&handle)? {
+            ParameterValue::Color(color) => Some((color[0], color[1], color[2])),
+            _ => None,
+        })
+}
+
 fn apply_scalar_override(
     values: &mut [Option<AttributeValue>],
     handle: Option<AttributeHandle>,
@@ -190,225 +327,69 @@ fn resolve_timeline_at(
         return (Vec::new(), ParameterContext::new());
     };
 
+    let target_time = MusicalTime::from_beats(time.beat, timeline.ppq)
+        .unwrap_or(MusicalTime::from_ticks(u64::MAX));
     let mut active_phasers = Vec::new();
-    for event in &timeline.events {
-        let CompiledTimelineAction::Phaser { phaser } = &event.action else {
-            continue;
-        };
-        if !event_is_active(event, time.beat) {
-            continue;
+    for track in &timeline.tracks {
+        for active in active_clips_at(track, target_time) {
+            let clip = active.clip;
+            let default_speed = show
+                .effect_instances
+                .get(clip.instance.as_str())
+                .and_then(|instance| {
+                    let definition = show.effect_definitions.get(instance.definition.index())?;
+                    let handle = definition.parameter_handle(SPEED_PARAMETER_ID)?;
+                    instance
+                        .resolve_parameter(definition, handle)
+                        .and_then(|value| value.as_scalar())
+                })
+                .unwrap_or(1.0);
+            let speed_target = CompiledAutomationTarget::EffectInstance {
+                instance: clip.instance.clone(),
+                parameter: common_parameter_handle(SPEED_PARAMETER_ID)
+                    .expect("common speed parameter"),
+            };
+            let speed_lane = timeline
+                .automation_index
+                .get(&speed_target)
+                .and_then(|index| timeline.automation_lanes.get(*index));
+            let phase_ticks =
+                integrate_lane_scalar_ticks(speed_lane, clip.start, target_time, default_speed);
+            active_phasers.push(ResolvedPhaser {
+                source_id: clip.id.clone(),
+                instance: clip.instance.clone(),
+                phase: clip.source_offset_ticks as f64 / f64::from(timeline.ppq)
+                    + phase_ticks / f64::from(timeline.ppq),
+                layer: clip.layer,
+                weight: active.weight,
+                activation_order: clip.start.ticks(),
+                stable_source_order: clip.stable_order,
+            });
         }
-
-        let default_multiplier = show
-            .phasers
-            .get(phaser.as_str())
-            .and_then(|compiled| compiled.multiplier)
-            .unwrap_or(1.0);
-        let target = CompiledAutomationTarget::EffectInstance {
-            instance: phaser.clone(),
-            parameter: CompiledEffectParameter::Multiplier,
-        };
-        active_phasers.push(ResolvedPhaser {
-            instance: phaser.clone(),
-            phase: integrate_float_parameter(
-                &timeline.events,
-                &target,
-                event.beat,
-                time.beat,
-                default_multiplier,
-            ),
-        });
     }
 
     let mut parameters = ParameterContext::new();
-    let mut resolved_parameters: HashMap<&CompiledAutomationTarget, (f64, usize, AnimatableValue)> =
-        HashMap::new();
-    for (index, event) in timeline.events.iter().enumerate() {
-        let CompiledTimelineAction::Animate {
-            target,
-            from,
-            to,
-            easing,
-        } = &event.action
-        else {
-            continue;
-        };
-        if event.beat > time.beat {
-            continue;
+    for lane in &timeline.automation_lanes {
+        if let Some(value) = evaluate_lane_at(lane, target_time) {
+            parameters.write_value(lane.target.clone(), value);
         }
-        let Some(value) = evaluate_animation_at(
-            event,
-            from,
-            to,
-            easing.as_ref().map(|value| value.as_str()),
-            time.beat,
-        ) else {
-            continue;
-        };
-
-        let replace = resolved_parameters
-            .get(target)
-            .is_none_or(|(start, previous_index, _)| {
-                event.beat > *start || (event.beat == *start && index > *previous_index)
-            });
-        if replace {
-            resolved_parameters.insert(target, (event.beat, index, value));
-        }
-    }
-    for (target, (_, _, value)) in resolved_parameters {
-        parameters.write_value(target.clone(), value);
     }
 
     (active_phasers, parameters)
 }
 
-fn event_is_active(event: &CompiledTimelineEvent, beat: f64) -> bool {
-    if beat < event.beat {
-        return false;
-    }
-    event
-        .duration
-        .is_none_or(|duration| beat < event.beat + duration)
-}
-
-fn evaluate_animation_at(
-    event: &CompiledTimelineEvent,
-    from: &crate::document::AnimatableValueDSL,
-    to: &crate::document::AnimatableValueDSL,
-    easing: Option<&str>,
-    beat: f64,
-) -> Option<AnimatableValue> {
-    let start = AnimatableValue::from_document(from)?;
-    let end = AnimatableValue::from_document(to)?;
-    let duration = event.duration.unwrap_or(0.0);
-    if duration <= 0.0 || beat >= event.beat + duration {
-        return Some(end);
-    }
-
-    let progress = ((beat - event.beat) / duration).clamp(0.0, 1.0);
-    Some(start.lerp(&end, ease(progress, easing.unwrap_or("linear"))))
-}
-
-fn integrate_float_parameter(
-    events: &[CompiledTimelineEvent],
-    target: &CompiledAutomationTarget,
-    from_beat: f64,
-    to_beat: f64,
-    default_value: f64,
-) -> f64 {
-    if to_beat <= from_beat {
-        return 0.0;
-    }
-
-    let matching: Vec<_> = events
-        .iter()
-        .enumerate()
-        .filter_map(|(index, event)| match &event.action {
-            CompiledTimelineAction::Animate {
-                target: event_target,
-                from,
-                to,
-                easing,
-            } if event_target == target => Some((
-                index,
-                event,
-                from,
-                to,
-                easing.as_ref().map(|value| value.as_str()),
-            )),
-            _ => None,
-        })
-        .collect();
-
-    let mut boundaries = vec![from_beat, to_beat];
-    for (_, event, _, _, _) in &matching {
-        if event.beat > from_beat && event.beat < to_beat {
-            boundaries.push(event.beat);
-        }
-        if let Some(duration) = event.duration {
-            let end = event.beat + duration;
-            if end > from_beat && end < to_beat {
-                boundaries.push(end);
-            }
-        }
-    }
-    boundaries.sort_by(f64::total_cmp);
-    boundaries.dedup_by(|left, right| (*left - *right).abs() < f64::EPSILON);
-
-    boundaries
-        .windows(2)
-        .map(|window| {
-            let start = window[0];
-            let end = window[1];
-            let midpoint = start + (end - start) / 2.0;
-            let selected = matching
-                .iter()
-                .filter(|(_, event, _, _, _)| event.beat <= midpoint)
-                .max_by(
-                    |(left_index, left, _, _, _), (right_index, right, _, _, _)| {
-                        left.beat
-                            .total_cmp(&right.beat)
-                            .then(left_index.cmp(right_index))
-                    },
-                );
-
-            selected.map_or(
-                default_value * (end - start),
-                |(_, event, from, to, easing)| {
-                    integrate_animation_segment(event, from, to, *easing, start, end)
-                        .unwrap_or(default_value * (end - start))
-                },
-            )
-        })
-        .sum()
-}
-
-fn integrate_animation_segment(
-    event: &CompiledTimelineEvent,
-    from: &crate::document::AnimatableValueDSL,
-    to: &crate::document::AnimatableValueDSL,
-    easing: Option<&str>,
-    segment_start: f64,
-    segment_end: f64,
-) -> Option<f64> {
-    let start_value = from.as_f64()?;
-    let end_value = to.as_f64()?;
-    let duration = event.duration.unwrap_or(0.0);
-    if duration <= 0.0 || segment_start >= event.beat + duration {
-        return Some(end_value * (segment_end - segment_start));
-    }
-
-    let normalized_start = ((segment_start - event.beat) / duration).clamp(0.0, 1.0);
-    let normalized_end = ((segment_end - event.beat) / duration).clamp(0.0, 1.0);
-    let constant = start_value * (segment_end - segment_start);
-    let eased_area = duration
-        * (easing_antiderivative(normalized_end, easing.unwrap_or("linear"))
-            - easing_antiderivative(normalized_start, easing.unwrap_or("linear")));
-    Some(constant + (end_value - start_value) * eased_area)
-}
-
-fn easing_antiderivative(value: f64, easing: &str) -> f64 {
-    let value = value.clamp(0.0, 1.0);
-    match easing {
-        "ease_in" => value.powi(3) / 3.0,
-        "ease_out" => value.powi(2) - value.powi(3) / 3.0,
-        "ease_in_out" if value < 0.5 => 2.0 * value.powi(3) / 3.0,
-        "ease_in_out" => -value + 2.0 * value.powi(2) - 2.0 * value.powi(3) / 3.0 + 1.0 / 6.0,
-        _ => value.powi(2) / 2.0,
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{integrate_float_parameter, render_at, RenderSource, RenderTime};
-    use crate::compiler::{
-        parser::ShowDSL, CompiledAutomationTarget, CompiledEffectParameter, Compiler,
-    };
+    use super::{render_at, RenderSource, RenderTime};
+    use crate::compiler::{CompiledAutomationTarget, Compiler};
     use crate::engine::attribute::{resolve_attribute, FixtureFrame};
+    use crate::engine::effect::{common_parameter_handle, SPEED_PARAMETER_ID};
+    use crate::engine::musical_time::MusicalTime;
     use crate::engine::profile::{AttributeValue, COLOR_RGB_ATTRIBUTE, INTENSITY_ATTRIBUTE};
+    use crate::engine::timeline::integrate_lane_scalar_ticks;
 
     fn compiled_show() -> crate::compiler::CompiledShow {
-        let dsl: ShowDSL = serde_json::from_str(
+        let dsl = crate::document::load_document(
             r##"{
                 "schema_version": 2,
                 "meta": { "name": "render at" },
@@ -442,29 +423,45 @@ mod tests {
                 ]}
             }"##,
         )
-        .expect("test DSL");
+        .expect("test DSL")
+        .document;
         Compiler::compile_document(dsl).expect("compiled test show")
     }
 
     #[test]
     fn multiplier_automation_is_integrated_over_musical_time() {
         let show = compiled_show();
-        let events = &show.timeline.as_ref().expect("timeline").events;
+        let timeline = show.timeline.as_ref().expect("timeline");
         let target = CompiledAutomationTarget::EffectInstance {
             instance: "pulse".to_string().into(),
-            parameter: CompiledEffectParameter::Multiplier,
+            parameter: common_parameter_handle(SPEED_PARAMETER_ID).expect("speed parameter"),
         };
+        let lane = timeline
+            .automation_index
+            .get(&target)
+            .and_then(|index| timeline.automation_lanes.get(*index));
 
         assert_eq!(
-            integrate_float_parameter(events, &target, 0.0, 1.0, 1.0),
+            integrate_lane_scalar_ticks(lane, MusicalTime::ZERO, MusicalTime::from_ticks(960), 1.0,)
+                / f64::from(timeline.ppq),
             1.5
         );
         assert_eq!(
-            integrate_float_parameter(events, &target, 0.0, 2.0, 1.0),
+            integrate_lane_scalar_ticks(
+                lane,
+                MusicalTime::ZERO,
+                MusicalTime::from_ticks(1_920),
+                1.0,
+            ) / f64::from(timeline.ppq),
             4.0
         );
         assert_eq!(
-            integrate_float_parameter(events, &target, 0.0, 3.0, 1.0),
+            integrate_lane_scalar_ticks(
+                lane,
+                MusicalTime::ZERO,
+                MusicalTime::from_ticks(2_880),
+                1.0,
+            ) / f64::from(timeline.ppq),
             7.0
         );
     }
@@ -500,6 +497,54 @@ mod tests {
     }
 
     #[test]
+    fn one_hundred_random_seeks_match_sequential_tick_rendering() {
+        let show = compiled_show();
+        let mut state = 0x9e37_79b9_7f4a_7c15_u64;
+        let targets: Vec<_> = (0..100)
+            .map(|_| {
+                state ^= state << 13;
+                state ^= state >> 7;
+                state ^= state << 17;
+                state % 3_840
+            })
+            .collect();
+        let mut sequential_ticks = targets.clone();
+        sequential_ticks.sort_unstable();
+        sequential_ticks.dedup();
+        let sequential_frames: Vec<_> = sequential_ticks
+            .iter()
+            .map(|tick| {
+                (
+                    *tick,
+                    render_at(
+                        &show,
+                        RenderTime {
+                            beat: *tick as f64 / 960.0,
+                        },
+                        RenderSource::Timeline,
+                    ),
+                )
+            })
+            .collect();
+
+        for tick in targets {
+            let direct = render_at(
+                &show,
+                RenderTime {
+                    beat: tick as f64 / 960.0,
+                },
+                RenderSource::Timeline,
+            );
+            let sequential = sequential_frames
+                .iter()
+                .find(|(candidate, _)| *candidate == tick)
+                .map(|(_, frame)| frame)
+                .expect("sequential frame");
+            assert_eq!(&direct, sequential, "seek mismatch at tick {tick}");
+        }
+    }
+
+    #[test]
     fn timeline_event_end_rebuilds_to_blackout() {
         let show = compiled_show();
         let frame = render_at(&show, RenderTime { beat: 4.0 }, RenderSource::Timeline);
@@ -516,7 +561,7 @@ mod tests {
 
     #[test]
     fn moving_head_effects_render_profile_specific_angle_attributes() {
-        let dsl: ShowDSL = serde_json::from_str(
+        let dsl = crate::document::load_document(
             r##"{
                 "schema_version": 2,
                 "meta": { "name": "moving attributes" },
@@ -541,7 +586,8 @@ mod tests {
                 }]}
             }"##,
         )
-        .expect("moving-head DSL");
+        .expect("moving-head DSL")
+        .document;
         let show = Compiler::compile_document(dsl).expect("compiled moving-head show");
         let frame = render_at(&show, RenderTime { beat: 0.5 }, RenderSource::Timeline);
 
@@ -557,7 +603,7 @@ mod tests {
 
     #[test]
     fn overlapping_effects_use_htp_intensity_and_stable_ltp_color() {
-        let dsl: ShowDSL = serde_json::from_str(
+        let dsl = crate::document::load_document(
             r##"{
                 "schema_version": 2,
                 "meta": { "name": "mixed attributes" },
@@ -592,7 +638,8 @@ mod tests {
                 ]}
             }"##,
         )
-        .expect("mixed DSL");
+        .expect("mixed DSL")
+        .document;
         let show = Compiler::compile_document(dsl).expect("compiled mixed show");
 
         for _ in 0..2 {

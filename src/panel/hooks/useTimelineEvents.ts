@@ -1,10 +1,22 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { Easing, FromTo, FullDSL, TimelineEventDSL } from "@/bridge/types";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import type {
+  AutomationLaneDSL,
+  FromTo,
+  FullDSL,
+  KeyframeDSL,
+  KeyframeInterpolationDSL,
+  ParameterValueDSL,
+  TimelineEventDSL,
+  TimelineTrackDSL,
+} from "@/bridge/types";
+import type { DocumentCommand, DocumentTransaction } from "@/document/commands";
+import { clipOverlapPlan } from "@/document/clipOverlapPlan";
 import { useEngineStore, engineActions, engineSelectors } from "@/stores/engine";
-import { resolveOverlaps } from "../utils";
 import { BEAT_WIDTH } from "../context/TimelineContext";
+import type { AutomationParameterOption } from "../automationParameters";
 
-export interface MovingState {
+interface MoveInteraction {
+  type: "move";
   originalIndex: number;
   startClientX: number;
   startClientY: number;
@@ -12,191 +24,511 @@ export interface MovingState {
   currentDeltaX: number;
   currentDeltaY: number;
   activeTrackName?: string;
+  element: HTMLElement;
 }
 
-export interface ResizingState {
+interface ResizeInteraction {
+  type: "resize";
   originalIndex: number;
   startClientX: number;
   startDuration: number;
   currentDeltaX: number;
+  element: HTMLElement;
 }
+
+type TimelineInteraction = MoveInteraction | ResizeInteraction;
 
 export const useTimelineEvents = () => {
   const parsedDsl = useEngineStore(engineSelectors.parsedDsl);
-  const currentDslCode = useEngineStore(engineSelectors.currentDslCode);
-
-  const [moving, setMoving] = useState<MovingState | null>(null);
-  const [resizing, setResizing] = useState<ResizingState | null>(null);
-
   const interactionState = useRef<{ isInteracting: boolean }>({ isInteracting: false });
-
-  const timelineEvents = parsedDsl?.timeline?.events || [];
+  const interaction = useRef<TimelineInteraction | null>(null);
+  const timelineEvents = useMemo(() => flattenTimeline(parsedDsl), [parsedDsl]);
+  const parsedDslRef = useRef(parsedDsl);
+  const timelineEventsRef = useRef(timelineEvents);
+  parsedDslRef.current = parsedDsl;
+  timelineEventsRef.current = timelineEvents;
 
   const addEvent = useCallback(
     (newEvent: TimelineEventDSL) => {
-      try {
-        const dslObj = JSON.parse(currentDslCode) as FullDSL;
-        if (!dslObj.timeline) dslObj.timeline = { events: [] };
-        if (!dslObj.timeline.events) dslObj.timeline.events = [];
-
-        dslObj.timeline.events.push(newEvent);
-        dslObj.timeline.events = resolveOverlaps(dslObj.timeline.events);
-        engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
-      } catch (err) {
-        console.error("Failed to update DSL", err);
-      }
+      if (!parsedDsl || newEvent.action.type !== "effect") return;
+      const ppq = parsedDsl.timeline?.ppq ?? 960;
+      const track = parsedDsl.timeline?.tracks.find((candidate) => candidate.id === "effects");
+      engineActions.applyDocumentTransaction(
+        transaction("Add EffectClip", {
+          type: "add_clip",
+          track_id: "effects",
+          track_name: "Effects",
+          clip: {
+            id: stableId("clip"),
+            instance_id: newEvent.action.instance_id,
+            start_tick: beatsToTicks(newEvent.beat, ppq),
+            duration_tick: Math.max(1, beatsToTicks(newEvent.duration ?? 4, ppq)),
+            source_offset_tick: 0,
+            playback: "once",
+            layer: track ? nextLayer(track) : 0,
+          },
+        }),
+      );
     },
-    [currentDslCode],
+    [parsedDsl],
+  );
+
+  const addAutomationLane = useCallback(
+    (option: AutomationParameterOption) => {
+      if (!parsedDsl) return;
+      const ppq = parsedDsl.timeline?.ppq ?? 960;
+      const laneDuration = 4 * ppq;
+      const startTick = Math.min(
+        0xffff_ffff - laneDuration,
+        Math.max(0, Math.round(useEngineStore.getState().globalBeat * ppq)),
+      );
+      const endTick = startTick + laneDuration;
+      engineActions.applyDocumentTransaction(
+        transaction("Add AutomationLane", {
+          type: "add_automation_lane",
+          track_id: "automation",
+          track_name: "Automation",
+          lane: {
+            id: stableId("lane"),
+            target: option.target,
+            keyframes: [
+              {
+                id: stableId("keyframe"),
+                time_tick: startTick,
+                value: structuredClone(option.initialValue),
+                interpolation: option.definition.automation === "discrete" ? "hold" : "linear",
+              },
+              {
+                id: stableId("keyframe"),
+                time_tick: endTick,
+                value: structuredClone(option.initialValue),
+                interpolation: "hold",
+              },
+            ],
+          },
+        }),
+      );
+    },
+    [parsedDsl],
   );
 
   const deleteEvent = useCallback(
     (originalIndex: number) => {
-      try {
-        const dslObj = JSON.parse(currentDslCode) as FullDSL;
-        if (dslObj.timeline?.events) {
-          dslObj.timeline.events.splice(originalIndex, 1);
-          engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
-        }
-      } catch (err) {}
+      const view = timelineEvents[originalIndex];
+      if (!view?.source_track_id || !view.source_item_id) return;
+      const command: DocumentCommand =
+        view.action.type === "effect"
+          ? {
+              type: "delete_clip",
+              track_id: view.source_track_id,
+              clip_id: view.source_item_id,
+            }
+          : {
+              type: "delete_automation_lane",
+              track_id: view.source_track_id,
+              lane_id: view.source_item_id,
+            };
+      engineActions.applyDocumentTransaction(transaction("Delete timeline item", command));
     },
-    [currentDslCode],
+    [timelineEvents],
   );
 
-  const updateAnimationBlock = useCallback(
-    (eventIndex: number, fromValue: FromTo, toValue: FromTo, easing: string) => {
-      try {
-        const dslObj = JSON.parse(currentDslCode) as FullDSL;
-        const ev = dslObj.timeline?.events?.[eventIndex];
-        if (ev && ev.action.type === "animate") {
-          ev.action.from = fromValue;
-          ev.action.to = toValue;
-          ev.action.easing = easing as Easing;
-
-          engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
-        }
-      } catch (err) {
-        console.error("Failed to update animation block", err);
-      }
+  const addKeyframe = useCallback(
+    (
+      trackId: string,
+      laneId: string,
+      timeTick: number,
+      value: ParameterValueDSL,
+      interpolation: KeyframeInterpolationDSL,
+    ) => {
+      engineActions.applyDocumentTransaction(
+        transaction("Add keyframe", {
+          type: "add_keyframe",
+          track_id: trackId,
+          lane_id: laneId,
+          keyframe: {
+            id: stableId("keyframe"),
+            time_tick: timeTick,
+            value: structuredClone(value),
+            interpolation,
+          },
+        }),
+      );
     },
-    [currentDslCode],
+    [],
+  );
+
+  const moveKeyframes = useCallback(
+    (trackId: string, laneId: string, keyframeIds: string[], deltaTick: number) => {
+      engineActions.applyDocumentTransaction(
+        transaction("Move keyframes", {
+          type: "move_keyframes",
+          track_id: trackId,
+          lane_id: laneId,
+          keyframe_ids: keyframeIds,
+          delta_tick: deltaTick,
+        }),
+      );
+    },
+    [],
+  );
+
+  const deleteKeyframes = useCallback((trackId: string, laneId: string, keyframeIds: string[]) => {
+    engineActions.applyDocumentTransaction(
+      transaction("Delete keyframes", {
+        type: "delete_keyframes",
+        track_id: trackId,
+        lane_id: laneId,
+        keyframe_ids: keyframeIds,
+      }),
+    );
+  }, []);
+
+  const updateKeyframe = useCallback(
+    (
+      trackId: string,
+      laneId: string,
+      keyframeId: string,
+      changes: Partial<Pick<KeyframeDSL, "time_tick" | "value" | "interpolation">>,
+    ) => {
+      engineActions.applyDocumentTransaction(
+        transaction("Update keyframe", {
+          type: "update_keyframe",
+          track_id: trackId,
+          lane_id: laneId,
+          keyframe_id: keyframeId,
+          ...changes,
+        }),
+      );
+    },
+    [],
+  );
+
+  const nudgeEvent = useCallback(
+    (originalIndex: number, deltaBeats: number) => {
+      if (!parsedDsl?.timeline) return;
+      const view = timelineEvents[originalIndex];
+      if (!view?.source_track_id || !view.source_item_id) return;
+      const targetBeat = Math.max(0, view.beat + deltaBeats);
+      const targetTick = beatsToTicks(targetBeat, parsedDsl.timeline.ppq);
+      const command: DocumentCommand =
+        view.action.type === "effect"
+          ? {
+              type: "move_clip",
+              track_id: view.source_track_id,
+              clip_id: view.source_item_id,
+              start_tick: targetTick,
+            }
+          : {
+              type: "move_automation_lane",
+              track_id: view.source_track_id,
+              lane_id: view.source_item_id,
+              delta_tick: targetTick - beatsToTicks(view.beat, parsedDsl.timeline.ppq),
+            };
+      engineActions.applyDocumentTransaction(transaction("Nudge timeline item", command));
+    },
+    [parsedDsl, timelineEvents],
+  );
+
+  const trimClipOverlaps = useCallback(
+    (originalIndex: number) => {
+      if (!parsedDsl) return;
+      const view = timelineEvents[originalIndex];
+      if (!view?.source_track_id || !view.source_item_id) return;
+      const plan = clipOverlapPlan(parsedDsl, view.source_track_id, view.source_item_id);
+      if (!plan?.trim || plan.overlappingClipIds.length === 0) return;
+      engineActions.applyDocumentTransaction(
+        transaction("Trim EffectClip overlap", {
+          type: "trim_clip",
+          track_id: plan.track.id,
+          clip_id: plan.clip.id,
+          start_tick: plan.trim.startTick,
+          duration_tick: plan.trim.durationTick,
+          source_offset_tick: plan.trim.sourceOffsetTick,
+        }),
+      );
+    },
+    [parsedDsl, timelineEvents],
+  );
+
+  const replaceClipOverlaps = useCallback(
+    (originalIndex: number) => {
+      if (!parsedDsl) return;
+      const view = timelineEvents[originalIndex];
+      if (!view?.source_track_id || !view.source_item_id) return;
+      const plan = clipOverlapPlan(parsedDsl, view.source_track_id, view.source_item_id);
+      if (!plan || plan.overlappingClipIds.length === 0) return;
+      engineActions.applyDocumentTransaction(
+        transaction(
+          "Replace overlapping EffectClips",
+          ...plan.overlappingClipIds.map(
+            (clipId): DocumentCommand => ({
+              type: "delete_clip",
+              track_id: plan.track.id,
+              clip_id: clipId,
+            }),
+          ),
+        ),
+      );
+    },
+    [parsedDsl, timelineEvents],
+  );
+
+  const startMoving = useCallback(
+    (
+      originalIndex: number,
+      clientX: number,
+      clientY: number,
+      startBeat: number,
+      activeTrackName: string | undefined,
+      element: HTMLElement,
+    ) => {
+      interactionState.current.isInteracting = false;
+      interaction.current = {
+        type: "move",
+        originalIndex,
+        startClientX: clientX,
+        startClientY: clientY,
+        startBeat,
+        currentDeltaX: 0,
+        currentDeltaY: 0,
+        activeTrackName,
+        element,
+      };
+    },
+    [],
+  );
+
+  const startResizing = useCallback(
+    (originalIndex: number, clientX: number, startDuration: number, element: HTMLElement) => {
+      interactionState.current.isInteracting = false;
+      interaction.current = {
+        type: "resize",
+        originalIndex,
+        startClientX: clientX,
+        startDuration,
+        currentDeltaX: 0,
+        element,
+      };
+    },
+    [],
   );
 
   useEffect(() => {
-    if (!resizing && !moving) return;
-
-    const handlePointerMove = (e: PointerEvent) => {
+    const handlePointerMove = (event: PointerEvent) => {
+      const active = interaction.current;
+      if (!active) return;
       interactionState.current.isInteracting = true;
-
-      if (resizing) {
-        setResizing((prev) =>
-          prev ? { ...prev, currentDeltaX: e.clientX - prev.startClientX } : null,
-        );
+      if (active.type === "resize") {
+        active.currentDeltaX = event.clientX - active.startClientX;
+        const duration = snappedDuration(active.startDuration, active.currentDeltaX);
+        active.element.style.width = `${duration * BEAT_WIDTH}px`;
+        return;
       }
 
-      if (moving) {
-        let activeTrackName = moving.activeTrackName;
-        const elements = document.elementsFromPoint(e.clientX, e.clientY);
-        const trackEl = elements.find((el) => el.hasAttribute("data-track-name"));
-        if (trackEl) {
-          activeTrackName = trackEl.getAttribute("data-track-name") || undefined;
-        }
-
-        setMoving((prev) =>
-          prev
-            ? {
-                ...prev,
-                currentDeltaX: e.clientX - prev.startClientX,
-                currentDeltaY: e.clientY - prev.startClientY,
-                activeTrackName,
-              }
-            : null,
-        );
-      }
+      active.currentDeltaX = event.clientX - active.startClientX;
+      active.currentDeltaY = event.clientY - active.startClientY;
+      const previewBeat = snappedBeat(active.startBeat, active.currentDeltaX);
+      const previewDeltaX = (previewBeat - active.startBeat) * BEAT_WIDTH;
+      active.element.style.transform = `translate3d(${previewDeltaX}px, ${active.currentDeltaY}px, 0)`;
+      const track = document
+        .elementsFromPoint?.(event.clientX, event.clientY)
+        .find((element) => element.hasAttribute("data-track-name"));
+      if (track) active.activeTrackName = track.getAttribute("data-track-name") ?? undefined;
     };
 
-    const handlePointerUp = () => {
-      if (resizing) {
-        const deltaBeats = resizing.currentDeltaX / BEAT_WIDTH;
-        const newDuration = Math.max(
-          0.5,
-          Math.round((resizing.startDuration + deltaBeats) * 2) / 2,
+    const finishInteraction = (commit: boolean) => {
+      const active = interaction.current;
+      if (!active) return;
+      const document = parsedDslRef.current;
+      const view = timelineEventsRef.current[active.originalIndex];
+      const command =
+        commit && document?.timeline && view?.source_track_id && view.source_item_id
+          ? commandForInteraction(active, document, view)
+          : undefined;
+      active.element.style.transform = "";
+      active.element.style.width = "";
+      interaction.current = null;
+      if (command) {
+        engineActions.applyDocumentTransaction(
+          transaction(
+            active.type === "move" ? "Move timeline item" : "Resize timeline item",
+            command,
+          ),
         );
-
-        try {
-          const dslObj = JSON.parse(currentDslCode);
-          if (dslObj.timeline?.events?.[resizing.originalIndex]) {
-            if (dslObj.timeline.events[resizing.originalIndex].duration !== newDuration) {
-              dslObj.timeline.events[resizing.originalIndex].duration = newDuration;
-              dslObj.timeline.events = resolveOverlaps(dslObj.timeline.events);
-              engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
-            }
-          }
-        } catch (err) {}
       }
-
-      if (moving) {
-        const deltaBeats = moving.currentDeltaX / BEAT_WIDTH;
-        const newBeat = Math.max(0, Math.floor((moving.startBeat + deltaBeats) * 2) / 2);
-
-        try {
-          const dslObj = JSON.parse(currentDslCode);
-          if (dslObj.timeline?.events?.[moving.originalIndex]) {
-            const ev = dslObj.timeline.events[moving.originalIndex];
-
-            if (ev.action.type === "animate") {
-              if (ev.beat !== newBeat) {
-                ev.beat = newBeat;
-                dslObj.timeline.events = resolveOverlaps(dslObj.timeline.events);
-                engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
-              }
-            } else if (ev.action.type === "phaser") {
-              // Extract the target phaser ID if dragging onto a specific track
-              let targetPhaserId = ev.action.phaser;
-
-              if (moving.activeTrackName?.startsWith("phaser:")) {
-                targetPhaserId = moving.activeTrackName.replace("phaser:", "");
-              }
-
-              const isDifferentTrack = targetPhaserId !== ev.action.phaser;
-
-              if (ev.beat !== newBeat || isDifferentTrack) {
-                ev.beat = newBeat;
-                ev.action.phaser = targetPhaserId;
-
-                dslObj.timeline.events = resolveOverlaps(dslObj.timeline.events);
-                engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
-              }
-            }
-          }
-        } catch (err) {}
-      }
-
-      setResizing(null);
-      setMoving(null);
-
-      setTimeout(() => {
-        interactionState.current.isInteracting = false;
+      globalThis.setTimeout(() => {
+        if (!interaction.current) interactionState.current.isInteracting = false;
       }, 50);
     };
 
+    const handlePointerUp = () => finishInteraction(true);
+    const handlePointerCancel = () => finishInteraction(false);
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
-
+    window.addEventListener("pointercancel", handlePointerCancel);
     return () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerCancel);
     };
-  }, [resizing, moving, currentDslCode]);
+  }, []);
 
   return {
+    document: parsedDsl,
     timelineEvents,
-    moving,
-    setMoving,
-    resizing,
-    setResizing,
     interactionState,
+    startMoving,
+    startResizing,
     addEvent,
+    addAutomationLane,
     deleteEvent,
-    updateAnimationBlock,
+    nudgeEvent,
+    trimClipOverlaps,
+    replaceClipOverlaps,
+    addKeyframe,
+    moveKeyframes,
+    deleteKeyframes,
+    updateKeyframe,
   };
 };
+
+function commandForInteraction(
+  interaction: TimelineInteraction,
+  document: FullDSL,
+  view: TimelineEventDSL,
+): DocumentCommand | undefined {
+  if (!document.timeline || !view.source_track_id || !view.source_item_id) return undefined;
+  if (interaction.type === "resize") {
+    const durationTick = Math.max(
+      1,
+      beatsToTicks(
+        snappedDuration(interaction.startDuration, interaction.currentDeltaX),
+        document.timeline.ppq,
+      ),
+    );
+    return view.action.type === "effect"
+      ? {
+          type: "resize_clip",
+          track_id: view.source_track_id,
+          clip_id: view.source_item_id,
+          duration_tick: durationTick,
+        }
+      : {
+          type: "scale_automation_lane",
+          track_id: view.source_track_id,
+          lane_id: view.source_item_id,
+          start_tick: beatsToTicks(view.beat, document.timeline.ppq),
+          duration_tick: durationTick,
+        };
+  }
+
+  const newTick = beatsToTicks(
+    snappedBeat(interaction.startBeat, interaction.currentDeltaX),
+    document.timeline.ppq,
+  );
+  const clip = findClip(document, view);
+  if (clip) {
+    return {
+      type: "move_clip",
+      track_id: view.source_track_id,
+      clip_id: view.source_item_id,
+      start_tick: newTick,
+      instance_id: interaction.activeTrackName?.startsWith("phaser:")
+        ? interaction.activeTrackName.replace("phaser:", "")
+        : undefined,
+    };
+  }
+  const lane = findLane(document, view);
+  if (lane && lane.keyframes.length > 0) {
+    return {
+      type: "move_automation_lane",
+      track_id: view.source_track_id,
+      lane_id: view.source_item_id,
+      delta_tick: newTick - lane.keyframes[0].time_tick,
+    };
+  }
+  return undefined;
+}
+
+export function flattenTimeline(document: FullDSL | null): TimelineEventDSL[] {
+  const timeline = document?.timeline;
+  if (!timeline) return [];
+  const events: TimelineEventDSL[] = [];
+  for (const track of timeline.tracks) {
+    for (const clip of track.clips ?? []) {
+      events.push({
+        id: clip.id,
+        beat: clip.start_tick / timeline.ppq,
+        duration: clip.duration_tick / timeline.ppq,
+        action: { type: "effect", instance_id: clip.instance_id },
+        source_track_id: track.id,
+        source_item_id: clip.id,
+      });
+    }
+    for (const lane of track.automation_lanes ?? []) {
+      const first = lane.keyframes[0];
+      const last = lane.keyframes[lane.keyframes.length - 1];
+      if (!first || !last) continue;
+      events.push({
+        id: lane.id,
+        beat: first.time_tick / timeline.ppq,
+        duration: Math.max(1, last.time_tick - first.time_tick) / timeline.ppq,
+        action: {
+          type: "animate",
+          target: lane.target,
+          from: fromParameterValue(first.value),
+          to: fromParameterValue(last.value),
+          easing: first.interpolation,
+        },
+        source_track_id: track.id,
+        source_item_id: lane.id,
+      });
+    }
+  }
+  return events.sort(
+    (left, right) => left.beat - right.beat || (left.id ?? "").localeCompare(right.id ?? ""),
+  );
+}
+
+function findClip(document: FullDSL, view?: TimelineEventDSL) {
+  if (!view?.source_track_id || !view.source_item_id) return undefined;
+  return document.timeline?.tracks
+    .find((track) => track.id === view.source_track_id)
+    ?.clips?.find((clip) => clip.id === view.source_item_id);
+}
+
+function findLane(document: FullDSL, view?: TimelineEventDSL): AutomationLaneDSL | undefined {
+  if (!view?.source_track_id || !view.source_item_id) return undefined;
+  return document.timeline?.tracks
+    .find((track) => track.id === view.source_track_id)
+    ?.automation_lanes?.find((lane) => lane.id === view.source_item_id);
+}
+
+function snappedBeat(startBeat: number, deltaX: number) {
+  return Math.max(0, Math.floor((startBeat + deltaX / BEAT_WIDTH) * 2) / 2);
+}
+
+function snappedDuration(startDuration: number, deltaX: number) {
+  return Math.max(0.5, Math.round((startDuration + deltaX / BEAT_WIDTH) * 2) / 2);
+}
+
+function beatsToTicks(beats: number, ppq: number) {
+  return Math.max(0, Math.round(beats * ppq));
+}
+
+function nextLayer(track: TimelineTrackDSL) {
+  return (track.clips ?? []).reduce((maximum, clip) => Math.max(maximum, clip.layer ?? 0), -1) + 1;
+}
+
+function stableId(prefix: string) {
+  return `${prefix}-${globalThis.crypto.randomUUID()}`;
+}
+
+function transaction(label: string, ...commands: DocumentCommand[]): DocumentTransaction {
+  return { id: stableId("transaction"), label, commands };
+}
+
+function fromParameterValue(value: ParameterValueDSL): FromTo {
+  return value.value;
+}

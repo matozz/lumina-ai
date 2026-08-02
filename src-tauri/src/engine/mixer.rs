@@ -7,7 +7,7 @@ pub struct AttributeWrite<'a> {
     pub attribute: AttributeHandle,
     pub value: AttributeValue,
     pub source_id: &'a str,
-    pub layer: u32,
+    pub layer: i32,
     pub priority: i32,
     pub activation_order: u64,
     pub stable_source_order: u32,
@@ -34,7 +34,7 @@ pub struct AttributeMixInspection {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct MixContender {
     pub source_id: String,
-    pub layer: u32,
+    pub layer: i32,
     pub priority: i32,
     pub activation_order: u64,
     pub stable_source_order: u32,

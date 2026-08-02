@@ -1,9 +1,11 @@
-use lumina_ai_lib::compiler::{
-    CompiledGroup, CompiledPhaser, CompiledProfilePhaser, CompiledShow, CompiledStep, Fixture,
-    PhaseConfig,
-};
+use lumina_ai_lib::compiler::{CompiledGroup, CompiledShow, Fixture};
 use lumina_ai_lib::engine::attribute::{resolve_attribute, FixtureFrame};
 use lumina_ai_lib::engine::clock::ManualClock;
+use lumina_ai_lib::engine::effect::{
+    common_parameters, CompiledEffectGraph, CompiledEffectNode, CompiledEffectStep,
+    CompiledProfileSequence, EffectCatalog, EffectDefinition, EffectDefinitionHandle,
+    EffectInstance, EffectNodeHandle, EffectSource, SpatialBasis,
+};
 use lumina_ai_lib::engine::output::{LogicalFrame, OutputHub};
 use lumina_ai_lib::engine::profile::{
     profile_by_handle, profile_handle_by_id, AttributeValue, FixtureProfileHandle,
@@ -161,39 +163,81 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
         sorted_fixture_ids: fixtures.iter().map(|fixture| fixture.id).collect(),
         blocks: vec![1; fixture_count],
     };
-    let phaser = CompiledPhaser {
-        id: "loaded".to_string(),
+    let definition = EffectDefinition {
+        id: "benchmark.loaded".to_string(),
         name: "Loaded runtime".to_string(),
-        target: "all".to_string().into(),
-        multiplier: Some(1.0),
-        profile_steps: HashMap::from([(
-            profile,
-            profile_phaser(
-                profile,
-                vec![
-                    ([255, 255, 255], 1.0, 50.0, 100.0),
-                    ([0, 0, 0], 0.0, 50.0, 100.0),
-                ],
-            ),
-        )]),
-        phase: PhaseConfig::Spread {
-            from: 0.0,
-            to: 100.0,
+        revision: 1,
+        source: EffectSource::ProjectLocal,
+        parameters: common_parameters(1.0),
+        graph: CompiledEffectGraph {
+            nodes: vec![
+                CompiledEffectNode::Time,
+                CompiledEffectNode::SpatialPhase {
+                    input: EffectNodeHandle::from_index(0).expect("time handle"),
+                    basis: SpatialBasis::Index,
+                    from: 0.0,
+                    to: 1.0,
+                    wrap: false,
+                    group_size: None,
+                    custom_order: Vec::new(),
+                },
+                CompiledEffectNode::StepSequence {
+                    phase: EffectNodeHandle::from_index(1).expect("spatial handle"),
+                    profiles: HashMap::from([(
+                        profile,
+                        profile_sequence(
+                            profile,
+                            vec![
+                                ([255, 255, 255], 1.0, 50.0, 100.0),
+                                ([0, 0, 0], 0.0, 50.0, 100.0),
+                            ],
+                        ),
+                    )]),
+                },
+                CompiledEffectNode::AttributeWriter {
+                    input: EffectNodeHandle::from_index(2).expect("sequence handle"),
+                    mask: None,
+                    attributes: HashMap::new(),
+                },
+            ],
+            writers: vec![EffectNodeHandle::from_index(3).expect("writer handle")],
         },
+        catalog: EffectCatalog::default(),
+    };
+    let offsets: Vec<_> = (0..fixture_count)
+        .map(|index| {
+            if fixture_count <= 1 {
+                0.0
+            } else {
+                index as f64 / (fixture_count - 1) as f64
+            }
+        })
+        .collect();
+    let instance = EffectInstance {
+        id: "loaded".to_string(),
+        definition: EffectDefinitionHandle::from_index(0),
+        target_group_id: "all".to_string(),
+        parameter_overrides: HashMap::new(),
+        seed: EffectInstance::stable_seed("loaded"),
+        spatial_offsets: HashMap::from([(
+            EffectNodeHandle::from_index(1).expect("spatial handle"),
+            offsets,
+        )]),
     };
 
     CompiledShow {
         fixtures,
         groups: HashMap::from([(group.id.clone(), group)]),
-        phasers: HashMap::from([(phaser.id.clone(), phaser)]),
+        effect_definitions: vec![definition],
+        effect_instances: HashMap::from([(instance.id.clone(), instance)]),
         ..CompiledShow::default()
     }
 }
 
-fn profile_phaser(
+fn profile_sequence(
     profile: FixtureProfileHandle,
     definitions: Vec<([u8; 3], f32, f64, f64)>,
-) -> CompiledProfilePhaser {
+) -> CompiledProfileSequence {
     let intensity = resolve_attribute(profile, INTENSITY_ATTRIBUTE);
     let color = resolve_attribute(profile, COLOR_RGB_ATTRIBUTE);
     let attribute_count = profile_by_handle(profile).attributes.len();
@@ -204,7 +248,7 @@ fn profile_phaser(
             values[intensity.expect("intensity").index()] =
                 Some(AttributeValue::Scalar(intensity_value));
             values[color.expect("color").index()] = Some(AttributeValue::Color(color_value));
-            CompiledStep {
+            CompiledEffectStep {
                 values,
                 width,
                 transition,
@@ -213,7 +257,7 @@ fn profile_phaser(
             }
         })
         .collect();
-    CompiledProfilePhaser {
+    CompiledProfileSequence {
         steps,
         intensity,
         color,

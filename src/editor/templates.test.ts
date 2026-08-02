@@ -31,9 +31,9 @@ describe("DSL template contract", () => {
     for (const template of templates) {
       expect(template.disabled, template.errorMessage).not.toBe(true);
       const parsed = validateShowDocument(JSON.parse(template.dsl));
-      expect(parsed.success, `${template.key} must satisfy ShowDocumentV2`).toBe(true);
+      expect(parsed.success, `${template.key} must satisfy ShowDocumentV4`).toBe(true);
       if (parsed.success) {
-        expect(parsed.data.schema_version).toBe(2);
+        expect(parsed.data.schema_version).toBe(4);
       }
     }
   });

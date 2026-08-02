@@ -2,15 +2,16 @@ import { describe, expect, it } from "vitest";
 import { validateShowDocument } from "./showDocument";
 
 const document = {
-  schema_version: 2,
+  schema_version: 4,
   meta: { name: "Contract" },
   patch: [],
   layout: { type: "generator", generator: { shape: "custom", fixtures: [] } },
   groups: [],
-  phasers: [],
+  effect_definitions: [],
+  effect_instances: [],
 };
 
-describe("generated ShowDocumentV2 validator", () => {
+describe("generated ShowDocumentV4 validator", () => {
   it("accepts the current version and rejects unknown fields", () => {
     expect(validateShowDocument(document).success).toBe(true);
 
@@ -25,21 +26,44 @@ describe("generated ShowDocumentV2 validator", () => {
   });
 
   it("fails closed for an unknown schema version", () => {
-    const result = validateShowDocument({ ...document, schema_version: 3 });
+    const result = validateShowDocument({ ...document, schema_version: 5 });
 
     expect(result.success).toBe(false);
   });
 
   it("accepts structured automation targets and rejects legacy target paths", () => {
-    const action = {
-      type: "animate",
+    const lane = {
+      id: "master-dimmer",
       target: { scope: "global", parameter_id: "master_dimmer" },
-      from: 0,
-      to: 1,
+      keyframes: [
+        {
+          id: "master-start",
+          time_tick: 0,
+          value: { type: "scalar", value: 0 },
+          interpolation: "linear",
+        },
+        {
+          id: "master-end",
+          time_tick: 960,
+          value: { type: "scalar", value: 1 },
+          interpolation: "hold",
+        },
+      ],
     };
     const withTimeline = {
       ...document,
-      timeline: { events: [{ beat: 0, duration: 1, action }] },
+      timeline: {
+        ppq: 960,
+        tempo_map: { points: [{ time_tick: 0, bpm: 120 }] },
+        tracks: [
+          {
+            id: "automation",
+            name: "Automation",
+            overlap_policy: "layer",
+            automation_lanes: [lane],
+          },
+        ],
+      },
     };
 
     expect(validateShowDocument(withTimeline).success).toBe(true);
@@ -47,11 +71,11 @@ describe("generated ShowDocumentV2 validator", () => {
       validateShowDocument({
         ...withTimeline,
         timeline: {
-          events: [
+          ...withTimeline.timeline,
+          tracks: [
             {
-              beat: 0,
-              duration: 1,
-              action: { ...action, target: "global.master_dimmer" },
+              ...withTimeline.timeline.tracks[0],
+              automation_lanes: [{ ...lane, target: "global.master_dimmer" }],
             },
           ],
         },

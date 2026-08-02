@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 4,
   "meta": {
     "name": "Color Bump"
   },
@@ -18,10 +18,10 @@
       "shape": "circle",
       "rings": 1,
       "increment": 12,
-      "gap": 150,
+      "gap": 150.0,
       "center": [
-        0,
-        0
+        0.0,
+        0.0
       ]
     }
   },
@@ -64,102 +64,670 @@
       "sort_by": "none"
     }
   ],
-  "phasers": [
+  "effect_definitions": [
     {
-      "id": "odd_bump",
+      "id": "legacy.odd_bump",
       "name": "Odd Bump",
-      "target": "odd",
-      "multiplier": 2,
-      "steps": [
+      "revision": 1,
+      "source": "project_local",
+      "parameters": [
         {
-          "values": {
-            "color": "#00ffff",
-            "dimmer": 1
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 2.0
           },
-          "width": 10,
-          "transition": 0
+          "range": [
+            0.01,
+            64.0
+          ],
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
         },
         {
-          "values": {
-            "color": "#000033",
-            "dimmer": 0.2
+          "id": "phase",
+          "name": "Phase",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0.0
           },
-          "width": 90,
-          "transition": 50
+          "range": [
+            -1.0,
+            1.0
+          ],
+          "unit": "cycles",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "width",
+          "name": "Width",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 100.0
+          },
+          "range": [
+            0.0,
+            100.0
+          ],
+          "unit": "percent",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "transition",
+          "name": "Transition",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 100.0
+          },
+          "range": [
+            0.0,
+            100.0
+          ],
+          "unit": "percent",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 1.0
+          },
+          "range": [
+            0.0,
+            1.0
+          ],
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "value_type": "color",
+          "default_value": {
+            "type": "color",
+            "value": "#ffffff"
+          },
+          "unit": "color",
+          "ui_hint": "color",
+          "automation": "continuous"
+        },
+        {
+          "id": "direction",
+          "name": "Direction",
+          "value_type": "direction",
+          "default_value": {
+            "type": "direction",
+            "value": "forward"
+          },
+          "unit": "direction",
+          "ui_hint": "segmented",
+          "automation": "discrete"
+        },
+        {
+          "id": "pan",
+          "name": "Pan",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0.0
+          },
+          "range": [
+            -540.0,
+            540.0
+          ],
+          "unit": "degrees",
+          "ui_hint": "angle",
+          "automation": "continuous"
+        },
+        {
+          "id": "tilt",
+          "name": "Tilt",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0.0
+          },
+          "range": [
+            -270.0,
+            270.0
+          ],
+          "unit": "degrees",
+          "ui_hint": "angle",
+          "automation": "continuous"
         }
       ],
-      "phase": {
-        "mode": "grouped",
-        "grouped": {
-          "group_size": 6,
-          "spread": [0, 0]
-        }
+      "graph": {
+        "nodes": [
+          {
+            "type": "time",
+            "id": "time"
+          },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": {
+              "node_id": "time",
+              "port": "scalar"
+            },
+            "basis": "index",
+            "from": 0.0,
+            "to": 0.0,
+            "wrap": true,
+            "group_size": 6
+          },
+          {
+            "type": "step_sequence",
+            "id": "sequence",
+            "phase": {
+              "node_id": "spatial",
+              "port": "scalar"
+            },
+            "steps": [
+              {
+                "values": {
+                  "color": "#00ffff",
+                  "dimmer": 1.0
+                },
+                "width": 10.0,
+                "transition": 0.0
+              },
+              {
+                "values": {
+                  "color": "#000033",
+                  "dimmer": 0.2
+                },
+                "width": 90.0,
+                "transition": 50.0
+              }
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "output",
+            "input": {
+              "node_id": "sequence",
+              "port": "attribute_set"
+            }
+          }
+        ]
+      },
+      "catalog": {
+        "energy": 0.5,
+        "density": 0.5,
+        "motion": "pulse",
+        "colorfulness": 0.5,
+        "strobe_risk": "none",
+        "required_attributes": [
+          "intensity",
+          "color.rgb"
+        ]
       }
     },
     {
-      "id": "even_bump",
+      "id": "legacy.even_bump",
       "name": "Even Bump",
-      "target": "even",
-      "multiplier": 2,
-      "steps": [
+      "revision": 1,
+      "source": "project_local",
+      "parameters": [
         {
-          "values": {
-            "color": "#ff00ff",
-            "dimmer": 1
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 2.0
           },
-          "width": 10,
-          "transition": 0
+          "range": [
+            0.01,
+            64.0
+          ],
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
         },
         {
-          "values": {
-            "color": "#330000",
-            "dimmer": 0.2
+          "id": "phase",
+          "name": "Phase",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0.0
           },
-          "width": 90,
-          "transition": 50
+          "range": [
+            -1.0,
+            1.0
+          ],
+          "unit": "cycles",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "width",
+          "name": "Width",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 100.0
+          },
+          "range": [
+            0.0,
+            100.0
+          ],
+          "unit": "percent",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "transition",
+          "name": "Transition",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 100.0
+          },
+          "range": [
+            0.0,
+            100.0
+          ],
+          "unit": "percent",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 1.0
+          },
+          "range": [
+            0.0,
+            1.0
+          ],
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "value_type": "color",
+          "default_value": {
+            "type": "color",
+            "value": "#ffffff"
+          },
+          "unit": "color",
+          "ui_hint": "color",
+          "automation": "continuous"
+        },
+        {
+          "id": "direction",
+          "name": "Direction",
+          "value_type": "direction",
+          "default_value": {
+            "type": "direction",
+            "value": "forward"
+          },
+          "unit": "direction",
+          "ui_hint": "segmented",
+          "automation": "discrete"
+        },
+        {
+          "id": "pan",
+          "name": "Pan",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0.0
+          },
+          "range": [
+            -540.0,
+            540.0
+          ],
+          "unit": "degrees",
+          "ui_hint": "angle",
+          "automation": "continuous"
+        },
+        {
+          "id": "tilt",
+          "name": "Tilt",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0.0
+          },
+          "range": [
+            -270.0,
+            270.0
+          ],
+          "unit": "degrees",
+          "ui_hint": "angle",
+          "automation": "continuous"
         }
       ],
-      "phase": {
-        "mode": "grouped",
-        "grouped": {
-          "group_size": 6,
-          "spread": [0, 100]
-        }
+      "graph": {
+        "nodes": [
+          {
+            "type": "time",
+            "id": "time"
+          },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": {
+              "node_id": "time",
+              "port": "scalar"
+            },
+            "basis": "index",
+            "from": 0.0,
+            "to": 1.0,
+            "wrap": true,
+            "group_size": 6
+          },
+          {
+            "type": "step_sequence",
+            "id": "sequence",
+            "phase": {
+              "node_id": "spatial",
+              "port": "scalar"
+            },
+            "steps": [
+              {
+                "values": {
+                  "color": "#ff00ff",
+                  "dimmer": 1.0
+                },
+                "width": 10.0,
+                "transition": 0.0
+              },
+              {
+                "values": {
+                  "color": "#330000",
+                  "dimmer": 0.2
+                },
+                "width": 90.0,
+                "transition": 50.0
+              }
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "output",
+            "input": {
+              "node_id": "sequence",
+              "port": "attribute_set"
+            }
+          }
+        ]
+      },
+      "catalog": {
+        "energy": 0.5,
+        "density": 0.5,
+        "motion": "pulse",
+        "colorfulness": 0.5,
+        "strobe_risk": "none",
+        "required_attributes": [
+          "intensity",
+          "color.rgb"
+        ]
       }
     },
     {
-      "id": "sweep_flash",
+      "id": "legacy.sweep_flash",
       "name": "Sweep Flash",
-      "target": "all",
-      "multiplier": 0.5,
-      "steps": [
+      "revision": 1,
+      "source": "project_local",
+      "parameters": [
         {
-          "values": {
-            "color": "#ffffff",
-            "dimmer": 1
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0.5
           },
-          "width": 5,
-          "transition": 0
+          "range": [
+            0.01,
+            64.0
+          ],
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
         },
         {
-          "values": {
-            "color": "#000000",
-            "dimmer": 0
+          "id": "phase",
+          "name": "Phase",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0.0
           },
-          "width": 95,
-          "transition": 100
+          "range": [
+            -1.0,
+            1.0
+          ],
+          "unit": "cycles",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "width",
+          "name": "Width",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 100.0
+          },
+          "range": [
+            0.0,
+            100.0
+          ],
+          "unit": "percent",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "transition",
+          "name": "Transition",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 100.0
+          },
+          "range": [
+            0.0,
+            100.0
+          ],
+          "unit": "percent",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 1.0
+          },
+          "range": [
+            0.0,
+            1.0
+          ],
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "value_type": "color",
+          "default_value": {
+            "type": "color",
+            "value": "#ffffff"
+          },
+          "unit": "color",
+          "ui_hint": "color",
+          "automation": "continuous"
+        },
+        {
+          "id": "direction",
+          "name": "Direction",
+          "value_type": "direction",
+          "default_value": {
+            "type": "direction",
+            "value": "forward"
+          },
+          "unit": "direction",
+          "ui_hint": "segmented",
+          "automation": "discrete"
+        },
+        {
+          "id": "pan",
+          "name": "Pan",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0.0
+          },
+          "range": [
+            -540.0,
+            540.0
+          ],
+          "unit": "degrees",
+          "ui_hint": "angle",
+          "automation": "continuous"
+        },
+        {
+          "id": "tilt",
+          "name": "Tilt",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0.0
+          },
+          "range": [
+            -270.0,
+            270.0
+          ],
+          "unit": "degrees",
+          "ui_hint": "angle",
+          "automation": "continuous"
         }
       ],
-      "phase": {
-        "mode": "spread",
-        "spread": {
-          "from": 0,
-          "to": 100
-        }
+      "graph": {
+        "nodes": [
+          {
+            "type": "time",
+            "id": "time"
+          },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": {
+              "node_id": "time",
+              "port": "scalar"
+            },
+            "basis": "index",
+            "from": 0.0,
+            "to": 1.0,
+            "wrap": true
+          },
+          {
+            "type": "step_sequence",
+            "id": "sequence",
+            "phase": {
+              "node_id": "spatial",
+              "port": "scalar"
+            },
+            "steps": [
+              {
+                "values": {
+                  "color": "#ffffff",
+                  "dimmer": 1.0
+                },
+                "width": 5.0,
+                "transition": 0.0
+              },
+              {
+                "values": {
+                  "color": "#000000",
+                  "dimmer": 0.0
+                },
+                "width": 95.0,
+                "transition": 100.0
+              }
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "output",
+            "input": {
+              "node_id": "sequence",
+              "port": "attribute_set"
+            }
+          }
+        ]
+      },
+      "catalog": {
+        "energy": 0.5,
+        "density": 0.5,
+        "motion": "pulse",
+        "colorfulness": 0.5,
+        "strobe_risk": "none",
+        "required_attributes": [
+          "intensity",
+          "color.rgb"
+        ]
       }
     }
   ],
+  "effect_instances": [
+    {
+      "id": "odd_bump",
+      "definition_id": "legacy.odd_bump",
+      "definition_revision": 1,
+      "target_group_id": "odd",
+      "seed": "9564bf5f14bdd0b7"
+    },
+    {
+      "id": "even_bump",
+      "definition_id": "legacy.even_bump",
+      "definition_revision": 1,
+      "target_group_id": "even",
+      "seed": "7eb2cd2b8206571a"
+    },
+    {
+      "id": "sweep_flash",
+      "definition_id": "legacy.sweep_flash",
+      "definition_revision": 1,
+      "target_group_id": "all",
+      "seed": "321b51a3f3ea3a26"
+    }
+  ],
   "timeline": {
-    "events": []
+    "ppq": 960,
+    "tempo_map": {
+      "points": [
+        {
+          "time_tick": 0,
+          "bpm": 120.0
+        }
+      ]
+    },
+    "tracks": []
   }
 }

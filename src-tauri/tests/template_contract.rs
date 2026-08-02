@@ -33,7 +33,7 @@ fn all_editor_templates_parse_and_compile_with_fixture_outputs() {
             .iter()
             .map(|patch| (patch.id_range.1 - patch.id_range.0 + 1) as usize)
             .sum();
-        let expected_phaser_count = dsl.phasers.len();
+        let expected_phaser_count = dsl.effect_instances.len();
         let show = Compiler::compile_document(dsl)
             .unwrap_or_else(|errors| panic!("{} must compile: {errors:?}", path.display()));
 
@@ -44,7 +44,7 @@ fn all_editor_templates_parse_and_compile_with_fixture_outputs() {
             path.display()
         );
         assert_eq!(
-            show.phasers.len(),
+            show.effect_instances.len(),
             expected_phaser_count,
             "{} phaser output count",
             path.display()

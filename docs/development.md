@@ -2,7 +2,7 @@
 
 Lumina pins its quality-gate toolchain so local and CI results are reproducible:
 
-- Node.js 20.19.3 via `.nvmrc`
+- Node.js 22.20.0 via `.nvmrc`
 - pnpm 10.33.0 via `packageManager`
 - Rust 1.94.1 with rustfmt and Clippy via `rust-toolchain.toml`
 

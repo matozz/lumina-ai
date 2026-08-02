@@ -114,7 +114,7 @@ Here is an example of defining a matrix of lights and creating a "Blink" phaser 
 
 Ensure you have the following installed:
 
-- [Node.js](https://nodejs.org/) 20.19.3
+- [Node.js](https://nodejs.org/) 22.20.0
 - [pnpm](https://pnpm.io/) 10.33.0
 - [Rust](https://www.rust-lang.org/tools/install) 1.94.1 with rustfmt and Clippy
 

@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.33.0",
   "engines": {
-    "node": "20.19.3",
+    "node": "22.20.0",
     "pnpm": "10.33.0"
   },
   "type": "module",
@@ -14,6 +14,7 @@
     "build:vite": "vite build",
     "baseline:stage0": "cargo run --release --manifest-path src-tauri/Cargo.toml --example stage0_baseline",
     "baseline:stage1": "cargo run --release --manifest-path src-tauri/Cargo.toml --example stage1_runtime_validation",
+    "baseline:stage4": "cargo run --release --manifest-path src-tauri/Cargo.toml --example stage4_effect_benchmark",
     "schema:generate": "cargo run --manifest-path src-tauri/Cargo.toml --example generate_show_schema && prettier --write schemas/*.json src/generated/show-document-v*.ts",
     "schema:check": "cargo run --quiet --manifest-path src-tauri/Cargo.toml --example generate_show_schema -- --check",
     "document:migrate": "cargo run --manifest-path src-tauri/Cargo.toml --example migrate_show_document --",

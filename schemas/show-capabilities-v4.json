@@ -1,0 +1,19 @@
+{
+  "document_contract": {
+    "arrangement": ["track", "effect_clip", "automation_lane", "keyframe"],
+    "automation_targets": {
+      "effect_instance": "definition_parameter_id",
+      "global": ["master_dimmer"]
+    },
+    "keyframe_interpolation": ["hold", "linear", "ease_in", "ease_out", "ease_in_out", "bezier"],
+    "musical_time": {
+      "ppq": 960,
+      "storage": "integer_tick"
+    },
+    "overlap_policies": ["layer", "replace", "reject", "crossfade"]
+  },
+  "document_schema": "show-document-v4.schema.json",
+  "document_schema_version": 4,
+  "fixture_profiles": "fixture-profiles-v1.json",
+  "metadata_version": 1
+}

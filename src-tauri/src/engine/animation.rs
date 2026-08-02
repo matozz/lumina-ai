@@ -1,22 +1,25 @@
-use crate::compiler::{CompiledAutomationTarget, CompiledEffectParameter, EffectInstanceHandle};
-use crate::document::AnimatableValueDSL;
+use crate::compiler::{CompiledAutomationTarget, EffectInstanceHandle};
+use crate::document::{DirectionDSL, ParameterValueDSL};
 use crate::engine::color::{lerp_color_lab, parse_hex_color};
+use crate::engine::effect::ParameterHandle;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum AnimatableValue {
     Float(f64),
     Color(u8, u8, u8),
+    Direction(DirectionDSL),
 }
 
 impl AnimatableValue {
-    pub fn from_document(value: &AnimatableValueDSL) -> Option<Self> {
-        let AnimatableValueDSL::Color(color) = value else {
-            return value.as_f64().map(Self::Float);
-        };
-        parse_hex_color(color)
-            .ok()
-            .map(|(red, green, blue)| Self::Color(red, green, blue))
+    pub fn from_parameter_document(value: &ParameterValueDSL) -> Option<Self> {
+        match value {
+            ParameterValueDSL::Scalar(value) => Some(Self::Float(*value)),
+            ParameterValueDSL::Color(color) => parse_hex_color(color)
+                .ok()
+                .map(|(red, green, blue)| Self::Color(red, green, blue)),
+            ParameterValueDSL::Direction(direction) => Some(Self::Direction(*direction)),
+        }
     }
 
     pub fn lerp(&self, other: &Self, t: f64) -> Self {
@@ -27,6 +30,13 @@ impl AnimatableValue {
             (AnimatableValue::Color(r1, g1, b1), AnimatableValue::Color(r2, g2, b2)) => {
                 let (r, g, b) = lerp_color_lab((*r1, *g1, *b1), (*r2, *g2, *b2), t);
                 AnimatableValue::Color(r, g, b)
+            }
+            (AnimatableValue::Direction(left), AnimatableValue::Direction(right)) => {
+                if t >= 1.0 {
+                    Self::Direction(*right)
+                } else {
+                    Self::Direction(*left)
+                }
             }
             // Fallback: If types don't match, just snap to the target if we are halfway there
             _ => {
@@ -61,7 +71,7 @@ pub fn ease(t: f64, easing: &str) -> f64 {
 #[derive(Clone, Default, Debug)]
 pub struct ParameterContext {
     global_master_dimmer: Option<AnimatableValue>,
-    effect_params: HashMap<EffectInstanceHandle, HashMap<CompiledEffectParameter, AnimatableValue>>,
+    effect_params: HashMap<EffectInstanceHandle, HashMap<ParameterHandle, AnimatableValue>>,
 }
 
 impl ParameterContext {
@@ -100,18 +110,18 @@ impl ParameterContext {
     pub fn get_effect_float(
         &self,
         instance: &EffectInstanceHandle,
-        parameter: CompiledEffectParameter,
+        parameter: ParameterHandle,
     ) -> Option<f64> {
         match self.effect_params.get(instance)?.get(&parameter)? {
             AnimatableValue::Float(value) => Some(*value),
-            AnimatableValue::Color(_, _, _) => None,
+            AnimatableValue::Color(_, _, _) | AnimatableValue::Direction(_) => None,
         }
     }
 
     pub fn get_effect_color(
         &self,
         instance: &EffectInstanceHandle,
-        parameter: CompiledEffectParameter,
+        parameter: ParameterHandle,
     ) -> Option<(u8, u8, u8)> {
         if let AnimatableValue::Color(r, g, b) =
             self.effect_params.get(instance)?.get(&parameter)?
@@ -119,6 +129,17 @@ impl ParameterContext {
             Some((*r, *g, *b))
         } else {
             None
+        }
+    }
+
+    pub fn get_effect_direction(
+        &self,
+        instance: &EffectInstanceHandle,
+        parameter: ParameterHandle,
+    ) -> Option<DirectionDSL> {
+        match self.effect_params.get(instance)?.get(&parameter)? {
+            AnimatableValue::Direction(direction) => Some(*direction),
+            AnimatableValue::Float(_) | AnimatableValue::Color(_, _, _) => None,
         }
     }
 
