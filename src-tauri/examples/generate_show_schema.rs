@@ -1,4 +1,6 @@
-use lumina_ai_lib::document::{ShowDocumentV1, ShowDocumentV2, CURRENT_SCHEMA_VERSION};
+use lumina_ai_lib::document::{
+    ShowDocumentV1, ShowDocumentV2, ShowDocumentV3, CURRENT_SCHEMA_VERSION,
+};
 use lumina_ai_lib::engine::profile::builtin_profiles;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeSet;
@@ -12,16 +14,21 @@ fn main() {
         .to_path_buf();
     let schema_v1_path = repository_root.join("schemas/show-document-v1.schema.json");
     let schema_v2_path = repository_root.join("schemas/show-document-v2.schema.json");
+    let schema_v3_path = repository_root.join("schemas/show-document-v3.schema.json");
     let capabilities_v1_path = repository_root.join("schemas/show-capabilities-v1.json");
     let capabilities_v2_path = repository_root.join("schemas/show-capabilities-v2.json");
+    let capabilities_v3_path = repository_root.join("schemas/show-capabilities-v3.json");
     let profiles_path = repository_root.join("schemas/fixture-profiles-v1.json");
     let typescript_v1_path = repository_root.join("src/generated/show-document-v1.ts");
     let typescript_v2_path = repository_root.join("src/generated/show-document-v2.ts");
+    let typescript_v3_path = repository_root.join("src/generated/show-document-v3.ts");
 
     let schema_v1 = schemars::schema_for!(ShowDocumentV1);
     let schema_v2 = schemars::schema_for!(ShowDocumentV2);
+    let schema_v3 = schemars::schema_for!(ShowDocumentV3);
     let schema_v1_value = serde_json::to_value(&schema_v1).expect("V1 schema converts to JSON");
     let schema_v2_value = serde_json::to_value(&schema_v2).expect("V2 schema converts to JSON");
+    let schema_v3_value = serde_json::to_value(&schema_v3).expect("V3 schema converts to JSON");
     let capabilities_v1_value = json!({
         "metadata_version": 1,
         "document_schema_version": 1,
@@ -39,7 +46,7 @@ fn main() {
     });
     let capabilities_v2_value = json!({
         "metadata_version": 1,
-        "document_schema_version": CURRENT_SCHEMA_VERSION,
+        "document_schema_version": 2,
         "document_schema": "show-document-v2.schema.json",
         "fixture_profiles": "fixture-profiles-v1.json",
         "document_contract": {
@@ -53,6 +60,27 @@ fn main() {
             }
         }
     });
+    let capabilities_v3_value = json!({
+        "metadata_version": 1,
+        "document_schema_version": CURRENT_SCHEMA_VERSION,
+        "document_schema": "show-document-v3.schema.json",
+        "fixture_profiles": "fixture-profiles-v1.json",
+        "document_contract": {
+            "effect_sources": ["built_in", "project_local", "user_library"],
+            "parameter_types": ["scalar", "color", "direction"],
+            "common_parameters": ["speed", "phase", "width", "transition", "intensity", "color", "direction"],
+            "effect_nodes": [
+                "time", "constant", "step_sequence", "oscillator", "envelope",
+                "spatial_phase", "math", "map", "clamp", "color_gradient",
+                "fixture_mask", "attribute_writer"
+            ],
+            "spatial_bases": ["index", "x", "y", "distance", "angle", "custom"],
+            "automation_targets": {
+                "global": ["master_dimmer"],
+                "effect_instance": "definition_parameter_id"
+            }
+        }
+    });
     let profiles_value = json!({
         "metadata_version": 1,
         "profiles": builtin_profiles()
@@ -61,15 +89,19 @@ fn main() {
     let json_artifacts = [
         (&schema_v1_path, &schema_v1_value),
         (&schema_v2_path, &schema_v2_value),
+        (&schema_v3_path, &schema_v3_value),
         (&capabilities_v1_path, &capabilities_v1_value),
         (&capabilities_v2_path, &capabilities_v2_value),
+        (&capabilities_v3_path, &capabilities_v3_value),
         (&profiles_path, &profiles_value),
     ];
     let typescript_v1 = render_typescript(&schema_v1_value, "ShowDocumentV1");
     let typescript_v2 = render_typescript(&schema_v2_value, "ShowDocumentV2");
+    let typescript_v3 = render_typescript(&schema_v3_value, "ShowDocumentV3");
     let text_artifacts = [
         (&typescript_v1_path, typescript_v1.as_str()),
         (&typescript_v2_path, typescript_v2.as_str()),
+        (&typescript_v3_path, typescript_v3.as_str()),
     ];
 
     if std::env::args().any(|argument| argument == "--check") {
@@ -91,12 +123,16 @@ fn main() {
 
     fs::create_dir_all(schema_v1_path.parent().expect("schema parent"))
         .expect("schema directory is writable");
-    for (path, schema) in [(&schema_v1_path, &schema_v1), (&schema_v2_path, &schema_v2)] {
+    for (path, schema) in [
+        (&schema_v1_path, &schema_v1),
+        (&schema_v2_path, &schema_v2),
+        (&schema_v3_path, &schema_v3),
+    ] {
         let mut contents = serde_json::to_string_pretty(schema).expect("schema serializes");
         contents.push('\n');
         fs::write(path, contents).expect("schema artifact is writable");
     }
-    for (path, value) in json_artifacts.into_iter().skip(2) {
+    for (path, value) in json_artifacts.into_iter().skip(3) {
         let mut contents = serde_json::to_string_pretty(value).expect("JSON artifact serializes");
         contents.push('\n');
         fs::write(path, contents).expect("JSON artifact is writable");
@@ -126,7 +162,11 @@ fn render_typescript(schema: &Value, root_name: &str) -> String {
 }
 
 fn render_named_type(name: &str, schema: &Value) -> String {
-    if is_object_schema(schema) && schema.get("oneOf").is_none() && schema.get("anyOf").is_none() {
+    if is_object_schema(schema)
+        && !is_record_schema(schema)
+        && schema.get("oneOf").is_none()
+        && schema.get("anyOf").is_none()
+    {
         format!("export interface {name} {}\n", render_object(schema, 0))
     } else {
         let rendered = render_type(schema, 0);
@@ -237,6 +277,15 @@ fn render_type_name(type_name: &str, schema: &Value, indent: usize) -> String {
 }
 
 fn render_object(schema: &Value, indent: usize) -> String {
+    if let Some(values) = schema.get("additionalProperties") {
+        if schema
+            .get("properties")
+            .and_then(Value::as_object)
+            .is_none_or(Map::is_empty)
+        {
+            return format!("Record<string, {}>", render_type(values, indent));
+        }
+    }
     let properties = schema
         .get("properties")
         .and_then(Value::as_object)
@@ -279,6 +328,14 @@ fn sorted_entries(properties: &Map<String, Value>) -> Vec<(&str, &Value)> {
 fn is_object_schema(schema: &Value) -> bool {
     matches!(schema.get("type"), Some(Value::String(value)) if value == "object")
         || schema.get("properties").is_some()
+}
+
+fn is_record_schema(schema: &Value) -> bool {
+    schema.get("additionalProperties").is_some()
+        && schema
+            .get("properties")
+            .and_then(Value::as_object)
+            .is_none_or(Map::is_empty)
 }
 
 fn format_number_literal(value: f64) -> String {

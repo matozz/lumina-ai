@@ -1,28 +1,31 @@
 use super::{
-    AnimatableValueDSL, AutomationTargetDSL, EffectParameterDSL, GeneratorDSL, GroupFixturesDSL,
-    PhaseConfigDSL, ShowDocumentV2, TimelineActionDefDSL, CURRENT_SCHEMA_VERSION,
+    AnimatableValueDSL, AutomationPolicyDSL, AutomationTargetV3DSL, EffectDefinitionDSL,
+    EffectNodeDSL, EffectPortDSL, EffectPortRefDSL, GeneratorDSL, GroupFixturesDSL,
+    ParameterValueDSL, ParameterValueTypeDSL, ShowDocumentV3, TimelineActionV3DSL,
+    CURRENT_SCHEMA_VERSION,
 };
 use crate::compiler::diagnostic::{
-    Diagnostic, DOC_DUPLICATE_ID, DOC_FIXTURE_REFERENCE_NOT_FOUND, DOC_FORMULA_INVALID,
+    Diagnostic, DOC_DUPLICATE_ID, DOC_EFFECT_DEFINITION_NOT_FOUND, DOC_EFFECT_GRAPH_INVALID,
+    DOC_EFFECT_INSTANCE_NOT_FOUND, DOC_FIXTURE_REFERENCE_NOT_FOUND, DOC_FORMULA_INVALID,
     DOC_INVALID_COLOR, DOC_INVALID_NUMBER, DOC_INVALID_RANGE, DOC_INVALID_VALUE,
-    DOC_PHASER_REFERENCE_NOT_FOUND, DOC_PROFILE_NOT_FOUND, DOC_SVG_PATH_INVALID,
+    DOC_PARAMETER_INVALID, DOC_PROFILE_NOT_FOUND, DOC_SVG_PATH_INVALID,
     DOC_TIMELINE_TARGET_INVALID, DOC_UNSUPPORTED_SCHEMA_VERSION, DSL_DUPLICATE_FIXTURE_ID,
     DSL_TARGET_GROUP_NOT_FOUND,
 };
 use crate::engine::color::parse_hex_color;
 use crate::engine::profile::profile_by_id;
 use fasteval::{Compiler as FastevalCompiler, Evaler};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 const MAX_FIXTURES: u64 = 1_000_000;
 
 #[derive(Debug, Clone)]
 pub struct ValidatedShow {
-    document: ShowDocumentV2,
+    document: ShowDocumentV3,
 }
 
 impl ValidatedShow {
-    pub(crate) fn into_document(self) -> ShowDocumentV2 {
+    pub(crate) fn into_document(self) -> ShowDocumentV3 {
         self.document
     }
 }
@@ -30,7 +33,7 @@ impl ValidatedShow {
 pub struct DocumentValidator;
 
 impl DocumentValidator {
-    pub fn validate(document: ShowDocumentV2) -> Result<ValidatedShow, Vec<Diagnostic>> {
+    pub fn validate(document: ShowDocumentV3) -> Result<ValidatedShow, Vec<Diagnostic>> {
         let mut diagnostics = Vec::new();
         if document.schema_version != CURRENT_SCHEMA_VERSION {
             diagnostics.push(Diagnostic::error(
@@ -44,8 +47,10 @@ impl DocumentValidator {
         let fixture_ids = validate_patch(&document, &mut diagnostics);
         validate_layout(&document, &fixture_ids, &mut diagnostics);
         let group_ids = validate_groups(&document, &fixture_ids, &mut diagnostics);
-        let phaser_ids = validate_phasers(&document, &group_ids, &mut diagnostics);
-        validate_timeline(&document, &phaser_ids, &mut diagnostics);
+        let definitions = validate_effect_definitions(&document, &mut diagnostics);
+        let instances =
+            validate_effect_instances(&document, &group_ids, &definitions, &mut diagnostics);
+        validate_timeline(&document, &instances, &mut diagnostics);
 
         if diagnostics.is_empty() {
             Ok(ValidatedShow { document })
@@ -55,7 +60,7 @@ impl DocumentValidator {
     }
 }
 
-fn validate_patch(document: &ShowDocumentV2, diagnostics: &mut Vec<Diagnostic>) -> HashSet<u32> {
+fn validate_patch(document: &ShowDocumentV3, diagnostics: &mut Vec<Diagnostic>) -> HashSet<u32> {
     let mut fixture_ids = HashSet::new();
     let mut total_fixture_count = 0_u64;
     for (index, patch) in document.patch.iter().enumerate() {
@@ -113,7 +118,7 @@ fn validate_patch(document: &ShowDocumentV2, diagnostics: &mut Vec<Diagnostic>) 
 }
 
 fn validate_layout(
-    document: &ShowDocumentV2,
+    document: &ShowDocumentV3,
     fixture_ids: &HashSet<u32>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
@@ -231,7 +236,7 @@ fn validate_layout(
 }
 
 fn validate_groups(
-    document: &ShowDocumentV2,
+    document: &ShowDocumentV3,
     fixture_ids: &HashSet<u32>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> HashSet<String> {
@@ -291,116 +296,529 @@ fn validate_groups(
     group_ids
 }
 
-fn validate_phasers(
-    document: &ShowDocumentV2,
-    group_ids: &HashSet<String>,
+#[derive(Clone, Copy)]
+struct ParameterContract {
+    value_type: ParameterValueTypeDSL,
+    range: Option<(f64, f64)>,
+}
+
+type DefinitionParameters = HashMap<String, (u32, HashMap<String, ParameterContract>)>;
+type InstanceParameters = HashMap<String, HashMap<String, ParameterContract>>;
+
+fn validate_effect_definitions(
+    document: &ShowDocumentV3,
     diagnostics: &mut Vec<Diagnostic>,
-) -> HashSet<String> {
-    let mut phaser_ids = HashSet::new();
-    for (index, phaser) in document.phasers.iter().enumerate() {
-        if phaser.id.trim().is_empty() || !phaser_ids.insert(phaser.id.clone()) {
+) -> DefinitionParameters {
+    let mut definitions = HashMap::new();
+    for (index, definition) in document.effect_definitions.iter().enumerate() {
+        let path = format!("effect_definitions[{index}]");
+        if definition.id.trim().is_empty() || definitions.contains_key(&definition.id) {
             diagnostics.push(Diagnostic::error(
                 DOC_DUPLICATE_ID,
-                format!("phasers[{index}].id"),
-                format!("Phaser ID must be non-empty and unique: {:?}", phaser.id),
-                "Use a stable unique phaser ID separate from its display name.",
+                format!("{path}.id"),
+                format!(
+                    "Effect definition ID must be non-empty and unique: {:?}.",
+                    definition.id
+                ),
+                "Use a stable unique definition ID separate from its display name.",
             ));
         }
-        if !group_ids.contains(&phaser.target) {
+        if definition.revision == 0 {
+            diagnostics.push(invalid_number(
+                format!("{path}.revision"),
+                "Effect definition revision must be greater than zero.",
+            ));
+        }
+        let parameters = validate_parameter_schema(index, definition, diagnostics);
+        validate_effect_graph(index, definition, diagnostics);
+        validate_range(
+            f64::from(definition.catalog.energy),
+            0.0,
+            1.0,
+            format!("{path}.catalog.energy"),
+            diagnostics,
+        );
+        validate_range(
+            f64::from(definition.catalog.density),
+            0.0,
+            1.0,
+            format!("{path}.catalog.density"),
+            diagnostics,
+        );
+        validate_range(
+            f64::from(definition.catalog.colorfulness),
+            0.0,
+            1.0,
+            format!("{path}.catalog.colorfulness"),
+            diagnostics,
+        );
+        definitions.insert(definition.id.clone(), (definition.revision, parameters));
+    }
+    definitions
+}
+
+fn validate_parameter_schema(
+    definition_index: usize,
+    definition: &EffectDefinitionDSL,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> HashMap<String, ParameterContract> {
+    let mut parameters = HashMap::new();
+    for (index, parameter) in definition.parameters.iter().enumerate() {
+        let path = format!("effect_definitions[{definition_index}].parameters[{index}]");
+        if parameter.id.trim().is_empty() || parameters.contains_key(&parameter.id) {
+            diagnostics.push(Diagnostic::error(
+                DOC_DUPLICATE_ID,
+                format!("{path}.id"),
+                format!(
+                    "Parameter ID must be non-empty and unique: {:?}.",
+                    parameter.id
+                ),
+                "Use a stable unique parameter ID within the definition.",
+            ));
+        }
+        if parameter.value_type != parameter.default_value.value_type() {
+            diagnostics.push(Diagnostic::error(
+                DOC_PARAMETER_INVALID,
+                format!("{path}.default_value"),
+                "Parameter default value does not match its declared type.",
+                "Use a typed default value matching value_type.",
+            ));
+        }
+        if let Some((min, max)) = parameter.range {
+            if !min.is_finite() || !max.is_finite() || min > max {
+                diagnostics.push(Diagnostic::error(
+                    DOC_INVALID_RANGE,
+                    format!("{path}.range"),
+                    "Parameter range must contain finite ordered endpoints.",
+                    "Use a finite [min, max] range.",
+                ));
+            }
+            if let ParameterValueDSL::Scalar(value) = parameter.default_value {
+                if !value.is_finite() || value < min || value > max {
+                    diagnostics.push(Diagnostic::error(
+                        DOC_PARAMETER_INVALID,
+                        format!("{path}.default_value"),
+                        "Parameter default is outside its declared range.",
+                        "Move the default inside the parameter range.",
+                    ));
+                }
+            }
+        }
+        if matches!(parameter.automation, AutomationPolicyDSL::Continuous)
+            && matches!(parameter.value_type, ParameterValueTypeDSL::Direction)
+        {
+            diagnostics.push(Diagnostic::error(
+                DOC_PARAMETER_INVALID,
+                format!("{path}.automation"),
+                "Direction parameters cannot use continuous automation.",
+                "Use discrete automation for direction parameters.",
+            ));
+        }
+        if let ParameterValueDSL::Color(color) = &parameter.default_value {
+            validate_color(color, format!("{path}.default_value.value"), diagnostics);
+        }
+        parameters.insert(
+            parameter.id.clone(),
+            ParameterContract {
+                value_type: parameter.value_type,
+                range: parameter.range,
+            },
+        );
+    }
+    parameters
+}
+
+fn validate_effect_instances(
+    document: &ShowDocumentV3,
+    group_ids: &HashSet<String>,
+    definitions: &DefinitionParameters,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> InstanceParameters {
+    let mut instances = HashMap::new();
+    for (index, instance) in document.effect_instances.iter().enumerate() {
+        let path = format!("effect_instances[{index}]");
+        if instance.id.trim().is_empty() || instances.contains_key(&instance.id) {
+            diagnostics.push(Diagnostic::error(
+                DOC_DUPLICATE_ID,
+                format!("{path}.id"),
+                format!(
+                    "Effect instance ID must be non-empty and unique: {:?}.",
+                    instance.id
+                ),
+                "Use a stable unique effect instance ID.",
+            ));
+        }
+        if instance.seed.len() != 16
+            || !instance
+                .seed
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        {
+            diagnostics.push(Diagnostic::error(
+                DOC_INVALID_VALUE,
+                format!("{path}.seed"),
+                "Effect instance seed must be a 16-digit hexadecimal string.",
+                "Store the deterministic 64-bit seed as lowercase hexadecimal text.",
+            ));
+        }
+        if !group_ids.contains(&instance.target_group_id) {
             diagnostics.push(Diagnostic::error(
                 DSL_TARGET_GROUP_NOT_FOUND,
-                format!("phasers[{index}].target"),
-                format!("Target group not found: {}", phaser.target),
-                "Define the target group or update this phaser's target.",
+                format!("{path}.target_group_id"),
+                format!("Target group not found: {}", instance.target_group_id),
+                "Define the target group or update the effect instance target.",
             ));
         }
-        if phaser.multiplier.is_some_and(|value| value <= 0.0) {
-            diagnostics.push(invalid_number(
-                format!("phasers[{index}].multiplier"),
-                "Phaser multiplier must be greater than zero.",
+        let Some((revision, parameters)) = definitions.get(&instance.definition_id) else {
+            diagnostics.push(Diagnostic::error(
+                DOC_EFFECT_DEFINITION_NOT_FOUND,
+                format!("{path}.definition_id"),
+                format!("Effect definition not found: {}", instance.definition_id),
+                "Reference an effect definition contained in this document or catalog.",
+            ));
+            continue;
+        };
+        if instance.definition_revision != *revision {
+            diagnostics.push(Diagnostic::error(
+                DOC_EFFECT_DEFINITION_NOT_FOUND,
+                format!("{path}.definition_revision"),
+                format!(
+                    "Effect definition revision {} is not available; document contains revision {revision}.",
+                    instance.definition_revision
+                ),
+                "Pin the available revision or explicitly update the instance.",
             ));
         }
-        if phaser.steps.is_empty() {
-            diagnostics.push(invalid_number(
-                format!("phasers[{index}].steps"),
-                "A phaser must contain at least one step.",
-            ));
-        }
-        for (step_index, step) in phaser.steps.iter().enumerate() {
-            let path = format!("phasers[{index}].steps[{step_index}]");
-            validate_optional_range(step.width, 0.0, 100.0, format!("{path}.width"), diagnostics);
-            validate_optional_range(
-                step.transition,
-                0.0,
-                100.0,
-                format!("{path}.transition"),
-                diagnostics,
-            );
-            validate_optional_range(
-                step.values.dimmer.map(f64::from),
-                0.0,
-                1.0,
-                format!("{path}.values.dimmer"),
-                diagnostics,
-            );
-            if let Some(color) = &step.values.color {
-                if parse_hex_color(color).is_err() {
+        for (parameter_id, value) in &instance.parameter_overrides {
+            let Some(value_type) = parameters.get(parameter_id) else {
+                diagnostics.push(Diagnostic::error(
+                    DOC_PARAMETER_INVALID,
+                    format!("{path}.parameter_overrides.{parameter_id}"),
+                    format!("Unknown effect parameter: {parameter_id}"),
+                    "Use a parameter declared by the referenced definition.",
+                ));
+                continue;
+            };
+            if value_type.value_type != value.value_type() {
+                diagnostics.push(Diagnostic::error(
+                    DOC_PARAMETER_INVALID,
+                    format!("{path}.parameter_overrides.{parameter_id}"),
+                    "Effect parameter override has the wrong value type.",
+                    "Use the value type declared by the referenced definition.",
+                ));
+            }
+            if let (Some((min, max)), ParameterValueDSL::Scalar(value)) = (value_type.range, value)
+            {
+                if !value.is_finite() || *value < min || *value > max {
                     diagnostics.push(Diagnostic::error(
-                        DOC_INVALID_COLOR,
-                        format!("{path}.values.color"),
-                        format!("Unsupported color value: {color:?}."),
-                        "Use a color in #RRGGBB format.",
+                        DOC_PARAMETER_INVALID,
+                        format!("{path}.parameter_overrides.{parameter_id}"),
+                        "Effect parameter override is outside its declared range.",
+                        "Keep the override inside the definition parameter range.",
                     ));
                 }
             }
         }
-        match &phaser.phase {
-            PhaseConfigDSL::Spread { spread } => {
-                validate_range(
-                    spread.from,
-                    0.0,
-                    100.0,
-                    format!("phasers[{index}].phase.spread.from"),
-                    diagnostics,
-                );
-                validate_range(
-                    spread.to,
-                    0.0,
-                    100.0,
-                    format!("phasers[{index}].phase.spread.to"),
-                    diagnostics,
-                );
-            }
-            PhaseConfigDSL::Grouped { grouped } => {
-                if grouped.group_size == 0 {
-                    diagnostics.push(invalid_number(
-                        format!("phasers[{index}].phase.grouped.group_size"),
-                        "Grouped phase group_size must be greater than zero.",
-                    ));
-                }
-                validate_range(
-                    grouped.spread.0,
-                    0.0,
-                    100.0,
-                    format!("phasers[{index}].phase.grouped.spread[0]"),
-                    diagnostics,
-                );
-                validate_range(
-                    grouped.spread.1,
-                    0.0,
-                    100.0,
-                    format!("phasers[{index}].phase.grouped.spread[1]"),
-                    diagnostics,
-                );
+        instances.insert(instance.id.clone(), parameters.clone());
+    }
+    instances
+}
+
+fn validate_effect_graph(
+    definition_index: usize,
+    definition: &EffectDefinitionDSL,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let base = format!("effect_definitions[{definition_index}].graph.nodes");
+    let mut nodes = HashMap::new();
+    for (index, node) in definition.graph.nodes.iter().enumerate() {
+        if node.id().trim().is_empty() || nodes.insert(node.id(), (index, node)).is_some() {
+            diagnostics.push(Diagnostic::error(
+                DOC_DUPLICATE_ID,
+                format!("{base}[{index}].id"),
+                format!(
+                    "Effect node ID must be non-empty and unique: {:?}.",
+                    node.id()
+                ),
+                "Use a stable unique node ID within the graph.",
+            ));
+        }
+        validate_effect_node_values(&base, index, node, diagnostics);
+    }
+    if !definition
+        .graph
+        .nodes
+        .iter()
+        .any(|node| matches!(node, EffectNodeDSL::AttributeWriter { .. }))
+    {
+        diagnostics.push(Diagnostic::error(
+            DOC_EFFECT_GRAPH_INVALID,
+            base.clone(),
+            "EffectGraph must contain at least one AttributeWriter.",
+            "Connect a typed graph value to an AttributeWriter node.",
+        ));
+    }
+    for (index, node) in definition.graph.nodes.iter().enumerate() {
+        for (reference, expected) in effect_node_inputs(node) {
+            let path = format!("{base}[{index}]");
+            let Some((_, source)) = nodes.get(reference.node_id.as_str()) else {
+                diagnostics.push(Diagnostic::error(
+                    DOC_EFFECT_GRAPH_INVALID,
+                    path,
+                    format!(
+                        "Effect node references unknown node {:?}.",
+                        reference.node_id
+                    ),
+                    "Connect the input to an existing node output.",
+                ));
+                continue;
+            };
+            if reference.port != source.output_port() || !expected.contains(&reference.port) {
+                diagnostics.push(Diagnostic::error(
+                    DOC_EFFECT_GRAPH_INVALID,
+                    path,
+                    format!(
+                        "Effect port type mismatch for node {:?}: declared {:?}, source outputs {:?}.",
+                        reference.node_id,
+                        reference.port,
+                        source.output_port()
+                    ),
+                    "Connect ports with the same declared value type.",
+                ));
             }
         }
     }
-    phaser_ids
+    if graph_has_cycle(&definition.graph.nodes) {
+        diagnostics.push(Diagnostic::error(
+            DOC_EFFECT_GRAPH_INVALID,
+            base,
+            "EffectGraph contains a cycle.",
+            "Make the graph acyclic so it can be topologically compiled.",
+        ));
+    }
+}
+
+fn effect_node_inputs(node: &EffectNodeDSL) -> Vec<(&EffectPortRefDSL, &'static [EffectPortDSL])> {
+    const SCALAR: &[EffectPortDSL] = &[EffectPortDSL::Scalar];
+    const WRITABLE: &[EffectPortDSL] = &[
+        EffectPortDSL::Scalar,
+        EffectPortDSL::Color,
+        EffectPortDSL::AttributeSet,
+    ];
+    match node {
+        EffectNodeDSL::Time { .. } | EffectNodeDSL::Constant { .. } => Vec::new(),
+        EffectNodeDSL::StepSequence { phase, .. } | EffectNodeDSL::Oscillator { phase, .. } => {
+            vec![(phase, SCALAR)]
+        }
+        EffectNodeDSL::Envelope { input, .. }
+        | EffectNodeDSL::SpatialPhase { input, .. }
+        | EffectNodeDSL::Map { input, .. }
+        | EffectNodeDSL::Clamp { input, .. }
+        | EffectNodeDSL::ColorGradient { input, .. }
+        | EffectNodeDSL::FixtureMask { input, .. } => vec![(input, SCALAR)],
+        EffectNodeDSL::Math { left, right, .. } => vec![(left, SCALAR), (right, SCALAR)],
+        EffectNodeDSL::AttributeWriter { input, .. } => vec![(input, WRITABLE)],
+    }
+}
+
+fn graph_has_cycle(nodes: &[EffectNodeDSL]) -> bool {
+    fn visit<'a>(
+        id: &'a str,
+        nodes: &HashMap<&'a str, &'a EffectNodeDSL>,
+        visiting: &mut HashSet<&'a str>,
+        visited: &mut HashSet<&'a str>,
+    ) -> bool {
+        if visited.contains(id) {
+            return false;
+        }
+        if !visiting.insert(id) {
+            return true;
+        }
+        if let Some(node) = nodes.get(id) {
+            for (reference, _) in effect_node_inputs(node) {
+                if nodes.contains_key(reference.node_id.as_str())
+                    && visit(&reference.node_id, nodes, visiting, visited)
+                {
+                    return true;
+                }
+            }
+        }
+        visiting.remove(id);
+        visited.insert(id);
+        false
+    }
+
+    let nodes: HashMap<_, _> = nodes.iter().map(|node| (node.id(), node)).collect();
+    let mut visiting = HashSet::new();
+    let mut visited = HashSet::new();
+    nodes
+        .keys()
+        .any(|id| visit(id, &nodes, &mut visiting, &mut visited))
+}
+
+fn validate_effect_node_values(
+    base: &str,
+    index: usize,
+    node: &EffectNodeDSL,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let path = format!("{base}[{index}]");
+    match node {
+        EffectNodeDSL::Constant {
+            value: ParameterValueDSL::Color(color),
+            ..
+        } => validate_color(color, format!("{path}.value"), diagnostics),
+        EffectNodeDSL::StepSequence { steps, .. } => {
+            if steps.is_empty() {
+                diagnostics.push(invalid_number(
+                    format!("{path}.steps"),
+                    "StepSequence must contain at least one step.",
+                ));
+            }
+            for (step_index, step) in steps.iter().enumerate() {
+                let step_path = format!("{path}.steps[{step_index}]");
+                validate_optional_range(
+                    step.width,
+                    0.0,
+                    100.0,
+                    format!("{step_path}.width"),
+                    diagnostics,
+                );
+                validate_optional_range(
+                    step.transition,
+                    0.0,
+                    100.0,
+                    format!("{step_path}.transition"),
+                    diagnostics,
+                );
+                validate_optional_range(
+                    step.values.dimmer.map(f64::from),
+                    0.0,
+                    1.0,
+                    format!("{step_path}.values.dimmer"),
+                    diagnostics,
+                );
+                if let Some(color) = &step.values.color {
+                    validate_color(color, format!("{step_path}.values.color"), diagnostics);
+                }
+            }
+        }
+        EffectNodeDSL::Envelope {
+            attack, release, ..
+        } => {
+            validate_range(*attack, 0.0, 1.0, format!("{path}.attack"), diagnostics);
+            validate_range(*release, 0.0, 1.0, format!("{path}.release"), diagnostics);
+        }
+        EffectNodeDSL::SpatialPhase {
+            basis,
+            group_size,
+            custom_order,
+            ..
+        } => {
+            if group_size.is_some_and(|size| size == 0) {
+                diagnostics.push(invalid_number(
+                    format!("{path}.group_size"),
+                    "SpatialPhase group_size must be greater than zero.",
+                ));
+            }
+            if matches!(basis, super::SpatialBasisDSL::Custom) && custom_order.is_empty() {
+                diagnostics.push(Diagnostic::error(
+                    DOC_EFFECT_GRAPH_INVALID,
+                    format!("{path}.custom_order"),
+                    "Custom spatial phase requires a non-empty fixture ordering.",
+                    "Provide fixture IDs in the intended phase order.",
+                ));
+            }
+        }
+        EffectNodeDSL::Map {
+            input_range,
+            output_range,
+            ..
+        } => {
+            if input_range.0 == input_range.1
+                || !input_range.0.is_finite()
+                || !input_range.1.is_finite()
+            {
+                diagnostics.push(Diagnostic::error(
+                    DOC_INVALID_RANGE,
+                    format!("{path}.input_range"),
+                    "Map input range must contain distinct finite endpoints.",
+                    "Use a non-zero finite input range.",
+                ));
+            }
+            if !output_range.0.is_finite() || !output_range.1.is_finite() {
+                diagnostics.push(invalid_number(
+                    format!("{path}.output_range"),
+                    "Map output range endpoints must be finite.",
+                ));
+            }
+        }
+        EffectNodeDSL::Clamp { min, max, .. } | EffectNodeDSL::FixtureMask { min, max, .. } => {
+            if !min.is_finite() || !max.is_finite() || min > max {
+                diagnostics.push(Diagnostic::error(
+                    DOC_INVALID_RANGE,
+                    path,
+                    "Node range must contain finite ordered endpoints.",
+                    "Use a finite min less than or equal to max.",
+                ));
+            }
+        }
+        EffectNodeDSL::ColorGradient { stops, .. } => {
+            if stops.len() < 2 {
+                diagnostics.push(Diagnostic::error(
+                    DOC_EFFECT_GRAPH_INVALID,
+                    format!("{path}.stops"),
+                    "ColorGradient requires at least two stops.",
+                    "Provide ordered color stops from 0 to 1.",
+                ));
+            }
+            for (stop_index, stop) in stops.iter().enumerate() {
+                validate_range(
+                    stop.position,
+                    0.0,
+                    1.0,
+                    format!("{path}.stops[{stop_index}].position"),
+                    diagnostics,
+                );
+                validate_color(
+                    &stop.color,
+                    format!("{path}.stops[{stop_index}].color"),
+                    diagnostics,
+                );
+            }
+            if stops
+                .windows(2)
+                .any(|pair| pair[0].position > pair[1].position)
+            {
+                diagnostics.push(Diagnostic::error(
+                    DOC_EFFECT_GRAPH_INVALID,
+                    format!("{path}.stops"),
+                    "ColorGradient stops must be ordered by position.",
+                    "Sort stops from lowest to highest position.",
+                ));
+            }
+        }
+        EffectNodeDSL::AttributeWriter {
+            input,
+            attribute_id,
+            ..
+        } if !matches!(input.port, EffectPortDSL::AttributeSet)
+            && attribute_id.as_deref().is_none_or(str::is_empty) =>
+        {
+            diagnostics.push(Diagnostic::error(
+                DOC_EFFECT_GRAPH_INVALID,
+                format!("{path}.attribute_id"),
+                "Scalar and color writers require an attribute_id.",
+                "Name the target fixture attribute or connect an attribute_set.",
+            ));
+        }
+        _ => {}
+    }
 }
 
 fn validate_timeline(
-    document: &ShowDocumentV2,
-    phaser_ids: &HashSet<String>,
+    document: &ShowDocumentV3,
+    instances: &InstanceParameters,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let Some(timeline) = &document.timeline else {
@@ -420,53 +838,71 @@ fn validate_timeline(
             ));
         }
         match &event.action {
-            TimelineActionDefDSL::Phaser { phaser } => {
-                if !phaser_ids.contains(phaser) {
+            TimelineActionV3DSL::Effect { instance_id } => {
+                if !instances.contains_key(instance_id) {
                     diagnostics.push(Diagnostic::error(
-                        DOC_PHASER_REFERENCE_NOT_FOUND,
-                        format!("timeline.events[{index}].action.phaser"),
-                        format!("Timeline references unknown phaser ID: {phaser}"),
-                        "Use the ID of a phaser defined in this document.",
+                        DOC_EFFECT_INSTANCE_NOT_FOUND,
+                        format!("timeline.events[{index}].action.instance_id"),
+                        format!("Timeline references unknown effect instance ID: {instance_id}"),
+                        "Use an effect instance ID defined in this document.",
                     ));
                 }
             }
-            TimelineActionDefDSL::Animate {
+            TimelineActionV3DSL::Animate {
                 target, from, to, ..
-            } => validate_animation_target(index, target, from, to, phaser_ids, diagnostics),
+            } => validate_animation_target(index, target, from, to, instances, diagnostics),
         }
     }
 }
 
 fn validate_animation_target(
     event_index: usize,
-    target: &AutomationTargetDSL,
+    target: &AutomationTargetV3DSL,
     from: &AnimatableValueDSL,
     to: &AnimatableValueDSL,
-    phaser_ids: &HashSet<String>,
+    instances: &InstanceParameters,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let path = format!("timeline.events[{event_index}].action.target");
     let target_kind = match target {
-        AutomationTargetDSL::Global { .. } => "number",
-        AutomationTargetDSL::EffectInstance {
+        AutomationTargetV3DSL::Global { .. } => "number",
+        AutomationTargetV3DSL::EffectInstance {
             instance_id,
             parameter_id,
         } => {
-            if !phaser_ids.contains(instance_id) {
+            let Some(parameters) = instances.get(instance_id) else {
                 diagnostics.push(Diagnostic::error(
-                    DOC_PHASER_REFERENCE_NOT_FOUND,
+                    DOC_EFFECT_INSTANCE_NOT_FOUND,
                     path,
                     format!("Automation references unknown effect instance ID: {instance_id}"),
                     "Use an effect instance ID defined in this document.",
                 ));
                 return;
-            }
-            match parameter_id {
-                EffectParameterDSL::Color => "color",
-                EffectParameterDSL::Multiplier
-                | EffectParameterDSL::Dimmer
-                | EffectParameterDSL::Pan
-                | EffectParameterDSL::Tilt => "number",
+            };
+            match parameters
+                .get(parameter_id)
+                .map(|parameter| parameter.value_type)
+            {
+                Some(ParameterValueTypeDSL::Color) => "color",
+                Some(ParameterValueTypeDSL::Scalar) => "number",
+                Some(ParameterValueTypeDSL::Direction) => {
+                    diagnostics.push(Diagnostic::error(
+                        DOC_TIMELINE_TARGET_INVALID,
+                        path,
+                        "Direction parameters require discrete keyframes.",
+                        "Use a discrete AutomationLane after the Stage 5 timeline migration.",
+                    ));
+                    return;
+                }
+                None => {
+                    diagnostics.push(Diagnostic::error(
+                        DOC_PARAMETER_INVALID,
+                        path,
+                        format!("Automation references unknown parameter ID: {parameter_id}"),
+                        "Use a parameter declared by the instance definition.",
+                    ));
+                    return;
+                }
             }
         }
     };
@@ -501,6 +937,17 @@ fn validate_animation_target(
                 ));
             }
         }
+    }
+}
+
+fn validate_color(color: &str, path: String, diagnostics: &mut Vec<Diagnostic>) {
+    if parse_hex_color(color).is_err() {
+        diagnostics.push(Diagnostic::error(
+            DOC_INVALID_COLOR,
+            path,
+            format!("Unsupported color value: {color:?}."),
+            "Use a color in #RRGGBB format.",
+        ));
     }
 }
 

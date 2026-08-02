@@ -1,4 +1,11 @@
-import type { AnimatableValueDSL, EasingDSL, ShowDocumentV2 } from "@/generated/show-document-v2";
+import type {
+  AnimatableValueDSL,
+  EasingDSL,
+  ShowDocumentV3,
+  TimelineActionV3DSL,
+  TimelineEventV3DSL,
+  TimelineV3DSL,
+} from "@/generated/show-document-v3";
 
 export type {
   AnimatableValueDSL,
@@ -12,20 +19,29 @@ export type {
   LayoutDSL,
   MetaDSL,
   PatchDSL,
-  PhaseConfigDSL,
-  PhaseGroupedDSL,
-  PhaserDSL,
+  AutomationTargetV3DSL,
+  EffectCatalogDSL,
+  EffectDefinitionDSL,
+  EffectGraphDSL,
+  EffectInstanceDSL,
+  EffectNodeDSL,
+  EffectPortDSL,
+  EffectPortRefDSL,
+  ParameterDefinitionDSL,
+  ParameterValueDSL,
   PhaserStepDSL,
-  PhaseSpreadDSL,
-  ShowDocumentV2,
+  ShowDocumentV3,
   StepValuesDSL,
   SvgPathDef,
-  TimelineActionDefDSL,
-  TimelineDSL,
-  TimelineEventDSL,
-} from "@/generated/show-document-v2";
+  TimelineActionV3DSL,
+  TimelineEventV3DSL,
+  TimelineV3DSL,
+} from "@/generated/show-document-v3";
 
-export type FullDSL = ShowDocumentV2;
+export type FullDSL = ShowDocumentV3;
+export type TimelineActionDSL = TimelineActionV3DSL;
+export type TimelineDSL = TimelineV3DSL;
+export type TimelineEventDSL = TimelineEventV3DSL;
 export type FromTo = AnimatableValueDSL;
 export type Easing = EasingDSL;
 
@@ -88,7 +104,7 @@ export interface MigrationReport {
 }
 
 export interface LoadShowResult {
-  document: ShowDocumentV2;
+  document: ShowDocumentV3;
   migration_report: MigrationReport;
 }
 

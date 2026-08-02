@@ -16,6 +16,7 @@ Stage 4 需要在不改变 Stage 5 时间模型、Stage 6 工作区或 Stage 9 �
 - 参数在 compile 阶段解析为紧凑 `ParameterHandle`。参数定义同时声明值类型、默认值、范围、单位、UI hint 和 automation policy；instance override 与 automation target 使用同一个 handle。旧 `multiplier` 只在文档 migration 边界存在，进入 runtime 后统一映射为 `speed`。
 - EffectGraph 文档连接使用结构化 node/port reference。compiler 校验 node ID、port type、拓扑、参数和 attribute capability，并生成拓扑排序的 typed IR；render path 只访问 node/parameter/attribute handle，不解析自由字符串。
 - 每个节点是目标时间和 fixture context 的纯函数。Random 节点必须从 instance seed、node stable order 和离散 sample index 派生结果，禁止共享可变 RNG；相同 snapshot、tick 和 seed 必须产生相同 Frame。
+- 文档中的 64-bit seed 使用固定 16 位小写十六进制字符串，避免 JavaScript JSON number 超出安全整数范围；compiler 一次性解析为 `u64`。
 - 空间相位在 compile 阶段为目标灯组预计算 index/x/y/distance/angle/custom ordering 和 grouped blocks；render 只读取 cache。spread 使用包含首尾的规范化端点，单灯组固定为起点；wrap 显式控制是否归一化到一个 cycle。
 - Catalog 统一表示 built-in、project-local 和 user-library 来源，固定 definition revision，并提供 mood、energy、density、motion、colorfulness、strobe risk 与 required attributes 查询。
 - V2 Phaser 通过 V2→V3 migration 转换为 canonical EffectGraph、Definition 和 Instance。实例 ID 保持原 phaser ID；timeline phaser action 迁移为 effect clip 引用；before/after golden Frame 证明兼容。pan/tilt 从旧版曾被忽略的状态按 Stage 3 typed attribute 行为输出并在 migration report 中标记。
@@ -44,3 +45,4 @@ Stage 4 需要在不改变 Stage 5 时间模型、Stage 6 工作区或 Stage 9 �
 
 - Stage 3 baseline: `635f1a9`
 - Compiled Effect identity and typed parameter core: 本切片提交
+- V3 Effect document contract and V2 migration: 本切片提交

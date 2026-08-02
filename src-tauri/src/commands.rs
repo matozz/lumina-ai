@@ -1,5 +1,5 @@
 use crate::compiler::{diagnostic::Diagnostic, Compiler, LayoutCoord};
-use crate::document::{load_document, MigrationReport, ShowDocumentV2};
+use crate::document::{load_document, MigrationReport, ShowDocumentV3};
 use crate::engine::render::{LivePhaser, RenderTime};
 use crate::engine::transport::OutputRate;
 use crate::state::EngineState;
@@ -32,7 +32,7 @@ pub struct CompileResult {
 
 #[derive(serde::Serialize)]
 pub struct LoadShowResult {
-    pub document: ShowDocumentV2,
+    pub document: ShowDocumentV3,
     pub migration_report: MigrationReport,
 }
 
@@ -51,11 +51,16 @@ pub async fn load_dsl(
     }
 
     let mut phasers: Vec<PhaserInfo> = Vec::new();
-    for p in &dsl.phasers {
-        if !phasers.iter().any(|info| info.id == p.id) {
+    for instance in &dsl.effect_instances {
+        if !phasers.iter().any(|info| info.id == instance.id) {
+            let name = dsl
+                .effect_definitions
+                .iter()
+                .find(|definition| definition.id == instance.definition_id)
+                .map_or_else(|| instance.id.clone(), |definition| definition.name.clone());
             phasers.push(PhaserInfo {
-                id: p.id.clone(),
-                name: p.name.clone(),
+                id: instance.id.clone(),
+                name,
             });
         }
     }

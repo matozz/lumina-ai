@@ -564,17 +564,17 @@ Time/Beat
 
 #### 4.1 EffectDefinition 与 EffectInstance
 
-- [ ] Definition 只描述可复用逻辑、参数 schema 和默认值。
-- [ ] Instance 保存 definition ID、target group、parameter overrides 和 seed。
-- [ ] 每个实例具有独立稳定 ID，Timeline 引用实例而不是 display name。
-- [ ] random 节点必须有 seed，相同 seed 的结果可复现。
+- [x] Definition 只描述可复用逻辑、参数 schema 和默认值。
+- [x] Instance 保存 definition ID、target group、parameter overrides 和 seed。
+- [x] 每个实例具有独立稳定 ID，Timeline 引用实例而不是 display name。
+- [ ] random 节点必须有 seed，相同 seed 的结果可复现（V3 instance 已使用精确 64-bit seed；待 typed evaluator 消费并验证）。
 
 #### 4.2 Parameter Schema
 
-- [ ] 参数声明类型、默认值、范围、单位、UI hint 和 automation policy。
-- [ ] 首批通用参数：speed、phase、width、transition、intensity、color、direction。
+- [x] 参数声明类型、默认值、范围、单位、UI hint 和 automation policy。
+- [x] 首批通用参数：speed、phase、width、transition、intensity、color、direction。
 - [ ] `multiplier` 只保留一个定义和一个运行路径。
-- [ ] parameter override 与 automation 使用相同 typed reference。
+- [x] parameter override 与 automation 使用相同 typed reference。
 
 #### 4.3 Spatial Phase
 
@@ -585,7 +585,7 @@ Time/Beat
 
 #### 4.4 Phaser Compatibility
 
-- [ ] 把现有 Phaser 编译为 EffectGraph 或兼容 IR。
+- [x] 把现有 Phaser 编译为 EffectGraph 或兼容 IR。
 - [ ] 所有现有视觉模板建立 before/after golden frame。
 - [ ] 修正 pan/tilt 模板并标记行为变更。
 
@@ -1023,7 +1023,7 @@ flowchart LR
 - [x] `cargo clippy --all-targets -- -D warnings` 通过，或例外已记录。
 - [x] `cargo test` 通过且新增行为有测试。
 - [x] 对实时路径的修改包含确定性、Seek/Replay 或性能验证。
-- [x] 对 schema 的修改包含 migration、生成文件和模板检查（V0→V1→V2 report、V1/V2 Rust→JSON Schema→TypeScript/capability artifacts、18/18 V2 模板 contract）。
+- [x] 对 schema 的修改包含 migration、生成文件和模板检查（V0→V1→V2→V3 report、V1/V2/V3 Rust→JSON Schema→TypeScript/capability artifacts、18/18 V3 模板 contract）。
 - [x] 对 UI 的修改包含空态、错误态、键盘路径和真实窗口验证（本 scope 无新增交互；既有 Stage 1 native window 验收保持有效，Canvas adapter 有 typed/immutability tests）。
 - [x] 相关文档、Stage checklist、ADR 和 Progress Ledger 已更新。
 - [x] 已进行自审并形成符合仓库规范的增量 commit。
@@ -1081,14 +1081,14 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 ## Handoff
 
 - Current Stage: Stage 4 · 可扩展 Effect Engine（in_progress）；Stage 0–3 交接已在干净 `main` 基线上重新审计并通过。
-- Slice completed: 建立 compiled `EffectDefinition`/`EffectInstance` identity、stable definition/parameter handles、typed defaults/ranges/units/UI hints/automation policy、实例 overrides 与 deterministic seed；旧 Phaser 在 compile 时生成独立 definition/instance，timeline `multiplier` 只在 contract 边界映射为 runtime `speed` parameter handle。
-- Commits: 本切片提交。
-- Files changed: `engine/effect.rs`、compiler compiled show/automation target、render parameter resolution、ADR-0005、Stage status、Ledger、Open Risks 和 Handoff。
-- Validation: 基线与实现后 `pnpm check:all` 均通过；18 frontend、63 Rust unit + 7 integration/contract tests 全绿，18/18 V2 模板保持确定性。
-- ADRs added/updated: 新增并接受 ADR-0005，固定 EffectGraph typed-port、纯求值、spatial cache、Catalog 与 V2→V3 migration 边界。
+- Slice completed: 在 `a34528e` 的 compiled identity/typed parameter core 上新增 ShowDocument V3；Definition/Instance、typed parameter schema、structured typed-port EffectGraph、Catalog metadata/source/revision 和精确 hex seed 成为 Rust schema 权威；实现 strict parameter/port/cycle/revision/reference validation、V2 Phaser/timeline/multiplier→V3 Effect/speed migration、V3 JSON Schema/TypeScript/capability artifacts，并把 18 个模板与 golden fixture 升级到 V3。
+- Commits: `a34528e`；V3 contract（本切片提交）。
+- Files changed: document effect types/validation/migration、compiler compatibility lowering、schema generator/artifacts、commands/bridge/frontend validator、18 templates、timeline V3 action field适配、contract tests、ADR/Stage/Ledger/Handoff。
+- Validation: `pnpm check:all` 通过；Rust 64 unit + 8 integration/contract tests 与 frontend 18 tests 全绿；18/18 V3 templates 无 migration 即可 compile/render；V3 schema artifacts freshness、fmt、strict Clippy、TypeScript 和 Vite build 均通过。
+- ADRs added/updated: ADR-0005 补充跨 JS/Rust 精确 seed 表示；V3 contract 遵循已接受的 typed-port 与 migration 决策。
 - Risks opened/closed: 新增 R-015，跟踪 legacy Phaser/EffectGraph 过渡期双重 IR；Stage 4 退出前必须关闭。
-- Remaining exit criteria: Stage 4 的 V3 document contract、最小节点 evaluator、spatial phase、Catalog、完整 Phaser migration/golden/performance 尚未完成；Stage 5 未开始。
-- Recommended next slice: V3 EffectDefinition/Instance/typed parameter document schema、strict validation、V2→V3 migration 和 generated TypeScript/capability artifacts。
+- Remaining exit criteria: Stage 4 的 typed graph evaluator、random seed 求值、spatial phase/cache、Catalog query、18 模板 before/after golden 与 1,000-fixture benchmark 尚未完成；`multiplier` compatibility IR 尚待删除；Stage 5 未开始。
+- Recommended next slice: 编译拓扑排序的 typed EffectGraph IR，并实现最小节点集的纯确定性 evaluator，替换 render path 的 legacy Phaser evaluator。
 
 ## 19. ADR 规范
 
@@ -1166,6 +1166,9 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 2+3      | scoped Goal 收口      | completed | 本切片提交  | clean full gate；18/18 V2；36k ticks/18m evals                   | 全局 DoD 通过；Stage 4 not_started            | 停止，不进入 Stage 4                        |
 | 2026-08-02 | 4        | Effect core 验证      | failed    | none        | Cargo 不接受多个位置测试过滤参数                                 | 测试命令调用错误；改为执行完整 Rust suite     | 全量验证 typed parameter 与兼容 runtime     |
 | 2026-08-02 | 4        | Effect identity       | completed | 本切片提交  | 70 Rust tests/contracts；既有 18/18 V2 模板保持确定性            | ADR-0005 accepted；新增 R-015                 | V3 Definition/Instance document contract    |
+| 2026-08-02 | 4        | V3 frontend gate      | failed    | none        | AJV strict mode 拒绝未知 `uint64` format                         | seed 改为精确 16 位 hex，避免 JS 精度损失     | 重生成 V3 artifacts 并复跑前端              |
+| 2026-08-02 | 4        | V3 Rust gate          | failed    | none        | 62/63 unit 通过；旧断言仍期望 Phaser target path                 | 更新为 V3 EffectInstance 诊断路径             | 复跑完整 Rust suite                         |
+| 2026-08-02 | 4        | V3 effect contract    | completed | 本切片提交  | 72 Rust/18 frontend；18/18 V3 templates compile/render           | typed ports/seed/migration；R-015 仍 open     | typed graph evaluator                       |
 
 ## 21. Open Risks
 

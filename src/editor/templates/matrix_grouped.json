@@ -1,12 +1,15 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "meta": {
     "name": "Matrix Grouped"
   },
   "patch": [
     {
       "profile_id": "generic-moving-head",
-      "id_range": [1, 64]
+      "id_range": [
+        1,
+        64
+      ]
     }
   ],
   "layout": {
@@ -16,7 +19,10 @@
       "rows": 8,
       "columns": 8,
       "spacing": 40,
-      "origin": [0, 0]
+      "origin": [
+        0,
+        0
+      ]
     }
   },
   "groups": [
@@ -24,7 +30,10 @@
       "id": "all",
       "name": "All",
       "fixtures": {
-        "range": [1, 64]
+        "range": [
+          1,
+          64
+        ]
       },
       "sort_by": "none"
     },
@@ -32,7 +41,10 @@
       "id": "byx",
       "name": "ByX",
       "fixtures": {
-        "range": [1, 64]
+        "range": [
+          1,
+          64
+        ]
       },
       "sort_by": "x"
     },
@@ -40,104 +52,667 @@
       "id": "byy",
       "name": "ByY",
       "fixtures": {
-        "range": [1, 64]
+        "range": [
+          1,
+          64
+        ]
       },
       "sort_by": "y"
     }
   ],
-  "phasers": [
+  "effect_definitions": [
     {
-      "id": "chunky_scan_x",
+      "id": "legacy.chunky_scan_x",
       "name": "Chunky Scan X (Grouped: 2)",
-      "target": "byx",
-      "multiplier": 1,
-      "steps": [
+      "revision": 1,
+      "source": "project_local",
+      "parameters": [
         {
-          "values": {
-            "color": "#ff0088",
-            "dimmer": 1
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 1
           },
-          "width": 20,
-          "transition": 0
+          "range": [
+            0.01,
+            64
+          ],
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
         },
         {
-          "values": {
-            "color": "#000000",
-            "dimmer": 0
+          "id": "phase",
+          "name": "Phase",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0
           },
-          "width": 80,
-          "transition": 50
+          "range": [
+            -1,
+            1
+          ],
+          "unit": "cycles",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "width",
+          "name": "Width",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 100
+          },
+          "range": [
+            0,
+            100
+          ],
+          "unit": "percent",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "transition",
+          "name": "Transition",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 100
+          },
+          "range": [
+            0,
+            100
+          ],
+          "unit": "percent",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 1
+          },
+          "range": [
+            0,
+            1
+          ],
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "value_type": "color",
+          "default_value": {
+            "type": "color",
+            "value": "#ffffff"
+          },
+          "unit": "color",
+          "ui_hint": "color",
+          "automation": "continuous"
+        },
+        {
+          "id": "direction",
+          "name": "Direction",
+          "value_type": "direction",
+          "default_value": {
+            "type": "direction",
+            "value": "forward"
+          },
+          "unit": "direction",
+          "ui_hint": "segmented",
+          "automation": "discrete"
+        },
+        {
+          "id": "pan",
+          "name": "Pan",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0
+          },
+          "range": [
+            -540,
+            540
+          ],
+          "unit": "degrees",
+          "ui_hint": "angle",
+          "automation": "continuous"
+        },
+        {
+          "id": "tilt",
+          "name": "Tilt",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0
+          },
+          "range": [
+            -270,
+            270
+          ],
+          "unit": "degrees",
+          "ui_hint": "angle",
+          "automation": "continuous"
         }
       ],
-      "phase": {
-        "mode": "grouped",
-        "grouped": {
-          "group_size": 2,
-          "spread": [0, 100]
-        }
+      "graph": {
+        "nodes": [
+          {
+            "type": "time",
+            "id": "time"
+          },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": {
+              "node_id": "time",
+              "port": "scalar"
+            },
+            "basis": "index",
+            "from": 0,
+            "to": 1,
+            "wrap": true,
+            "group_size": 2
+          },
+          {
+            "type": "step_sequence",
+            "id": "sequence",
+            "phase": {
+              "node_id": "spatial",
+              "port": "scalar"
+            },
+            "steps": [
+              {
+                "values": {
+                  "color": "#ff0088",
+                  "dimmer": 1
+                },
+                "width": 20,
+                "transition": 0
+              },
+              {
+                "values": {
+                  "color": "#000000",
+                  "dimmer": 0
+                },
+                "width": 80,
+                "transition": 50
+              }
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "output",
+            "input": {
+              "node_id": "sequence",
+              "port": "attribute_set"
+            }
+          }
+        ]
+      },
+      "catalog": {
+        "energy": 0.5,
+        "density": 0.5,
+        "motion": "pulse",
+        "colorfulness": 0.5,
+        "strobe_risk": "none",
+        "required_attributes": [
+          "intensity",
+          "color.rgb"
+        ]
       }
+    },
+    {
+      "id": "legacy.block_drop_y",
+      "name": "Block Drop Y (Grouped: 4)",
+      "revision": 1,
+      "source": "project_local",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 1
+          },
+          "range": [
+            0.01,
+            64
+          ],
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "phase",
+          "name": "Phase",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0
+          },
+          "range": [
+            -1,
+            1
+          ],
+          "unit": "cycles",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "width",
+          "name": "Width",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 100
+          },
+          "range": [
+            0,
+            100
+          ],
+          "unit": "percent",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "transition",
+          "name": "Transition",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 100
+          },
+          "range": [
+            0,
+            100
+          ],
+          "unit": "percent",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 1
+          },
+          "range": [
+            0,
+            1
+          ],
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "value_type": "color",
+          "default_value": {
+            "type": "color",
+            "value": "#ffffff"
+          },
+          "unit": "color",
+          "ui_hint": "color",
+          "automation": "continuous"
+        },
+        {
+          "id": "direction",
+          "name": "Direction",
+          "value_type": "direction",
+          "default_value": {
+            "type": "direction",
+            "value": "forward"
+          },
+          "unit": "direction",
+          "ui_hint": "segmented",
+          "automation": "discrete"
+        },
+        {
+          "id": "pan",
+          "name": "Pan",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0
+          },
+          "range": [
+            -540,
+            540
+          ],
+          "unit": "degrees",
+          "ui_hint": "angle",
+          "automation": "continuous"
+        },
+        {
+          "id": "tilt",
+          "name": "Tilt",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0
+          },
+          "range": [
+            -270,
+            270
+          ],
+          "unit": "degrees",
+          "ui_hint": "angle",
+          "automation": "continuous"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "type": "time",
+            "id": "time"
+          },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": {
+              "node_id": "time",
+              "port": "scalar"
+            },
+            "basis": "index",
+            "from": 0,
+            "to": 1,
+            "wrap": true,
+            "group_size": 4
+          },
+          {
+            "type": "step_sequence",
+            "id": "sequence",
+            "phase": {
+              "node_id": "spatial",
+              "port": "scalar"
+            },
+            "steps": [
+              {
+                "values": {
+                  "color": "#00ffcc",
+                  "dimmer": 1
+                },
+                "width": 25,
+                "transition": 100
+              },
+              {
+                "values": {
+                  "color": "#002244",
+                  "dimmer": 0
+                },
+                "width": 75,
+                "transition": 100
+              }
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "output",
+            "input": {
+              "node_id": "sequence",
+              "port": "attribute_set"
+            }
+          }
+        ]
+      },
+      "catalog": {
+        "energy": 0.5,
+        "density": 0.5,
+        "motion": "pulse",
+        "colorfulness": 0.5,
+        "strobe_risk": "none",
+        "required_attributes": [
+          "intensity",
+          "color.rgb"
+        ]
+      }
+    },
+    {
+      "id": "legacy.binary_flash",
+      "name": "Binary Flash (Grouped: 32)",
+      "revision": 1,
+      "source": "project_local",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 2
+          },
+          "range": [
+            0.01,
+            64
+          ],
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "phase",
+          "name": "Phase",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0
+          },
+          "range": [
+            -1,
+            1
+          ],
+          "unit": "cycles",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "width",
+          "name": "Width",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 100
+          },
+          "range": [
+            0,
+            100
+          ],
+          "unit": "percent",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "transition",
+          "name": "Transition",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 100
+          },
+          "range": [
+            0,
+            100
+          ],
+          "unit": "percent",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 1
+          },
+          "range": [
+            0,
+            1
+          ],
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "value_type": "color",
+          "default_value": {
+            "type": "color",
+            "value": "#ffffff"
+          },
+          "unit": "color",
+          "ui_hint": "color",
+          "automation": "continuous"
+        },
+        {
+          "id": "direction",
+          "name": "Direction",
+          "value_type": "direction",
+          "default_value": {
+            "type": "direction",
+            "value": "forward"
+          },
+          "unit": "direction",
+          "ui_hint": "segmented",
+          "automation": "discrete"
+        },
+        {
+          "id": "pan",
+          "name": "Pan",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0
+          },
+          "range": [
+            -540,
+            540
+          ],
+          "unit": "degrees",
+          "ui_hint": "angle",
+          "automation": "continuous"
+        },
+        {
+          "id": "tilt",
+          "name": "Tilt",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0
+          },
+          "range": [
+            -270,
+            270
+          ],
+          "unit": "degrees",
+          "ui_hint": "angle",
+          "automation": "continuous"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "type": "time",
+            "id": "time"
+          },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": {
+              "node_id": "time",
+              "port": "scalar"
+            },
+            "basis": "index",
+            "from": 0,
+            "to": 1,
+            "wrap": true,
+            "group_size": 32
+          },
+          {
+            "type": "step_sequence",
+            "id": "sequence",
+            "phase": {
+              "node_id": "spatial",
+              "port": "scalar"
+            },
+            "steps": [
+              {
+                "values": {
+                  "color": "#ffffff",
+                  "dimmer": 1
+                },
+                "width": 50,
+                "transition": 0
+              },
+              {
+                "values": {
+                  "color": "#000000",
+                  "dimmer": 0
+                },
+                "width": 50,
+                "transition": 0
+              }
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "output",
+            "input": {
+              "node_id": "sequence",
+              "port": "attribute_set"
+            }
+          }
+        ]
+      },
+      "catalog": {
+        "energy": 0.5,
+        "density": 0.5,
+        "motion": "pulse",
+        "colorfulness": 0.5,
+        "strobe_risk": "none",
+        "required_attributes": [
+          "intensity",
+          "color.rgb"
+        ]
+      }
+    }
+  ],
+  "effect_instances": [
+    {
+      "id": "chunky_scan_x",
+      "definition_id": "legacy.chunky_scan_x",
+      "definition_revision": 1,
+      "target_group_id": "byx",
+      "seed": "8770af5d79f98558"
     },
     {
       "id": "block_drop_y",
-      "name": "Block Drop Y (Grouped: 4)",
-      "target": "byy",
-      "multiplier": 1,
-      "steps": [
-        {
-          "values": {
-            "color": "#00ffcc",
-            "dimmer": 1
-          },
-          "width": 25,
-          "transition": 100
-        },
-        {
-          "values": {
-            "color": "#002244",
-            "dimmer": 0
-          },
-          "width": 75,
-          "transition": 100
-        }
-      ],
-      "phase": {
-        "mode": "grouped",
-        "grouped": {
-          "group_size": 4,
-          "spread": [0, 100]
-        }
-      }
+      "definition_id": "legacy.block_drop_y",
+      "definition_revision": 1,
+      "target_group_id": "byy",
+      "seed": "7594d72107033afe"
     },
     {
       "id": "binary_flash",
-      "name": "Binary Flash (Grouped: 32)",
-      "target": "all",
-      "multiplier": 2,
-      "steps": [
-        {
-          "values": {
-            "color": "#ffffff",
-            "dimmer": 1
-          },
-          "width": 50,
-          "transition": 0
-        },
-        {
-          "values": {
-            "color": "#000000",
-            "dimmer": 0
-          },
-          "width": 50,
-          "transition": 0
-        }
-      ],
-      "phase": {
-        "mode": "grouped",
-        "grouped": {
-          "group_size": 32,
-          "spread": [0, 100]
-        }
-      }
+      "definition_id": "legacy.binary_flash",
+      "definition_revision": 1,
+      "target_group_id": "all",
+      "seed": "a6facd67149cdc75"
     }
   ],
   "timeline": {

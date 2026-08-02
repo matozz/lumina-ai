@@ -9,8 +9,8 @@ export function resolveOverlaps(events: TimelineEventDSL[]): TimelineEventDSL[] 
   events.forEach((e) => {
     let groupKey = "global";
 
-    if (e.action.type === "phaser") {
-      groupKey = `phaser:${e.action.phaser}`;
+    if (e.action.type === "effect") {
+      groupKey = `phaser:${e.action.instance_id}`;
     } else if (e.action.type === "animate") {
       groupKey = `animate:${automationTargetPath(e.action.target)}`;
     }

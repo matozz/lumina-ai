@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "meta": {
     "name": "Sine Wave Fly"
   },
@@ -38,43 +38,231 @@
       "sort_by": "x"
     }
   ],
-  "phasers": [
+  "effect_definitions": [
     {
-      "id": "sine_fly",
+      "id": "legacy.sine_fly",
       "name": "Sine Fly",
-      "target": "all",
-      "multiplier": 1,
-      "steps": [
+      "revision": 1,
+      "source": "project_local",
+      "parameters": [
         {
-          "values": {
-            "tilt": -60,
-            "dimmer": 1,
-            "color": "#00aaff"
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 1
           },
-          "width": 50,
-          "transition": 100,
-          "accel": 30,
-          "decel": -30
+          "range": [
+            0.01,
+            64
+          ],
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
         },
         {
-          "values": {
-            "tilt": 60,
-            "dimmer": 0.2,
-            "color": "#001144"
+          "id": "phase",
+          "name": "Phase",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0
           },
-          "width": 50,
-          "transition": 100,
-          "accel": -30,
-          "decel": 30
+          "range": [
+            -1,
+            1
+          ],
+          "unit": "cycles",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "width",
+          "name": "Width",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 100
+          },
+          "range": [
+            0,
+            100
+          ],
+          "unit": "percent",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "transition",
+          "name": "Transition",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 100
+          },
+          "range": [
+            0,
+            100
+          ],
+          "unit": "percent",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 1
+          },
+          "range": [
+            0,
+            1
+          ],
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "value_type": "color",
+          "default_value": {
+            "type": "color",
+            "value": "#ffffff"
+          },
+          "unit": "color",
+          "ui_hint": "color",
+          "automation": "continuous"
+        },
+        {
+          "id": "direction",
+          "name": "Direction",
+          "value_type": "direction",
+          "default_value": {
+            "type": "direction",
+            "value": "forward"
+          },
+          "unit": "direction",
+          "ui_hint": "segmented",
+          "automation": "discrete"
+        },
+        {
+          "id": "pan",
+          "name": "Pan",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0
+          },
+          "range": [
+            -540,
+            540
+          ],
+          "unit": "degrees",
+          "ui_hint": "angle",
+          "automation": "continuous"
+        },
+        {
+          "id": "tilt",
+          "name": "Tilt",
+          "value_type": "scalar",
+          "default_value": {
+            "type": "scalar",
+            "value": 0
+          },
+          "range": [
+            -270,
+            270
+          ],
+          "unit": "degrees",
+          "ui_hint": "angle",
+          "automation": "continuous"
         }
       ],
-      "phase": {
-        "mode": "spread",
-        "spread": {
-          "from": 0,
-          "to": 100
-        }
+      "graph": {
+        "nodes": [
+          {
+            "type": "time",
+            "id": "time"
+          },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": {
+              "node_id": "time",
+              "port": "scalar"
+            },
+            "basis": "index",
+            "from": 0,
+            "to": 1,
+            "wrap": true
+          },
+          {
+            "type": "step_sequence",
+            "id": "sequence",
+            "phase": {
+              "node_id": "spatial",
+              "port": "scalar"
+            },
+            "steps": [
+              {
+                "values": {
+                  "color": "#00aaff",
+                  "dimmer": 1,
+                  "tilt": -60
+                },
+                "width": 50,
+                "transition": 100,
+                "accel": 30,
+                "decel": -30
+              },
+              {
+                "values": {
+                  "color": "#001144",
+                  "dimmer": 0.2,
+                  "tilt": 60
+                },
+                "width": 50,
+                "transition": 100,
+                "accel": -30,
+                "decel": 30
+              }
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "output",
+            "input": {
+              "node_id": "sequence",
+              "port": "attribute_set"
+            }
+          }
+        ]
+      },
+      "catalog": {
+        "energy": 0.5,
+        "density": 0.5,
+        "motion": "pulse",
+        "colorfulness": 0.5,
+        "strobe_risk": "none",
+        "required_attributes": [
+          "intensity",
+          "color.rgb",
+          "position.tilt"
+        ]
       }
+    }
+  ],
+  "effect_instances": [
+    {
+      "id": "sine_fly",
+      "definition_id": "legacy.sine_fly",
+      "definition_revision": 1,
+      "target_group_id": "all",
+      "seed": "f14ac19a33fc3a42"
     }
   ],
   "timeline": {

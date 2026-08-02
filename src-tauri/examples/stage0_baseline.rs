@@ -1,6 +1,6 @@
 use lumina_ai_lib::compiler::{
-    parser::ShowDSL, CompiledGroup, CompiledPhaser, CompiledProfilePhaser, CompiledShow,
-    CompiledStep, Compiler, Fixture, PhaseConfig,
+    CompiledGroup, CompiledPhaser, CompiledProfilePhaser, CompiledShow, CompiledStep, Compiler,
+    Fixture, PhaseConfig,
 };
 use lumina_ai_lib::engine::attribute::{resolve_attribute, FixtureFrame};
 use lumina_ai_lib::engine::profile::{
@@ -248,7 +248,9 @@ fn benchmark_templates(template_dir: &Path) -> TemplateCompileReport {
     for _ in 0..samples {
         let started = Instant::now();
         for source in &sources {
-            let dsl: ShowDSL = serde_json::from_str(source).expect("template must parse");
+            let dsl = lumina_ai_lib::document::load_document(source)
+                .expect("template must parse")
+                .document;
             let show = Compiler::compile_document(dsl).expect("template must compile");
             assert!(!show.fixtures.is_empty());
             black_box(show);

@@ -1,6 +1,7 @@
 use lumina_ai_lib::compiler::diagnostic::{
-    DOC_FIXTURE_REFERENCE_NOT_FOUND, DOC_FORMULA_INVALID, DOC_INVALID_COLOR,
-    DOC_INVALID_PHASE_CONFIG, DOC_INVALID_RANGE, DOC_PROFILE_NOT_FOUND, DOC_SVG_PATH_INVALID,
+    DOC_EFFECT_GRAPH_INVALID, DOC_FIXTURE_REFERENCE_NOT_FOUND, DOC_FORMULA_INVALID,
+    DOC_INVALID_COLOR, DOC_INVALID_PHASE_CONFIG, DOC_INVALID_RANGE, DOC_PARAMETER_INVALID,
+    DOC_PROFILE_NOT_FOUND, DOC_SVG_PATH_INVALID,
 };
 use lumina_ai_lib::compiler::Compiler;
 use lumina_ai_lib::document::load_document;
@@ -103,7 +104,7 @@ fn reports_svg_layout_instead_of_silently_falling_back() {
 }
 
 fn compile_errors(
-    document: lumina_ai_lib::document::ShowDocumentV2,
+    document: lumina_ai_lib::document::ShowDocumentV3,
 ) -> Vec<lumina_ai_lib::compiler::diagnostic::Diagnostic> {
     match Compiler::compile_document(document) {
         Ok(_) => panic!("document must not compile"),
@@ -144,4 +145,53 @@ fn arbitrary_json_and_semantic_mutations_never_panic() {
         });
         assert!(result.is_ok(), "semantic mutation panicked");
     }
+}
+
+#[test]
+fn rejects_invalid_typed_parameters_ports_and_graph_cycles() {
+    let mut wrong_default = load_document(VALID_DOCUMENT)
+        .expect("valid source")
+        .document;
+    wrong_default.effect_definitions[0].parameters[0].default_value =
+        lumina_ai_lib::document::ParameterValueDSL::Color("#ffffff".to_string());
+    assert!(compile_errors(wrong_default)
+        .iter()
+        .any(|diagnostic| diagnostic.code == DOC_PARAMETER_INVALID));
+
+    let mut wrong_port = load_document(VALID_DOCUMENT)
+        .expect("valid source")
+        .document;
+    if let lumina_ai_lib::document::EffectNodeDSL::StepSequence { phase, .. } =
+        &mut wrong_port.effect_definitions[0].graph.nodes[2]
+    {
+        phase.port = lumina_ai_lib::document::EffectPortDSL::Color;
+    }
+    assert!(compile_errors(wrong_port)
+        .iter()
+        .any(|diagnostic| diagnostic.code == DOC_EFFECT_GRAPH_INVALID));
+
+    let mut cycle = load_document(VALID_DOCUMENT)
+        .expect("valid source")
+        .document;
+    let reference = |node_id: &str| lumina_ai_lib::document::EffectPortRefDSL {
+        node_id: node_id.to_string(),
+        port: lumina_ai_lib::document::EffectPortDSL::Scalar,
+    };
+    cycle.effect_definitions[0].graph.nodes.extend([
+        lumina_ai_lib::document::EffectNodeDSL::Map {
+            id: "cycle-a".to_string(),
+            input: reference("cycle-b"),
+            input_range: (0.0, 1.0),
+            output_range: (0.0, 1.0),
+        },
+        lumina_ai_lib::document::EffectNodeDSL::Map {
+            id: "cycle-b".to_string(),
+            input: reference("cycle-a"),
+            input_range: (0.0, 1.0),
+            output_range: (0.0, 1.0),
+        },
+    ]);
+    assert!(compile_errors(cycle)
+        .iter()
+        .any(|diagnostic| diagnostic.code == DOC_EFFECT_GRAPH_INVALID));
 }

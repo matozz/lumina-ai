@@ -24,11 +24,11 @@ export const DraggableBlock = (props: BlockProps) => {
   const duration = event.duration || 4;
   const width = Math.max(beatWidth * 0.5, duration * beatWidth);
 
-  const isPhaser = event.action.type === "phaser";
+  const isPhaser = event.action.type === "effect";
   const isAnimate = event.action.type === "animate";
 
   let label = event.action.type as string;
-  if (event.action.type === "phaser") label = event.action.phaser;
+  if (event.action.type === "effect") label = event.action.instance_id;
   else if (event.action.type === "animate") {
     label = event.action.target.parameter_id;
   }

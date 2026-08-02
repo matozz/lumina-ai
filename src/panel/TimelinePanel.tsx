@@ -74,7 +74,7 @@ export const TimelinePanel = () => {
     addEvent({
       beat: snappedBeat,
       duration: 4,
-      action: { type: "phaser", phaser: selectedPhaser },
+      action: { type: "effect", instance_id: selectedPhaser },
     });
   };
 

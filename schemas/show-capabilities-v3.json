@@ -1,0 +1,38 @@
+{
+  "document_contract": {
+    "automation_targets": {
+      "effect_instance": "definition_parameter_id",
+      "global": ["master_dimmer"]
+    },
+    "common_parameters": [
+      "speed",
+      "phase",
+      "width",
+      "transition",
+      "intensity",
+      "color",
+      "direction"
+    ],
+    "effect_nodes": [
+      "time",
+      "constant",
+      "step_sequence",
+      "oscillator",
+      "envelope",
+      "spatial_phase",
+      "math",
+      "map",
+      "clamp",
+      "color_gradient",
+      "fixture_mask",
+      "attribute_writer"
+    ],
+    "effect_sources": ["built_in", "project_local", "user_library"],
+    "parameter_types": ["scalar", "color", "direction"],
+    "spatial_bases": ["index", "x", "y", "distance", "angle", "custom"]
+  },
+  "document_schema": "show-document-v3.schema.json",
+  "document_schema_version": 3,
+  "fixture_profiles": "fixture-profiles-v1.json",
+  "metadata_version": 1
+}

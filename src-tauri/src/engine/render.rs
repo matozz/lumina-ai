@@ -425,13 +425,13 @@ fn easing_antiderivative(value: f64, easing: &str) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::{integrate_float_parameter, render_at, RenderSource, RenderTime};
-    use crate::compiler::{parser::ShowDSL, CompiledAutomationTarget, Compiler};
+    use crate::compiler::{CompiledAutomationTarget, Compiler};
     use crate::engine::attribute::{resolve_attribute, FixtureFrame};
     use crate::engine::effect::{common_parameter_handle, SPEED_PARAMETER_ID};
     use crate::engine::profile::{AttributeValue, COLOR_RGB_ATTRIBUTE, INTENSITY_ATTRIBUTE};
 
     fn compiled_show() -> crate::compiler::CompiledShow {
-        let dsl: ShowDSL = serde_json::from_str(
+        let dsl = crate::document::load_document(
             r##"{
                 "schema_version": 2,
                 "meta": { "name": "render at" },
@@ -465,7 +465,8 @@ mod tests {
                 ]}
             }"##,
         )
-        .expect("test DSL");
+        .expect("test DSL")
+        .document;
         Compiler::compile_document(dsl).expect("compiled test show")
     }
 
@@ -539,7 +540,7 @@ mod tests {
 
     #[test]
     fn moving_head_effects_render_profile_specific_angle_attributes() {
-        let dsl: ShowDSL = serde_json::from_str(
+        let dsl = crate::document::load_document(
             r##"{
                 "schema_version": 2,
                 "meta": { "name": "moving attributes" },
@@ -564,7 +565,8 @@ mod tests {
                 }]}
             }"##,
         )
-        .expect("moving-head DSL");
+        .expect("moving-head DSL")
+        .document;
         let show = Compiler::compile_document(dsl).expect("compiled moving-head show");
         let frame = render_at(&show, RenderTime { beat: 0.5 }, RenderSource::Timeline);
 
@@ -580,7 +582,7 @@ mod tests {
 
     #[test]
     fn overlapping_effects_use_htp_intensity_and_stable_ltp_color() {
-        let dsl: ShowDSL = serde_json::from_str(
+        let dsl = crate::document::load_document(
             r##"{
                 "schema_version": 2,
                 "meta": { "name": "mixed attributes" },
@@ -615,7 +617,8 @@ mod tests {
                 ]}
             }"##,
         )
-        .expect("mixed DSL");
+        .expect("mixed DSL")
+        .document;
         let show = Compiler::compile_document(dsl).expect("compiled mixed show");
 
         for _ in 0..2 {

@@ -52,8 +52,8 @@ export const useTimelineTracks = (
       }
 
       let displayTarget = "";
-      if (displayType === "phaser" && event.action.type === "phaser") {
-        displayTarget = event.action.phaser;
+      if (displayType === "effect" && event.action.type === "effect") {
+        displayTarget = event.action.instance_id;
       }
 
       if (moving && moving.originalIndex === index) {
@@ -61,7 +61,7 @@ export const useTimelineTracks = (
         displayBeat = Math.max(0, Math.floor((moving.startBeat + deltaBeats) * 2) / 2);
 
         if (moving.activeTrackName?.startsWith("phaser:")) {
-          displayType = "phaser";
+          displayType = "effect";
           displayTarget = moving.activeTrackName.replace("phaser:", "");
         }
       }
@@ -72,7 +72,7 @@ export const useTimelineTracks = (
       }
 
       let trackId = "global";
-      if (displayType === "phaser") trackId = `phaser:${displayTarget}`;
+      if (displayType === "effect") trackId = `phaser:${displayTarget}`;
 
       const e: UITimelineEvent = {
         ...event,
@@ -80,7 +80,8 @@ export const useTimelineTracks = (
         originalIndex: index,
         beat: displayBeat,
         duration: displayDuration,
-        action: displayType === "phaser" ? { type: "phaser", phaser: displayTarget } : event.action,
+        action:
+          displayType === "effect" ? { type: "effect", instance_id: displayTarget } : event.action,
       };
 
       if (!trackMap.has(trackId)) {

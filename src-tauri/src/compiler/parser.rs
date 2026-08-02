@@ -1,4 +1,4 @@
 pub use crate::document::*;
 
 /// Transitional name retained while editor call sites migrate from DSL terminology.
-pub type ShowDSL = ShowDocumentV2;
+pub type ShowDSL = ShowDocumentV3;

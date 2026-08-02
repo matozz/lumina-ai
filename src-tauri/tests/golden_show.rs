@@ -1,4 +1,4 @@
-use lumina_ai_lib::compiler::{parser::ShowDSL, Compiler};
+use lumina_ai_lib::compiler::Compiler;
 use lumina_ai_lib::engine::attribute::{resolve_attribute, FixtureFrame};
 use lumina_ai_lib::engine::profile::{AttributeValue, COLOR_RGB_ATTRIBUTE, INTENSITY_ATTRIBUTE};
 use lumina_ai_lib::engine::{animation::ParameterContext, compute_frame};
@@ -6,8 +6,9 @@ use lumina_ai_lib::state::ActivePhaser;
 
 #[test]
 fn compiles_dsl_and_renders_expected_frame_at_known_beat() {
-    let dsl: ShowDSL = serde_json::from_str(include_str!("fixtures/golden_show.json"))
-        .expect("golden fixture must remain valid JSON DSL");
+    let dsl = lumina_ai_lib::document::load_document(include_str!("fixtures/golden_show.json"))
+        .expect("golden fixture must remain valid JSON DSL")
+        .document;
     let show = Compiler::compile_document(dsl).expect("golden fixture must compile");
     let sample_beat = 0.75;
     let active = ActivePhaser {

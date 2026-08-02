@@ -149,19 +149,19 @@ export const useTimelineEvents = () => {
                 dslObj.timeline.events = resolveOverlaps(dslObj.timeline.events);
                 engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));
               }
-            } else if (ev.action.type === "phaser") {
+            } else if (ev.action.type === "effect") {
               // Extract the target phaser ID if dragging onto a specific track
-              let targetPhaserId = ev.action.phaser;
+              let targetPhaserId = ev.action.instance_id;
 
               if (moving.activeTrackName?.startsWith("phaser:")) {
                 targetPhaserId = moving.activeTrackName.replace("phaser:", "");
               }
 
-              const isDifferentTrack = targetPhaserId !== ev.action.phaser;
+              const isDifferentTrack = targetPhaserId !== ev.action.instance_id;
 
               if (ev.beat !== newBeat || isDifferentTrack) {
                 ev.beat = newBeat;
-                ev.action.phaser = targetPhaserId;
+                ev.action.instance_id = targetPhaserId;
 
                 dslObj.timeline.events = resolveOverlaps(dslObj.timeline.events);
                 engineActions.setCurrentDslCode(JSON.stringify(dslObj, null, 2));

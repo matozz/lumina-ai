@@ -5,9 +5,9 @@ use crate::document::{DocumentValidator, ValidatedShow};
 use crate::engine::attribute::{resolve_attribute, AttributeHandle};
 use crate::engine::color::parse_hex_color;
 use crate::engine::effect::{
-    common_parameter_handle, EffectDefinition, EffectDefinitionHandle, EffectInstance,
-    ParameterHandle, COLOR_PARAMETER_ID, INTENSITY_PARAMETER_ID, PAN_PARAMETER_ID,
-    SPEED_PARAMETER_ID, TILT_PARAMETER_ID,
+    AutomationPolicy, Direction, EffectDefinition, EffectDefinitionHandle, EffectInstance,
+    ParameterDefinition, ParameterHandle, ParameterUiHint, ParameterUnit, ParameterValue,
+    ParameterValueType, SPEED_PARAMETER_ID,
 };
 use crate::engine::profile::{
     profile_by_handle, profile_handle_by_id, AttributeValue, FixtureProfileHandle,
@@ -15,7 +15,8 @@ use crate::engine::profile::{
 };
 use diagnostic::{
     Diagnostic, DiagnosticSeverity, DOC_ATTRIBUTE_NOT_SUPPORTED, DOC_ATTRIBUTE_OUT_OF_RANGE,
-    DOC_FORMULA_INVALID, DOC_INVALID_COLOR, DOC_PROFILE_NOT_FOUND, DSL_DUPLICATE_FIXTURE_ID,
+    DOC_EFFECT_GRAPH_INVALID, DOC_EFFECT_INSTANCE_NOT_FOUND, DOC_FORMULA_INVALID,
+    DOC_INVALID_COLOR, DOC_PARAMETER_INVALID, DOC_PROFILE_NOT_FOUND, DSL_DUPLICATE_FIXTURE_ID,
     DSL_TARGET_GROUP_NOT_FOUND,
 };
 use fasteval::{Compiler as FastevalCompiler, Evaler};
@@ -204,10 +205,19 @@ impl Compiler {
         let fixtures = Self::compile_patch(&dsl.patch, &mut errors);
         let coords = Self::compile_layout(&dsl.layout, &fixtures, &mut errors);
         let groups = Self::compile_groups(&dsl.groups, &fixtures, &coords, &mut errors);
-        let phasers = Self::compile_phasers(&dsl.phasers, &groups, &fixtures, &mut errors);
-        let (effect_definitions, effect_instances) = compile_legacy_effect_models(&dsl.phasers);
+        let legacy_phasers = reconstruct_legacy_phasers(&dsl, &mut errors);
+        let phasers = Self::compile_phasers(&legacy_phasers, &groups, &fixtures, &mut errors);
+        let (effect_definitions, effect_instances) =
+            compile_effect_models(&dsl.effect_definitions, &dsl.effect_instances, &mut errors);
 
-        let timeline = dsl.timeline.map(Self::compile_timeline);
+        let timeline = dsl.timeline.map(|timeline| {
+            Self::compile_timeline(
+                timeline,
+                &effect_definitions,
+                &effect_instances,
+                &mut errors,
+            )
+        });
 
         if !errors.is_empty()
             && errors
@@ -807,24 +817,36 @@ impl Compiler {
         map
     }
 
-    fn compile_timeline(timeline: TimelineDSL) -> CompiledTimeline {
+    fn compile_timeline(
+        timeline: TimelineV3DSL,
+        definitions: &[EffectDefinition],
+        instances: &HashMap<String, EffectInstance>,
+        errors: &mut Vec<Diagnostic>,
+    ) -> CompiledTimeline {
         let events = timeline
             .events
             .into_iter()
-            .map(|event| CompiledTimelineEvent {
+            .enumerate()
+            .map(|(index, event)| CompiledTimelineEvent {
                 beat: event.beat,
                 duration: event.duration,
                 action: match event.action {
-                    TimelineActionDefDSL::Phaser { phaser } => CompiledTimelineAction::Phaser {
-                        phaser: phaser.into(),
+                    TimelineActionV3DSL::Effect { instance_id } => CompiledTimelineAction::Phaser {
+                        phaser: instance_id.into(),
                     },
-                    TimelineActionDefDSL::Animate {
+                    TimelineActionV3DSL::Animate {
                         target,
                         from,
                         to,
                         easing,
                     } => CompiledTimelineAction::Animate {
-                        target: compile_automation_target(target),
+                        target: compile_automation_target(
+                            target,
+                            definitions,
+                            instances,
+                            index,
+                            errors,
+                        ),
                         from,
                         to,
                         easing,
@@ -967,22 +989,35 @@ fn set_angle_value(
     values[handle.index()] = Some(value);
 }
 
-fn compile_automation_target(target: AutomationTargetDSL) -> CompiledAutomationTarget {
+fn compile_automation_target(
+    target: AutomationTargetV3DSL,
+    definitions: &[EffectDefinition],
+    instances: &HashMap<String, EffectInstance>,
+    event_index: usize,
+    errors: &mut Vec<Diagnostic>,
+) -> CompiledAutomationTarget {
     match target {
-        AutomationTargetDSL::Global { .. } => CompiledAutomationTarget::GlobalMasterDimmer,
-        AutomationTargetDSL::EffectInstance {
+        AutomationTargetV3DSL::Global { .. } => CompiledAutomationTarget::GlobalMasterDimmer,
+        AutomationTargetV3DSL::EffectInstance {
             instance_id,
             parameter_id,
         } => {
-            let parameter_id = match parameter_id {
-                EffectParameterDSL::Multiplier => SPEED_PARAMETER_ID,
-                EffectParameterDSL::Color => COLOR_PARAMETER_ID,
-                EffectParameterDSL::Dimmer => INTENSITY_PARAMETER_ID,
-                EffectParameterDSL::Pan => PAN_PARAMETER_ID,
-                EffectParameterDSL::Tilt => TILT_PARAMETER_ID,
+            let parameter = instances.get(&instance_id).and_then(|instance| {
+                definitions
+                    .get(instance.definition.index())?
+                    .parameter_handle(&parameter_id)
+            });
+            let Some(parameter) = parameter else {
+                errors.push(Diagnostic::error(
+                    DOC_PARAMETER_INVALID,
+                    format!("timeline.events[{event_index}].action.target"),
+                    format!(
+                        "Cannot resolve effect parameter {parameter_id:?} for instance {instance_id:?}."
+                    ),
+                    "Reference a parameter declared by the pinned effect definition.",
+                ));
+                return CompiledAutomationTarget::GlobalMasterDimmer;
             };
-            let parameter = common_parameter_handle(parameter_id)
-                .expect("common effect parameter handles are fixed at compile time");
             CompiledAutomationTarget::EffectInstance {
                 instance: instance_id.into(),
                 parameter,
@@ -991,32 +1026,220 @@ fn compile_automation_target(target: AutomationTargetDSL) -> CompiledAutomationT
     }
 }
 
-fn compile_legacy_effect_models(
-    phasers: &[PhaserDSL],
-) -> (Vec<EffectDefinition>, HashMap<String, EffectInstance>) {
-    let mut definitions = Vec::with_capacity(phasers.len());
-    let mut instances = HashMap::with_capacity(phasers.len());
+fn reconstruct_legacy_phasers(
+    document: &ShowDocumentV3,
+    errors: &mut Vec<Diagnostic>,
+) -> Vec<PhaserDSL> {
+    let definitions: HashMap<_, _> = document
+        .effect_definitions
+        .iter()
+        .map(|definition| (definition.id.as_str(), definition))
+        .collect();
+    let mut phasers = Vec::with_capacity(document.effect_instances.len());
+    for (index, instance) in document.effect_instances.iter().enumerate() {
+        let Some(definition) = definitions.get(instance.definition_id.as_str()) else {
+            continue;
+        };
+        let sequence = definition.graph.nodes.iter().find_map(|node| match node {
+            EffectNodeDSL::StepSequence { steps, .. } => Some(steps.clone()),
+            _ => None,
+        });
+        let spatial = definition.graph.nodes.iter().find_map(|node| match node {
+            EffectNodeDSL::SpatialPhase {
+                from,
+                to,
+                group_size,
+                ..
+            } => Some((*from, *to, *group_size)),
+            _ => None,
+        });
+        let (Some(steps), Some((from, to, group_size))) = (sequence, spatial) else {
+            errors.push(Diagnostic::error(
+                DOC_EFFECT_GRAPH_INVALID,
+                format!("effect_instances[{index}].definition_id"),
+                format!(
+                    "Effect definition {:?} is not yet reducible to the Stage 4 compatibility evaluator.",
+                    definition.id
+                ),
+                "Use the canonical Time → SpatialPhase → StepSequence → AttributeWriter graph until the typed evaluator slice lands.",
+            ));
+            continue;
+        };
+        let speed = instance
+            .parameter_overrides
+            .get(SPEED_PARAMETER_ID)
+            .or_else(|| {
+                definition
+                    .parameters
+                    .iter()
+                    .find(|parameter| parameter.id == SPEED_PARAMETER_ID)
+                    .map(|parameter| &parameter.default_value)
+            })
+            .and_then(|value| match value {
+                ParameterValueDSL::Scalar(value) => Some(*value),
+                ParameterValueDSL::Color(_) | ParameterValueDSL::Direction(_) => None,
+            });
+        let phase = group_size.map_or_else(
+            || PhaseConfigDSL::Spread {
+                spread: PhaseSpreadDSL {
+                    from: from * 100.0,
+                    to: to * 100.0,
+                },
+            },
+            |group_size| PhaseConfigDSL::Grouped {
+                grouped: PhaseGroupedDSL {
+                    group_size,
+                    spread: (from * 100.0, to * 100.0),
+                },
+            },
+        );
+        phasers.push(PhaserDSL {
+            id: instance.id.clone(),
+            name: definition.name.clone(),
+            target: instance.target_group_id.clone(),
+            multiplier: speed,
+            steps,
+            phase,
+        });
+    }
+    phasers
+}
 
-    for phaser in phasers {
-        let definition_handle = EffectDefinitionHandle::from_index(definitions.len());
-        definitions.push(EffectDefinition::legacy(
-            &phaser.id,
-            &phaser.name,
-            phaser.multiplier.unwrap_or(1.0),
-        ));
+fn compile_effect_models(
+    definition_documents: &[EffectDefinitionDSL],
+    instance_documents: &[EffectInstanceDSL],
+    errors: &mut Vec<Diagnostic>,
+) -> (Vec<EffectDefinition>, HashMap<String, EffectInstance>) {
+    let mut definitions = Vec::with_capacity(definition_documents.len());
+    let mut definition_handles = HashMap::with_capacity(definition_documents.len());
+    for (index, definition) in definition_documents.iter().enumerate() {
+        let handle = EffectDefinitionHandle::from_index(index);
+        definition_handles.insert((definition.id.as_str(), definition.revision), handle);
+        let parameters = definition
+            .parameters
+            .iter()
+            .filter_map(|parameter| compile_parameter_definition(parameter, errors))
+            .collect();
+        definitions.push(EffectDefinition {
+            id: definition.id.clone(),
+            name: definition.name.clone(),
+            revision: definition.revision,
+            parameters,
+        });
+    }
+
+    let mut instances = HashMap::with_capacity(instance_documents.len());
+    for (index, instance) in instance_documents.iter().enumerate() {
+        let Some(definition) = definition_handles
+            .get(&(
+                instance.definition_id.as_str(),
+                instance.definition_revision,
+            ))
+            .copied()
+        else {
+            errors.push(Diagnostic::error(
+                DOC_EFFECT_INSTANCE_NOT_FOUND,
+                format!("effect_instances[{index}].definition_id"),
+                format!(
+                    "Cannot compile missing effect definition {:?} revision {}.",
+                    instance.definition_id, instance.definition_revision
+                ),
+                "Reference a definition and revision present in the document.",
+            ));
+            continue;
+        };
+        let compiled_definition = &definitions[definition.index()];
+        let parameter_overrides = instance
+            .parameter_overrides
+            .iter()
+            .filter_map(|(id, value)| {
+                let handle = compiled_definition.parameter_handle(id)?;
+                compile_parameter_value(value, errors).map(|value| (handle, value))
+            })
+            .collect();
         instances.insert(
-            phaser.id.clone(),
+            instance.id.clone(),
             EffectInstance {
-                id: phaser.id.clone(),
-                definition: definition_handle,
-                target_group_id: phaser.target.clone(),
-                parameter_overrides: HashMap::new(),
-                seed: EffectInstance::stable_seed(&phaser.id),
+                id: instance.id.clone(),
+                definition,
+                target_group_id: instance.target_group_id.clone(),
+                parameter_overrides,
+                seed: u64::from_str_radix(&instance.seed, 16).unwrap_or_else(|_| {
+                    errors.push(Diagnostic::error(
+                        DOC_PARAMETER_INVALID,
+                        format!("effect_instances[{index}].seed"),
+                        "Cannot compile the deterministic effect seed.",
+                        "Use a 16-digit hexadecimal seed.",
+                    ));
+                    0
+                }),
             },
         );
     }
-
     (definitions, instances)
+}
+
+fn compile_parameter_definition(
+    parameter: &ParameterDefinitionDSL,
+    errors: &mut Vec<Diagnostic>,
+) -> Option<ParameterDefinition> {
+    let default_value = compile_parameter_value(&parameter.default_value, errors)?;
+    Some(ParameterDefinition {
+        id: parameter.id.clone(),
+        value_type: match parameter.value_type {
+            ParameterValueTypeDSL::Scalar => ParameterValueType::Scalar,
+            ParameterValueTypeDSL::Color => ParameterValueType::Color,
+            ParameterValueTypeDSL::Direction => ParameterValueType::Direction,
+        },
+        default_value,
+        range: parameter.range,
+        unit: match parameter.unit {
+            ParameterUnitDSL::Multiplier => ParameterUnit::Multiplier,
+            ParameterUnitDSL::Cycles => ParameterUnit::Cycles,
+            ParameterUnitDSL::Percent => ParameterUnit::Percent,
+            ParameterUnitDSL::Normalized => ParameterUnit::Normalized,
+            ParameterUnitDSL::Color => ParameterUnit::Color,
+            ParameterUnitDSL::Direction => ParameterUnit::Direction,
+            ParameterUnitDSL::Degrees => ParameterUnit::Degrees,
+        },
+        ui_hint: match parameter.ui_hint {
+            ParameterUiHintDSL::Slider => ParameterUiHint::Slider,
+            ParameterUiHintDSL::Color => ParameterUiHint::Color,
+            ParameterUiHintDSL::Segmented => ParameterUiHint::Segmented,
+            ParameterUiHintDSL::Angle => ParameterUiHint::Angle,
+        },
+        automation: match parameter.automation {
+            AutomationPolicyDSL::Continuous => AutomationPolicy::Continuous,
+            AutomationPolicyDSL::Discrete => AutomationPolicy::Discrete,
+        },
+    })
+}
+
+fn compile_parameter_value(
+    value: &ParameterValueDSL,
+    errors: &mut Vec<Diagnostic>,
+) -> Option<ParameterValue> {
+    match value {
+        ParameterValueDSL::Scalar(value) => Some(ParameterValue::Scalar(*value)),
+        ParameterValueDSL::Color(color) => match parse_hex_color(color) {
+            Ok((red, green, blue)) => Some(ParameterValue::Color([red, green, blue])),
+            Err(error) => {
+                errors.push(Diagnostic::error(
+                    DOC_INVALID_COLOR,
+                    "effect_definitions.parameters.default_value",
+                    error.to_string(),
+                    "Use a color in #RRGGBB format.",
+                ));
+                None
+            }
+        },
+        ParameterValueDSL::Direction(direction) => {
+            Some(ParameterValue::Direction(match direction {
+                DirectionDSL::Forward => Direction::Forward,
+                DirectionDSL::Reverse => Direction::Reverse,
+            }))
+        }
+    }
 }
 
 fn formula_diagnostic(path: &str, error: impl std::fmt::Display) -> Diagnostic {
@@ -1044,7 +1267,6 @@ mod tests {
             DOC_ATTRIBUTE_NOT_SUPPORTED, DOC_ATTRIBUTE_OUT_OF_RANGE, DSL_DUPLICATE_FIXTURE_ID,
             DSL_TARGET_GROUP_NOT_FOUND,
         },
-        parser::ShowDSL,
         Compiler, PhaseConfig,
     };
     use crate::engine::effect::{ParameterValue, SPEED_PARAMETER_ID};
@@ -1090,7 +1312,9 @@ mod tests {
 
     #[test]
     fn compiles_fixture_group_phaser_and_timeline_outputs() {
-        let dsl: ShowDSL = serde_json::from_str(VALID_SHOW).expect("valid baseline DSL");
+        let dsl = crate::document::load_document(VALID_SHOW)
+            .expect("valid baseline DSL")
+            .document;
         let show = Compiler::compile_document(dsl).expect("baseline show should compile");
 
         assert_eq!(show.fixtures.len(), 2);
@@ -1148,7 +1372,9 @@ mod tests {
                 "[{ \"profile_id\": \"generic-rgb\", \"id_range\": [1, 2] }, { \"profile_id\": \"generic-rgb\", \"id_range\": [2, 3] }]",
             )
             .replace("\"target\": \"line\"", "\"target\": \"Missing\"");
-        let dsl: ShowDSL = serde_json::from_str(&invalid_show).expect("syntactically valid DSL");
+        let dsl = crate::document::load_document(&invalid_show)
+            .expect("syntactically valid DSL")
+            .document;
         let errors = match Compiler::compile_document(dsl) {
             Ok(_) => panic!("invalid show must not compile"),
             Err(errors) => errors,
@@ -1163,7 +1389,7 @@ mod tests {
             Some("Use a unique fixture ID across all patch ranges.")
         );
         assert_eq!(errors[1].code, DSL_TARGET_GROUP_NOT_FOUND);
-        assert_eq!(errors[1].path, "phasers[0].target");
+        assert_eq!(errors[1].path, "effect_instances[0].target_group_id");
         assert_eq!(errors[1].message, "Target group not found: Missing");
     }
 
@@ -1174,7 +1400,9 @@ mod tests {
             "\"color\": \"#ff0000\", \"dimmer\": 0.5, \"pan\": 90",
         );
         let unsupported_errors = match Compiler::compile_document(
-            serde_json::from_str(&unsupported).expect("syntactically valid unsupported show"),
+            crate::document::load_document(&unsupported)
+                .expect("syntactically valid unsupported show")
+                .document,
         ) {
             Ok(_) => panic!("RGB profile must reject pan writes"),
             Err(errors) => errors,
@@ -1187,7 +1415,9 @@ mod tests {
             .replace("generic-rgb", "generic-moving-head")
             .replace("\"pan\": 90", "\"pan\": 300");
         let range_errors = match Compiler::compile_document(
-            serde_json::from_str(&out_of_range).expect("syntactically valid range show"),
+            crate::document::load_document(&out_of_range)
+                .expect("syntactically valid range show")
+                .document,
         ) {
             Ok(_) => panic!("moving-head profile must enforce its physical pan range"),
             Err(errors) => errors,
