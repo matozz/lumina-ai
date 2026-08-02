@@ -109,6 +109,12 @@ pub async fn publish_dsl(
 }
 
 #[tauri::command]
+pub fn preview_dsl(dsl_json: String) -> Result<CompileResult, Diagnostic> {
+    let (result, _) = compile_dsl(&dsl_json)?;
+    Ok(result)
+}
+
+#[tauri::command]
 pub async fn activate_show_revision(
     revision: u64,
     state: State<'_, Arc<EngineState>>,
@@ -388,7 +394,7 @@ async fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{atomic_write, SAVE_SEQUENCE};
+    use super::{atomic_write, preview_dsl, SAVE_SEQUENCE};
     use std::sync::atomic::Ordering;
 
     #[tokio::test]
@@ -432,5 +438,25 @@ mod tests {
         tokio::fs::remove_dir_all(directory)
             .await
             .expect("test cleanup");
+    }
+
+    #[test]
+    fn draft_preview_compiles_without_assigning_a_show_revision() {
+        let source = r#"{
+          "schema_version": 4,
+          "meta": { "name": "Preview" },
+          "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 4] }],
+          "layout": { "type": "generator", "generator": { "shape": "matrix", "rows": 2, "columns": 2, "spacing": 64 } },
+          "groups": [{ "id": "all", "name": "All", "fixtures": { "range": [1, 4] } }],
+          "effect_definitions": [],
+          "effect_instances": [],
+          "timeline": { "ppq": 960, "tempo_map": { "points": [{ "time_tick": 0, "bpm": 120 }] }, "tracks": [] }
+        }"#;
+
+        let result = preview_dsl(source.to_string()).expect("draft preview");
+        assert!(result.success);
+        assert_eq!(result.show_revision, None);
+        assert_eq!(result.fixture_count, 4);
+        assert_eq!(result.layout_coords.len(), 4);
     }
 }

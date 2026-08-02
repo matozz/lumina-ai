@@ -13,6 +13,8 @@ export const engine = {
 
   publishDSL: (json: string) => invoke<CompileResult>("publish_dsl", { dslJson: json }),
 
+  previewDSL: (json: string) => invoke<CompileResult>("preview_dsl", { dslJson: json }),
+
   activateShowRevision: (revision: number) =>
     invoke<ShowSnapshotState>("activate_show_revision", { revision }),
 

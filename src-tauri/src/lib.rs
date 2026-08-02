@@ -37,6 +37,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::load_dsl,
             commands::publish_dsl,
+            commands::preview_dsl,
             commands::activate_show_revision,
             commands::get_show_snapshot_state,
             commands::validate_dsl,

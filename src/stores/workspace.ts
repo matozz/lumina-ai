@@ -5,6 +5,11 @@ import type { ShowSnapshotState } from "@/bridge/types";
 export type WorkspaceId = "stage" | "effect-lab" | "song" | "arrange" | "live";
 export type PublishStatus = "idle" | "publishing" | "activating" | "error";
 
+export interface PatchAddress {
+  universe: number;
+  startChannel: number;
+}
+
 export interface WorkspaceState {
   activeWorkspace: WorkspaceId;
   advancedMode: boolean;
@@ -12,6 +17,7 @@ export interface WorkspaceState {
   inspectorVisible: boolean;
   selectedEffectId: string | null;
   favoriteEffectIds: string[];
+  patchAddresses: PatchAddress[];
   publishedRevision: number | null;
   liveRevision: number | null;
   publishStatus: PublishStatus;
@@ -25,6 +31,7 @@ const initialState: WorkspaceState = {
   inspectorVisible: true,
   selectedEffectId: null,
   favoriteEffectIds: [],
+  patchAddresses: [{ universe: 1, startChannel: 1 }],
   publishedRevision: null,
   liveRevision: null,
   publishStatus: "idle",
@@ -40,6 +47,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       libraryVisible: state.libraryVisible,
       inspectorVisible: state.inspectorVisible,
       favoriteEffectIds: state.favoriteEffectIds,
+      patchAddresses: state.patchAddresses,
     }),
   }),
 );
@@ -59,6 +67,12 @@ export const workspaceActions = {
         ? state.favoriteEffectIds.filter((id) => id !== effectId)
         : [...state.favoriteEffectIds, effectId],
     })),
+  setPatchAddress: (index: number, address: PatchAddress) =>
+    useWorkspaceStore.setState((state) => {
+      const patchAddresses = [...state.patchAddresses];
+      patchAddresses[index] = address;
+      return { patchAddresses };
+    }),
   setSnapshotState: (snapshot: ShowSnapshotState) =>
     useWorkspaceStore.setState({
       publishedRevision: snapshot.published_revision,
@@ -78,6 +92,7 @@ export const workspaceSelectors = {
   inspectorVisible: (state: WorkspaceState) => state.inspectorVisible,
   selectedEffectId: (state: WorkspaceState) => state.selectedEffectId,
   favoriteEffectIds: (state: WorkspaceState) => state.favoriteEffectIds,
+  patchAddresses: (state: WorkspaceState) => state.patchAddresses,
   publishedRevision: (state: WorkspaceState) => state.publishedRevision,
   liveRevision: (state: WorkspaceState) => state.liveRevision,
   publishStatus: (state: WorkspaceState) => state.publishStatus,

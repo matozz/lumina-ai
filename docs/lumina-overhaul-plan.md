@@ -725,10 +725,10 @@ Keyframe 至少包含：
 
 #### 6.2 Stage Setup
 
-- [ ] Fixture Profile 选择、数量、ID/universe/channel 设置。
+- [x] Fixture Profile 选择、数量、ID/universe/channel 设置。
 - [ ] matrix/circle/formula/custom 布局可视化编辑。
-- [ ] group 创建、空间筛选、排序和测试点亮。
-- [ ] fixture capability 和 patch 冲突实时提示。
+- [x] group 创建、空间筛选、排序和测试点亮。
+- [x] fixture capability 和 patch 冲突实时提示。
 
 #### 6.3 Effect Lab
 
@@ -1082,14 +1082,14 @@ flowchart LR
 ## Handoff
 
 - Current Stage: Stage 6 `in_progress`；严格止于 Stage 7。
-- Slice completed: `main@3a690c0` 原生基线、Draft/Published/Live immutable snapshot 边界、紧凑五工作区 Shell、可调/可隐藏 context panels、Raw DSL Advanced Mode、4×4 starter project。
-- Commits: 分支 `codex/song-driven-dj-workspace`；原生基线 `3b709a0`；snapshot contract `e9a32d8`；Workspace Shell 为当前切片提交。
-- Files changed: ShowStore/Tauri commands/bridge、ADR-0006、workspace Zustand state、starter project、Workspace Rail/Header/Library/Content/Inspector、shadcn Resizable/Badge/Separator/ScrollArea/Empty、embedded Canvas/Timeline/Control、tests 与原生截图证据。
-- Validation: `pnpm check:all` 全绿：34 frontend files/67 tests、74 Rust unit + 12 contracts/golden/templates、schema、format、typecheck、Vite build、strict Clippy；真实 Tauri max/min/Arrange/Advanced 截图与 AX names。既有 PointerEvents/DOM ref/snap/duration/Undo 代码未改写。
+- Slice completed: `main@3a690c0` 原生基线、Draft/Published/Live immutable snapshot 边界、紧凑五工作区 Shell、Raw DSL Advanced Mode、4×4 starter project，以及 profile/patch/layout/group/capability/conflict Stage Setup。
+- Commits: 分支 `codex/song-driven-dj-workspace`；原生基线 `3b709a0`；snapshot contract `e9a32d8`；Workspace Shell `a490908`；Stage Setup 为当前切片提交。
+- Files changed: ShowStore/Tauri commands/bridge、ADR-0006、workspace state、Workspace Shell、side-effect-free Draft preview、generated profile adapter、atomic Stage Setup command、Canvas outline/test preview、tests 与原生截图证据。
+- Validation: Workspace Shell `pnpm check:all` 全绿；Stage Setup 36 frontend files/76 tests、Rust preview test、strict Clippy、`pnpm build`；真实 Tauri max/min/test-light 与 `r2/r1 → r2/r2` revision 截图/AX。既有 PointerEvents/DOM ref/snap/duration/Undo 代码未改写。
 - ADRs added/updated: ADR-0006 accepted；Draft 发布不改变 Live，只有显式 Take live 激活 revision。
-- Risks opened/closed: R-005 后端与前端边界已实现，仍保持 open，等待 Stage 6 完整原生用户路径复核后关闭。
-- Remaining exit criteria: Stage Setup 编辑器、完整 Effect Lab、Arrange place/empty/help、Live Pad modes/Blackout、全路径 accessibility；之后才进入 Stage 7 Audio/TempoMap/SongAnalysis。
-- Recommended next slice: Stage Setup 的 profile/patch/layout/group 可视化编辑、capability 与冲突提示。
+- Risks opened/closed: R-005 closed；原生 Publish 得到 `Published r2 / Live r1`，只有显式 Take live 后变为 `Live r2`。
+- Remaining exit criteria: Stage Setup 继续补 layout 参数/Custom 坐标编辑；完整 Effect Lab、Arrange place/empty/help、Live Pad modes/Blackout、全路径 accessibility；之后才进入 Stage 7 Audio/TempoMap/SongAnalysis。
+- Recommended next slice: Effect Lab 的 catalog CRUD、参数表单、Draft loop preview 与 revision metadata。
 
 ## 19. ADR 规范
 
@@ -1197,6 +1197,9 @@ flowchart LR
 | 2026-08-02 | 6        | Workspace Shell 首测      | failed    | none        | typecheck 仅发现 shadcn ScrollArea 与 WorkspaceLibrary 未使用 import     | 删除无用 import；不改变组件行为                             | 重跑 frontend 与真实 Tauri                  |
 | 2026-08-02 | 6        | 紧凑 Workspace Shell      | completed | 本切片提交  | `check:all`；67 frontend；86 Rust；4 native screenshots；AX names        | npm official shadcn；Canvas/Timeline 主区；Advanced DSL     | Stage Setup 可视化编辑                      |
 | 2026-08-02 | 6        | revision 原生点击复核     | failed    | none        | 截图后窗口被宿主关闭；重启时 macOS 仅暴露 `loginwindow`，无可访问窗口    | backend + frontend integration 均通过；不判定产品回归       | 完整原生用户路径时重跑 Publish/Take live    |
+| 2026-08-02 | 6        | Stage Setup 组件首测      | failed    | none        | happy-dom 缺 `getAnimations`；ScrollArea cleanup failed                  | 测试 mock layout；产品仍用真实 ScrollArea                   | 重跑全 frontend                             |
+| 2026-08-02 | 6        | Stage Setup + preview     | completed | 本切片提交  | `check:all`；76 frontend；87 Rust；max/min native + test light           | generated profiles；pure preview；atomic command            | Effect Lab                                  |
+| 2026-08-02 | 6        | revision 原生点击复核     | completed | 本切片提交  | native AX/screens：`r2/r1 → r2/r2`                                       | R-005 closed；显式 Publish 与 Take live                     | 保持边界进入 Effect Lab                     |
 
 ## 21. Open Risks
 
@@ -1206,7 +1209,7 @@ flowchart LR
 | R-002 | schema 漂移导致用户/AI 字段静默丢失                 | critical | 2           | Rust 权威、strict semantic gate、generated schema/TS/capability、AJV contract | closed   |
 | R-003 | 所有属性使用 max 混合产生错误颜色/运动              | high     | 3           | 属性级 HTP/LTP/Add/Multiply/Mask、稳定 tie-break 与 conflict inspection       | closed   |
 | R-004 | Preview 80ms 插值掩盖真实频闪输出                   | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                                          | closed   |
-| R-005 | Raw DSL 热编译破坏 Live active show                 | critical | 6           | Stage 1 immutable revision；Stage 6 显式 Draft/Live 发布                      | open     |
+| R-005 | Raw DSL 热编译破坏 Live active show                 | critical | 6           | immutable revisions；Draft preview；显式 Publish 与 Take live；native AX 复核 | closed   |
 | R-006 | 没有歌曲时间模型导致 AI 编排不可复现                | high     | 7           | Stage 5 可复现 arrangement 已完成；SongAnalysis residual 明确转交 Stage 7     | accepted |
 | R-007 | AI 直接生成无效或不安全效果                         | critical | 8           | typed plan、capability、validator、safety budget                              | open     |
 | R-008 | 硬件故障时无法自动 Blackout                         | critical | 9           | 独立 safety controller 和 fail-safe tests                                     | open     |

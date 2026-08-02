@@ -3,6 +3,7 @@ import { CanvasRenderer } from "./CanvasRenderer";
 import { onFrameUpdate } from "../bridge/events";
 import { engine } from "../bridge/commands";
 import { assessFrame, type FrameCursor } from "../bridge/frameSync";
+import type { FixtureFramePayload, LayoutCoord } from "../bridge/types";
 import { cn } from "../lib/utils";
 
 export const CanvasView = () => {
@@ -43,8 +44,21 @@ export const CanvasView = () => {
       }
     };
 
+    const handleDraftLayout = (event: Event) => {
+      rendererRef.current?.initFromLayout((event as CustomEvent<LayoutCoord[]>).detail);
+    };
+    const handleFixtureTest = (event: Event) => {
+      rendererRef.current?.applyFrame((event as CustomEvent<FixtureFramePayload[]>).detail, true);
+    };
+
     window.addEventListener("engine:layout-ready", handleLayoutUpdate);
-    return () => window.removeEventListener("engine:layout-ready", handleLayoutUpdate);
+    window.addEventListener("engine:draft-layout", handleDraftLayout);
+    window.addEventListener("workspace:test-fixtures", handleFixtureTest);
+    return () => {
+      window.removeEventListener("engine:layout-ready", handleLayoutUpdate);
+      window.removeEventListener("engine:draft-layout", handleDraftLayout);
+      window.removeEventListener("workspace:test-fixtures", handleFixtureTest);
+    };
   }, []);
 
   return (

@@ -35,4 +35,13 @@ describe("workspace state", () => {
       publishStatus: "publishing",
     });
   });
+
+  it("persists user-authored fixture protocol addresses outside high-frequency engine state", () => {
+    workspaceActions.setPatchAddress(0, { universe: 2, startChannel: 101 });
+
+    expect(useWorkspaceStore.getState().patchAddresses[0]).toEqual({
+      universe: 2,
+      startChannel: 101,
+    });
+  });
 });

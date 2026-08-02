@@ -5,11 +5,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ControlPanel } from "@/panel/ControlPanel";
 import { engineSelectors, useEngineStore } from "@/stores/engine";
 import type { WorkspaceId } from "@/stores/workspace";
+import { StageSetupInspector } from "./stage/StageSetupInspector";
 
 export function WorkspaceInspector({ workspace }: { workspace: WorkspaceId }) {
   const document = useEngineStore(engineSelectors.parsedDsl);
   const compileErrors = useEngineStore(engineSelectors.compileErrors);
 
+  if (workspace === "stage") return <StageSetupInspector />;
   if (workspace === "live") return <ControlPanel embedded />;
 
   return (

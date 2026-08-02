@@ -33,6 +33,7 @@ export type {
   KeyframeTangentDSL,
   OverlapPolicyDSL,
   ShowDocumentV4,
+  SortByDSL,
   StepValuesDSL,
   SvgPathDef,
   TempoMapDSL,

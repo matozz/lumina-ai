@@ -3,11 +3,15 @@ import type {
   ClipPlaybackDSL,
   EffectClipDSL,
   FullDSL,
+  GroupDSL,
   KeyframeDSL,
+  LayoutDSL,
+  PatchDSL,
   TimelineTrackDSL,
 } from "@/bridge/types";
 
 export type DocumentCommand =
+  | { type: "replace_stage_setup"; patch: PatchDSL[]; layout: LayoutDSL; groups: GroupDSL[] }
   | {
       type: "add_clip";
       track_id: string;
@@ -134,6 +138,12 @@ export function applyDocumentTransaction(
 
 function applyCommand(document: FullDSL, command: DocumentCommand) {
   switch (command.type) {
+    case "replace_stage_setup": {
+      document.patch = structuredClone(command.patch);
+      document.layout = structuredClone(command.layout);
+      document.groups = structuredClone(command.groups);
+      return;
+    }
     case "add_clip": {
       assertItemIdAvailable(document, command.clip.id);
       assertClip(command.clip);

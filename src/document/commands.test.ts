@@ -46,6 +46,36 @@ function transaction(commands: DocumentTransaction["commands"]): DocumentTransac
 }
 
 describe("DocumentCommand transactions", () => {
+  it("replaces patch, layout, and groups as one undoable stage setup command", () => {
+    const source = document();
+    const next = applyDocumentTransaction(
+      source,
+      transaction([
+        {
+          type: "replace_stage_setup",
+          patch: [{ profile_id: "generic-rgb", id_range: [1, 16] }],
+          layout: {
+            type: "generator",
+            generator: { shape: "matrix", rows: 4, columns: 4, spacing: 64 },
+          },
+          groups: [
+            {
+              id: "all-fixtures",
+              name: "All fixtures",
+              fixtures: { range: [1, 16] },
+              sort_by: "x",
+            },
+          ],
+        },
+      ]),
+    );
+
+    expect(source.patch).toEqual([]);
+    expect(next.patch[0]).toEqual({ profile_id: "generic-rgb", id_range: [1, 16] });
+    expect(next.layout.generator).toMatchObject({ shape: "matrix", rows: 4, columns: 4 });
+    expect(next.groups[0]).toMatchObject({ id: "all-fixtures", sort_by: "x" });
+  });
+
   it("applies multiple edits atomically without mutating the source or adjacent overlaps", () => {
     const source = document();
     const next = applyDocumentTransaction(
