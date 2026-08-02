@@ -47,11 +47,12 @@ V4 migration 先生成整数时间和 arrangement contract，再切换 compiler/
 ## Related commits
 
 - Stage 4 baseline: `d338c08`
-- MusicalTime/TempoMap core: 本切片提交
-- V4 arrangement contract and migration: 本切片提交
-- Pure indexed tick evaluator and old executor removal: 本切片提交
-- DocumentCommand transaction/history/save point: 本切片提交
+- MusicalTime/TempoMap core: `13645ec`
+- V4 arrangement contract and migration: `11955ab`
+- Pure indexed tick evaluator and old executor removal: `aa37595`
+- DocumentCommand transaction/history/save point: `c82c842`
 - Timeline DOM preview/virtualization/playhead isolation: `34473b9`
 - Typed parameter menu and AutomationLane creation: `82b29b6`
 - Multi-keyframe row, typed inspector, and derived time display: `fb0e913`
-- Explicit overlap preview and undoable trim/replace: 本切片提交
+- Explicit overlap preview and undoable trim/replace: `fffaf0b`
+- Pointer selection and keyboard focus handoff: `1e0f880`
