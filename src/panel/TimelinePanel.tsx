@@ -209,8 +209,9 @@ export const TimelinePanel = () => {
       tabIndex={0}
       onKeyDown={handleHistoryKeyDown}
       className={cn(
-        "relative z-20 flex h-96 shrink-0 flex-col border-t border-zinc-800 bg-zinc-950 shadow-[0_-8px_20px_rgba(0,0,0,0.5)] select-none",
+        "relative z-20 flex h-[clamp(18rem,40vh,24rem)] min-h-0 min-w-0 shrink-0 flex-col border-t border-zinc-800 bg-zinc-950 shadow-[0_-8px_20px_rgba(0,0,0,0.5)] select-none",
       )}
+      data-layout-region="timeline"
     >
       <TimelineToolbar
         canUndo={canUndo}
@@ -224,7 +225,7 @@ export const TimelinePanel = () => {
         onZoomOut={() => handleZoom(beatWidth - BEAT_WIDTH_STEP)}
       />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className={cn("flex min-h-0 min-w-0 flex-1 overflow-hidden")}>
         <TimelineResourcePanel
           compileResult={compileResult}
           selectedPhaser={selectedPhaser}
@@ -245,7 +246,9 @@ export const TimelinePanel = () => {
             ref={scrollRef}
             onScroll={handleScroll}
             data-timeline-scroll
-            className="custom-scrollbar relative flex-1 overflow-x-auto overflow-y-auto overscroll-none bg-[#0a0a0c]"
+            className={cn(
+              "custom-scrollbar relative min-w-0 flex-1 overflow-x-auto overflow-y-auto overscroll-none bg-[#0a0a0c]",
+            )}
           >
             <div style={{ width: SCROLL_WIDTH, height: "100%", position: "relative" }}>
               <TimelineGrid geometry={geometry} viewport={viewport} />

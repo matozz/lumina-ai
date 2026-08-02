@@ -15,7 +15,7 @@
 - 执行标准窗口 Zoom 后：`1512 × 892`，位置 `(0, 33)`，`AXFullScreen=false`；这是非独占式最大化，不是沉浸全屏。
 - 最大化后的 Timeline 可访问性 group：位置 `(352, 582)`，尺寸 `1440 × 343`，Library、Timeline header/grid 和主编辑区均存在。
 
-宿主拒绝 `screencapture`，因此本轮基线使用用户原始截图、原生 AX 窗口/控件树和浏览器渲染证据组合留档。最终验收仍需在修复后的真实 Tauri 窗口重复执行并记录等价证据。
+首次基线 `screencapture` 被宿主拒绝，因此保留了用户原始截图和原生 AX 窗口/控件树。修复后的授权截图已成功保存，可与这些基线直接对照。
 
 ## 完整交互链路与根因
 
@@ -40,7 +40,14 @@
 - 修正夹具并补充同轨/跨轨独立断言后：聚焦集 10 个测试文件、18 项全部通过；完整 `src/panel` 17 个测试文件、32 项全部通过，覆盖不同 zoom/scroll snap、rAF 合并、preview/commit 一致、单 history、同轨/跨轨 duration 与宽度保持、resize、Escape cancel 和 Undo/Redo。
 - `pnpm build` 通过；仅保留既有 Vite chunk-size 警告。
 
+## 修复后窗口矩阵
+
+- Tauri 配置固定 `1440 × 900` fallback、`1100 × 720` minimum、`maximized=true`、`fullscreen=false`；`RunEvent::Ready` 在窗口事件循环可用后执行标准 maximize，避免 setup 阶段只设置逻辑状态而没有实际 Zoom。
+- 冷启动实测：窗口位置 `(0, 33)`、尺寸 `1512 × 892`、`AXFullScreen=false`。
+- 常用尺寸：macOS 可用屏幕把 `1440 × 900` clamp 为 `1440 × 892`；Canvas `752 × 516`，Editor/Control/Timeline/Library 均在窗口边界内。
+- 最小尺寸：`1100 × 720`；Canvas `562 × 400`，Editor `330px`、Control `208px`，Timeline toolbar 最右控件止于 `x=1282`、窗口右边界 `x=1306`。尝试设置 `900 × 600` 被原生约束恢复为 `1100 × 720`。
+- [`layout-minimum-1100x720.png`](./layout-minimum-1100x720.png) 保留了最小窗口真实截图；Canvas、Timeline、Library 和右侧 Control/Inspector 没有相互覆盖或把主编辑区压缩到不可用。
+
 ## 尚待本 Goal 完成的证据
 
-- 默认最大化与最小窗口尺寸的配置/布局测试。
-- 修复后真实 Tauri 窗口的关键帧、Effect Clip 同轨/跨轨、resize、播放中拖拽、Undo/Redo、最大化启动和最小窗口矩阵。
+- 完整统一门禁、最终增量提交和文档收口。
