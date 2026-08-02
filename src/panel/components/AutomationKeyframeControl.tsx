@@ -68,6 +68,7 @@ export const AutomationKeyframeControl = ({
             onPointerDown={(pointerEvent) => {
               pointerEvent.preventDefault();
               pointerEvent.stopPropagation();
+              pointerEvent.currentTarget.focus();
               const nextSelection = pointerEvent.shiftKey
                 ? toggleSelection(selectedIds, keyframe.id)
                 : selected

@@ -145,6 +145,7 @@ describe("AutomationLaneBlock", () => {
     const middle = screen.getByRole("button", { name: "Speed keyframe at tick 960" });
 
     fireEvent.pointerDown(middle, { button: 0, clientX: 40 });
+    expect(document.activeElement).toBe(middle);
     fireEvent.pointerMove(window, { clientX: 50 });
     expect(middle.style.transform).toContain("10px");
     expect(timelineActions.onMoveKeyframes).not.toHaveBeenCalled();
@@ -158,6 +159,7 @@ describe("AutomationLaneBlock", () => {
 
     const row = screen.getByRole("group", { name: /Speed automation lane/ });
     fireEvent.pointerDown(row, { button: 0, clientX: 0 });
+    expect(document.activeElement).toBe(row);
     fireEvent.pointerMove(window, { clientX: 50 });
     fireEvent.pointerUp(window);
     expect(

@@ -216,6 +216,7 @@ export const AutomationLaneBlock = memo(({ event, viewport }: AutomationLaneBloc
         const row = rowRef.current;
         if (!row) return;
         pointerEvent.preventDefault();
+        row.focus();
         const startX = pointerEvent.clientX - row.getBoundingClientRect().left;
         boxInteraction.current = { startX, currentX: startX };
       }}
