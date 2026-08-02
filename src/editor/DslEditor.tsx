@@ -1,4 +1,4 @@
-import Editor from "@monaco-editor/react";
+import Editor, { type Monaco } from "@monaco-editor/react";
 import { useEffect, useRef, useState } from "react";
 import { engine } from "../bridge/commands";
 import { formatDiagnostic, normalizeDiagnostic } from "../bridge/diagnostics";
@@ -8,6 +8,7 @@ import { XCircle, FileCode2, AlertTriangle, RefreshCw, Copy } from "lucide-react
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { showDocumentSchema, showDocumentSchemaUri } from "@/document/showDocument";
 import {
   Select,
   SelectContent,
@@ -214,6 +215,7 @@ export const DslEditor = () => {
           defaultLanguage="json"
           theme="vs-dark"
           value={code}
+          beforeMount={configureJsonSchema}
           onChange={handleEditorChange}
           options={{
             minimap: { enabled: false },
@@ -228,3 +230,16 @@ export const DslEditor = () => {
     </div>
   );
 };
+
+function configureJsonSchema(monaco: Monaco) {
+  monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+    validate: true,
+    schemas: [
+      {
+        uri: showDocumentSchemaUri,
+        fileMatch: ["*"],
+        schema: showDocumentSchema,
+      },
+    ],
+  });
+}

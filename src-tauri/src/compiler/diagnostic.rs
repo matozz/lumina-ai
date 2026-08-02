@@ -3,6 +3,9 @@ use serde::Serialize;
 pub const DSL_DUPLICATE_FIXTURE_ID: &str = "DSL_DUPLICATE_FIXTURE_ID";
 pub const DSL_JSON_PARSE: &str = "DSL_JSON_PARSE";
 pub const DSL_TARGET_GROUP_NOT_FOUND: &str = "DSL_TARGET_GROUP_NOT_FOUND";
+pub const DOC_INVALID_SCHEMA_VERSION: &str = "DOC_INVALID_SCHEMA_VERSION";
+pub const DOC_SCHEMA_INVALID: &str = "DOC_SCHEMA_INVALID";
+pub const DOC_UNSUPPORTED_SCHEMA_VERSION: &str = "DOC_UNSUPPORTED_SCHEMA_VERSION";
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct Diagnostic {
@@ -36,6 +39,12 @@ impl Diagnostic {
             error.to_string(),
             "Fix the JSON syntax at the reported line and column.",
         )
+    }
+}
+
+impl std::fmt::Display for Diagnostic {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "[{}] {}: {}", self.code, self.path, self.message)
     }
 }
 

@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod compiler;
+pub mod document;
 pub mod engine;
 pub mod scheduler;
 pub mod state;

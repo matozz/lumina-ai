@@ -14,7 +14,9 @@
     "build:vite": "vite build",
     "baseline:stage0": "cargo run --release --manifest-path src-tauri/Cargo.toml --example stage0_baseline",
     "baseline:stage1": "cargo run --release --manifest-path src-tauri/Cargo.toml --example stage1_runtime_validation",
-    "check": "pnpm format:check && pnpm typecheck && pnpm test && pnpm build:vite",
+    "schema:generate": "cargo run --manifest-path src-tauri/Cargo.toml --example generate_show_schema",
+    "schema:check": "cargo run --quiet --manifest-path src-tauri/Cargo.toml --example generate_show_schema -- --check",
+    "check": "pnpm schema:check && pnpm format:check && pnpm typecheck && pnpm test && pnpm build:vite",
     "check:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml -- --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings && cargo test --manifest-path src-tauri/Cargo.toml",
     "check:all": "pnpm check && pnpm check:rust",
     "test": "vitest run",
@@ -31,6 +33,7 @@
     "@monaco-editor/react": "^4.7.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
+    "ajv": "8.18.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "es-toolkit": "^1.45.1",
@@ -40,7 +43,6 @@
     "shadcn": "^4.1.0",
     "tailwind-merge": "^3.5.0",
     "tw-animate-css": "^1.4.0",
-    "zod": "^4.3.6",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

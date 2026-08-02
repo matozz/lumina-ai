@@ -1,4 +1,4 @@
-import { FullDSLSchema } from "@/bridge/types";
+import { validateShowDocument } from "@/document/showDocument";
 
 export interface DslTemplate {
   key: string;
@@ -19,23 +19,18 @@ export function getTemplates(): DslTemplate[] {
   for (const [path, module] of Object.entries(templateModules)) {
     // path looks like './templates/combined.json'
     const key = path.split("/").pop()?.replace(".json", "") || "unknown";
-    const json = module as any;
+    const json = module as { default?: unknown };
     // For default exports in JSON
-    const content = json.default || json;
+    const content = json.default ?? json;
 
     // Validate the template against ShowDSL schema
-    const result = FullDSLSchema.safeParse(content);
+    const result = validateShowDocument(content);
 
     if (!result.success) {
-      const errorMsg = result.error.issues
-        .map((e) => `${e.path.join(".")}: ${e.message}`)
-        .join("\n");
-      console.error(`[Template Error] Invalid DSL in template: ${path}`, result.error);
-
-      const name = content.meta?.name || key;
+      const errorMsg = result.issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n");
       templates.push({
         key,
-        name,
+        name: key,
         dsl: JSON.stringify(content, null, 2),
         disabled: true,
         errorMessage: errorMsg,

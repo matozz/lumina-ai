@@ -1,5 +1,5 @@
-use crate::compiler::parser::ShowDSL;
 use crate::compiler::{diagnostic::Diagnostic, Compiler, LayoutCoord};
+use crate::document::{load_document, MigrationReport, ShowDocumentV1};
 use crate::engine::render::{LivePhaser, RenderTime};
 use crate::engine::transport::OutputRate;
 use crate::state::EngineState;
@@ -23,6 +23,13 @@ pub struct CompileResult {
     pub sequence_names: Vec<String>,
     pub errors: Vec<Diagnostic>,
     pub warnings: Vec<Diagnostic>,
+    pub migration_report: MigrationReport,
+}
+
+#[derive(serde::Serialize)]
+pub struct LoadShowResult {
+    pub document: ShowDocumentV1,
+    pub migration_report: MigrationReport,
 }
 
 #[tauri::command]
@@ -30,8 +37,8 @@ pub async fn load_dsl(
     dsl_json: String,
     state: State<'_, Arc<EngineState>>,
 ) -> Result<CompileResult, Diagnostic> {
-    let dsl: ShowDSL =
-        serde_json::from_str(&dsl_json).map_err(|error| Diagnostic::json_parse(&error))?;
+    let loaded = load_document(&dsl_json)?;
+    let dsl = loaded.document;
     let mut group_names: Vec<String> = Vec::new();
     for g in &dsl.groups {
         if !group_names.contains(&g.name) {
@@ -61,6 +68,7 @@ pub async fn load_dsl(
         sequence_names: vec![],
         errors: vec![],
         warnings: vec![],
+        migration_report: loaded.migration_report,
     };
 
     match compiled {
@@ -88,8 +96,7 @@ pub async fn load_dsl(
 
 #[tauri::command]
 pub async fn validate_dsl(dsl_json: String) -> Result<Vec<Diagnostic>, Diagnostic> {
-    let dsl: ShowDSL =
-        serde_json::from_str(&dsl_json).map_err(|error| Diagnostic::json_parse(&error))?;
+    let dsl = load_document(&dsl_json)?.document;
     let compiled = Compiler::compile(dsl);
     match compiled {
         Ok(_) => Ok(vec![]),
@@ -199,22 +206,25 @@ pub async fn stop_phaser(
 
 #[tauri::command]
 pub async fn save_show(path: String, dsl_json: String) -> Result<(), String> {
-    let _: ShowDSL =
-        serde_json::from_str(&dsl_json).map_err(|e| format!("JSON formatting error: {}", e))?;
-    tokio::fs::write(&path, dsl_json.as_bytes())
+    let loaded = load_document(&dsl_json).map_err(|error| error.to_string())?;
+    let serialized = serde_json::to_string_pretty(&loaded.document)
+        .map_err(|error| format!("Document serialization error: {error}"))?;
+    tokio::fs::write(&path, serialized.as_bytes())
         .await
         .map_err(|e| format!("File write error: {}", e))?;
     Ok(())
 }
 
 #[tauri::command]
-pub async fn load_show(path: String) -> Result<String, String> {
+pub async fn load_show(path: String) -> Result<LoadShowResult, String> {
     let content = tokio::fs::read_to_string(&path)
         .await
         .map_err(|e| format!("File read error: {}", e))?;
-    let _: ShowDSL =
-        serde_json::from_str(&content).map_err(|e| format!("DSL parse error: {}", e))?;
-    Ok(content)
+    let loaded = load_document(&content).map_err(|error| error.to_string())?;
+    Ok(LoadShowResult {
+        document: loaded.document,
+        migration_report: loaded.migration_report,
+    })
 }
 
 #[tauri::command]

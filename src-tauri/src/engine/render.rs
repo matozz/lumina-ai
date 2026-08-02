@@ -172,8 +172,13 @@ fn resolve_timeline_at(
         if event.beat > time.beat {
             continue;
         }
-        let Some(value) = evaluate_animation_at(event, from, to, easing.as_deref(), time.beat)
-        else {
+        let Some(value) = evaluate_animation_at(
+            event,
+            from,
+            to,
+            easing.as_ref().map(|value| value.as_str()),
+            time.beat,
+        ) else {
             continue;
         };
 
@@ -205,13 +210,13 @@ fn event_is_active(event: &TimelineEventDSL, beat: f64) -> bool {
 
 fn evaluate_animation_at(
     event: &TimelineEventDSL,
-    from: &serde_json::Value,
-    to: &serde_json::Value,
+    from: &crate::document::AnimatableValueDSL,
+    to: &crate::document::AnimatableValueDSL,
     easing: Option<&str>,
     beat: f64,
 ) -> Option<AnimatableValue> {
-    let start = AnimatableValue::from_json(from)?;
-    let end = AnimatableValue::from_json(to)?;
+    let start = AnimatableValue::from_document(from)?;
+    let end = AnimatableValue::from_document(to)?;
     let duration = event.duration.unwrap_or(0.0);
     if duration <= 0.0 || beat >= event.beat + duration {
         return Some(end);
@@ -241,7 +246,13 @@ fn integrate_float_parameter(
                 from,
                 to,
                 easing,
-            } if event_target == target => Some((index, event, from, to, easing.as_deref())),
+            } if event_target == target => Some((
+                index,
+                event,
+                from,
+                to,
+                easing.as_ref().map(|value| value.as_str()),
+            )),
             _ => None,
         })
         .collect();
@@ -291,8 +302,8 @@ fn integrate_float_parameter(
 
 fn integrate_animation_segment(
     event: &TimelineEventDSL,
-    from: &serde_json::Value,
-    to: &serde_json::Value,
+    from: &crate::document::AnimatableValueDSL,
+    to: &crate::document::AnimatableValueDSL,
     easing: Option<&str>,
     segment_start: f64,
     segment_end: f64,
@@ -333,6 +344,7 @@ mod tests {
     fn compiled_show() -> crate::compiler::CompiledShow {
         let dsl: ShowDSL = serde_json::from_str(
             r##"{
+                "schema_version": 1,
                 "meta": { "name": "render at" },
                 "patch": [{ "type": "pixel", "id_range": [1, 1] }],
                 "layout": { "type": "generator", "generator": {

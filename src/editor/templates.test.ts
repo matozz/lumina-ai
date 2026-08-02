@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FullDSLSchema } from "@/bridge/types";
+import { validateShowDocument } from "@/document/showDocument";
 import { getTemplates } from "./templates";
 
 describe("DSL template contract", () => {
@@ -30,8 +30,11 @@ describe("DSL template contract", () => {
 
     for (const template of templates) {
       expect(template.disabled, template.errorMessage).not.toBe(true);
-      const parsed = FullDSLSchema.safeParse(JSON.parse(template.dsl));
-      expect(parsed.success, `${template.key} must satisfy FullDSLSchema`).toBe(true);
+      const parsed = validateShowDocument(JSON.parse(template.dsl));
+      expect(parsed.success, `${template.key} must satisfy ShowDocumentV1`).toBe(true);
+      if (parsed.success) {
+        expect(parsed.data.schema_version).toBe(1);
+      }
     }
   });
 });

@@ -63,8 +63,8 @@ impl TimelineExecutor {
                 let local_time = global_beat - start;
                 let duration = event.duration.unwrap_or(4.0); // fallback duration if none provided, though animate events should have one
 
-                let val_start = AnimatableValue::from_json(from);
-                let val_end = AnimatableValue::from_json(to);
+                let val_start = AnimatableValue::from_document(from);
+                let val_end = AnimatableValue::from_document(to);
 
                 if let (Some(vs), Some(ve)) = (val_start, val_end) {
                     if local_time >= duration {
@@ -76,7 +76,10 @@ impl TimelineExecutor {
                     } else {
                         // Interpolate
                         let progress = local_time / duration;
-                        let easing_str = easing.as_deref().unwrap_or("linear");
+                        let easing_str = easing
+                            .as_ref()
+                            .map(|value| value.as_str())
+                            .unwrap_or("linear");
                         let t = ease(progress, easing_str);
                         let current_val = vs.lerp(&ve, t);
                         actions.push(TimelineAction::UpdateParameter(target.clone(), current_val));
@@ -94,6 +97,7 @@ impl TimelineExecutor {
 mod tests {
     use super::{TimelineAction, TimelineExecutor};
     use crate::compiler::{parser::TimelineActionDefDSL, CompiledTimeline};
+    use crate::document::{AnimatableValueDSL, EasingDSL};
     use crate::engine::animation::AnimatableValue;
 
     fn timeline() -> CompiledTimeline {
@@ -111,9 +115,9 @@ mod tests {
                     duration: Some(2.0),
                     action: TimelineActionDefDSL::Animate {
                         target: "global.master_dimmer".to_string(),
-                        from: serde_json::json!(0.0),
-                        to: serde_json::json!(1.0),
-                        easing: Some("linear".to_string()),
+                        from: AnimatableValueDSL::Float(0.0),
+                        to: AnimatableValueDSL::Float(1.0),
+                        easing: Some(EasingDSL::Linear),
                     },
                 },
             ],

@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "meta": { "name": "Golden frame baseline" },
   "patch": [{ "type": "pixel", "id_range": [1, 3] }],
   "layout": {

@@ -315,7 +315,9 @@ impl Compiler {
         for g in group_dsl {
             let mut ids = match &g.fixtures {
                 GroupFixturesDSL::List(list) => list.clone(),
-                GroupFixturesDSL::Range { range } => (range.0..=range.1).collect(),
+                GroupFixturesDSL::Range(definition) => {
+                    (definition.range.0..=definition.range.1).collect()
+                }
             };
 
             let mut blocks = Vec::new();
@@ -679,6 +681,7 @@ mod tests {
 
     const VALID_SHOW: &str = r##"
     {
+      "schema_version": 1,
       "meta": { "name": "Compiler baseline" },
       "patch": [{ "type": "pixel", "id_range": [1, 2] }],
       "layout": {

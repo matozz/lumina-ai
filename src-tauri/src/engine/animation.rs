@@ -1,3 +1,4 @@
+use crate::document::AnimatableValueDSL;
 use crate::engine::color::lerp_color_lab;
 use std::collections::HashMap;
 
@@ -8,12 +9,10 @@ pub enum AnimatableValue {
 }
 
 impl AnimatableValue {
-    pub fn from_json(value: &serde_json::Value) -> Option<Self> {
-        if let Some(number) = value.as_f64() {
-            return Some(Self::Float(number));
-        }
-
-        let color = value.as_str()?;
+    pub fn from_document(value: &AnimatableValueDSL) -> Option<Self> {
+        let AnimatableValueDSL::Color(color) = value else {
+            return value.as_f64().map(Self::Float);
+        };
         if !color.starts_with('#') || color.len() != 7 {
             return None;
         }

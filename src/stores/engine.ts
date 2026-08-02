@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { validateShowDocument } from "../document/showDocument";
 import type { CompileResult, Diagnostic, FullDSL, TransportState } from "../bridge/types";
 
 export type SequencerMode = "live" | "timeline";
@@ -48,11 +49,14 @@ export const engineActions = {
   setCompileErrors: (errors: Diagnostic[]) => useEngineStore.setState({ compileErrors: errors }),
   setCompileStatus: (status: CompileStatus) => useEngineStore.setState({ compileStatus: status }),
   setCurrentDslCode: (code: string) => {
-    let parsed = null;
+    let parsed: FullDSL | null = null;
     try {
-      parsed = JSON.parse(code);
-    } catch (e) {}
-    useEngineStore.setState({ currentDslCode: code, parsedDsl: parsed as FullDSL });
+      const validation = validateShowDocument(JSON.parse(code));
+      parsed = validation.success ? validation.data : null;
+    } catch {
+      parsed = null;
+    }
+    useEngineStore.setState({ currentDslCode: code, parsedDsl: parsed });
   },
   setSequencerMode: (mode: SequencerMode) => useEngineStore.setState({ sequencerMode: mode }),
 };
