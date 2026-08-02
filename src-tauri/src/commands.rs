@@ -1,5 +1,6 @@
 use crate::compiler::{diagnostic::Diagnostic, Compiler, LayoutCoord};
 use crate::document::{load_document, MigrationReport, ShowDocumentV3};
+use crate::engine::effect::{EffectCatalog, EffectCatalogQuery, EffectSource};
 use crate::engine::render::{LivePhaser, RenderTime};
 use crate::engine::transport::OutputRate;
 use crate::state::EngineState;
@@ -34,6 +35,44 @@ pub struct CompileResult {
 pub struct LoadShowResult {
     pub document: ShowDocumentV3,
     pub migration_report: MigrationReport,
+}
+
+#[derive(serde::Serialize)]
+pub struct EffectCatalogInfo {
+    pub id: String,
+    pub name: String,
+    pub revision: u32,
+    pub source: EffectSource,
+    pub catalog: EffectCatalog,
+    pub target_supported: bool,
+    pub missing_attributes: Vec<String>,
+}
+
+#[tauri::command]
+pub async fn query_effect_catalog(
+    target_group_id: String,
+    query: EffectCatalogQuery,
+    state: State<'_, Arc<EngineState>>,
+) -> Result<Vec<EffectCatalogInfo>, String> {
+    let snapshot = state
+        .shows
+        .current()
+        .await
+        .ok_or_else(|| "No compiled show is loaded.".to_string())?;
+    Ok(snapshot
+        .show
+        .query_effect_catalog(&target_group_id, &query)
+        .into_iter()
+        .map(|matched| EffectCatalogInfo {
+            id: matched.definition.id.clone(),
+            name: matched.definition.name.clone(),
+            revision: matched.definition.revision,
+            source: matched.definition.source,
+            catalog: matched.definition.catalog.clone(),
+            target_supported: matched.target_supported,
+            missing_attributes: matched.missing_attributes,
+        })
+        .collect())
 }
 
 #[tauri::command]

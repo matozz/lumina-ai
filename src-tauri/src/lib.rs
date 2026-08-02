@@ -37,6 +37,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::load_dsl,
             commands::validate_dsl,
+            commands::query_effect_catalog,
             commands::play,
             commands::pause,
             commands::stop,

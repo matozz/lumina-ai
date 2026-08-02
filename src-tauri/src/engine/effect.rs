@@ -114,14 +114,16 @@ pub enum AutomationPolicy {
     Discrete,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum EffectSource {
     BuiltIn,
     ProjectLocal,
     UserLibrary,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum MotionTag {
     Static,
     Pulse,
@@ -130,7 +132,10 @@ pub enum MotionTag {
     Organic,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
+#[serde(rename_all = "snake_case")]
 pub enum StrobeRisk {
     None,
     Low,
@@ -138,7 +143,7 @@ pub enum StrobeRisk {
     High,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
 pub struct EffectCatalog {
     pub mood: Vec<String>,
     pub energy: f32,
@@ -147,6 +152,81 @@ pub struct EffectCatalog {
     pub colorfulness: f32,
     pub strobe_risk: StrobeRisk,
     pub required_attributes: Vec<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EffectCatalogQuery {
+    pub moods: Vec<String>,
+    pub energy: Option<(f32, f32)>,
+    pub density: Option<(f32, f32)>,
+    pub motion: Option<MotionTag>,
+    pub minimum_colorfulness: Option<f32>,
+    pub maximum_strobe_risk: Option<StrobeRisk>,
+    pub source: Option<EffectSource>,
+}
+
+#[derive(Clone, Debug)]
+pub struct EffectCatalogMatch<'a> {
+    pub definition: &'a EffectDefinition,
+    pub target_supported: bool,
+    pub missing_attributes: Vec<String>,
+}
+
+pub fn query_effect_catalog<'a>(
+    definitions: &'a [EffectDefinition],
+    target_profiles: &[FixtureProfileHandle],
+    query: &EffectCatalogQuery,
+) -> Vec<EffectCatalogMatch<'a>> {
+    definitions
+        .iter()
+        .filter(|definition| catalog_matches(&definition.catalog, definition.source, query))
+        .map(|definition| {
+            let mut missing_attributes: Vec<_> = definition
+                .catalog
+                .required_attributes
+                .iter()
+                .filter(|attribute| {
+                    target_profiles
+                        .iter()
+                        .any(|profile| profile_by_handle(*profile).attribute(attribute).is_none())
+                })
+                .cloned()
+                .collect();
+            missing_attributes.sort();
+            missing_attributes.dedup();
+            EffectCatalogMatch {
+                definition,
+                target_supported: !target_profiles.is_empty() && missing_attributes.is_empty(),
+                missing_attributes,
+            }
+        })
+        .collect()
+}
+
+fn catalog_matches(
+    catalog: &EffectCatalog,
+    source: EffectSource,
+    query: &EffectCatalogQuery,
+) -> bool {
+    query.source.is_none_or(|expected| expected == source)
+        && query
+            .moods
+            .iter()
+            .all(|mood| catalog.mood.iter().any(|candidate| candidate == mood))
+        && query
+            .energy
+            .is_none_or(|(min, max)| catalog.energy >= min && catalog.energy <= max)
+        && query
+            .density
+            .is_none_or(|(min, max)| catalog.density >= min && catalog.density <= max)
+        && query.motion.is_none_or(|motion| catalog.motion == motion)
+        && query
+            .minimum_colorfulness
+            .is_none_or(|minimum| catalog.colorfulness >= minimum)
+        && query
+            .maximum_strobe_risk
+            .is_none_or(|maximum| catalog.strobe_risk <= maximum)
 }
 
 impl Default for EffectCatalog {
@@ -358,6 +438,21 @@ pub enum EffectValue {
     AttributeSet(Vec<Option<AttributeValue>>),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EffectEvaluationParameters {
+    pub width_percent: f64,
+    pub transition_percent: f64,
+}
+
+impl Default for EffectEvaluationParameters {
+    fn default() -> Self {
+        Self {
+            width_percent: 100.0,
+            transition_percent: 100.0,
+        }
+    }
+}
+
 impl EffectValue {
     fn scalar(&self) -> f64 {
         match self {
@@ -387,6 +482,7 @@ pub fn evaluate_effect_graph(
     fixture_index: usize,
     profile: FixtureProfileHandle,
     phase: f64,
+    parameters: EffectEvaluationParameters,
 ) -> Vec<(AttributeHandle, AttributeValue)> {
     let mut values = Vec::with_capacity(definition.graph.nodes.len());
     for (index, node) in definition.graph.nodes.iter().enumerate() {
@@ -414,12 +510,15 @@ pub fn evaluate_effect_graph(
                     EffectValue::Empty
                 } else {
                     let total_width: f64 = sequence.steps.iter().map(|step| step.width).sum();
-                    if total_width <= 0.0 {
+                    let active_width = (parameters.width_percent / 100.0).clamp(0.0, 1.0);
+                    let cycle_position = cycle.rem_euclid(1.0);
+                    if total_width <= 0.0 || active_width <= 0.0 || cycle_position > active_width {
                         EffectValue::Empty
                     } else {
                         EffectValue::AttributeSet(evaluate_steps(
-                            cycle.rem_euclid(1.0) * total_width,
+                            cycle_position / active_width * total_width,
                             &sequence.steps,
+                            parameters.transition_percent / 100.0,
                         ))
                     }
                 }
@@ -574,7 +673,11 @@ fn evaluate_gradient(position: f64, stops: &[CompiledColorStop]) -> [u8; 3] {
     stops.last().map_or([0, 0, 0], |stop| stop.color)
 }
 
-fn evaluate_steps(position: f64, steps: &[CompiledEffectStep]) -> Vec<Option<AttributeValue>> {
+fn evaluate_steps(
+    position: f64,
+    steps: &[CompiledEffectStep],
+    transition_scale: f64,
+) -> Vec<Option<AttributeValue>> {
     if steps.is_empty() {
         return Vec::new();
     }
@@ -587,7 +690,7 @@ fn evaluate_steps(position: f64, steps: &[CompiledEffectStep]) -> Vec<Option<Att
                 0.0
             };
             let previous = &steps[(index + steps.len() - 1) % steps.len()];
-            let transition = step.transition / 100.0;
+            let transition = (step.transition / 100.0 * transition_scale).clamp(0.0, 1.0);
             if transition > 0.0 && progress <= transition {
                 let progress = apply_accel_decel(progress / transition, step.accel, step.decel);
                 return previous
@@ -764,16 +867,17 @@ fn scalar_parameter(
 #[cfg(test)]
 mod tests {
     use super::{
-        deterministic_random, evaluate_effect_graph, CompiledColorStop, CompiledEffectGraph,
-        CompiledEffectNode, CompiledEffectStep, Direction, EffectCatalog, EffectDefinition,
-        EffectDefinitionHandle, EffectInstance, EffectNodeHandle, EffectSource, MathOperation,
-        OscillatorWaveform, ParameterValue, SpatialBasis, COLOR_PARAMETER_ID,
-        DIRECTION_PARAMETER_ID, SPEED_PARAMETER_ID,
+        deterministic_random, evaluate_effect_graph, query_effect_catalog, CompiledColorStop,
+        CompiledEffectGraph, CompiledEffectNode, CompiledEffectStep, Direction, EffectCatalog,
+        EffectCatalogQuery, EffectDefinition, EffectDefinitionHandle, EffectInstance,
+        EffectNodeHandle, EffectSource, MathOperation, MotionTag, OscillatorWaveform,
+        ParameterValue, SpatialBasis, StrobeRisk, COLOR_PARAMETER_ID, DIRECTION_PARAMETER_ID,
+        SPEED_PARAMETER_ID,
     };
     use crate::engine::attribute::resolve_attribute;
     use crate::engine::profile::{
-        profile_handle_by_id, AttributeValue, COLOR_RGB_ATTRIBUTE, GENERIC_RGB_PROFILE_ID,
-        INTENSITY_ATTRIBUTE,
+        profile_handle_by_id, AttributeValue, COLOR_RGB_ATTRIBUTE, GENERIC_MOVING_HEAD_PROFILE_ID,
+        GENERIC_RGB_PROFILE_ID, INTENSITY_ATTRIBUTE, PAN_ATTRIBUTE,
     };
     use std::collections::HashMap;
 
@@ -935,8 +1039,24 @@ mod tests {
             spatial_offsets: HashMap::from([(handles(1), vec![0.25])]),
         };
 
-        let first = evaluate_effect_graph(&definition, &instance, 1, 0, profile, 0.5);
-        let replay = evaluate_effect_graph(&definition, &instance, 1, 0, profile, 0.5);
+        let first = evaluate_effect_graph(
+            &definition,
+            &instance,
+            1,
+            0,
+            profile,
+            0.5,
+            super::EffectEvaluationParameters::default(),
+        );
+        let replay = evaluate_effect_graph(
+            &definition,
+            &instance,
+            1,
+            0,
+            profile,
+            0.5,
+            super::EffectEvaluationParameters::default(),
+        );
         assert_eq!(first, replay);
         assert_eq!(first.len(), 1);
         assert_eq!(first[0].0, color);
@@ -961,8 +1081,8 @@ mod tests {
                 decel: 0,
             },
         ];
-        assert_eq!(super::evaluate_steps(25.0, &steps), steps[0].values);
-        assert_eq!(super::evaluate_steps(75.0, &steps), steps[1].values);
+        assert_eq!(super::evaluate_steps(25.0, &steps, 1.0), steps[0].values);
+        assert_eq!(super::evaluate_steps(75.0, &steps, 1.0), steps[1].values);
 
         let profile = profile_handle_by_id(GENERIC_RGB_PROFILE_ID).expect("RGB profile");
         let intensity = resolve_attribute(profile, INTENSITY_ATTRIBUTE).expect("intensity");
@@ -1003,10 +1123,72 @@ mod tests {
                 seed: 1,
                 spatial_offsets: HashMap::new(),
             };
-            let writes = evaluate_effect_graph(&definition, &instance, 1, 0, profile, 0.25);
+            let writes = evaluate_effect_graph(
+                &definition,
+                &instance,
+                1,
+                0,
+                profile,
+                0.25,
+                super::EffectEvaluationParameters::default(),
+            );
             assert!(
                 matches!(writes.as_slice(), [(handle, AttributeValue::Scalar(value))] if *handle == intensity && (0.0..=1.0).contains(value))
             );
         }
+    }
+
+    #[test]
+    fn catalog_query_filters_metadata_and_explains_target_capability() {
+        let mut pulse = EffectDefinition::legacy("pulse", "Pulse", 1.0);
+        pulse.source = EffectSource::BuiltIn;
+        pulse.catalog = EffectCatalog {
+            mood: vec!["energetic".to_string()],
+            energy: 0.9,
+            density: 0.7,
+            motion: MotionTag::Pulse,
+            colorfulness: 0.8,
+            strobe_risk: StrobeRisk::Low,
+            required_attributes: vec![INTENSITY_ATTRIBUTE.to_string()],
+        };
+        let mut sweep = EffectDefinition::legacy("sweep", "Sweep", 1.0);
+        sweep.source = EffectSource::UserLibrary;
+        sweep.catalog = EffectCatalog {
+            mood: vec!["energetic".to_string()],
+            energy: 0.8,
+            density: 0.5,
+            motion: MotionTag::Sweep,
+            colorfulness: 0.4,
+            strobe_risk: StrobeRisk::None,
+            required_attributes: vec![PAN_ATTRIBUTE.to_string()],
+        };
+        let rgb = profile_handle_by_id(GENERIC_RGB_PROFILE_ID).expect("RGB profile");
+        let moving = profile_handle_by_id(GENERIC_MOVING_HEAD_PROFILE_ID).expect("moving profile");
+        let definitions = [pulse, sweep];
+        let query = EffectCatalogQuery {
+            moods: vec!["energetic".to_string()],
+            energy: Some((0.75, 1.0)),
+            maximum_strobe_risk: Some(StrobeRisk::Low),
+            ..EffectCatalogQuery::default()
+        };
+
+        let rgb_matches = query_effect_catalog(&definitions, &[rgb], &query);
+        assert_eq!(rgb_matches.len(), 2);
+        assert!(rgb_matches[0].target_supported);
+        assert!(!rgb_matches[1].target_supported);
+        assert_eq!(rgb_matches[1].missing_attributes, vec![PAN_ATTRIBUTE]);
+
+        let moving_matches = query_effect_catalog(
+            &definitions,
+            &[moving],
+            &EffectCatalogQuery {
+                source: Some(EffectSource::UserLibrary),
+                motion: Some(MotionTag::Sweep),
+                ..EffectCatalogQuery::default()
+            },
+        );
+        assert_eq!(moving_matches.len(), 1);
+        assert!(moving_matches[0].target_supported);
+        assert_eq!(moving_matches[0].definition.revision, 1);
     }
 }

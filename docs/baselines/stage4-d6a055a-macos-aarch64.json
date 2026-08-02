@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "source_commit": "d6a055a+catalog-worktree",
+  "fixture_count": 1000,
+  "effect_layers": 4,
+  "samples": 120,
+  "p50_us": 428.667,
+  "p95_us": 540.334,
+  "mean_us": 432.14169166666665,
+  "frame_budget_us": 16666.666666666668,
+  "within_60hz_budget": true
+}

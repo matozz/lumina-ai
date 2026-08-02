@@ -562,6 +562,13 @@ fn migrate_phasers_to_effects(
             .get("steps")
             .cloned()
             .unwrap_or_else(|| serde_json::Value::Array(Vec::new()));
+        let position_behavior_changed = steps.as_array().is_some_and(|steps| {
+            steps.iter().any(|step| {
+                step.get("values").is_some_and(|values| {
+                    values.get("pan").is_some() || values.get("tilt").is_some()
+                })
+            })
+        });
         let phase = phaser.get("phase").and_then(serde_json::Value::as_object);
         let (from, to, group_size) = match phase
             .and_then(|phase| phase.get("mode"))
@@ -665,6 +672,15 @@ fn migrate_phasers_to_effects(
             path: format!("effect_instances[{index}]"),
             message: format!("Converted Phaser {id:?} to EffectDefinition/Instance."),
         });
+        if position_behavior_changed {
+            changes.push(MigrationChange {
+                code: "MIGRATION_ENABLE_POSITION_ATTRIBUTES".to_string(),
+                path: format!("effect_definitions[{index}].graph"),
+                message: format!(
+                    "Phaser {id:?} pan/tilt values now write typed position attributes; older runtimes ignored them."
+                ),
+            });
+        }
     }
 
     object.insert(
@@ -1252,7 +1268,7 @@ mod tests {
                 "\"phasers\": []",
                 r##""phasers": [{
                   "id": "pulse", "name": "Pulse", "target": "all", "multiplier": 2,
-                  "steps": [{ "values": { "color": "#ffffff", "dimmer": 1 } }],
+                  "steps": [{ "values": { "color": "#ffffff", "dimmer": 1, "pan": 30, "tilt": -15 } }],
                   "phase": { "mode": "spread", "spread": { "from": 0, "to": 100 } }
                 }],
                 "timeline": { "events": [
@@ -1292,6 +1308,11 @@ mod tests {
             .changes
             .iter()
             .any(|change| change.code == "MIGRATION_PHASER_TO_EFFECT"));
+        assert!(loaded
+            .migration_report
+            .changes
+            .iter()
+            .any(|change| change.code == "MIGRATION_ENABLE_POSITION_ATTRIBUTES"));
     }
 
     #[test]

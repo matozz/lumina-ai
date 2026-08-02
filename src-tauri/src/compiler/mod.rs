@@ -6,10 +6,11 @@ use crate::engine::attribute::{resolve_attribute, AttributeHandle};
 use crate::engine::color::parse_hex_color;
 use crate::engine::effect::{
     AutomationPolicy, CompiledColorStop, CompiledEffectGraph, CompiledEffectNode,
-    CompiledEffectStep, CompiledProfileSequence, Direction, EffectCatalog, EffectDefinition,
-    EffectDefinitionHandle, EffectInstance, EffectNodeHandle, EffectSource, MathOperation,
-    MotionTag, OscillatorWaveform, ParameterDefinition, ParameterHandle, ParameterUiHint,
-    ParameterUnit, ParameterValue, ParameterValueType, SpatialBasis, StrobeRisk,
+    CompiledEffectStep, CompiledProfileSequence, Direction, EffectCatalog, EffectCatalogMatch,
+    EffectCatalogQuery, EffectDefinition, EffectDefinitionHandle, EffectInstance, EffectNodeHandle,
+    EffectSource, MathOperation, MotionTag, OscillatorWaveform, ParameterDefinition,
+    ParameterHandle, ParameterUiHint, ParameterUnit, ParameterValue, ParameterValueType,
+    SpatialBasis, StrobeRisk,
 };
 use crate::engine::profile::{
     profile_by_handle, profile_handle_by_id, AttributeValue, FixtureProfileHandle,
@@ -32,6 +33,32 @@ pub struct CompiledShow {
     pub effect_definitions: Vec<EffectDefinition>,
     pub effect_instances: HashMap<String, EffectInstance>,
     pub timeline: Option<CompiledTimeline>,
+}
+
+impl CompiledShow {
+    pub fn query_effect_catalog(
+        &self,
+        target_group_id: &str,
+        query: &EffectCatalogQuery,
+    ) -> Vec<EffectCatalogMatch<'_>> {
+        let Some(group) = self.groups.get(target_group_id) else {
+            return Vec::new();
+        };
+        let fixture_profiles: HashMap<_, _> = self
+            .fixtures
+            .iter()
+            .map(|fixture| (fixture.id, fixture.profile))
+            .collect();
+        let mut profiles = Vec::new();
+        for fixture_id in &group.sorted_fixture_ids {
+            if let Some(profile) = fixture_profiles.get(fixture_id) {
+                if !profiles.contains(profile) {
+                    profiles.push(*profile);
+                }
+            }
+        }
+        crate::engine::effect::query_effect_catalog(&self.effect_definitions, &profiles, query)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

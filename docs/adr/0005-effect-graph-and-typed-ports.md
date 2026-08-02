@@ -36,6 +36,8 @@ Stage 4 需要在不改变 Stage 5 时间模型、Stage 6 工作区或 Stage 9 �
 - compiler 需要保存 definition/instance/parameter/node handle table 和预计算 spatial cache，换取 render path 无字符串解析和稳定分配上限。
 - Live Pad 在 Stage 4 仍可显示“Phaser”兼容文案，但 backend identity 已是 EffectInstance；产品命名和 Effect Lab 留到 Stage 6。
 - Stage 5 automation lane 可直接复用 typed parameter target，不再为 `multiplier` 建立第二条求值路径。
+- Catalog query 可按 metadata、来源与 strobe risk 过滤，并为目标 group 的 profile 返回缺失 attribute；同一查询通过 Tauri command 供 UI/AI 使用。
+- Stage 4 release gate 固定为 1,000 fixtures × 4 typed effect layers，p95 必须低于 60Hz 的 16.67ms frame budget。
 
 ## Migration and rollback
 

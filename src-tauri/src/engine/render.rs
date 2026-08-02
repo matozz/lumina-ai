@@ -6,9 +6,10 @@ use crate::compiler::{
     EffectInstanceHandle,
 };
 use crate::engine::effect::{
-    common_parameter_handle, evaluate_effect_graph, Direction, ParameterValue, COLOR_PARAMETER_ID,
-    DIRECTION_PARAMETER_ID, INTENSITY_PARAMETER_ID, PAN_PARAMETER_ID, PHASE_PARAMETER_ID,
-    SPEED_PARAMETER_ID, TILT_PARAMETER_ID,
+    common_parameter_handle, evaluate_effect_graph, Direction, EffectEvaluationParameters,
+    ParameterValue, COLOR_PARAMETER_ID, DIRECTION_PARAMETER_ID, INTENSITY_PARAMETER_ID,
+    PAN_PARAMETER_ID, PHASE_PARAMETER_ID, SPEED_PARAMETER_ID, TILT_PARAMETER_ID,
+    TRANSITION_PARAMETER_ID, WIDTH_PARAMETER_ID,
 };
 use crate::engine::profile::{
     AttributeValue, COLOR_RGB_ATTRIBUTE, INTENSITY_ATTRIBUTE, PAN_ATTRIBUTE, TILT_ATTRIBUTE,
@@ -130,6 +131,24 @@ pub(crate) fn render_resolved(
                     fixture_index,
                     fixture.profile,
                     phase,
+                    EffectEvaluationParameters {
+                        width_percent: resolve_effect_scalar(
+                            definition,
+                            instance,
+                            &active.instance,
+                            parameters,
+                            WIDTH_PARAMETER_ID,
+                            100.0,
+                        ),
+                        transition_percent: resolve_effect_scalar(
+                            definition,
+                            instance,
+                            &active.instance,
+                            parameters,
+                            TRANSITION_PARAMETER_ID,
+                            100.0,
+                        ),
+                    },
                 ) {
                     values[handle.index()] = Some(value);
                 }
