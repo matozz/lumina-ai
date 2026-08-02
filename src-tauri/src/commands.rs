@@ -259,8 +259,13 @@ pub async fn get_layout_coords(
 
 #[tauri::command]
 pub async fn request_full_frame(state: State<'_, Arc<EngineState>>) -> Result<(), String> {
-    state.runtime.write().await.frame_publisher.request_full();
-    Ok(())
+    state
+        .runtime
+        .write()
+        .await
+        .output_hub
+        .request_preview_full()
+        .map_err(|error| error.to_string())
 }
 
 async fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), String> {

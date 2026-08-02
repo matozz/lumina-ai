@@ -26,7 +26,7 @@ pub fn run() {
                     transport,
                     live_phasers: Vec::new(),
                     sequencer_mode: state::SequencerMode::Live,
-                    frame_publisher: engine::frame::FramePublisher::default(),
+                    output_hub: engine::output::OutputHub::default(),
                 })),
             });
 

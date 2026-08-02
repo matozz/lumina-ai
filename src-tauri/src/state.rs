@@ -1,6 +1,6 @@
 use crate::compiler::CompiledShow;
 use crate::engine::clock::Clock;
-use crate::engine::frame::FramePublisher;
+use crate::engine::output::OutputHub;
 use crate::engine::render::LivePhaser;
 use crate::engine::transport::Transport;
 use crate::scheduler::Scheduler;
@@ -60,7 +60,7 @@ pub struct RuntimeState {
     pub transport: Transport,
     pub live_phasers: Vec<LivePhaser>,
     pub sequencer_mode: SequencerMode,
-    pub frame_publisher: FramePublisher,
+    pub output_hub: OutputHub,
 }
 
 #[derive(Clone, serde::Serialize)]

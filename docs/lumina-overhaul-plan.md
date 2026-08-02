@@ -221,7 +221,7 @@ flowchart TD
 | 0     | Baseline 与质量护栏                     | completed   | 无   | 测试框架、基线和 CI 可用                    |
 | 1     | 实时内核与 Transport                    | completed   | 0    | Clock/Play/Pause/Stop/Seek 确定且无重复线程 |
 | 2     | Versioned Document 与统一 Schema        | completed   | 1    | 单一 schema 契约、migration、零 panic       |
-| 3     | Fixture Attribute、Mixer 与 Output 抽象 | in_progress | 2    | 通用属性、HTP/LTP、Null/Preview Sink        |
+| 3     | Fixture Attribute、Mixer 与 Output 抽象 | completed   | 2    | 通用属性、HTP/LTP、Null/Preview Sink        |
 | 4     | 可扩展 Effect Engine                    | not_started | 3    | EffectGraph/参数/空间相位可确定性求值       |
 | 5     | Timeline、Keyframe 与 Undo/Redo         | not_started | 4    | 多关键帧、seek/replay、无隐式数据破坏       |
 | 6     | 用户工作区与 Effect Lab                 | not_started | 5    | Stage→Effect→Arrange→Live 主路径可用        |
@@ -501,10 +501,10 @@ trait OutputSink {
 }
 ```
 
-- [ ] `NullSink` 用于测试。
-- [ ] `PreviewSink` 或统一 Frame subscription 用于 Canvas。
-- [ ] `RecordingSink` 用于 golden frame 和离线导出。
-- [ ] 真实网络协议延后到 Stage 9。
+- [x] `NullSink` 用于测试。
+- [x] `PreviewSink` 或统一 Frame subscription 用于 Canvas。
+- [x] `RecordingSink` 用于 golden frame 和离线导出。
+- [x] 真实网络协议延后到 Stage 9。
 
 #### 3.5 兼容迁移
 
@@ -1013,7 +1013,7 @@ flowchart LR
 
 任何任务只有同时满足以下条件才可以在 Progress Ledger 标记完成：
 
-以下勾选状态对应 2026-08-02 的 Stage 0+1 收口及 Stage 2 最终收口；后续切片必须重新验证并更新。
+以下勾选状态已在 2026-08-02 的 Stage 2+3 最终收口重新验证。
 
 - [x] 实现与当前 Stage 设计一致；若偏离，已有 ADR。
 - [x] 没有无关重构、调试日志、死代码或生成噪音。
@@ -1023,8 +1023,8 @@ flowchart LR
 - [x] `cargo clippy --all-targets -- -D warnings` 通过，或例外已记录。
 - [x] `cargo test` 通过且新增行为有测试。
 - [x] 对实时路径的修改包含确定性、Seek/Replay 或性能验证。
-- [x] 对 schema 的修改包含 migration、生成文件和模板检查（V0→V1 report、Rust→JSON Schema→TypeScript artifacts、18/18 V1 模板 contract）。
-- [x] 对 UI 的修改包含空态、错误态、键盘路径和真实窗口验证（N/A：本切片只替换无视觉交互变化的 Monaco schema/validator wiring；错误态由 schema issues contract 覆盖）。
+- [x] 对 schema 的修改包含 migration、生成文件和模板检查（V0→V1→V2 report、V1/V2 Rust→JSON Schema→TypeScript/capability artifacts、18/18 V2 模板 contract）。
+- [x] 对 UI 的修改包含空态、错误态、键盘路径和真实窗口验证（本 scope 无新增交互；既有 Stage 1 native window 验收保持有效，Canvas adapter 有 typed/immutability tests）。
 - [x] 相关文档、Stage checklist、ADR 和 Progress Ledger 已更新。
 - [x] 已进行自审并形成符合仓库规范的增量 commit。
 
@@ -1080,15 +1080,15 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 
 ## Handoff
 
-- Current Stage: Stage 3 · Fixture Attribute、Mixer 与 Output 抽象（in_progress）；Stage 2 已在 `06e14e3` 完成，未进入 Stage 4。
-- Slice completed: 新增单一 attribute Mixer 并接入真实 render path；每个 write 携带 source/layer/priority/activation order/stable source order/optional weight/policy override；profile policy 默认驱动 HTP intensity 与 LTP color/position；显式 Add/Multiply/Mask 以固定 layer stack 顺序执行并 clamp 到物理范围；LTP 按 `(layer, priority, activation_order, stable_source_order, source_id)` 稳定决胜；可选 conflict inspection 输出 contenders、policy、weight、winner 与最终值，关闭旧逐通道 `max` 语义。
-- Commits: Stage 2 `06e14e3`；Fixture Profile `cab82e2`；Attribute Frame `ced259c`；Attribute Mixer（本切片提交）。
-- Files changed: `engine/mixer.rs`、render write collection/integration、AttributeHandle ordering、Mixer/overlap regression tests、ADR-0004、Stage checklist/ledger/handoff/Open Risks。
-- Validation: 63 Rust tests/contracts 全通过；矩阵覆盖 HTP、稳定 LTP 四层 tie-break、显式 Add/Multiply/Mask、weight、range clamp、Inspector 与双效果 render；strict fmt/Clippy、schema、18 frontend tests、`pnpm build` 全通过；release harness 36k ticks/18m evaluations，0.012ms drift、81.44× realtime、204.65µs mean render+publish。
-- ADRs added/updated: ADR-0004 明确 layer stack、policy fold/weight 与 legacy Phaser metadata defaults。
-- Risks opened/closed: R-002 维持 closed；R-003 closed，属性不再统一 `max`，混合 policy 与冲突来源可检查。
-- Remaining exit criteria: Null/Preview/Recording OutputSink 与生命周期/backpressure contract；Moving Head RecordingSink、Preview/Recording 同 revision 验证；Stage 3 最终全局 DoD 复验。
-- Recommended next slice: Stage 3 OutputSink 垂直切片——定义 immutable revisioned logical frame envelope 与 sink lifecycle，完成 Null/Preview/Recording sink、blackout/health/backpressure，并让 scheduler/Canvas subscription 走统一 fan-out。
+- Current Stage: Stage 3 · Fixture Attribute、Mixer 与 Output 抽象（completed）；Stage 2、Stage 3 及本次 scoped Goal 的全局 DoD 已满足，Stage 4 保持 not_started。
+- Slice completed: 定义不可变、revisioned `LogicalFrame` 与同步非阻塞 `OutputSink` lifecycle/capability/health/backpressure contract；实现 Null、单槽 best-effort Preview、bounded backpressured Recording 及统一 `OutputHub`；scheduler、Seek/full resync、Stop/Blackout 和 Canvas Tauri subscription 全部经过 PreviewSink；Hub 把同一个 `Arc<LogicalFrame>` fan-out 到 Preview/Recording；Recording 保留 Moving Head pan/tilt，blackout 类型显式可见；真实协议仍只属于 Stage 9。
+- Commits: Stage 2 `0ce3cbb`/`06e14e3`；Fixture Profile `cab82e2`；Attribute Frame `ced259c`；Attribute Mixer `0279bad`；OutputSink + Stage 3 close（本切片提交）。
+- Files changed: output contract/sinks/hub、Arc-backed FramePublisher、scheduler/state/commands/app lifecycle、loaded-runtime harness、sink/scheduler integration tests、ADR-0004、Stage/DoD/Ledger/Handoff。
+- Validation: schema check、Prettier、`pnpm build`、18 frontend tests、strict Rust fmt/Clippy、68 Rust tests/contracts 全通过；18/18 V2 templates compile/render；Output lifecycle/health/backpressure、Moving Head Recording、blackout、Preview/Recording same revision、scheduler fan-out 均有测试；真实 OutputHub release harness 完成 36k ticks/18m evaluations，0.012ms drift、73.93× realtime、225.44µs mean render+publish。
+- ADRs added/updated: ADR-0004 补充 immutable Arc fan-out、best-effort/backpressured delivery 和 Stage 9 adapter 边界。
+- Risks opened/closed: R-002/R-003 均 closed；没有新增 Stage 2/3 风险；R-005–R-008 属未开始的后续 Stage，不阻塞本次 scoped Goal。
+- Remaining exit criteria: 本次 Stage 2+3 Goal 无剩余退出条件；Stage 4 未开始。
+- Recommended next slice: 无；按用户边界停止，不提前实施 Stage 4。
 
 ## 19. ADR 规范
 
@@ -1161,6 +1161,9 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 3        | Attribute Frame       | completed | 本切片提交  | build/fmt/Clippy/schema；58 Rust/18 frontend；0.012ms drift      | 3.2/3.5 完成；R-003 仍 open                   | attribute Mixer + conflict inspection       |
 | 2026-08-02 | 3        | Attribute Mixer       | failed    | none        | 62/63 Rust 通过；LTP weight=1 的 LAB 路径把白色舍入为 254        | 权重 0/1 必须精确保留端点                     | 修正端点并复跑混合矩阵                      |
 | 2026-08-02 | 3        | Attribute Mixer       | completed | 本切片提交  | 63 Rust/18 frontend；gates；0.012ms；81.44×                      | R-003 closed；ADR-0004 补充稳定 layer stack   | Null/Preview/Recording OutputSink           |
+| 2026-08-02 | 3        | OutputSink            | failed    | none        | Rust compile 指出 `mut` 修正误命中 play guard                    | 精确恢复 transport mutable guard              | 复跑 Rust/Clippy 与 sink matrix             |
+| 2026-08-02 | 3        | OutputSink + close    | completed | 本切片提交  | 68 Rust/18 frontend；gates；0.012ms；73.93×                      | Stage 3 exits；ADR-0004；无新风险             | scoped Goal 最终审计                        |
+| 2026-08-02 | 2+3      | scoped Goal 收口      | completed | 本切片提交  | clean full gate；18/18 V2；36k ticks/18m evals                   | 全局 DoD 通过；Stage 4 not_started            | 停止，不进入 Stage 4                        |
 
 ## 21. Open Risks
 

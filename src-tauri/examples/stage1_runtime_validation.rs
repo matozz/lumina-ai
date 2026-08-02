@@ -4,7 +4,7 @@ use lumina_ai_lib::compiler::{
 };
 use lumina_ai_lib::engine::attribute::{resolve_attribute, FixtureFrame};
 use lumina_ai_lib::engine::clock::ManualClock;
-use lumina_ai_lib::engine::frame::FramePublisher;
+use lumina_ai_lib::engine::output::{LogicalFrame, OutputHub};
 use lumina_ai_lib::engine::profile::{
     profile_by_handle, profile_handle_by_id, AttributeValue, FixtureProfileHandle,
     COLOR_RGB_ATTRIBUTE, GENERIC_RGB_PROFILE_ID, INTENSITY_ATTRIBUTE,
@@ -13,6 +13,7 @@ use lumina_ai_lib::engine::render::{render_at, LivePhaser, RenderSource, RenderT
 use lumina_ai_lib::engine::transport::{OutputRate, RealtimeCore};
 use serde::Serialize;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 const DURATION: Duration = Duration::from_secs(600);
@@ -90,7 +91,7 @@ fn validate_loaded_runtime() -> LoadedRuntimeReport {
         phase_offset: 0.0,
         multiplier: 1.0,
     }];
-    let mut publisher = FramePublisher::default();
+    let output_hub = OutputHub::default();
     let tick_count = DURATION.as_secs() * u64::from(output_rate.hz());
     let started = Instant::now();
 
@@ -105,7 +106,15 @@ fn validate_loaded_runtime() -> LoadedRuntimeReport {
             RenderSource::Live(&live),
         );
         assert_eq!(frame.len(), FIXTURE_COUNT);
-        let _ = publisher.publish(1, snapshot.cursor_beat, frame);
+        let logical_frame = Arc::new(LogicalFrame::new(1, snapshot.cursor_beat, frame));
+        let dispatch = output_hub.dispatch(logical_frame, false);
+        assert_eq!(dispatch.accepted, 1);
+        assert!(dispatch.errors.is_empty());
+        let preview = output_hub
+            .take_preview_payload()
+            .expect("preview sink state")
+            .expect("preview frame");
+        assert_eq!(preview.show_revision, 1);
     }
 
     let wall_elapsed = started.elapsed();

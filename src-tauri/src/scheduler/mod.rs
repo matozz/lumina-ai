@@ -1,5 +1,5 @@
 use crate::engine::attribute::FixtureFrame;
-use crate::engine::frame::FramePayload;
+use crate::engine::output::LogicalFrame;
 use crate::engine::render::{render_at, RenderSource, RenderTime};
 use crate::engine::transport::{OutputRate, TransportError, TransportSnapshot, TransportState};
 use crate::state::{EngineState, SequencerMode};
@@ -201,6 +201,7 @@ impl Scheduler {
         let mut runtime = state.runtime.write().await;
         runtime.live_phasers.clear();
         runtime.transport.stop(state.clock.now());
+        let _ = runtime.output_hub.stop();
         Ok(())
     }
 
@@ -299,22 +300,21 @@ async fn render_and_emit<R: Runtime>(
             source,
         );
         let payload = {
-            let mut runtime = state.runtime.write().await;
+            let runtime = state.runtime.write().await;
             if force_full {
-                runtime.frame_publisher.publish_full(
-                    show_snapshot.revision,
-                    transport.cursor_beat,
-                    frame,
-                )
-            } else {
-                runtime.frame_publisher.publish(
-                    show_snapshot.revision,
-                    transport.cursor_beat,
-                    frame,
-                )
+                let _ = runtime.output_hub.request_preview_full();
             }
+            let logical_frame = Arc::new(LogicalFrame::new(
+                show_snapshot.revision,
+                transport.cursor_beat,
+                frame,
+            ));
+            let _ = runtime.output_hub.dispatch(logical_frame, false);
+            runtime.output_hub.take_preview_payload().ok().flatten()
         };
-        let _ = app.emit("engine:frame-update", payload);
+        if let Some(payload) = payload {
+            let _ = app.emit("engine:frame-update", payload);
+        }
     }
 
     emit_state(app, state, transport).await;
@@ -334,12 +334,19 @@ async fn publish_blackout<R: Runtime>(
         .iter()
         .map(|fixture| FixtureFrame::with_profile_defaults(fixture.id, fixture.profile))
         .collect();
-    let payload: FramePayload = state.runtime.write().await.frame_publisher.publish_full(
-        show_snapshot.revision,
-        transport.cursor_beat,
-        blackout,
-    );
-    let _ = app.emit("engine:frame-update", payload);
+    let payload = {
+        let runtime = state.runtime.write().await;
+        let logical_frame = Arc::new(LogicalFrame::new(
+            show_snapshot.revision,
+            transport.cursor_beat,
+            blackout,
+        ));
+        let _ = runtime.output_hub.dispatch(logical_frame, true);
+        runtime.output_hub.take_preview_payload().ok().flatten()
+    };
+    if let Some(payload) = payload {
+        let _ = app.emit("engine:frame-update", payload);
+    }
 }
 
 async fn emit_state<R: Runtime>(
@@ -373,7 +380,7 @@ mod tests {
     use super::{Scheduler, SchedulerError};
     use crate::compiler::{CompiledShow, Fixture};
     use crate::engine::clock::{Clock, ManualClock};
-    use crate::engine::frame::FramePublisher;
+    use crate::engine::output::{OutputHub, RecordingSink};
     use crate::engine::profile::{profile_handle_by_id, GENERIC_RGB_PROFILE_ID};
     use crate::engine::render::LivePhaser;
     use crate::engine::transport::{OutputRate, Transport, TransportState};
@@ -392,7 +399,7 @@ mod tests {
                 transport: Transport::new(120, clock.now()).expect("transport"),
                 live_phasers: Vec::new(),
                 sequencer_mode: SequencerMode::Timeline,
-                frame_publisher: FramePublisher::default(),
+                output_hub: OutputHub::default(),
             })),
         });
         (state, clock)
@@ -503,7 +510,15 @@ mod tests {
         assert_eq!(transport.state, TransportState::Playing);
         assert_eq!(transport.cursor_beat, 42.0);
         assert_eq!(transport.revision, 3);
-        assert!(state.runtime.read().await.frame_publisher.frame_sequence() >= 1);
+        assert!(
+            state
+                .runtime
+                .read()
+                .await
+                .output_hub
+                .preview_frame_sequence()
+                >= 1
+        );
         assert!(state.scheduler.is_running().await);
 
         state
@@ -533,7 +548,12 @@ mod tests {
                 .expect("play");
             tokio::time::sleep(Duration::from_millis(250)).await;
 
-            let sequence = state.runtime.read().await.frame_publisher.frame_sequence();
+            let sequence = state
+                .runtime
+                .read()
+                .await
+                .output_hub
+                .preview_frame_sequence();
             let expected = u64::from(hz) / 4;
             let tolerance = expected / 3 + 1;
             assert!(
@@ -546,6 +566,49 @@ mod tests {
                 .await
                 .expect("pause");
         }
+    }
+
+    #[tokio::test]
+    async fn scheduler_fans_the_same_show_revision_to_preview_and_recording_sinks() {
+        let app = tauri::test::mock_app();
+        let (state, _) = engine_state(OutputRate::default());
+        let snapshot = state.shows.publish(show_with_fixture(1)).await;
+        let recording = Arc::new(RecordingSink::new(16));
+        state
+            .runtime
+            .write()
+            .await
+            .output_hub
+            .register(recording.clone())
+            .expect("register recording sink");
+
+        state
+            .scheduler
+            .play(app.handle().clone(), state.clone())
+            .await
+            .expect("play through output hub");
+        tokio::time::sleep(Duration::from_millis(40)).await;
+        state
+            .scheduler
+            .pause(app.handle(), &state)
+            .await
+            .expect("pause output hub test");
+
+        let recorded = recording.take_frames().expect("recorded logical frames");
+        assert!(!recorded.is_empty());
+        assert!(recorded
+            .iter()
+            .all(|frame| frame.frame.show_revision == snapshot.revision));
+        assert_eq!(
+            state
+                .runtime
+                .read()
+                .await
+                .output_hub
+                .preview_health()
+                .last_show_revision,
+            Some(snapshot.revision)
+        );
     }
 
     #[tokio::test]
@@ -620,7 +683,13 @@ mod tests {
         };
         let resync = async {
             for _ in 0..200 {
-                state.runtime.write().await.frame_publisher.request_full();
+                state
+                    .runtime
+                    .write()
+                    .await
+                    .output_hub
+                    .request_preview_full()
+                    .expect("preview resync");
                 tokio::task::yield_now().await;
             }
         };
