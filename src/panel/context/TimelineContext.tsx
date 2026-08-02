@@ -4,9 +4,20 @@ import type { FromTo } from "@/bridge/types";
 export const BEAT_WIDTH = 40;
 
 export interface TimelineActions {
-  onDragStart: (e: React.PointerEvent, originalIndex: number, startBeat: number) => void;
-  onResizeStart: (e: React.PointerEvent, originalIndex: number, startDuration: number) => void;
+  onDragStart: (
+    e: React.PointerEvent,
+    originalIndex: number,
+    startBeat: number,
+    element: HTMLElement,
+  ) => void;
+  onResizeStart: (
+    e: React.PointerEvent,
+    originalIndex: number,
+    startDuration: number,
+    element: HTMLElement,
+  ) => void;
   onDelete: (originalIndex: number) => void;
+  onNudge: (originalIndex: number, deltaBeats: number) => void;
   onUpdateAnimation: (
     eventIndex: number,
     fromValue: FromTo,

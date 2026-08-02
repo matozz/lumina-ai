@@ -1,133 +1,62 @@
 import { useMemo } from "react";
 import type { TimelineEventDSL } from "@/bridge/types";
 import type { UITimelineEvent, TimelineTrackData } from "../types";
-import { BEAT_WIDTH } from "../context/TimelineContext";
-import type { MovingState, ResizingState } from "./useTimelineEvents";
 import { automationTargetParentTrack } from "@/document/automationTarget";
 
-export const useTimelineTracks = (
-  timelineEvents: TimelineEventDSL[],
-  moving: MovingState | null,
-  resizing: ResizingState | null,
-): TimelineTrackData[] => {
+export const useTimelineTracks = (timelineEvents: TimelineEventDSL[]): TimelineTrackData[] => {
   return useMemo(() => {
     const trackMap = new Map<string, UITimelineEvent[]>();
     const animationsMap = new Map<string, UITimelineEvent[]>();
 
-    timelineEvents.forEach((event: TimelineEventDSL, index: number) => {
-      let displayBeat = event.beat;
-      let displayDuration = event.duration || 4;
-      let displayType = event.action.type;
-
-      // Handle Animate Actions differently
-      if (displayType === "animate" && event.action.type === "animate") {
+    timelineEvents.forEach((event, index) => {
+      if (event.action.type === "animate") {
         const parentTrackId = automationTargetParentTrack(event.action.target);
-
-        if (moving && moving.originalIndex === index) {
-          const deltaBeats = moving.currentDeltaX / BEAT_WIDTH;
-          displayBeat = Math.max(0, Math.floor((moving.startBeat + deltaBeats) * 2) / 2);
-        }
-
-        if (resizing && resizing.originalIndex === index) {
-          const deltaBeats = resizing.currentDeltaX / BEAT_WIDTH;
-          displayDuration = Math.max(
-            0.5,
-            Math.round((resizing.startDuration + deltaBeats) * 2) / 2,
-          );
-        }
-
-        const e: UITimelineEvent = {
+        const timelineEvent: UITimelineEvent = {
           ...event,
-          id: `timeline-anim-${index}`,
+          id: `timeline-anim-${event.id ?? index}`,
           originalIndex: index,
-          beat: displayBeat,
-          duration: displayDuration,
+          duration: event.duration ?? 4,
         };
-
-        if (!animationsMap.has(parentTrackId)) {
-          animationsMap.set(parentTrackId, []);
-        }
-        animationsMap.get(parentTrackId)?.push(e);
-        return; // Skip normal track processing for animations
+        const animations = animationsMap.get(parentTrackId) ?? [];
+        animations.push(timelineEvent);
+        animationsMap.set(parentTrackId, animations);
+        return;
       }
 
-      let displayTarget = "";
-      if (displayType === "effect" && event.action.type === "effect") {
-        displayTarget = event.action.instance_id;
-      }
-
-      if (moving && moving.originalIndex === index) {
-        const deltaBeats = moving.currentDeltaX / BEAT_WIDTH;
-        displayBeat = Math.max(0, Math.floor((moving.startBeat + deltaBeats) * 2) / 2);
-
-        if (moving.activeTrackName?.startsWith("phaser:")) {
-          displayType = "effect";
-          displayTarget = moving.activeTrackName.replace("phaser:", "");
-        }
-      }
-
-      if (resizing && resizing.originalIndex === index) {
-        const deltaBeats = resizing.currentDeltaX / BEAT_WIDTH;
-        displayDuration = Math.max(0.5, Math.round((resizing.startDuration + deltaBeats) * 2) / 2);
-      }
-
-      let trackId = "global";
-      if (displayType === "effect") trackId = `phaser:${displayTarget}`;
-
-      const e: UITimelineEvent = {
+      const trackId = `phaser:${event.action.instance_id}`;
+      const timelineEvent: UITimelineEvent = {
         ...event,
-        id: `timeline-${index}`,
+        id: `timeline-${event.id ?? index}`,
         originalIndex: index,
-        beat: displayBeat,
-        duration: displayDuration,
-        action:
-          displayType === "effect" ? { type: "effect", instance_id: displayTarget } : event.action,
+        duration: event.duration ?? 4,
       };
-
-      if (!trackMap.has(trackId)) {
-        trackMap.set(trackId, []);
-      }
-      trackMap.get(trackId)?.push(e);
+      const events = trackMap.get(trackId) ?? [];
+      events.push(timelineEvent);
+      trackMap.set(trackId, events);
     });
 
-    // Create final array with animations attached to tracks
-    const result: TimelineTrackData[] = [];
+    const trackIds = new Set([...trackMap.keys(), ...animationsMap.keys()]);
+    if (trackIds.size === 0) trackIds.add("global");
 
-    // Collect all unique track names
-    const allTrackIds = new Set([...trackMap.keys(), ...animationsMap.keys()]);
-    if (allTrackIds.size === 0) {
-      allTrackIds.add("global");
-    }
-
-    allTrackIds.forEach((trackId) => {
-      const trackEvents = trackMap.get(trackId) || [];
-      const animEvents = animationsMap.get(trackId) || [];
-
-      // Group animations by specific property (e.g. "multiplier", "color")
-      const subTracksMap = new Map<string, UITimelineEvent[]>();
-      animEvents.forEach((e) => {
-        if (e.action.type === "animate") {
-          const propName = e.action.target.parameter_id;
-          if (!subTracksMap.has(propName)) subTracksMap.set(propName, []);
-          subTracksMap.get(propName)?.push(e);
+    return Array.from(trackIds)
+      .map((trackId): TimelineTrackData => {
+        const subTracks = new Map<string, UITimelineEvent[]>();
+        for (const event of animationsMap.get(trackId) ?? []) {
+          if (event.action.type !== "animate") continue;
+          const parameterId = event.action.target.parameter_id;
+          const events = subTracks.get(parameterId) ?? [];
+          events.push(event);
+          subTracks.set(parameterId, events);
         }
-      });
-
-      const subTracks = Array.from(subTracksMap.entries())
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([propName, evs]) => ({
-          name: propName,
-          events: evs,
-        }));
-
-      result.push({
-        id: trackId, // Explicit structured ID
-        name: trackId, // Renderable string
-        events: trackEvents,
-        subTracks,
-      });
-    });
-
-    return result.sort((a, b) => a.name.localeCompare(b.name));
-  }, [timelineEvents, moving, resizing]);
+        return {
+          id: trackId,
+          name: trackId,
+          events: trackMap.get(trackId) ?? [],
+          subTracks: Array.from(subTracks, ([name, events]) => ({ name, events })).sort(
+            (left, right) => left.name.localeCompare(right.name),
+          ),
+        };
+      })
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }, [timelineEvents]);
 };

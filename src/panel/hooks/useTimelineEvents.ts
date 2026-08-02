@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type {
   AutomationLaneDSL,
   Easing,
@@ -12,7 +12,8 @@ import type { DocumentCommand, DocumentTransaction } from "@/document/commands";
 import { useEngineStore, engineActions, engineSelectors } from "@/stores/engine";
 import { BEAT_WIDTH } from "../context/TimelineContext";
 
-export interface MovingState {
+interface MoveInteraction {
+  type: "move";
   originalIndex: number;
   startClientX: number;
   startClientY: number;
@@ -20,24 +21,29 @@ export interface MovingState {
   currentDeltaX: number;
   currentDeltaY: number;
   activeTrackName?: string;
+  element: HTMLElement;
 }
 
-export interface ResizingState {
+interface ResizeInteraction {
+  type: "resize";
   originalIndex: number;
   startClientX: number;
   startDuration: number;
   currentDeltaX: number;
+  element: HTMLElement;
 }
+
+type TimelineInteraction = MoveInteraction | ResizeInteraction;
 
 export const useTimelineEvents = () => {
   const parsedDsl = useEngineStore(engineSelectors.parsedDsl);
-
-  const [moving, setMoving] = useState<MovingState | null>(null);
-  const [resizing, setResizing] = useState<ResizingState | null>(null);
-
   const interactionState = useRef<{ isInteracting: boolean }>({ isInteracting: false });
-
+  const interaction = useRef<TimelineInteraction | null>(null);
   const timelineEvents = useMemo(() => flattenTimeline(parsedDsl), [parsedDsl]);
+  const parsedDslRef = useRef(parsedDsl);
+  const timelineEventsRef = useRef(timelineEvents);
+  parsedDslRef.current = parsedDsl;
+  timelineEventsRef.current = timelineEvents;
 
   const addEvent = useCallback(
     (newEvent: TimelineEventDSL) => {
@@ -108,134 +114,203 @@ export const useTimelineEvents = () => {
     [parsedDsl, timelineEvents],
   );
 
-  useEffect(() => {
-    if (!resizing && !moving) return;
-
-    const handlePointerMove = (e: PointerEvent) => {
-      interactionState.current.isInteracting = true;
-
-      if (resizing) {
-        setResizing((prev) =>
-          prev ? { ...prev, currentDeltaX: e.clientX - prev.startClientX } : null,
-        );
-      }
-
-      if (moving) {
-        let activeTrackName = moving.activeTrackName;
-        const elements = document.elementsFromPoint(e.clientX, e.clientY);
-        const trackEl = elements.find((el) => el.hasAttribute("data-track-name"));
-        if (trackEl) {
-          activeTrackName = trackEl.getAttribute("data-track-name") || undefined;
-        }
-
-        setMoving((prev) =>
-          prev
-            ? {
-                ...prev,
-                currentDeltaX: e.clientX - prev.startClientX,
-                currentDeltaY: e.clientY - prev.startClientY,
-                activeTrackName,
-              }
-            : null,
-        );
-      }
-    };
-
-    const handlePointerUp = () => {
-      if (resizing) {
-        const deltaBeats = resizing.currentDeltaX / BEAT_WIDTH;
-        const newDuration = Math.max(
-          0.5,
-          Math.round((resizing.startDuration + deltaBeats) * 2) / 2,
-        );
-
-        const view = timelineEvents[resizing.originalIndex];
-        if (parsedDsl?.timeline && view?.source_track_id && view.source_item_id) {
-          const durationTick = Math.max(1, beatsToTicks(newDuration, parsedDsl.timeline.ppq));
-          const command: DocumentCommand =
-            view.action.type === "effect"
-              ? {
-                  type: "resize_clip",
-                  track_id: view.source_track_id,
-                  clip_id: view.source_item_id,
-                  duration_tick: durationTick,
-                }
-              : {
-                  type: "scale_automation_lane",
-                  track_id: view.source_track_id,
-                  lane_id: view.source_item_id,
-                  start_tick: beatsToTicks(view.beat, parsedDsl.timeline.ppq),
-                  duration_tick: durationTick,
-                };
-          engineActions.applyDocumentTransaction(transaction("Resize timeline item", command));
-        }
-      }
-
-      if (moving) {
-        const deltaBeats = moving.currentDeltaX / BEAT_WIDTH;
-        const newBeat = Math.max(0, Math.floor((moving.startBeat + deltaBeats) * 2) / 2);
-
-        const view = timelineEvents[moving.originalIndex];
-        if (parsedDsl?.timeline && view?.source_track_id && view.source_item_id) {
-          const newTick = beatsToTicks(newBeat, parsedDsl.timeline.ppq);
-          const clip = findClip(parsedDsl, view);
-          const lane = findLane(parsedDsl, view);
-          let command: DocumentCommand | undefined;
-          if (clip) {
-            command = {
+  const nudgeEvent = useCallback(
+    (originalIndex: number, deltaBeats: number) => {
+      if (!parsedDsl?.timeline) return;
+      const view = timelineEvents[originalIndex];
+      if (!view?.source_track_id || !view.source_item_id) return;
+      const targetBeat = Math.max(0, view.beat + deltaBeats);
+      const targetTick = beatsToTicks(targetBeat, parsedDsl.timeline.ppq);
+      const command: DocumentCommand =
+        view.action.type === "effect"
+          ? {
               type: "move_clip",
               track_id: view.source_track_id,
               clip_id: view.source_item_id,
-              start_tick: newTick,
-              instance_id: moving.activeTrackName?.startsWith("phaser:")
-                ? moving.activeTrackName.replace("phaser:", "")
-                : undefined,
-            };
-          } else if (lane && lane.keyframes.length > 0) {
-            command = {
+              start_tick: targetTick,
+            }
+          : {
               type: "move_automation_lane",
               track_id: view.source_track_id,
               lane_id: view.source_item_id,
-              delta_tick: newTick - lane.keyframes[0].time_tick,
+              delta_tick: targetTick - beatsToTicks(view.beat, parsedDsl.timeline.ppq),
             };
-          }
-          if (command) {
-            engineActions.applyDocumentTransaction(transaction("Move timeline item", command));
-          }
-        }
+      engineActions.applyDocumentTransaction(transaction("Nudge timeline item", command));
+    },
+    [parsedDsl, timelineEvents],
+  );
+
+  const startMoving = useCallback(
+    (
+      originalIndex: number,
+      clientX: number,
+      clientY: number,
+      startBeat: number,
+      activeTrackName: string | undefined,
+      element: HTMLElement,
+    ) => {
+      interactionState.current.isInteracting = false;
+      interaction.current = {
+        type: "move",
+        originalIndex,
+        startClientX: clientX,
+        startClientY: clientY,
+        startBeat,
+        currentDeltaX: 0,
+        currentDeltaY: 0,
+        activeTrackName,
+        element,
+      };
+    },
+    [],
+  );
+
+  const startResizing = useCallback(
+    (originalIndex: number, clientX: number, startDuration: number, element: HTMLElement) => {
+      interactionState.current.isInteracting = false;
+      interaction.current = {
+        type: "resize",
+        originalIndex,
+        startClientX: clientX,
+        startDuration,
+        currentDeltaX: 0,
+        element,
+      };
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      const active = interaction.current;
+      if (!active) return;
+      interactionState.current.isInteracting = true;
+      if (active.type === "resize") {
+        active.currentDeltaX = event.clientX - active.startClientX;
+        const duration = snappedDuration(active.startDuration, active.currentDeltaX);
+        active.element.style.width = `${duration * BEAT_WIDTH}px`;
+        return;
       }
 
-      setResizing(null);
-      setMoving(null);
+      active.currentDeltaX = event.clientX - active.startClientX;
+      active.currentDeltaY = event.clientY - active.startClientY;
+      const previewBeat = snappedBeat(active.startBeat, active.currentDeltaX);
+      const previewDeltaX = (previewBeat - active.startBeat) * BEAT_WIDTH;
+      active.element.style.transform = `translate3d(${previewDeltaX}px, ${active.currentDeltaY}px, 0)`;
+      const track = document
+        .elementsFromPoint?.(event.clientX, event.clientY)
+        .find((element) => element.hasAttribute("data-track-name"));
+      if (track) active.activeTrackName = track.getAttribute("data-track-name") ?? undefined;
+    };
 
-      setTimeout(() => {
-        interactionState.current.isInteracting = false;
+    const finishInteraction = (commit: boolean) => {
+      const active = interaction.current;
+      if (!active) return;
+      const document = parsedDslRef.current;
+      const view = timelineEventsRef.current[active.originalIndex];
+      const command =
+        commit && document?.timeline && view?.source_track_id && view.source_item_id
+          ? commandForInteraction(active, document, view)
+          : undefined;
+      active.element.style.transform = "";
+      active.element.style.width = "";
+      interaction.current = null;
+      if (command) {
+        engineActions.applyDocumentTransaction(
+          transaction(
+            active.type === "move" ? "Move timeline item" : "Resize timeline item",
+            command,
+          ),
+        );
+      }
+      globalThis.setTimeout(() => {
+        if (!interaction.current) interactionState.current.isInteracting = false;
       }, 50);
     };
 
+    const handlePointerUp = () => finishInteraction(true);
+    const handlePointerCancel = () => finishInteraction(false);
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
-
+    window.addEventListener("pointercancel", handlePointerCancel);
     return () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerCancel);
     };
-  }, [resizing, moving, parsedDsl, timelineEvents]);
+  }, []);
 
   return {
     timelineEvents,
-    moving,
-    setMoving,
-    resizing,
-    setResizing,
     interactionState,
+    startMoving,
+    startResizing,
     addEvent,
     deleteEvent,
+    nudgeEvent,
     updateAnimationBlock,
   };
 };
 
-function flattenTimeline(document: FullDSL | null): TimelineEventDSL[] {
+function commandForInteraction(
+  interaction: TimelineInteraction,
+  document: FullDSL,
+  view: TimelineEventDSL,
+): DocumentCommand | undefined {
+  if (!document.timeline || !view.source_track_id || !view.source_item_id) return undefined;
+  if (interaction.type === "resize") {
+    const durationTick = Math.max(
+      1,
+      beatsToTicks(
+        snappedDuration(interaction.startDuration, interaction.currentDeltaX),
+        document.timeline.ppq,
+      ),
+    );
+    return view.action.type === "effect"
+      ? {
+          type: "resize_clip",
+          track_id: view.source_track_id,
+          clip_id: view.source_item_id,
+          duration_tick: durationTick,
+        }
+      : {
+          type: "scale_automation_lane",
+          track_id: view.source_track_id,
+          lane_id: view.source_item_id,
+          start_tick: beatsToTicks(view.beat, document.timeline.ppq),
+          duration_tick: durationTick,
+        };
+  }
+
+  const newTick = beatsToTicks(
+    snappedBeat(interaction.startBeat, interaction.currentDeltaX),
+    document.timeline.ppq,
+  );
+  const clip = findClip(document, view);
+  if (clip) {
+    return {
+      type: "move_clip",
+      track_id: view.source_track_id,
+      clip_id: view.source_item_id,
+      start_tick: newTick,
+      instance_id: interaction.activeTrackName?.startsWith("phaser:")
+        ? interaction.activeTrackName.replace("phaser:", "")
+        : undefined,
+    };
+  }
+  const lane = findLane(document, view);
+  if (lane && lane.keyframes.length > 0) {
+    return {
+      type: "move_automation_lane",
+      track_id: view.source_track_id,
+      lane_id: view.source_item_id,
+      delta_tick: newTick - lane.keyframes[0].time_tick,
+    };
+  }
+  return undefined;
+}
+
+export function flattenTimeline(document: FullDSL | null): TimelineEventDSL[] {
   const timeline = document?.timeline;
   if (!timeline) return [];
   const events: TimelineEventDSL[] = [];
@@ -287,6 +362,14 @@ function findLane(document: FullDSL, view?: TimelineEventDSL): AutomationLaneDSL
   return document.timeline?.tracks
     .find((track) => track.id === view.source_track_id)
     ?.automation_lanes?.find((lane) => lane.id === view.source_item_id);
+}
+
+function snappedBeat(startBeat: number, deltaX: number) {
+  return Math.max(0, Math.floor((startBeat + deltaX / BEAT_WIDTH) * 2) / 2);
+}
+
+function snappedDuration(startDuration: number, deltaX: number) {
+  return Math.max(0.5, Math.round((startDuration + deltaX / BEAT_WIDTH) * 2) / 2);
 }
 
 function beatsToTicks(beats: number, ppq: number) {

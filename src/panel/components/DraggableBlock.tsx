@@ -1,9 +1,9 @@
-import React, { useRef, useState } from "react";
+import React, { memo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { UITimelineEvent } from "../types";
 import { AnimationEditor } from "./AnimationEditor";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { FromTo } from "@/bridge/types";
+import type { FromTo } from "@/bridge/types";
 import { useTimelineActions } from "@/panel/context/TimelineContext";
 
 interface BlockProps {
@@ -12,7 +12,7 @@ interface BlockProps {
   isSubTrack?: boolean;
 }
 
-export const DraggableBlock = (props: BlockProps) => {
+export const DraggableBlock = memo((props: BlockProps) => {
   const { event, beatWidth, isSubTrack } = props;
 
   const actions = useTimelineActions();
@@ -64,6 +64,7 @@ export const DraggableBlock = (props: BlockProps) => {
             ref={ref}
             className={cn(
               "group absolute flex cursor-grab items-center overflow-hidden rounded border shadow-sm transition-colors active:cursor-grabbing",
+              "focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:outline-none",
               isSubTrack ? "top-1 bottom-1 px-1.5" : "top-1.5 bottom-1.5 px-2",
               !isSubTrack && "backdrop-blur-md",
 
@@ -82,17 +83,32 @@ export const DraggableBlock = (props: BlockProps) => {
                 ? `${label} (From: ${fromValue} -> To: ${toValue})`
                 : `${label} (Beat ${event.beat} - ${event.beat + duration})`
             }
+            role="button"
+            tabIndex={0}
+            aria-label={`${label}, starts at beat ${event.beat}, duration ${duration} beats`}
             onClick={handleClick}
             onDoubleClick={handleDoubleClick}
+            onKeyDown={(ev) => {
+              if (ev.key === "Delete" || ev.key === "Backspace") {
+                ev.preventDefault();
+                actions.onDelete(event.originalIndex);
+              } else if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
+                ev.preventDefault();
+                const direction = ev.key === "ArrowLeft" ? -1 : 1;
+                actions.onNudge(event.originalIndex, direction * (ev.shiftKey ? 4 : 0.5));
+              }
+            }}
             onPointerDown={(ev) => {
               ev.preventDefault();
               ev.stopPropagation();
+              ref.current?.focus();
               (ev.target as HTMLElement).setPointerCapture(ev.pointerId);
-              actions.onDragStart(ev, event.originalIndex, event.beat);
+              if (ref.current)
+                actions.onDragStart(ev, event.originalIndex, event.beat, ref.current);
             }}
           >
             <div className="pointer-events-none flex w-full items-center justify-between overflow-hidden px-1">
-              <span className="text-[11px] font-medium text-ellipsis whitespace-nowrap text-white drop-shadow-md">
+              <span className="truncate text-[11px] font-medium text-white drop-shadow-md">
                 {label}
               </span>
               {isAnimate && width > 60 && (
@@ -113,7 +129,9 @@ export const DraggableBlock = (props: BlockProps) => {
                 ev.preventDefault();
                 ev.stopPropagation();
                 (ev.target as HTMLElement).setPointerCapture(ev.pointerId);
-                actions.onResizeStart(ev, event.originalIndex, duration);
+                if (ref.current) {
+                  actions.onResizeStart(ev, event.originalIndex, duration, ref.current);
+                }
               }}
             />
           </div>
@@ -134,4 +152,6 @@ export const DraggableBlock = (props: BlockProps) => {
       )}
     </Popover>
   );
-};
+});
+
+DraggableBlock.displayName = "DraggableBlock";

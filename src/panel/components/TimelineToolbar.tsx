@@ -1,9 +1,9 @@
 import { AudioWaveform, Redo2, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useEngineStore, engineSelectors } from "@/stores/engine";
 
 interface ToolbarProps {
-  globalBeat: number;
   canUndo: boolean;
   canRedo: boolean;
   isDirty: boolean;
@@ -12,7 +12,8 @@ interface ToolbarProps {
 }
 
 export const TimelineToolbar = (props: ToolbarProps) => {
-  const { globalBeat, canUndo, canRedo, isDirty, onUndo, onRedo } = props;
+  const { canUndo, canRedo, isDirty, onUndo, onRedo } = props;
+  const globalBeat = useEngineStore(engineSelectors.globalBeat);
   return (
     <div
       className={cn(

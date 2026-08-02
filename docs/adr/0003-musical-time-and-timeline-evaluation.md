@@ -20,7 +20,8 @@ Stage 5 需要更换时间与 arrangement contract，同时保持 Stage 1 Transp
 - renderer 从目标 tick 通过只读索引查询 active clips 和 lanes。顺序播放、直接 Seek 和 Replay 都调用同一个纯函数，不保存 `active_events` 真相；旧 `TimelineExecutor` 在 Stage 5 内删除。
 - overlap policy 是 Track 的显式字段：layer、replace、reject 或 crossfade。默认 migration 为 `layer`，编辑命令绝不隐式修改相邻 clip；replace 选择 `(layer, start_tick, stable source order)` 最大者，reject 在 validation 失败关闭，crossfade 对最高两层 active clip 按实际 overlap 区间线性配重，且这些策略只影响求值或显式命令结果。
 - 时间轴编辑统一经过 `DocumentCommand` transaction。drag/resize pointer move 只更新 DOM transform/width preview，pointer up 提交一个 transaction；history 保存 undo/redo、save point 和 dirty state。
-- 1,000 clips 的性能 gate 同时覆盖 compiled active-range query 和前端可见区域裁剪。playhead 通过独立 DOM ref 更新，不能让全部 block 随 60Hz cursor 重渲染。
+- 1,000 clips 的性能 gate 同时覆盖 compiled active-range query 和前端可见区域裁剪。viewport 以整数 beat 量化并带 8-beat overscan，clip、automation subtrack 和 bar label 只挂载相交区域；beat grid 使用 CSS repeating pattern，不按总时长创建节点。
+- playhead 独立订阅 engine store 并直接更新 DOM ref transform；drag/resize pointermove 同样只修改目标 block 的 transform/width。两条高频路径都绕过 timeline React render tree，toolbar 的轻量时间显示可以独立订阅。
 
 ## Alternatives considered
 
@@ -47,4 +48,4 @@ V4 migration 先生成整数时间和 arrangement contract，再切换 compiler/
 - V4 arrangement contract and migration: 本切片提交
 - Pure indexed tick evaluator and old executor removal: 本切片提交
 - DocumentCommand transaction/history/save point: 本切片提交
-- Timeline DOM preview/virtualization: pending
+- Timeline DOM preview/virtualization/playhead isolation: 本切片提交
