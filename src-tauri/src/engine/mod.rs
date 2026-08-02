@@ -3,6 +3,7 @@ pub mod attribute;
 pub mod clock;
 pub mod color;
 pub mod frame;
+pub mod mixer;
 pub mod phaser;
 pub mod profile;
 pub mod render;

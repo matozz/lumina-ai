@@ -1,11 +1,12 @@
 use super::animation::{ease, AnimatableValue, ParameterContext};
 use super::attribute::{AttributeHandle, FixtureFrame};
+use super::mixer::{mix_fixture, AttributeWrite};
 use super::phaser::{calculate_progress_delay, evaluate_phaser_at};
 use crate::compiler::{
     CompiledAutomationTarget, CompiledEffectParameter, CompiledShow, CompiledTimelineAction,
     CompiledTimelineEvent, EffectInstanceHandle,
 };
-use crate::engine::profile::{profile_by_handle, AttributeValue, MixPolicy};
+use crate::engine::profile::AttributeValue;
 use rayon::prelude::*;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -72,9 +73,10 @@ pub(crate) fn render_resolved(
     show.fixtures
         .par_iter()
         .map(|fixture| {
-            let mut output = FixtureFrame::with_profile_defaults(fixture.id, fixture.profile);
+            let output = FixtureFrame::with_profile_defaults(fixture.id, fixture.profile);
+            let mut writes = Vec::new();
 
-            for active in active_phasers {
+            for (source_order, active) in active_phasers.iter().enumerate() {
                 let Some(phaser) = show.phasers.get(active.instance.as_str()) else {
                     continue;
                 };
@@ -137,9 +139,21 @@ pub(crate) fn render_resolved(
                     else {
                         continue;
                     };
-                    apply_profile_write(&mut output, handle, value);
+                    writes.push(AttributeWrite {
+                        attribute: handle,
+                        value,
+                        source_id: active.instance.as_str(),
+                        layer: 0,
+                        priority: 0,
+                        activation_order: source_order as u64,
+                        stable_source_order: u32::try_from(source_order).unwrap_or(u32::MAX),
+                        weight: None,
+                        policy_override: None,
+                    });
                 }
             }
+
+            let mut output = mix_fixture(output, writes, false).frame;
 
             if let (Some(handle), Some(global_dimmer)) =
                 (fixture.intensity, parameters.global_master_dimmer())
@@ -166,17 +180,6 @@ fn apply_scalar_override(
     if let (Some(handle), Some(value)) = (handle, value) {
         values[handle.index()] = Some(convert(value as f32));
     }
-}
-
-fn apply_profile_write(frame: &mut FixtureFrame, handle: AttributeHandle, value: AttributeValue) {
-    let descriptor = &profile_by_handle(frame.profile).attributes[handle.index()];
-    let resolved = match (descriptor.mix_policy, frame.value(handle), &value) {
-        (MixPolicy::Htp, Some(AttributeValue::Scalar(current)), AttributeValue::Scalar(next)) => {
-            AttributeValue::Scalar(current.max(*next))
-        }
-        _ => value,
-    };
-    frame.set(handle, resolved);
 }
 
 fn resolve_timeline_at(
@@ -550,6 +553,59 @@ mod tests {
             attribute(&frame[0], crate::engine::profile::TILT_ATTRIBUTE),
             &AttributeValue::Angle(-45.0)
         );
+    }
+
+    #[test]
+    fn overlapping_effects_use_htp_intensity_and_stable_ltp_color() {
+        let dsl: ShowDSL = serde_json::from_str(
+            r##"{
+                "schema_version": 2,
+                "meta": { "name": "mixed attributes" },
+                "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 1] }],
+                "layout": { "type": "generator", "generator": {
+                    "shape": "matrix", "rows": 1, "columns": 1, "spacing": 1
+                }},
+                "groups": [{ "id": "all", "name": "All", "fixtures": [1] }],
+                "phasers": [
+                    {
+                        "id": "red", "name": "Red", "target": "all",
+                        "steps": [{
+                            "values": { "color": "#ff0000", "dimmer": 0.25 },
+                            "width": 100, "transition": 0
+                        }],
+                        "phase": { "mode": "spread", "spread": { "from": 0, "to": 0 } }
+                    },
+                    {
+                        "id": "blue", "name": "Blue", "target": "all",
+                        "steps": [{
+                            "values": { "color": "#0000ff", "dimmer": 0.8 },
+                            "width": 100, "transition": 0
+                        }],
+                        "phase": { "mode": "spread", "spread": { "from": 0, "to": 0 } }
+                    }
+                ],
+                "timeline": { "events": [
+                    { "beat": 0, "duration": 2,
+                      "action": { "type": "phaser", "phaser": "red" } },
+                    { "beat": 0, "duration": 2,
+                      "action": { "type": "phaser", "phaser": "blue" } }
+                ]}
+            }"##,
+        )
+        .expect("mixed DSL");
+        let show = Compiler::compile_document(dsl).expect("compiled mixed show");
+
+        for _ in 0..2 {
+            let frame = render_at(&show, RenderTime { beat: 0.5 }, RenderSource::Timeline);
+            assert_eq!(
+                attribute(&frame[0], INTENSITY_ATTRIBUTE),
+                &AttributeValue::Scalar(0.8)
+            );
+            assert_eq!(
+                attribute(&frame[0], COLOR_RGB_ATTRIBUTE),
+                &AttributeValue::Color([0, 0, 255])
+            );
+        }
     }
 
     fn attribute<'a>(frame: &'a FixtureFrame, id: &str) -> &'a AttributeValue {

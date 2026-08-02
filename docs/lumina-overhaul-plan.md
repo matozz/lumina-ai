@@ -482,11 +482,11 @@ FixtureProfile
 
 #### 3.3 Mixer
 
-- [ ] 实现 HTP、LTP、Add、Multiply、Mask。
-- [ ] 每次 effect write 携带 layer、priority、activation order 和 optional weight。
-- [ ] 属性默认 mix policy 来自 profile，可被 track/effect 显式覆盖。
-- [ ] LTP tie-break 必须稳定且可测试。
-- [ ] 冲突可生成可解释 Diagnostic/Inspector 信息。
+- [x] 实现 HTP、LTP、Add、Multiply、Mask。
+- [x] 每次 effect write 携带 layer、priority、activation order 和 optional weight。
+- [x] 属性默认 mix policy 来自 profile，可被 track/effect 显式覆盖。
+- [x] LTP tie-break 必须稳定且可测试。
+- [x] 冲突可生成可解释 Diagnostic/Inspector 信息。
 
 #### 3.4 OutputSink 抽象
 
@@ -1081,14 +1081,14 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 ## Handoff
 
 - Current Stage: Stage 3 · Fixture Attribute、Mixer 与 Output 抽象（in_progress）；Stage 2 已在 `06e14e3` 完成，未进入 Stage 4。
-- Slice completed: 新增 profile-backed `FixtureFrame`、typed `AttributeValue` 与紧凑 `AttributeHandle`；compiler 按目标 profile 预编译 attribute writes，并对不支持属性/物理范围返回稳定 Diagnostic；render、diff、blackout、IPC payload、golden/baseline 全部移除核心硬编码 `FixtureOutput`；未写属性从 profile default 建帧；Moving Head pan/tilt 现在进入逻辑 Frame；Canvas 通过纯只读 adapter 投影 `intensity/color.rgb/position.*`，不修改源 Frame。
-- Commits: Stage 2 strict contract `06e14e3`；Stage 3 Fixture Profile + V2 migration `cab82e2`；Stage 3 Attribute Frame + Canvas adapter（本切片提交）。
-- Files changed: attribute frame/value interpolation、profile-specific phaser compiler、renderer/frame publisher/scheduler/state、Rust golden 与 release harness、bridge payload contract、Canvas adapter/tests、ADR-0004、Stage checklist/ledger/handoff。
-- Validation: schema generation check、Prettier、`pnpm build`、18 Vitest、strict Rust fmt/Clippy、58 Rust tests/contracts 全通过；Moving Head typed pan/tilt、capability/range Diagnostic、wrong-type write rejection、profile-aware topology diff、Canvas adapter immutability 均有测试；release harness 完成 36k ticks/18m fixture evaluations，0.012ms drift、79.95× realtime、208.45µs mean render+publish。
-- ADRs added/updated: ADR-0004 补充已落地的 descriptor-order frame/IPC adapter 约束；ADR-0002 保持不变。
-- Risks opened/closed: R-002 维持 closed；R-003 仍 open，通用 Frame 已落地，但完整 Mixer policy、稳定 LTP tie-break 和冲突检查尚未完成。
-- Remaining exit criteria: HTP/LTP/Add/Multiply/Mask、write metadata 与 conflict inspection；Null/Preview/Recording OutputSink；Stage 3 最终混合/同 revision sink 验证矩阵与全局 DoD 复验。
-- Recommended next slice: Stage 3 Mixer 垂直切片——引入携带 layer/priority/activation order/weight/override 的 attribute writes，由单一 Mixer 实现 HTP/LTP/Add/Multiply/Mask、稳定 tie-break 和 conflict inspection。
+- Slice completed: 新增单一 attribute Mixer 并接入真实 render path；每个 write 携带 source/layer/priority/activation order/stable source order/optional weight/policy override；profile policy 默认驱动 HTP intensity 与 LTP color/position；显式 Add/Multiply/Mask 以固定 layer stack 顺序执行并 clamp 到物理范围；LTP 按 `(layer, priority, activation_order, stable_source_order, source_id)` 稳定决胜；可选 conflict inspection 输出 contenders、policy、weight、winner 与最终值，关闭旧逐通道 `max` 语义。
+- Commits: Stage 2 `06e14e3`；Fixture Profile `cab82e2`；Attribute Frame `ced259c`；Attribute Mixer（本切片提交）。
+- Files changed: `engine/mixer.rs`、render write collection/integration、AttributeHandle ordering、Mixer/overlap regression tests、ADR-0004、Stage checklist/ledger/handoff/Open Risks。
+- Validation: 63 Rust tests/contracts 全通过；矩阵覆盖 HTP、稳定 LTP 四层 tie-break、显式 Add/Multiply/Mask、weight、range clamp、Inspector 与双效果 render；strict fmt/Clippy、schema、18 frontend tests、`pnpm build` 全通过；release harness 36k ticks/18m evaluations，0.012ms drift、81.44× realtime、204.65µs mean render+publish。
+- ADRs added/updated: ADR-0004 明确 layer stack、policy fold/weight 与 legacy Phaser metadata defaults。
+- Risks opened/closed: R-002 维持 closed；R-003 closed，属性不再统一 `max`，混合 policy 与冲突来源可检查。
+- Remaining exit criteria: Null/Preview/Recording OutputSink 与生命周期/backpressure contract；Moving Head RecordingSink、Preview/Recording 同 revision 验证；Stage 3 最终全局 DoD 复验。
+- Recommended next slice: Stage 3 OutputSink 垂直切片——定义 immutable revisioned logical frame envelope 与 sink lifecycle，完成 Null/Preview/Recording sink、blackout/health/backpressure，并让 scheduler/Canvas subscription 走统一 fan-out。
 
 ## 19. ADR 规范
 
@@ -1159,6 +1159,8 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | 2026-08-02 | 3        | Attribute Frame       | failed    | none        | 新增 range contract 初跑受 `expect_err` 的 `Debug` bound 阻止    | 测试写法问题；改为显式匹配 `Result`           | 复跑 Rust 全目标测试                        |
 | 2026-08-02 | 3        | Attribute Frame gate  | failed    | none        | 58 Rust/18 frontend 通过；Clippy 命中 `map_entry`                | 等价改用 `entry().or_insert_with()`           | 修正后复跑 strict Clippy 与完整门禁         |
 | 2026-08-02 | 3        | Attribute Frame       | completed | 本切片提交  | build/fmt/Clippy/schema；58 Rust/18 frontend；0.012ms drift      | 3.2/3.5 完成；R-003 仍 open                   | attribute Mixer + conflict inspection       |
+| 2026-08-02 | 3        | Attribute Mixer       | failed    | none        | 62/63 Rust 通过；LTP weight=1 的 LAB 路径把白色舍入为 254        | 权重 0/1 必须精确保留端点                     | 修正端点并复跑混合矩阵                      |
+| 2026-08-02 | 3        | Attribute Mixer       | completed | 本切片提交  | 63 Rust/18 frontend；gates；0.012ms；81.44×                      | R-003 closed；ADR-0004 补充稳定 layer stack   | Null/Preview/Recording OutputSink           |
 
 ## 21. Open Risks
 
@@ -1166,7 +1168,7 @@ Goal 只有在 Stage 0 至 Stage 9 全部满足退出条件、全局 Definition 
 | ----- | -------------------------------------------------- | -------- | ----------- | ----------------------------------------------------------------------------- | ------ |
 | R-001 | scheduler 重复线程或锁反转导致演出冻结             | critical | 1           | 单 worker、统一锁策略、压力测试                                               | closed |
 | R-002 | schema 漂移导致用户/AI 字段静默丢失                | critical | 2           | Rust 权威、strict semantic gate、generated schema/TS/capability、AJV contract | closed |
-| R-003 | 所有属性使用 max 混合产生错误颜色/运动             | high     | 3           | 属性级 HTP/LTP/mix policy                                                     | open   |
+| R-003 | 所有属性使用 max 混合产生错误颜色/运动             | high     | 3           | 属性级 HTP/LTP/Add/Multiply/Mask、稳定 tie-break 与 conflict inspection       | closed |
 | R-004 | Preview 80ms 插值掩盖真实频闪输出                  | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                                          | closed |
 | R-005 | Raw DSL 热编译破坏 Live active show                | critical | 6           | Stage 1 immutable revision；Stage 6 显式 Draft/Live 发布                      | open   |
 | R-006 | 没有歌曲时间模型导致 AI 编排不可复现               | high     | 5/7         | 整数 tick + TempoMap + SongAnalysis                                           | open   |

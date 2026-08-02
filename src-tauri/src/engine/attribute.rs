@@ -2,7 +2,7 @@ use super::color::lerp_color_lab;
 use super::profile::{profile_by_handle, AttributeValue, AttributeValueType, FixtureProfileHandle};
 use serde::Serialize;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct AttributeHandle(u16);
 
 impl AttributeHandle {

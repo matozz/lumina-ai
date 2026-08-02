@@ -15,7 +15,7 @@ Stage 3 必须在不进入 EffectGraph（Stage 4）或真实网络协议（Stage
 - ShowDocument V2 的 patch 使用稳定 `profile_id`。内置 registry 首先提供 `generic-rgb`、`generic-rgbw` 和 `generic-moving-head`；V1 的 `pixel/spot` 通过显式 migration 分别映射到 `generic-rgb/generic-moving-head`。
 - `FixtureProfile` 是灯具能力权威，包含 typed attribute descriptor、值类型、默认值、物理范围、默认 mix policy 和 protocol channel mapping。layout 只保留 fixture ID 与空间坐标；Preview 外观是 profile metadata/adapter 的派生信息。
 - compile 阶段把 profile ID 和 attribute ID 解析为紧凑 handle。runtime Frame 保存 typed attribute values，不保存只对 Canvas 有意义的 RGB/dimmer 镜像字段。
-- effect write 显式携带 source/layer、priority、activation order、weight 和 optional mix override。profile 提供默认 policy；HTP/LTP/Add/Multiply/Mask 由单一 Mixer 执行，LTP 使用 `(priority, activation_order, stable_source_order)` 确定胜者。
+- effect write 显式携带 source/layer、priority、activation order、stable source order、weight 和 optional mix override。profile 提供默认 policy；HTP/LTP/Add/Multiply/Mask 由单一 Mixer 执行，LTP 使用 `(layer, priority, activation_order, stable_source_order, source_id)` 确定胜者。
 - Mixer 同时产生可检查的 resolution/conflict 信息；这份信息用于 diagnostics/Inspector，不改变 Frame。
 - `OutputSink` 接受同一个 immutable Frame revision，并具有 `capabilities/start/send/blackout/health/stop` 生命周期。Stage 3 实现 Null、Preview subscription 和 Recording；网络协议与硬件 fail-safe 留在 Stage 9。
 
@@ -33,6 +33,8 @@ Stage 3 必须在不进入 EffectGraph（Stage 4）或真实网络协议（Stage
 - Add/Multiply/Mask 不会因多 effect 重叠而隐式启用；只有 profile 或 write 显式指定才执行。
 - runtime `FixtureFrame` 以 profile descriptor 顺序保存 typed values，只有 compiler/runtime 内部 `AttributeHandle` 可以定位槽位；错误值类型被拒绝，未写槽位保留 profile default。
 - IPC 在 Frame 边界携带 `profile_id + [{ attribute id, typed value }]`；Canvas 的 preview adapter 只读投影可展示属性，不能形成第二份可回写的 runtime state。
+- Mixer 先按 attribute 与上述稳定 layer stack 排序，再顺序 fold：HTP 取加权高值、LTP 选择栈顶 write、Add 累加、Multiply/Mask 使用权重插值后的中性乘数；每步都按 profile physical range clamp。不同 policy 的显式组合按同一栈顺序执行，并在 Inspector 中标记为 ordered blend。
+- 当前 legacy Phaser producer 使用 layer/priority 0、resolved activation/source order、weight 1 和 profile 默认 policy；typed track/effect producer 可在 `AttributeWrite` 边界显式提供 weight/policy override，无需把 policy 判断复制进 effect evaluator。
 
 ## Migration and rollback
 
@@ -42,4 +44,5 @@ V1 patch 的 `type=pixel` 映射为 `profile_id=generic-rgb`，`type=spot` 映�
 
 - Stage 2 strict contract: `06e14e3`
 - Fixture Profile and V2 migration: `cab82e2`
-- Typed Attribute Frame and Canvas adapter: 本切片提交
+- Typed Attribute Frame and Canvas adapter: `ced259c`
+- Attribute Mixer and conflict inspection: 本切片提交
