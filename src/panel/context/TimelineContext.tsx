@@ -31,6 +31,7 @@ export interface TimelineActions {
     changes: Partial<Pick<KeyframeDSL, "time_tick" | "value" | "interpolation">>,
   ) => void;
   onGridClick: (e: React.MouseEvent<HTMLDivElement>, trackName: string) => void;
+  onDropEffect: (e: React.DragEvent<HTMLDivElement>, trackName: string) => void;
   onSnapPreview: (tick: number) => void;
   onSnapPreviewEnd: () => void;
 }

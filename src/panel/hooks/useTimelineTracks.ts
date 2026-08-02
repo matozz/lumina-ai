@@ -1,9 +1,12 @@
 import { useMemo } from "react";
-import type { TimelineEventDSL } from "@/bridge/types";
+import type { FullDSL, TimelineEventDSL } from "@/bridge/types";
 import type { UITimelineEvent, TimelineTrackData } from "../types";
 import { automationTargetParentTrack } from "@/document/automationTarget";
 
-export const useTimelineTracks = (timelineEvents: TimelineEventDSL[]): TimelineTrackData[] => {
+export const useTimelineTracks = (
+  timelineEvents: TimelineEventDSL[],
+  document: FullDSL | null,
+): TimelineTrackData[] => {
   return useMemo(() => {
     const trackMap = new Map<string, UITimelineEvent[]>();
     const animationsMap = new Map<string, UITimelineEvent[]>();
@@ -36,7 +39,7 @@ export const useTimelineTracks = (timelineEvents: TimelineEventDSL[]): TimelineT
     });
 
     const trackIds = new Set([...trackMap.keys(), ...animationsMap.keys()]);
-    if (trackIds.size === 0) trackIds.add("global");
+    if (trackIds.size === 0) trackIds.add("effects");
 
     return Array.from(trackIds)
       .map((trackId): TimelineTrackData => {
@@ -50,7 +53,7 @@ export const useTimelineTracks = (timelineEvents: TimelineEventDSL[]): TimelineT
         }
         return {
           id: trackId,
-          name: trackId,
+          name: trackDisplayName(document, trackId),
           events: trackMap.get(trackId) ?? [],
           subTracks: Array.from(subTracks, ([name, events]) => ({ name, events })).sort(
             (left, right) => left.name.localeCompare(right.name),
@@ -58,5 +61,23 @@ export const useTimelineTracks = (timelineEvents: TimelineEventDSL[]): TimelineT
         };
       })
       .sort((left, right) => left.name.localeCompare(right.name));
-  }, [timelineEvents]);
+  }, [document, timelineEvents]);
 };
+
+function trackDisplayName(document: FullDSL | null, trackId: string) {
+  if (trackId === "global") return "Global controls";
+  if (trackId === "effects") {
+    return (
+      document?.timeline?.tracks.find((track) => track.id === "effects")?.name ?? "Lighting looks"
+    );
+  }
+  if (!trackId.startsWith("phaser:")) return trackId;
+  const instanceId = trackId.slice("phaser:".length);
+  const instance = document?.effect_instances.find((candidate) => candidate.id === instanceId);
+  const definition = document?.effect_definitions.find(
+    (candidate) =>
+      candidate.id === instance?.definition_id &&
+      candidate.revision === instance.definition_revision,
+  );
+  return definition?.name ?? "Unavailable effect";
+}

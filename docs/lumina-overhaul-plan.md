@@ -740,10 +740,10 @@ Keyframe 至少包含：
 
 #### 6.4 Arrange
 
-- [ ] Library 支持 click-to-place 和 drag-to-place，两者都有明确提示。
-- [ ] Track 名称显示用户名称，不直接显示 `phaser:id`。
-- [ ] Audio waveform、section 和 marker 区域为 Stage 7 预留。
-- [ ] 提供 empty state、快捷键帮助和错误恢复。
+- [x] Library 支持 click-to-place 和 drag-to-place，两者都有明确提示。
+- [x] Track 名称显示用户名称，不直接显示 `phaser:id`。
+- [x] Audio waveform、section 和 marker 区域为 Stage 7 预留。
+- [x] 提供 empty state、快捷键帮助和错误恢复。
 
 #### 6.5 Live/Rehearse
 
@@ -1082,14 +1082,14 @@ flowchart LR
 ## Handoff
 
 - Current Stage: Stage 6 `in_progress`；严格止于 Stage 7。
-- Slice completed: `main@3a690c0` 原生基线、immutable snapshot 边界、紧凑五工作区 Shell、Stage Setup，以及完整参数化 Effect Lab CRUD/revision/loop/scrub/A-B。
-- Commits: 分支 `codex/song-driven-dj-workspace`；基线 `3b709a0`；snapshot `e9a32d8`；Shell `a490908`；Stage Setup `00e2148`；Effect Lab 为当前切片提交。
-- Files changed: ShowStore/Tauri bridge、Workspace Shell、Stage Setup、effect factory + catalog + inspector、atomic effect commands、blocking multi-frame Draft renderer、Canvas rAF loop 与 tests/evidence。
-- Validation: Effect Lab `check:all` 全绿：39 frontend files/84 tests、76 Rust unit + 12 contracts、schema/format/typecheck/build/strict Clippy；1440×900 browser design QA。原生窗口当前 AX/Space capture failed，未把黑屏当证据，完整原生路径后续重跑。
+- Slice completed: `main@3a690c0` 原生基线、immutable snapshot 边界、紧凑五工作区 Shell、Stage Setup、完整参数化 Effect Lab，以及 Arrange 的 Draft effect 直通、click/native-drag placement、可读轨道与帮助/恢复状态。
+- Commits: 分支 `codex/song-driven-dj-workspace`；基线 `3b709a0`；snapshot `e9a32d8`；Shell `a490908`；Stage Setup `00e2148`；Effect Lab `bc4e050`；Arrange 为当前切片提交。
+- Files changed: ShowStore/Tauri bridge、Workspace Shell、Stage Setup、effect factory/catalog/inspector、blocking Draft preview、Canvas rAF loop、Timeline Draft library/native drop/friendly labels/help 与 tests/evidence。
+- Validation: Arrange `check:all` 全绿：41 frontend files/90 tests、76 Rust unit + 12 contracts、schema/format/typecheck/build/strict Clippy；1440×900 与 1100×720 browser design QA；真实指针 click 在 beat 6 生成 Red Pulse clip。原生窗口当前 AX/Space capture failed，未把黑屏当证据，完整原生路径后续重跑。
 - ADRs added/updated: ADR-0006 accepted；Draft 发布不改变 Live，只有显式 Take live 激活 revision。
 - Risks opened/closed: R-005 closed；原生 Publish 得到 `Published r2 / Live r1`，只有显式 Take live 后变为 `Live r2`。
-- Remaining exit criteria: Stage Setup 继续补 layout 参数/Custom 坐标编辑；Arrange place/empty/help、Live Pad modes/Blackout、完整原生路径与 accessibility；之后才进入 Stage 7 Audio/TempoMap/SongAnalysis。
-- Recommended next slice: Arrange 的 click/drag placement、用户 track 名称、empty/error/help 与 Effect revision handoff。
+- Remaining exit criteria: Stage Setup 继续补 layout 参数/Custom 坐标编辑；Live Pad modes/Blackout/diagnostics、完整原生路径与 accessibility；之后才进入 Stage 7 Audio/TempoMap/SongAnalysis。
+- Recommended next slice: Live/Rehearse quantized pads、toggle/momentary/one-shot/exclusive group，以及 Pause/Stop/Blackout 层级。
 
 ## 19. ADR 规范
 
@@ -1202,6 +1202,7 @@ flowchart LR
 | 2026-08-02 | 6        | revision 原生点击复核     | completed | 本切片提交  | native AX/screens：`r2/r1 → r2/r2`                                       | R-005 closed；显式 Publish 与 Take live                     | 保持边界进入 Effect Lab                     |
 | 2026-08-02 | 6        | Effect Lab 原生留证       | failed    | none        | clean Tauri ×2；CG window 存在；AX 0 windows；capture 黑 WebView         | 无效截图不提交；browser 仅做 design QA                      | Arrange/Live 后重跑完整 native path         |
 | 2026-08-02 | 6        | Effect Lab implementation | completed | 本切片提交  | `check:all`；84 frontend；88 Rust；1440×900 browser QA                   | atomic revision；one compile；rAF Canvas；A/B cache         | Arrange placement                           |
+| 2026-08-02 | 6        | Arrange visual workflow   | completed | 本切片提交  | `check:all`；90 frontend；88 Rust；1440×900 + min browser QA             | Draft revision 直入 Library；native drag；统一 snap         | Live Pad + safety hierarchy                 |
 
 ## 21. Open Risks
 

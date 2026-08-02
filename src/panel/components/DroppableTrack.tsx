@@ -31,6 +31,12 @@ export const DroppableTrack = memo((props: TrackProps) => {
           selectedPhaser && "cursor-crosshair",
         )}
         onClick={(e) => actions.onGridClick(e, track.id)}
+        onDragOver={(event) => {
+          if (!event.dataTransfer.types.includes("application/x-lumina-effect-instance")) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "copy";
+        }}
+        onDrop={(event) => actions.onDropEffect(event, track.id)}
         data-track-name={track.id}
       >
         {selectedPhaser && (
@@ -38,7 +44,7 @@ export const DroppableTrack = memo((props: TrackProps) => {
         )}
 
         {visibleEvents.map((e) => (
-          <DraggableBlock key={e.id} event={e} beatWidth={beatWidth} />
+          <DraggableBlock key={e.id} event={e} beatWidth={beatWidth} label={track.name} />
         ))}
       </div>
 

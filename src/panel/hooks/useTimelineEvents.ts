@@ -89,7 +89,7 @@ export const useTimelineEvents = ({ beatWidth, scrollRef }: TimelineEventsOption
         transaction("Add EffectClip", {
           type: "add_clip",
           track_id: "effects",
-          track_name: "Effects",
+          track_name: "Lighting looks",
           clip: {
             id: stableId("clip"),
             instance_id: newEvent.action.instance_id,

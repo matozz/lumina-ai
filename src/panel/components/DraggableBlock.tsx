@@ -9,15 +9,16 @@ import { EffectClipOverlapInspector } from "./EffectClipOverlapInspector";
 interface BlockProps {
   event: UITimelineEvent;
   beatWidth: number;
+  label?: string;
 }
 
-export const DraggableBlock = memo(({ event, beatWidth }: BlockProps) => {
+export const DraggableBlock = memo(({ event, beatWidth, label: displayLabel }: BlockProps) => {
   const actions = useTimelineActions();
   const ref = useRef<HTMLDivElement>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   if (event.action.type !== "effect") return null;
 
-  const label = event.action.instance_id;
+  const label = displayLabel ?? event.action.instance_id;
   const duration = event.duration ?? 4;
 
   return (

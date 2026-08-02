@@ -18,6 +18,7 @@ function renderBlock() {
     onDeleteKeyframes: vi.fn(),
     onUpdateKeyframe: vi.fn(),
     onGridClick: vi.fn(),
+    onDropEffect: vi.fn(),
     onSnapPreview: vi.fn(),
     onSnapPreviewEnd: vi.fn(),
   };
@@ -25,6 +26,7 @@ function renderBlock() {
     <TimelineActionContext.Provider value={actions}>
       <DraggableBlock
         beatWidth={40}
+        label="Red pulse"
         event={{
           id: "pulse",
           originalIndex: 7,
@@ -41,7 +43,7 @@ function renderBlock() {
 describe("DraggableBlock keyboard controls", () => {
   it("can receive focus, nudge at two step sizes, and delete", () => {
     const actions = renderBlock();
-    const block = screen.getByRole("button", { name: /pulse, starts at beat 2/ });
+    const block = screen.getByRole("button", { name: /Red pulse, starts at beat 2/ });
 
     block.focus();
     expect(document.activeElement).toBe(block);

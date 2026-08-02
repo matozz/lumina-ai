@@ -110,6 +110,7 @@ function actions(): TimelineActions {
     onDeleteKeyframes: vi.fn(),
     onUpdateKeyframe: vi.fn(),
     onGridClick: vi.fn(),
+    onDropEffect: vi.fn(),
     onSnapPreview: vi.fn(),
     onSnapPreviewEnd: vi.fn(),
   };

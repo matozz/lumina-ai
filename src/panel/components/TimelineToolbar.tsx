@@ -1,6 +1,7 @@
-import { AudioWaveform, Redo2, Undo2, ZoomIn, ZoomOut } from "lucide-react";
+import { AudioWaveform, CircleHelp, Redo2, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { useEngineStore, engineSelectors } from "@/stores/engine";
 import { formatMusicalPosition, formatSeconds, ticksToSeconds } from "../musicalTimeDisplay";
 import { MAX_BEAT_WIDTH, MIN_BEAT_WIDTH } from "../timelineGeometry";
@@ -89,8 +90,29 @@ export const TimelineToolbar = (props: ToolbarProps) => {
             <Redo2 />
           </Button>
         </div>
+        <Popover>
+          <PopoverTrigger
+            render={
+              <Button variant="ghost" size="icon-xs" aria-label="Timeline keyboard shortcuts">
+                <CircleHelp aria-hidden="true" />
+              </Button>
+            }
+          />
+          <PopoverContent align="end" className="w-72 border-zinc-700 bg-zinc-950">
+            <PopoverTitle className="text-xs tracking-wide text-zinc-100">
+              Arrange controls
+            </PopoverTitle>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[11px]">
+              <Shortcut keys="Click / drag" action="Place selected effect at snap" />
+              <Shortcut keys="← / →" action="Nudge clip by 1/2 beat" />
+              <Shortcut keys="Shift + ← / →" action="Nudge clip by 4 beats" />
+              <Shortcut keys="Delete" action="Remove focused clip" />
+              <Shortcut keys="⌘/Ctrl + Z" action="Undo timeline edit" />
+            </dl>
+          </PopoverContent>
+        </Popover>
         <div className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950/50 px-2 py-0.5 shadow-inner">
-          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500 motion-reduce:animate-none" />
           <span className="font-mono text-[11px] tracking-wider text-zinc-400">TIME</span>
           <span
             className="font-mono text-xs font-medium text-zinc-100"
@@ -106,6 +128,15 @@ export const TimelineToolbar = (props: ToolbarProps) => {
     </div>
   );
 };
+
+function Shortcut({ keys, action }: { keys: string; action: string }) {
+  return (
+    <>
+      <dt className="font-mono text-zinc-300">{keys}</dt>
+      <dd className="text-zinc-500">{action}</dd>
+    </>
+  );
+}
 
 function formatSnapBeats(beats: number) {
   if (beats === 0.25) return "1/4";

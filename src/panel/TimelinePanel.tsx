@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEngineStore, engineActions, engineSelectors } from "@/stores/engine";
 import { useTimelineStore, timelineActions, timelineSelectors } from "@/stores/timeline";
+import { workspaceActions } from "@/stores/workspace";
 import { cn } from "@/lib/utils";
 import { isTextEditingTarget } from "@/lib/dom";
 import { useTimelineEvents } from "./hooks/useTimelineEvents";
@@ -23,7 +24,6 @@ interface TimelinePanelProps {
 }
 
 export const TimelinePanel = ({ embedded = false }: TimelinePanelProps) => {
-  const compileResult = useEngineStore(engineSelectors.compileResult);
   const canUndo = useEngineStore(engineSelectors.canUndo);
   const canRedo = useEngineStore(engineSelectors.canRedo);
   const isDocumentDirty = useEngineStore(engineSelectors.isDocumentDirty);
@@ -63,7 +63,7 @@ export const TimelinePanel = ({ embedded = false }: TimelinePanelProps) => {
     updateKeyframe,
   } = useTimelineEvents({ beatWidth, scrollRef });
 
-  const tracks = useTimelineTracks(timelineEvents);
+  const tracks = useTimelineTracks(timelineEvents, document);
 
   const updateViewport = useCallback(
     (container: HTMLDivElement) => {
@@ -102,32 +102,65 @@ export const TimelinePanel = ({ embedded = false }: TimelinePanelProps) => {
   }, [updateViewport]);
 
   useEffect(() => {
-    if (selectedPhaser && compileResult?.phasers) {
-      if (!compileResult.phasers.some((p) => p.id === selectedPhaser)) {
-        timelineActions.setSelectedPhaser(null);
-      }
-    } else if (!compileResult?.phasers || compileResult.phasers.length === 0) {
+    if (
+      selectedPhaser &&
+      !document?.effect_instances.some((instance) => instance.id === selectedPhaser)
+    ) {
       timelineActions.setSelectedPhaser(null);
     }
-  }, [compileResult, selectedPhaser]);
+  }, [document?.effect_instances, selectedPhaser]);
+
+  const placeEffect = useCallback(
+    (instanceId: string, clientX: number) => {
+      if (!document?.effect_instances.some((instance) => instance.id === instanceId)) {
+        workspaceActions.setPublishStatus(
+          "error",
+          "That effect revision is no longer available. Select it again from the library.",
+        );
+        return;
+      }
+      const container = scrollRef.current;
+      if (!container) return;
+      const x = clientX - container.getBoundingClientRect().left + container.scrollLeft;
+      const snappedTick = snapTick(pixelsToTicks(x, geometry), geometry);
+      try {
+        addEvent({
+          beat: snappedTick / geometry.ppq,
+          duration: 4,
+          action: { type: "effect", instance_id: instanceId },
+        });
+        workspaceActions.setPublishStatus(
+          "idle",
+          `Placed effect at beat ${snappedTick / geometry.ppq}.`,
+        );
+      } catch (error) {
+        workspaceActions.setPublishStatus(
+          "error",
+          error instanceof Error ? error.message : "Effect could not be placed.",
+        );
+      }
+    },
+    [addEvent, document?.effect_instances, geometry],
+  );
 
   const handleGridClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>, _trackName: string) => {
       if (interactionState.current.isInteracting) return;
       if (!selectedPhaser) return;
 
-      const container = scrollRef.current;
-      if (!container) return;
-      const x = e.clientX - container.getBoundingClientRect().left + container.scrollLeft;
-      const snappedTick = snapTick(pixelsToTicks(x, geometry), geometry);
-
-      addEvent({
-        beat: snappedTick / geometry.ppq,
-        duration: 4,
-        action: { type: "effect", instance_id: selectedPhaser },
-      });
+      placeEffect(selectedPhaser, e.clientX);
     },
-    [addEvent, geometry, interactionState, selectedPhaser],
+    [interactionState, placeEffect, selectedPhaser],
+  );
+
+  const handleEffectDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      const instanceId = event.dataTransfer.getData("application/x-lumina-effect-instance");
+      if (!instanceId) return;
+      event.preventDefault();
+      placeEffect(instanceId, event.clientX);
+    },
+    [placeEffect],
   );
 
   const handleZoom = useCallback(
@@ -172,6 +205,7 @@ export const TimelinePanel = ({ embedded = false }: TimelinePanelProps) => {
       onDeleteKeyframes: deleteKeyframes,
       onUpdateKeyframe: updateKeyframe,
       onGridClick: handleGridClick,
+      onDropEffect: handleEffectDrop,
       onSnapPreview: showSnapPreview,
       onSnapPreviewEnd: hideSnapPreview,
     }),
@@ -179,6 +213,7 @@ export const TimelinePanel = ({ embedded = false }: TimelinePanelProps) => {
       deleteEvent,
       deleteKeyframes,
       handleGridClick,
+      handleEffectDrop,
       geometry,
       hideSnapPreview,
       addKeyframe,
@@ -234,9 +269,17 @@ export const TimelinePanel = ({ embedded = false }: TimelinePanelProps) => {
         onZoomOut={() => handleZoom(beatWidth - BEAT_WIDTH_STEP)}
       />
 
+      {embedded && (
+        <div className="flex h-7 shrink-0 items-center border-b border-zinc-800 bg-cyan-950/20 px-3 text-[10px] text-cyan-200/70">
+          <span className="font-medium">SONG SPINE</span>
+          <span className="ml-2">No audio · waveform, sections and markers</span>
+          <span className="ml-auto font-mono">Stage 7 ready</span>
+        </div>
+      )}
+
       <div className={cn("flex min-h-0 min-w-0 flex-1 overflow-hidden")}>
         <TimelineResourcePanel
-          compileResult={compileResult}
+          document={document}
           selectedPhaser={selectedPhaser}
           onSelectPhaser={timelineActions.setSelectedPhaser}
         />
