@@ -1,6 +1,6 @@
 import Ajv2020, { type ErrorObject } from "ajv/dist/2020.js";
-import schema from "../../schemas/show-document-v3.schema.json";
-import type { ShowDocumentV3 } from "@/generated/show-document-v3";
+import schema from "../../schemas/show-document-v4.schema.json";
+import type { ShowDocumentV4 } from "@/generated/show-document-v4";
 
 export interface SchemaIssue {
   keyword: string;
@@ -9,7 +9,7 @@ export interface SchemaIssue {
 }
 
 export type ShowDocumentValidation =
-  | { success: true; data: ShowDocumentV3; issues: [] }
+  | { success: true; data: ShowDocumentV4; issues: [] }
   | { success: false; data: null; issues: SchemaIssue[] };
 
 const validator = new Ajv2020({ allErrors: true, strict: true });
@@ -25,10 +25,10 @@ validator.addFormat("int32", {
 validator.addFormat("float", { type: "number", validate: Number.isFinite });
 validator.addFormat("double", { type: "number", validate: Number.isFinite });
 
-const validate = validator.compile<ShowDocumentV3>(schema);
+const validate = validator.compile<ShowDocumentV4>(schema);
 
 export const showDocumentSchema = schema;
-export const showDocumentSchemaUri = "https://lumina.local/schema/show-document-v3.json";
+export const showDocumentSchemaUri = "https://lumina.local/schema/show-document-v4.json";
 
 export function validateShowDocument(value: unknown): ShowDocumentValidation {
   if (validate(value)) {
@@ -46,6 +46,6 @@ function toSchemaIssue(error: ErrorObject): SchemaIssue {
   return {
     keyword: error.keyword,
     path: error.instancePath || "$",
-    message: error.message ?? "does not match ShowDocumentV3",
+    message: error.message ?? "does not match ShowDocumentV4",
   };
 }

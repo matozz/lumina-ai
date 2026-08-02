@@ -1,46 +1,5 @@
-import type { TimelineEventDSL } from "@/bridge/types";
 import type { TimelineTrackData } from "./types";
 import { BEAT_WIDTH } from "./context/TimelineContext";
-import { automationTargetPath } from "@/document/automationTarget";
-
-export function resolveOverlaps(events: TimelineEventDSL[]): TimelineEventDSL[] {
-  const tracks = new Map<string, TimelineEventDSL[]>();
-
-  events.forEach((e) => {
-    let groupKey = "global";
-
-    if (e.action.type === "effect") {
-      groupKey = `phaser:${e.action.instance_id}`;
-    } else if (e.action.type === "animate") {
-      groupKey = `animate:${automationTargetPath(e.action.target)}`;
-    }
-
-    if (!tracks.has(groupKey)) tracks.set(groupKey, []);
-    tracks.get(groupKey)?.push(e);
-  });
-
-  const resolvedEvents: TimelineEventDSL[] = [];
-
-  tracks.forEach((trackEvents) => {
-    trackEvents.sort((a, b) => a.beat - b.beat);
-
-    for (let i = 0; i < trackEvents.length; i++) {
-      const current = trackEvents[i];
-
-      if (i < trackEvents.length - 1) {
-        const next = trackEvents[i + 1];
-        const currentEnd = current.beat + (current.duration || 4);
-
-        if (currentEnd > next.beat) {
-          current.duration = Math.max(0.5, next.beat - current.beat);
-        }
-      }
-      resolvedEvents.push(current);
-    }
-  });
-
-  return resolvedEvents.sort((a, b) => a.beat - b.beat);
-}
 
 export function calculateTimelineDimensions(tracks: TimelineTrackData[], globalBeat: number) {
   const maxBeatFromEvents =

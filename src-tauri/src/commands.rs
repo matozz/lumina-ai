@@ -1,5 +1,5 @@
 use crate::compiler::{diagnostic::Diagnostic, Compiler, LayoutCoord};
-use crate::document::{load_document, MigrationReport, ShowDocumentV3};
+use crate::document::{load_document, MigrationReport, ShowDocumentV4};
 use crate::engine::effect::{EffectCatalog, EffectCatalogQuery, EffectSource};
 use crate::engine::render::{LivePhaser, RenderTime};
 use crate::engine::transport::OutputRate;
@@ -33,7 +33,7 @@ pub struct CompileResult {
 
 #[derive(serde::Serialize)]
 pub struct LoadShowResult {
-    pub document: ShowDocumentV3,
+    pub document: ShowDocumentV4,
     pub migration_report: MigrationReport,
 }
 

@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "meta": {
     "name": "Concentric Circles"
   },
@@ -18,10 +18,10 @@
       "shape": "circle",
       "rings": 4,
       "increment": 8,
-      "gap": 40,
+      "gap": 40.0,
       "center": [
-        0,
-        0
+        0.0,
+        0.0
       ]
     }
   },
@@ -73,11 +73,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 1
+            "value": 1.0
           },
           "range": [
             0.01,
-            64
+            64.0
           ],
           "unit": "multiplier",
           "ui_hint": "slider",
@@ -89,11 +89,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 0
+            "value": 0.0
           },
           "range": [
-            -1,
-            1
+            -1.0,
+            1.0
           ],
           "unit": "cycles",
           "ui_hint": "slider",
@@ -105,11 +105,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 100
+            "value": 100.0
           },
           "range": [
-            0,
-            100
+            0.0,
+            100.0
           ],
           "unit": "percent",
           "ui_hint": "slider",
@@ -121,11 +121,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 100
+            "value": 100.0
           },
           "range": [
-            0,
-            100
+            0.0,
+            100.0
           ],
           "unit": "percent",
           "ui_hint": "slider",
@@ -137,11 +137,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 1
+            "value": 1.0
           },
           "range": [
-            0,
-            1
+            0.0,
+            1.0
           ],
           "unit": "normalized",
           "ui_hint": "slider",
@@ -177,11 +177,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 0
+            "value": 0.0
           },
           "range": [
-            -540,
-            540
+            -540.0,
+            540.0
           ],
           "unit": "degrees",
           "ui_hint": "angle",
@@ -193,11 +193,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 0
+            "value": 0.0
           },
           "range": [
-            -270,
-            270
+            -270.0,
+            270.0
           ],
           "unit": "degrees",
           "ui_hint": "angle",
@@ -218,8 +218,8 @@
               "port": "scalar"
             },
             "basis": "index",
-            "from": 0,
-            "to": 1,
+            "from": 0.0,
+            "to": 1.0,
             "wrap": true
           },
           {
@@ -233,18 +233,18 @@
               {
                 "values": {
                   "color": "#00ffcc",
-                  "dimmer": 1
+                  "dimmer": 1.0
                 },
-                "width": 10,
-                "transition": 100
+                "width": 10.0,
+                "transition": 100.0
               },
               {
                 "values": {
                   "color": "#000000",
-                  "dimmer": 0
+                  "dimmer": 0.0
                 },
-                "width": 90,
-                "transition": 100
+                "width": 90.0,
+                "transition": 100.0
               }
             ]
           },
@@ -282,11 +282,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 1
+            "value": 1.0
           },
           "range": [
             0.01,
-            64
+            64.0
           ],
           "unit": "multiplier",
           "ui_hint": "slider",
@@ -298,11 +298,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 0
+            "value": 0.0
           },
           "range": [
-            -1,
-            1
+            -1.0,
+            1.0
           ],
           "unit": "cycles",
           "ui_hint": "slider",
@@ -314,11 +314,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 100
+            "value": 100.0
           },
           "range": [
-            0,
-            100
+            0.0,
+            100.0
           ],
           "unit": "percent",
           "ui_hint": "slider",
@@ -330,11 +330,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 100
+            "value": 100.0
           },
           "range": [
-            0,
-            100
+            0.0,
+            100.0
           ],
           "unit": "percent",
           "ui_hint": "slider",
@@ -346,11 +346,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 1
+            "value": 1.0
           },
           "range": [
-            0,
-            1
+            0.0,
+            1.0
           ],
           "unit": "normalized",
           "ui_hint": "slider",
@@ -386,11 +386,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 0
+            "value": 0.0
           },
           "range": [
-            -540,
-            540
+            -540.0,
+            540.0
           ],
           "unit": "degrees",
           "ui_hint": "angle",
@@ -402,11 +402,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 0
+            "value": 0.0
           },
           "range": [
-            -270,
-            270
+            -270.0,
+            270.0
           ],
           "unit": "degrees",
           "ui_hint": "angle",
@@ -427,8 +427,8 @@
               "port": "scalar"
             },
             "basis": "index",
-            "from": 1,
-            "to": 0,
+            "from": 1.0,
+            "to": 0.0,
             "wrap": true
           },
           {
@@ -442,18 +442,18 @@
               {
                 "values": {
                   "color": "#ffcc00",
-                  "dimmer": 1
+                  "dimmer": 1.0
                 },
-                "width": 30,
-                "transition": 100
+                "width": 30.0,
+                "transition": 100.0
               },
               {
                 "values": {
                   "color": "#000000",
-                  "dimmer": 0
+                  "dimmer": 0.0
                 },
-                "width": 70,
-                "transition": 50
+                "width": 70.0,
+                "transition": 50.0
               }
             ]
           },

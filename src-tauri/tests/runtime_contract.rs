@@ -74,7 +74,7 @@ fn all_templates_render_deterministically_with_the_stage_one_renderer() {
 }
 
 #[test]
-fn all_templates_preserve_frames_across_v2_to_v3_effect_migration() {
+fn all_templates_preserve_frames_across_v2_to_v4_effect_migration() {
     let template_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../src/editor/templates");
     let mut paths: Vec<_> = fs::read_dir(template_dir)
         .expect("template directory")
@@ -89,7 +89,7 @@ fn all_templates_preserve_frames_across_v2_to_v3_effect_migration() {
 
     for path in paths {
         let source = fs::read_to_string(&path).expect("template source");
-        let current = load_document(&source).expect("current V3 template");
+        let current = load_document(&source).expect("current V4 template");
         let instance_ids: Vec<_> = current
             .document
             .effect_instances
@@ -97,13 +97,18 @@ fn all_templates_preserve_frames_across_v2_to_v3_effect_migration() {
             .map(|instance| instance.id.clone())
             .collect();
         let current_show = Compiler::compile_document(current.document).expect("current compile");
-        let legacy_source = downgrade_canonical_v3_to_v2(&source);
+        let legacy_source = downgrade_canonical_v4_to_v2(&source);
         let migrated = load_document(&legacy_source).expect("derived V2 migration");
         assert!(migrated
             .migration_report
             .changes
             .iter()
             .any(|change| change.code == "MIGRATION_SCHEMA_V2_TO_V3"));
+        assert!(migrated
+            .migration_report
+            .changes
+            .iter()
+            .any(|change| change.code == "MIGRATION_SCHEMA_V3_TO_V4"));
         let migrated_show =
             Compiler::compile_document(migrated.document).expect("migrated V2 compile");
 
@@ -127,8 +132,8 @@ fn all_templates_preserve_frames_across_v2_to_v3_effect_migration() {
     }
 }
 
-fn downgrade_canonical_v3_to_v2(source: &str) -> String {
-    let mut document: serde_json::Value = serde_json::from_str(source).expect("V3 JSON");
+fn downgrade_canonical_v4_to_v2(source: &str) -> String {
+    let mut document: serde_json::Value = serde_json::from_str(source).expect("V4 JSON");
     let definitions = document["effect_definitions"]
         .as_array()
         .expect("effect definitions")

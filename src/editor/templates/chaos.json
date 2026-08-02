@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "meta": {
     "name": "Chaos Random"
   },
@@ -18,10 +18,10 @@
       "shape": "circle",
       "rings": 1,
       "increment": 16,
-      "gap": 120,
+      "gap": 120.0,
       "center": [
-        0,
-        0
+        0.0,
+        0.0
       ]
     }
   },
@@ -66,7 +66,7 @@
           },
           "range": [
             0.01,
-            64
+            64.0
           ],
           "unit": "multiplier",
           "ui_hint": "slider",
@@ -78,11 +78,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 0
+            "value": 0.0
           },
           "range": [
-            -1,
-            1
+            -1.0,
+            1.0
           ],
           "unit": "cycles",
           "ui_hint": "slider",
@@ -94,11 +94,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 100
+            "value": 100.0
           },
           "range": [
-            0,
-            100
+            0.0,
+            100.0
           ],
           "unit": "percent",
           "ui_hint": "slider",
@@ -110,11 +110,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 100
+            "value": 100.0
           },
           "range": [
-            0,
-            100
+            0.0,
+            100.0
           ],
           "unit": "percent",
           "ui_hint": "slider",
@@ -126,11 +126,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 1
+            "value": 1.0
           },
           "range": [
-            0,
-            1
+            0.0,
+            1.0
           ],
           "unit": "normalized",
           "ui_hint": "slider",
@@ -166,11 +166,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 0
+            "value": 0.0
           },
           "range": [
-            -540,
-            540
+            -540.0,
+            540.0
           ],
           "unit": "degrees",
           "ui_hint": "angle",
@@ -182,11 +182,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 0
+            "value": 0.0
           },
           "range": [
-            -270,
-            270
+            -270.0,
+            270.0
           ],
           "unit": "degrees",
           "ui_hint": "angle",
@@ -207,8 +207,8 @@
               "port": "scalar"
             },
             "basis": "index",
-            "from": 0,
-            "to": 0,
+            "from": 0.0,
+            "to": 0.0,
             "wrap": true,
             "group_size": 2
           },
@@ -223,20 +223,20 @@
               {
                 "values": {
                   "color": "#002244",
-                  "tilt": -60
+                  "tilt": -60.0
                 },
-                "width": 50,
-                "transition": 100,
+                "width": 50.0,
+                "transition": 100.0,
                 "accel": 50,
                 "decel": -50
               },
               {
                 "values": {
                   "color": "#00ffcc",
-                  "tilt": 0
+                  "tilt": 0.0
                 },
-                "width": 50,
-                "transition": 100,
+                "width": 50.0,
+                "transition": 100.0,
                 "accel": -50,
                 "decel": 50
               }
@@ -277,11 +277,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 2
+            "value": 2.0
           },
           "range": [
             0.01,
-            64
+            64.0
           ],
           "unit": "multiplier",
           "ui_hint": "slider",
@@ -293,11 +293,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 0
+            "value": 0.0
           },
           "range": [
-            -1,
-            1
+            -1.0,
+            1.0
           ],
           "unit": "cycles",
           "ui_hint": "slider",
@@ -309,11 +309,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 100
+            "value": 100.0
           },
           "range": [
-            0,
-            100
+            0.0,
+            100.0
           ],
           "unit": "percent",
           "ui_hint": "slider",
@@ -325,11 +325,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 100
+            "value": 100.0
           },
           "range": [
-            0,
-            100
+            0.0,
+            100.0
           ],
           "unit": "percent",
           "ui_hint": "slider",
@@ -341,11 +341,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 1
+            "value": 1.0
           },
           "range": [
-            0,
-            1
+            0.0,
+            1.0
           ],
           "unit": "normalized",
           "ui_hint": "slider",
@@ -381,11 +381,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 0
+            "value": 0.0
           },
           "range": [
-            -540,
-            540
+            -540.0,
+            540.0
           ],
           "unit": "degrees",
           "ui_hint": "angle",
@@ -397,11 +397,11 @@
           "value_type": "scalar",
           "default_value": {
             "type": "scalar",
-            "value": 0
+            "value": 0.0
           },
           "range": [
-            -270,
-            270
+            -270.0,
+            270.0
           ],
           "unit": "degrees",
           "ui_hint": "angle",
@@ -422,8 +422,8 @@
               "port": "scalar"
             },
             "basis": "index",
-            "from": 0,
-            "to": 1,
+            "from": 0.0,
+            "to": 1.0,
             "wrap": true
           },
           {
@@ -437,20 +437,20 @@
               {
                 "values": {
                   "color": "#ffffff",
-                  "dimmer": 1,
-                  "pan": 45
+                  "dimmer": 1.0,
+                  "pan": 45.0
                 },
-                "width": 10,
-                "transition": 0
+                "width": 10.0,
+                "transition": 0.0
               },
               {
                 "values": {
                   "color": "#000000",
-                  "dimmer": 0,
-                  "pan": -45
+                  "dimmer": 0.0,
+                  "pan": -45.0
                 },
-                "width": 90,
-                "transition": 0
+                "width": 90.0,
+                "transition": 0.0
               }
             ]
           },
@@ -495,6 +495,15 @@
     }
   ],
   "timeline": {
-    "events": []
+    "ppq": 960,
+    "tempo_map": {
+      "points": [
+        {
+          "time_tick": 0,
+          "bpm": 120.0
+        }
+      ]
+    },
+    "tracks": []
   }
 }

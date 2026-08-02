@@ -166,6 +166,10 @@ pub enum CompiledTimelineAction {
         to: AnimatableValueDSL,
         easing: Option<EasingDSL>,
     },
+    SetParameter {
+        target: CompiledAutomationTarget,
+        value: ParameterValueDSL,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -748,43 +752,110 @@ impl Compiler {
     }
 
     fn compile_timeline(
-        timeline: TimelineV3DSL,
+        timeline: TimelineV4DSL,
         definitions: &[EffectDefinition],
         instances: &HashMap<String, EffectInstance>,
         errors: &mut Vec<Diagnostic>,
     ) -> CompiledTimeline {
-        let events = timeline
-            .events
-            .into_iter()
-            .enumerate()
-            .map(|(index, event)| CompiledTimelineEvent {
-                beat: event.beat,
-                duration: event.duration,
-                action: match event.action {
-                    TimelineActionV3DSL::Effect { instance_id } => CompiledTimelineAction::Phaser {
-                        phaser: instance_id.into(),
+        let ppq = f64::from(timeline.ppq);
+        let mut events = Vec::new();
+        let mut automation_index = 0;
+        for track in timeline.tracks {
+            for clip in track.clips {
+                events.push(CompiledTimelineEvent {
+                    beat: f64::from(clip.start_tick) / ppq,
+                    duration: Some(f64::from(clip.duration_tick) / ppq),
+                    action: CompiledTimelineAction::Phaser {
+                        phaser: clip.instance_id.into(),
                     },
-                    TimelineActionV3DSL::Animate {
-                        target,
-                        from,
-                        to,
-                        easing,
-                    } => CompiledTimelineAction::Animate {
-                        target: compile_automation_target(
-                            target,
-                            definitions,
-                            instances,
-                            index,
-                            errors,
-                        ),
-                        from,
-                        to,
-                        easing,
-                    },
-                },
-            })
-            .collect();
+                });
+            }
+            for lane in track.automation_lanes {
+                let target = compile_automation_target(
+                    lane.target,
+                    definitions,
+                    instances,
+                    automation_index,
+                    errors,
+                );
+                automation_index += 1;
+                for pair in lane.keyframes.windows(2) {
+                    if matches!(pair[0].interpolation, KeyframeInterpolationDSL::Hold) {
+                        events.push(CompiledTimelineEvent {
+                            beat: f64::from(pair[0].time_tick) / ppq,
+                            duration: None,
+                            action: CompiledTimelineAction::SetParameter {
+                                target: target.clone(),
+                                value: pair[0].value.clone(),
+                            },
+                        });
+                        continue;
+                    }
+                    let Some((from, to)) = keyframe_animatable_pair(&pair[0].value, &pair[1].value)
+                    else {
+                        events.push(CompiledTimelineEvent {
+                            beat: f64::from(pair[0].time_tick) / ppq,
+                            duration: None,
+                            action: CompiledTimelineAction::SetParameter {
+                                target: target.clone(),
+                                value: pair[0].value.clone(),
+                            },
+                        });
+                        continue;
+                    };
+                    events.push(CompiledTimelineEvent {
+                        beat: f64::from(pair[0].time_tick) / ppq,
+                        duration: Some(f64::from(pair[1].time_tick - pair[0].time_tick) / ppq),
+                        action: CompiledTimelineAction::Animate {
+                            target: target.clone(),
+                            from,
+                            to,
+                            easing: Some(keyframe_easing(pair[0].interpolation)),
+                        },
+                    });
+                }
+                if let Some(last) = lane.keyframes.last() {
+                    events.push(CompiledTimelineEvent {
+                        beat: f64::from(last.time_tick) / ppq,
+                        duration: None,
+                        action: CompiledTimelineAction::SetParameter {
+                            target: target.clone(),
+                            value: last.value.clone(),
+                        },
+                    });
+                }
+            }
+        }
+        events.sort_by(|left, right| left.beat.total_cmp(&right.beat));
         CompiledTimeline { events }
+    }
+}
+
+fn keyframe_animatable_pair(
+    from: &ParameterValueDSL,
+    to: &ParameterValueDSL,
+) -> Option<(AnimatableValueDSL, AnimatableValueDSL)> {
+    match (from, to) {
+        (ParameterValueDSL::Scalar(from), ParameterValueDSL::Scalar(to)) => Some((
+            AnimatableValueDSL::Float(*from),
+            AnimatableValueDSL::Float(*to),
+        )),
+        (ParameterValueDSL::Color(from), ParameterValueDSL::Color(to)) => Some((
+            AnimatableValueDSL::Color(from.clone()),
+            AnimatableValueDSL::Color(to.clone()),
+        )),
+        _ => None,
+    }
+}
+
+fn keyframe_easing(interpolation: KeyframeInterpolationDSL) -> EasingDSL {
+    match interpolation {
+        KeyframeInterpolationDSL::Hold
+        | KeyframeInterpolationDSL::Linear
+        | KeyframeInterpolationDSL::Bezier => EasingDSL::Linear,
+        KeyframeInterpolationDSL::EaseIn => EasingDSL::EaseIn,
+        KeyframeInterpolationDSL::EaseOut => EasingDSL::EaseOut,
+        KeyframeInterpolationDSL::EaseInOut => EasingDSL::EaseInOut,
     }
 }
 

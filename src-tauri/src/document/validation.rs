@@ -1,8 +1,7 @@
 use super::{
-    AnimatableValueDSL, AutomationPolicyDSL, AutomationTargetV3DSL, EffectDefinitionDSL,
-    EffectNodeDSL, EffectPortDSL, EffectPortRefDSL, GeneratorDSL, GroupFixturesDSL,
-    ParameterValueDSL, ParameterValueTypeDSL, ShowDocumentV3, TimelineActionV3DSL,
-    CURRENT_SCHEMA_VERSION,
+    AutomationPolicyDSL, AutomationTargetV3DSL, EffectDefinitionDSL, EffectNodeDSL, EffectPortDSL,
+    EffectPortRefDSL, GeneratorDSL, GroupFixturesDSL, KeyframeDSL, OverlapPolicyDSL,
+    ParameterValueDSL, ParameterValueTypeDSL, ShowDocumentV4, CURRENT_SCHEMA_VERSION,
 };
 use crate::compiler::diagnostic::{
     Diagnostic, DOC_DUPLICATE_ID, DOC_EFFECT_DEFINITION_NOT_FOUND, DOC_EFFECT_GRAPH_INVALID,
@@ -21,11 +20,11 @@ const MAX_FIXTURES: u64 = 1_000_000;
 
 #[derive(Debug, Clone)]
 pub struct ValidatedShow {
-    document: ShowDocumentV3,
+    document: ShowDocumentV4,
 }
 
 impl ValidatedShow {
-    pub(crate) fn into_document(self) -> ShowDocumentV3 {
+    pub(crate) fn into_document(self) -> ShowDocumentV4 {
         self.document
     }
 }
@@ -33,7 +32,7 @@ impl ValidatedShow {
 pub struct DocumentValidator;
 
 impl DocumentValidator {
-    pub fn validate(document: ShowDocumentV3) -> Result<ValidatedShow, Vec<Diagnostic>> {
+    pub fn validate(document: ShowDocumentV4) -> Result<ValidatedShow, Vec<Diagnostic>> {
         let mut diagnostics = Vec::new();
         if document.schema_version != CURRENT_SCHEMA_VERSION {
             diagnostics.push(Diagnostic::error(
@@ -60,7 +59,7 @@ impl DocumentValidator {
     }
 }
 
-fn validate_patch(document: &ShowDocumentV3, diagnostics: &mut Vec<Diagnostic>) -> HashSet<u32> {
+fn validate_patch(document: &ShowDocumentV4, diagnostics: &mut Vec<Diagnostic>) -> HashSet<u32> {
     let mut fixture_ids = HashSet::new();
     let mut total_fixture_count = 0_u64;
     for (index, patch) in document.patch.iter().enumerate() {
@@ -118,7 +117,7 @@ fn validate_patch(document: &ShowDocumentV3, diagnostics: &mut Vec<Diagnostic>) 
 }
 
 fn validate_layout(
-    document: &ShowDocumentV3,
+    document: &ShowDocumentV4,
     fixture_ids: &HashSet<u32>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
@@ -236,7 +235,7 @@ fn validate_layout(
 }
 
 fn validate_groups(
-    document: &ShowDocumentV3,
+    document: &ShowDocumentV4,
     fixture_ids: &HashSet<u32>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> HashSet<String> {
@@ -306,7 +305,7 @@ type DefinitionParameters = HashMap<String, (u32, HashMap<String, ParameterContr
 type InstanceParameters = HashMap<String, HashMap<String, ParameterContract>>;
 
 fn validate_effect_definitions(
-    document: &ShowDocumentV3,
+    document: &ShowDocumentV4,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> DefinitionParameters {
     let mut definitions = HashMap::new();
@@ -429,7 +428,7 @@ fn validate_parameter_schema(
 }
 
 fn validate_effect_instances(
-    document: &ShowDocumentV3,
+    document: &ShowDocumentV4,
     group_ids: &HashSet<String>,
     definitions: &DefinitionParameters,
     diagnostics: &mut Vec<Diagnostic>,
@@ -825,55 +824,174 @@ fn validate_effect_node_values(
 }
 
 fn validate_timeline(
-    document: &ShowDocumentV3,
+    document: &ShowDocumentV4,
     instances: &InstanceParameters,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let Some(timeline) = &document.timeline else {
         return;
     };
-    for (index, event) in timeline.events.iter().enumerate() {
-        if event.beat < 0.0 {
+    if timeline.ppq == 0 {
+        diagnostics.push(invalid_number(
+            "timeline.ppq",
+            "Timeline PPQ must be greater than zero.",
+        ));
+    }
+    if timeline.tempo_map.points.is_empty()
+        || timeline.tempo_map.points[0].time_tick != 0
+        || timeline
+            .tempo_map
+            .points
+            .windows(2)
+            .any(|pair| pair[0].time_tick >= pair[1].time_tick)
+    {
+        diagnostics.push(Diagnostic::error(
+            DOC_TIMELINE_TARGET_INVALID,
+            "timeline.tempo_map.points",
+            "TempoMap must start at tick zero and use strictly increasing ticks.",
+            "Sort unique tempo points and include a point at time_tick 0.",
+        ));
+    }
+    for (index, point) in timeline.tempo_map.points.iter().enumerate() {
+        if !point.bpm.is_finite() || !(1.0..=1000.0).contains(&point.bpm) {
             diagnostics.push(invalid_number(
-                format!("timeline.events[{index}].beat"),
-                "Timeline beat cannot be negative.",
+                format!("timeline.tempo_map.points[{index}].bpm"),
+                "Tempo BPM must be finite and between 1 and 1000.",
             ));
         }
-        if event.duration.is_some_and(|duration| duration <= 0.0) {
-            diagnostics.push(invalid_number(
-                format!("timeline.events[{index}].duration"),
-                "Timeline duration must be greater than zero.",
+    }
+
+    let mut track_ids = HashSet::new();
+    let mut item_ids = HashSet::new();
+    for (track_index, track) in timeline.tracks.iter().enumerate() {
+        let track_path = format!("timeline.tracks[{track_index}]");
+        if track.id.trim().is_empty() || !track_ids.insert(track.id.as_str()) {
+            diagnostics.push(Diagnostic::error(
+                DOC_DUPLICATE_ID,
+                format!("{track_path}.id"),
+                format!(
+                    "Timeline track ID must be non-empty and unique: {:?}.",
+                    track.id
+                ),
+                "Use a stable unique track ID.",
             ));
         }
-        match &event.action {
-            TimelineActionV3DSL::Effect { instance_id } => {
-                if !instances.contains_key(instance_id) {
+        for (clip_index, clip) in track.clips.iter().enumerate() {
+            let path = format!("{track_path}.clips[{clip_index}]");
+            if clip.id.trim().is_empty() || !item_ids.insert(clip.id.as_str()) {
+                diagnostics.push(Diagnostic::error(
+                    DOC_DUPLICATE_ID,
+                    format!("{path}.id"),
+                    format!(
+                        "Timeline item ID must be non-empty and unique: {:?}.",
+                        clip.id
+                    ),
+                    "Use a stable unique clip or lane ID.",
+                ));
+            }
+            if clip.duration_tick == 0 {
+                diagnostics.push(invalid_number(
+                    format!("{path}.duration_tick"),
+                    "EffectClip duration must be greater than zero ticks.",
+                ));
+            }
+            if clip.start_tick.checked_add(clip.duration_tick).is_none() {
+                diagnostics.push(invalid_number(
+                    format!("{path}.duration_tick"),
+                    "EffectClip end exceeds the supported tick range.",
+                ));
+            }
+            if !instances.contains_key(&clip.instance_id) {
+                diagnostics.push(Diagnostic::error(
+                    DOC_EFFECT_INSTANCE_NOT_FOUND,
+                    format!("{path}.instance_id"),
+                    format!(
+                        "Timeline references unknown effect instance ID: {}",
+                        clip.instance_id
+                    ),
+                    "Use an effect instance ID defined in this document.",
+                ));
+            }
+        }
+        if matches!(track.overlap_policy, OverlapPolicyDSL::Reject) {
+            let mut clips: Vec<_> = track.clips.iter().collect();
+            clips.sort_by_key(|clip| clip.start_tick);
+            if clips.windows(2).any(|pair| {
+                pair[0].start_tick.saturating_add(pair[0].duration_tick) > pair[1].start_tick
+            }) {
+                diagnostics.push(Diagnostic::error(
+                    DOC_TIMELINE_TARGET_INVALID,
+                    format!("{track_path}.clips"),
+                    "Track overlap_policy reject does not allow overlapping EffectClips.",
+                    "Move the clips apart or choose layer, replace, or crossfade explicitly.",
+                ));
+            }
+        }
+        for (lane_index, lane) in track.automation_lanes.iter().enumerate() {
+            let path = format!("{track_path}.automation_lanes[{lane_index}]");
+            if lane.id.trim().is_empty() || !item_ids.insert(lane.id.as_str()) {
+                diagnostics.push(Diagnostic::error(
+                    DOC_DUPLICATE_ID,
+                    format!("{path}.id"),
+                    format!(
+                        "Timeline item ID must be non-empty and unique: {:?}.",
+                        lane.id
+                    ),
+                    "Use a stable unique clip or lane ID.",
+                ));
+            }
+            let Some(expected) =
+                automation_target_type(&lane.target, instances, &path, diagnostics)
+            else {
+                continue;
+            };
+            if lane.keyframes.is_empty() {
+                diagnostics.push(Diagnostic::error(
+                    DOC_TIMELINE_TARGET_INVALID,
+                    format!("{path}.keyframes"),
+                    "AutomationLane requires at least one keyframe.",
+                    "Add a typed keyframe or remove the empty lane.",
+                ));
+                continue;
+            }
+            let mut keyframe_ids = HashSet::new();
+            let mut previous_tick = None;
+            for (keyframe_index, keyframe) in lane.keyframes.iter().enumerate() {
+                let keyframe_path = format!("{path}.keyframes[{keyframe_index}]");
+                if keyframe.id.trim().is_empty() || !keyframe_ids.insert(keyframe.id.as_str()) {
                     diagnostics.push(Diagnostic::error(
-                        DOC_EFFECT_INSTANCE_NOT_FOUND,
-                        format!("timeline.events[{index}].action.instance_id"),
-                        format!("Timeline references unknown effect instance ID: {instance_id}"),
-                        "Use an effect instance ID defined in this document.",
+                        DOC_DUPLICATE_ID,
+                        format!("{keyframe_path}.id"),
+                        format!(
+                            "Keyframe ID must be non-empty and unique in its lane: {:?}.",
+                            keyframe.id
+                        ),
+                        "Use a stable unique keyframe ID.",
                     ));
                 }
+                if previous_tick.is_some_and(|tick| tick >= keyframe.time_tick) {
+                    diagnostics.push(Diagnostic::error(
+                        DOC_TIMELINE_TARGET_INVALID,
+                        format!("{path}.keyframes"),
+                        "Automation keyframes must use strictly increasing time_tick values.",
+                        "Sort keyframes and use at most one keyframe per tick.",
+                    ));
+                }
+                previous_tick = Some(keyframe.time_tick);
+                validate_keyframe(keyframe, expected, &keyframe_path, diagnostics);
             }
-            TimelineActionV3DSL::Animate {
-                target, from, to, ..
-            } => validate_animation_target(index, target, from, to, instances, diagnostics),
         }
     }
 }
 
-fn validate_animation_target(
-    event_index: usize,
+fn automation_target_type(
     target: &AutomationTargetV3DSL,
-    from: &AnimatableValueDSL,
-    to: &AnimatableValueDSL,
     instances: &InstanceParameters,
+    path: &str,
     diagnostics: &mut Vec<Diagnostic>,
-) {
-    let path = format!("timeline.events[{event_index}].action.target");
-    let target_kind = match target {
-        AutomationTargetV3DSL::Global { .. } => "number",
+) -> Option<ParameterValueTypeDSL> {
+    match target {
+        AutomationTargetV3DSL::Global { .. } => Some(ParameterValueTypeDSL::Scalar),
         AutomationTargetV3DSL::EffectInstance {
             instance_id,
             parameter_id,
@@ -881,69 +999,70 @@ fn validate_animation_target(
             let Some(parameters) = instances.get(instance_id) else {
                 diagnostics.push(Diagnostic::error(
                     DOC_EFFECT_INSTANCE_NOT_FOUND,
-                    path,
+                    format!("{path}.target"),
                     format!("Automation references unknown effect instance ID: {instance_id}"),
                     "Use an effect instance ID defined in this document.",
                 ));
-                return;
+                return None;
             };
             match parameters
                 .get(parameter_id)
                 .map(|parameter| parameter.value_type)
             {
-                Some(ParameterValueTypeDSL::Color) => "color",
-                Some(ParameterValueTypeDSL::Scalar) => "number",
-                Some(ParameterValueTypeDSL::Direction) => {
-                    diagnostics.push(Diagnostic::error(
-                        DOC_TIMELINE_TARGET_INVALID,
-                        path,
-                        "Direction parameters require discrete keyframes.",
-                        "Use a discrete AutomationLane after the Stage 5 timeline migration.",
-                    ));
-                    return;
-                }
+                Some(value_type) => Some(value_type),
                 None => {
                     diagnostics.push(Diagnostic::error(
                         DOC_PARAMETER_INVALID,
-                        path,
+                        format!("{path}.target"),
                         format!("Automation references unknown parameter ID: {parameter_id}"),
                         "Use a parameter declared by the instance definition.",
                     ));
-                    return;
+                    None
                 }
             }
         }
-    };
-    let values_match = matches!(
-        (target_kind, from, to),
-        (
-            "number",
-            AnimatableValueDSL::Float(_),
-            AnimatableValueDSL::Float(_)
-        ) | (
-            "color",
-            AnimatableValueDSL::Color(_),
-            AnimatableValueDSL::Color(_)
-        )
-    );
-    if !values_match {
+    }
+}
+
+fn validate_keyframe(
+    keyframe: &KeyframeDSL,
+    expected: ParameterValueTypeDSL,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if keyframe.value.value_type() != expected {
         diagnostics.push(Diagnostic::error(
             DOC_TIMELINE_TARGET_INVALID,
-            format!("timeline.events[{event_index}].action"),
-            format!("Automation values do not match the {target_kind} target."),
-            "Use numeric values for scalar targets and #RRGGBB strings for color targets.",
+            format!("{path}.value"),
+            "Keyframe value does not match the typed automation target.",
+            "Use a scalar, color, or direction value matching the target parameter.",
         ));
     }
-    for (value_name, value) in [("from", from), ("to", to)] {
-        if let AnimatableValueDSL::Color(color) = value {
-            if parse_hex_color(color).is_err() {
-                diagnostics.push(Diagnostic::error(
-                    DOC_INVALID_COLOR,
-                    format!("timeline.events[{event_index}].action.{value_name}"),
-                    format!("Unsupported color value: {color:?}."),
-                    "Use a color in #RRGGBB format.",
-                ));
-            }
+    if matches!(expected, ParameterValueTypeDSL::Direction)
+        && !matches!(
+            keyframe.interpolation,
+            super::KeyframeInterpolationDSL::Hold
+        )
+    {
+        diagnostics.push(Diagnostic::error(
+            DOC_TIMELINE_TARGET_INVALID,
+            format!("{path}.interpolation"),
+            "Direction keyframes require hold interpolation.",
+            "Use hold for discrete direction automation.",
+        ));
+    }
+    if let ParameterValueDSL::Color(color) = &keyframe.value {
+        validate_color(color, format!("{path}.value.value"), diagnostics);
+    }
+    for (name, tangent) in [
+        ("in_tangent", keyframe.in_tangent),
+        ("out_tangent", keyframe.out_tangent),
+    ] {
+        if tangent.is_some_and(|tangent| !tangent.time.is_finite() || !tangent.value.is_finite()) {
+            diagnostics.push(invalid_number(
+                format!("{path}.{name}"),
+                "Keyframe tangent values must be finite.",
+            ));
         }
     }
 }

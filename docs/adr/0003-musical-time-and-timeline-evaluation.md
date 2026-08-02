@@ -43,5 +43,6 @@ V4 migration 先生成整数时间和 arrangement contract，再切换 compiler/
 
 - Stage 4 baseline: `d338c08`
 - MusicalTime/TempoMap core: 本切片提交
-- V4 arrangement contract and evaluator: pending
+- V4 arrangement contract and migration: 本切片提交
+- Pure indexed tick evaluator: pending
 - Timeline command/history and UI performance: pending

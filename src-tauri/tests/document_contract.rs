@@ -1,10 +1,13 @@
 use lumina_ai_lib::compiler::diagnostic::{
     DOC_EFFECT_GRAPH_INVALID, DOC_FIXTURE_REFERENCE_NOT_FOUND, DOC_FORMULA_INVALID,
     DOC_INVALID_COLOR, DOC_INVALID_PHASE_CONFIG, DOC_INVALID_RANGE, DOC_PARAMETER_INVALID,
-    DOC_PROFILE_NOT_FOUND, DOC_SVG_PATH_INVALID,
+    DOC_PROFILE_NOT_FOUND, DOC_SVG_PATH_INVALID, DOC_TIMELINE_TARGET_INVALID,
 };
 use lumina_ai_lib::compiler::Compiler;
-use lumina_ai_lib::document::load_document;
+use lumina_ai_lib::document::{
+    load_document, AutomationLaneDSL, AutomationTargetV3DSL, GlobalParameterDSL, KeyframeDSL,
+    KeyframeInterpolationDSL, OverlapPolicyDSL, ParameterValueDSL,
+};
 
 const VALID_DOCUMENT: &str = r##"{
   "schema_version": 2,
@@ -104,7 +107,7 @@ fn reports_svg_layout_instead_of_silently_falling_back() {
 }
 
 fn compile_errors(
-    document: lumina_ai_lib::document::ShowDocumentV3,
+    document: lumina_ai_lib::document::ShowDocumentV4,
 ) -> Vec<lumina_ai_lib::compiler::diagnostic::Diagnostic> {
     match Compiler::compile_document(document) {
         Ok(_) => panic!("document must not compile"),
@@ -194,4 +197,92 @@ fn rejects_invalid_typed_parameters_ports_and_graph_cycles() {
     assert!(compile_errors(cycle)
         .iter()
         .any(|diagnostic| diagnostic.code == DOC_EFFECT_GRAPH_INVALID));
+}
+
+#[test]
+fn validates_multi_keyframes_and_preserves_layered_overlaps() {
+    let mut document = load_document(VALID_DOCUMENT)
+        .expect("valid source")
+        .document;
+    let timeline = document.timeline.as_mut().expect("timeline");
+    let effect_track = &mut timeline.tracks[0];
+    effect_track.overlap_policy = OverlapPolicyDSL::Layer;
+    let mut second_clip = effect_track.clips[0].clone();
+    second_clip.id = "second-layer".to_string();
+    second_clip.start_tick = 480;
+    effect_track.clips.push(second_clip);
+    effect_track.automation_lanes.push(AutomationLaneDSL {
+        id: "master-dimmer".to_string(),
+        target: AutomationTargetV3DSL::Global {
+            parameter_id: GlobalParameterDSL::MasterDimmer,
+        },
+        keyframes: vec![
+            KeyframeDSL {
+                id: "master-0".to_string(),
+                time_tick: 0,
+                value: ParameterValueDSL::Scalar(0.0),
+                interpolation: KeyframeInterpolationDSL::EaseIn,
+                in_tangent: None,
+                out_tangent: None,
+            },
+            KeyframeDSL {
+                id: "master-1".to_string(),
+                time_tick: 480,
+                value: ParameterValueDSL::Scalar(0.25),
+                interpolation: KeyframeInterpolationDSL::Bezier,
+                in_tangent: None,
+                out_tangent: None,
+            },
+            KeyframeDSL {
+                id: "master-2".to_string(),
+                time_tick: 960,
+                value: ParameterValueDSL::Scalar(1.0),
+                interpolation: KeyframeInterpolationDSL::Hold,
+                in_tangent: None,
+                out_tangent: None,
+            },
+        ],
+    });
+    let before = serde_json::to_value(&document).expect("serialize before compile");
+
+    Compiler::compile_document(document.clone()).expect("layered arrangement compiles");
+
+    assert_eq!(
+        serde_json::to_value(&document).expect("serialize after compile"),
+        before,
+        "compilation must not trim or move overlapping clips",
+    );
+    assert_eq!(
+        document.timeline.unwrap().tracks[0].clips.len(),
+        2,
+        "both layered clips remain in the source arrangement",
+    );
+}
+
+#[test]
+fn reject_overlap_policy_fails_closed_without_rewriting_clips() {
+    let mut document = load_document(VALID_DOCUMENT)
+        .expect("valid source")
+        .document;
+    let track = &mut document.timeline.as_mut().expect("timeline").tracks[0];
+    track.overlap_policy = OverlapPolicyDSL::Reject;
+    let mut second_clip = track.clips[0].clone();
+    second_clip.id = "rejected-overlap".to_string();
+    second_clip.start_tick = 480;
+    track.clips.push(second_clip);
+    let original_starts: Vec<_> = track.clips.iter().map(|clip| clip.start_tick).collect();
+
+    let diagnostics = compile_errors(document.clone());
+
+    assert!(diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == DOC_TIMELINE_TARGET_INVALID));
+    assert_eq!(
+        document.timeline.unwrap().tracks[0]
+            .clips
+            .iter()
+            .map(|clip| clip.start_tick)
+            .collect::<Vec<_>>(),
+        original_starts,
+    );
 }

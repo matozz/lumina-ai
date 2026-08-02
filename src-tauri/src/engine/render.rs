@@ -108,10 +108,21 @@ pub(crate) fn render_resolved(
                 );
                 let direction = definition
                     .parameter_handle(DIRECTION_PARAMETER_ID)
-                    .and_then(|handle| instance.resolve_parameter(definition, handle))
-                    .and_then(|value| match value {
-                        ParameterValue::Direction(direction) => Some(*direction),
-                        _ => None,
+                    .and_then(|handle| {
+                        parameters
+                            .get_effect_direction(&active.instance, handle)
+                            .map(|direction| match direction {
+                                crate::document::DirectionDSL::Forward => Direction::Forward,
+                                crate::document::DirectionDSL::Reverse => Direction::Reverse,
+                            })
+                            .or_else(|| {
+                                instance
+                                    .resolve_parameter(definition, handle)
+                                    .and_then(|value| match value {
+                                        ParameterValue::Direction(direction) => Some(*direction),
+                                        _ => None,
+                                    })
+                            })
                     })
                     .unwrap_or(Direction::Forward);
                 let phase = match direction {
@@ -354,6 +365,21 @@ fn resolve_timeline_at(
             easing,
         } = &event.action
         else {
+            if let CompiledTimelineAction::SetParameter { target, value } = &event.action {
+                if event.beat <= time.beat {
+                    if let Some(value) = AnimatableValue::from_parameter_document(value) {
+                        let replace = resolved_parameters.get(target).is_none_or(
+                            |(start, previous_index, _)| {
+                                event.beat > *start
+                                    || (event.beat == *start && index > *previous_index)
+                            },
+                        );
+                        if replace {
+                            resolved_parameters.insert(target, (event.beat, index, value));
+                        }
+                    }
+                }
+            }
             continue;
         };
         if event.beat > time.beat {

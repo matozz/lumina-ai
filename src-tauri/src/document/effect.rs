@@ -16,7 +16,7 @@ pub struct EffectDefinitionDSL {
     pub catalog: EffectCatalogDSL,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum EffectSourceDSL {
     BuiltIn,
@@ -69,7 +69,7 @@ impl ParameterValueDSL {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum DirectionDSL {
     Forward,
