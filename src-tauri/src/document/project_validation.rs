@@ -1,7 +1,7 @@
 use super::{
     ArrangementAutomationTarget, ArrangementDocument, AssetRef, CueDefinition, CueLayer,
-    EffectDefinitionDocument, GeneratorDSL, ParameterValueDSL, ProjectBundle, StageDocument,
-    TargetSetDefinition, TargetSetSelector, ARRANGEMENT_DOCUMENT_SCHEMA_VERSION,
+    CueMixOverride, EffectDefinitionDocument, GeneratorDSL, ParameterValueDSL, ProjectBundle,
+    StageDocument, TargetSetDefinition, TargetSetSelector, ARRANGEMENT_DOCUMENT_SCHEMA_VERSION,
     CUE_DEFINITION_SCHEMA_VERSION, EFFECT_DEFINITION_SCHEMA_VERSION, PROJECT_BUNDLE_SCHEMA_VERSION,
     PROJECT_MANIFEST_SCHEMA_VERSION, STAGE_DOCUMENT_SCHEMA_VERSION,
 };
@@ -12,6 +12,13 @@ use crate::compiler::diagnostic::{
 };
 use crate::engine::profile::profile_by_id;
 use std::collections::{BTreeMap, BTreeSet};
+
+#[derive(Debug, Clone)]
+pub(crate) struct ResolvedTargetSet {
+    pub fixture_ids: Vec<u32>,
+    pub partitions: Vec<Vec<u32>>,
+    pub weights: BTreeMap<u32, f32>,
+}
 
 #[derive(Debug, Clone)]
 pub struct ValidatedProject {
@@ -37,6 +44,10 @@ impl ValidatedProject {
 
     pub fn into_bundle(self) -> ProjectBundle {
         self.bundle
+    }
+
+    pub(crate) fn bundle(&self) -> &ProjectBundle {
+        &self.bundle
     }
 }
 
@@ -263,8 +274,21 @@ fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
             }
             validate_cue_layer(bundle, stage, layer, &path, diagnostics);
         }
+        let mut lane_ids = BTreeSet::new();
         for (lane_index, lane) in cue.automation_lanes.iter().enumerate() {
-            let path = format!("{cue_path}.automation_lanes[{lane_index}].target");
+            let lane_path = format!("{cue_path}.automation_lanes[{lane_index}]");
+            if lane.id.trim().is_empty() || !lane_ids.insert(lane.id.as_str()) {
+                diagnostics.push(Diagnostic::error(
+                    PROJECT_DUPLICATE_ASSET,
+                    format!("{lane_path}.id"),
+                    format!(
+                        "Cue automation lane ID {:?} is empty or duplicated.",
+                        lane.id
+                    ),
+                    "Use a stable, unique automation lane ID within the Cue revision.",
+                ));
+            }
+            let path = format!("{lane_path}.target");
             let Some(layer) = cue
                 .layers
                 .iter()
@@ -277,6 +301,25 @@ fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
                 continue;
             };
             validate_layer_parameter(bundle, layer, &lane.target.parameter_id, &path, diagnostics);
+            validate_keyframes(
+                &lane.keyframes,
+                cue.nominal_length_ticks,
+                &lane_path,
+                diagnostics,
+            );
+            if let Some(effect) = exact_asset(&bundle.effects, &layer.effect_ref, |asset| {
+                (&asset.id, asset.revision)
+            }) {
+                for keyframe in &lane.keyframes {
+                    validate_parameter_value(
+                        effect,
+                        &lane.target.parameter_id,
+                        &keyframe.value,
+                        &lane_path,
+                        diagnostics,
+                    );
+                }
+            }
         }
     }
 }
@@ -347,6 +390,13 @@ fn validate_cue_layer(
     for (parameter_id, value) in &layer.parameter_overrides {
         validate_parameter_value(effect, parameter_id, value, path, diagnostics);
     }
+    validate_mix_overrides(
+        stage,
+        target_set,
+        &layer.mix_overrides,
+        &format!("{path}.mix_overrides"),
+        diagnostics,
+    );
     validate_effect_capability(stage, target_set, effect, path, diagnostics);
 }
 
@@ -356,6 +406,7 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
         validate_identity(&arrangement.id, arrangement.revision, &path, diagnostics);
         validate_tempo_map(arrangement, &path, diagnostics);
         let mut clip_ids: BTreeMap<&str, (&CueDefinition, &super::CueClip)> = BTreeMap::new();
+        let mut automation_targets = BTreeSet::new();
         for (track_index, track) in arrangement.tracks.iter().enumerate() {
             for (clip_index, clip) in track.clips.iter().enumerate() {
                 let clip_path = format!("{path}.tracks[{track_index}].clips[{clip_index}]");
@@ -390,8 +441,20 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
                         "Extend the Arrangement or trim the CueClip without changing its start tick.",
                     ));
                 }
+                let mut overridden_layers = BTreeSet::new();
                 for (override_index, layer_override) in clip.layer_overrides.iter().enumerate() {
                     let override_path = format!("{clip_path}.layer_overrides[{override_index}]");
+                    if !overridden_layers.insert(layer_override.layer_id.as_str()) {
+                        diagnostics.push(Diagnostic::error(
+                            PROJECT_DUPLICATE_ASSET,
+                            format!("{override_path}.layer_id"),
+                            format!(
+                                "Cue layer {:?} has more than one instance override.",
+                                layer_override.layer_id
+                            ),
+                            "Merge instance overrides for a Cue layer into one entry.",
+                        ));
+                    }
                     let Some(layer) = cue
                         .layers
                         .iter()
@@ -419,6 +482,33 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
                             diagnostics,
                         );
                     }
+                    if layer_override.phase.is_some_and(|phase| !phase.is_finite()) {
+                        diagnostics.push(Diagnostic::error(
+                            PROJECT_SCHEMA_INVALID,
+                            format!("{override_path}.phase"),
+                            "CueClip layer phase override must be finite.",
+                            "Use a finite phase offset in cycles.",
+                        ));
+                    }
+                    if let Some(stage) =
+                        exact_asset(&bundle.stages, &cue.compatible_stage_ref, |asset| {
+                            (&asset.id, asset.revision)
+                        })
+                    {
+                        if let Some(target) = stage
+                            .target_sets
+                            .iter()
+                            .find(|target| target.id == layer.target_set_ref.target_set_id)
+                        {
+                            validate_mix_overrides(
+                                stage,
+                                target,
+                                &layer_override.mix_overrides,
+                                &format!("{override_path}.mix_overrides"),
+                                diagnostics,
+                            );
+                        }
+                    }
                 }
             }
         }
@@ -426,6 +516,15 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
             for (lane_index, lane) in track.automation_lanes.iter().enumerate() {
                 let lane_path =
                     format!("{path}.tracks[{track_index}].automation_lanes[{lane_index}]");
+                let target_key = format!("{:?}", lane.target);
+                if !automation_targets.insert(target_key) {
+                    diagnostics.push(Diagnostic::error(
+                        PROJECT_DUPLICATE_ASSET,
+                        format!("{lane_path}.target"),
+                        "An Arrangement automation target is owned by more than one lane.",
+                        "Merge keyframes for the target into one AutomationLane.",
+                    ));
+                }
                 if let ArrangementAutomationTarget::CueLayer {
                     clip_id,
                     layer_id,
@@ -527,6 +626,15 @@ fn validate_keyframes(
     path: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
+    if keyframes.is_empty() {
+        diagnostics.push(Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            format!("{path}.keyframes"),
+            "AutomationLane requires at least one keyframe.",
+            "Add a typed keyframe or remove the empty lane.",
+        ));
+        return;
+    }
     if keyframes
         .windows(2)
         .any(|pair| pair[0].time_tick >= pair[1].time_tick)
@@ -548,6 +656,57 @@ fn validate_keyframes(
             "Automation keyframe lies beyond Arrangement length_ticks.",
             "Extend the Arrangement or move the keyframe with an explicit edit command.",
         ));
+    }
+}
+
+fn validate_mix_overrides(
+    stage: &StageDocument,
+    target: &TargetSetDefinition,
+    mix_overrides: &[CueMixOverride],
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let profiles = stage_fixture_profile_map(stage);
+    let fixture_ids = target_fixture_ids(stage, target);
+    let mut attribute_ids = BTreeSet::new();
+    for (index, mix_override) in mix_overrides.iter().enumerate() {
+        if mix_override.attribute_id.trim().is_empty()
+            || !attribute_ids.insert(mix_override.attribute_id.as_str())
+        {
+            diagnostics.push(Diagnostic::error(
+                PROJECT_DUPLICATE_ASSET,
+                format!("{path}[{index}].attribute_id"),
+                format!(
+                    "Mix override attribute {:?} is empty or duplicated.",
+                    mix_override.attribute_id
+                ),
+                "Use at most one mix policy override per attribute.",
+            ));
+            continue;
+        }
+        for fixture_id in &fixture_ids {
+            let supported = profiles
+                .get(fixture_id)
+                .and_then(|profile_id| profile_by_id(profile_id))
+                .is_some_and(|profile| {
+                    profile
+                        .attributes
+                        .iter()
+                        .any(|attribute| attribute.id == mix_override.attribute_id)
+                });
+            if !supported {
+                diagnostics.push(Diagnostic::error(
+                    PROJECT_CAPABILITY_MISMATCH,
+                    format!("{path}[{index}].attribute_id"),
+                    format!(
+                        "Fixture {fixture_id} does not support mix override attribute {:?}.",
+                        mix_override.attribute_id
+                    ),
+                    "Remove the override or select a capability-compatible TargetSet.",
+                ));
+                break;
+            }
+        }
     }
 }
 
@@ -643,8 +802,10 @@ fn validate_target_set(
         }
     }
     let mut weighted = BTreeSet::new();
+    let selected_fixture_ids: BTreeSet<_> = target_fixture_ids(stage, target).into_iter().collect();
     for weight in &target.weights {
         if !fixture_profiles.contains_key(&weight.fixture_id)
+            || !selected_fixture_ids.contains(&weight.fixture_id)
             || !weight.weight.is_finite()
             || !(0.0..=1.0).contains(&weight.weight)
             || !weighted.insert(weight.fixture_id)
@@ -865,44 +1026,93 @@ fn dependency_cycle(edges: &BTreeMap<String, Vec<String>>) -> Option<Vec<String>
 }
 
 fn target_fixture_ids(stage: &StageDocument, target: &TargetSetDefinition) -> Vec<u32> {
+    resolve_target_set(stage, target).fixture_ids
+}
+
+pub(crate) fn resolve_target_set(
+    stage: &StageDocument,
+    target: &TargetSetDefinition,
+) -> ResolvedTargetSet {
     let fixture_ids: Vec<_> = stage_fixture_profile_map(stage).into_keys().collect();
+    let weights = target
+        .weights
+        .iter()
+        .map(|weight| (weight.fixture_id, weight.weight))
+        .collect();
     let GeneratorDSL::Matrix { rows, columns, .. } = stage.layout.generator else {
-        return match &target.selector {
+        let selected = match &target.selector {
             TargetSetSelector::All => fixture_ids,
             TargetSetSelector::FixtureIds { fixture_ids } => fixture_ids.clone(),
             _ => Vec::new(),
         };
+        return ResolvedTargetSet {
+            partitions: vec![selected.clone()],
+            fixture_ids: selected,
+            weights,
+        };
     };
-    fixture_ids
-        .into_iter()
+    let cells: Vec<_> = fixture_ids
+        .iter()
+        .copied()
         .enumerate()
-        .filter_map(|(index, fixture_id)| {
-            let row = index as u32 / columns;
-            let column = index as u32 % columns;
-            let selected = match &target.selector {
-                TargetSetSelector::All => true,
-                TargetSetSelector::Rows { indices } => indices.contains(&row),
-                TargetSetSelector::Columns { indices } => indices.contains(&column),
-                TargetSetSelector::Checkerboard { parity } => {
-                    let even = (row + column).is_multiple_of(2);
-                    even == matches!(parity, super::CheckerboardParity::Even)
-                }
-                TargetSetSelector::FixtureIds { fixture_ids } => fixture_ids.contains(&fixture_id),
-                TargetSetSelector::GridZones {
-                    rows: zone_rows,
-                    columns: zone_columns,
-                    zones,
-                } => {
-                    let zone_row = row.saturating_mul(*zone_rows) / rows.max(1);
-                    let zone_column = column.saturating_mul(*zone_columns) / columns.max(1);
-                    zones
-                        .iter()
-                        .any(|zone| zone.row == zone_row && zone.column == zone_column)
-                }
-            };
-            selected.then_some(fixture_id)
-        })
-        .collect()
+        .map(|(index, fixture_id)| (fixture_id, index as u32 / columns, index as u32 % columns))
+        .collect();
+    let partitions: Vec<Vec<u32>> = match &target.selector {
+        TargetSetSelector::All => vec![fixture_ids.clone()],
+        TargetSetSelector::FixtureIds { fixture_ids } => vec![fixture_ids.clone()],
+        TargetSetSelector::Rows { indices } => indices
+            .iter()
+            .map(|selected_row| {
+                cells
+                    .iter()
+                    .filter_map(|(id, row, _)| (row == selected_row).then_some(*id))
+                    .collect()
+            })
+            .collect(),
+        TargetSetSelector::Columns { indices } => indices
+            .iter()
+            .map(|selected_column| {
+                cells
+                    .iter()
+                    .filter_map(|(id, _, column)| (column == selected_column).then_some(*id))
+                    .collect()
+            })
+            .collect(),
+        TargetSetSelector::GridZones {
+            rows: zone_rows,
+            columns: zone_columns,
+            zones,
+        } => zones
+            .iter()
+            .map(|zone| {
+                cells
+                    .iter()
+                    .filter_map(|(id, row, column)| {
+                        let row = row.saturating_mul(*zone_rows) / rows.max(1);
+                        let column = column.saturating_mul(*zone_columns) / columns.max(1);
+                        (row == zone.row && column == zone.column).then_some(*id)
+                    })
+                    .collect()
+            })
+            .collect(),
+        TargetSetSelector::Checkerboard { parity } => vec![cells
+            .iter()
+            .filter_map(|(id, row, column)| {
+                let even = (row + column).is_multiple_of(2);
+                (even == matches!(parity, super::CheckerboardParity::Even)).then_some(*id)
+            })
+            .collect()],
+    };
+    let fixture_ids = partitions
+        .iter()
+        .flatten()
+        .copied()
+        .collect::<BTreeSet<_>>();
+    ResolvedTargetSet {
+        fixture_ids: fixture_ids.into_iter().collect(),
+        partitions,
+        weights,
+    }
 }
 
 fn stage_fixture_profiles<'a>(
@@ -1110,11 +1320,11 @@ fn matrix_target_diagnostic(path: &str) -> Diagnostic {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use serde_json::{json, Value};
 
-    fn valid_bundle() -> ProjectBundle {
+    pub(crate) fn valid_bundle() -> ProjectBundle {
         serde_json::from_value(json!({
             "schema_version": 1,
             "manifest": {

@@ -13,6 +13,8 @@ mod validation;
 
 pub use effect::*;
 pub use project::*;
+#[cfg(test)]
+pub(crate) use project_validation::tests::valid_bundle;
 pub use project_validation::*;
 pub use timeline::*;
 pub use validation::{DocumentValidator, ValidatedShow};

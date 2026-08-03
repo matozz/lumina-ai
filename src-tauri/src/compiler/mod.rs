@@ -1,5 +1,8 @@
 pub mod diagnostic;
 pub mod parser;
+mod project;
+
+pub use project::*;
 
 use crate::document::{DocumentValidator, ValidatedShow};
 use crate::engine::animation::AnimatableValue;
@@ -115,11 +118,106 @@ pub struct CompiledGroup {
     pub name: String,
     pub sorted_fixture_ids: Vec<u32>,
     pub blocks: Vec<usize>, // number of fixtures in each unique sort block
+    fixture_order: HashMap<u32, usize>,
+    membership_bits: Vec<u64>,
+    fixture_weights: Vec<f32>,
+    pub partitions: Vec<Vec<usize>>,
 }
 
 impl CompiledGroup {
+    pub fn new(
+        id: String,
+        name: String,
+        sorted_fixture_ids: Vec<u32>,
+        blocks: Vec<usize>,
+        fixtures: &[Fixture],
+    ) -> Self {
+        let mut group = Self {
+            id,
+            name,
+            sorted_fixture_ids,
+            blocks,
+            fixture_order: HashMap::new(),
+            membership_bits: vec![0; fixtures.len().div_ceil(64)],
+            fixture_weights: vec![0.0; fixtures.len()],
+            partitions: Vec::new(),
+        };
+        group.rebuild_target_cache(fixtures, None, &HashMap::new());
+        group
+    }
+
+    pub fn rebuild_target_cache(
+        &mut self,
+        fixtures: &[Fixture],
+        partition_fixture_ids: Option<&[Vec<u32>]>,
+        weights: &HashMap<u32, f32>,
+    ) {
+        self.fixture_order = self
+            .sorted_fixture_ids
+            .iter()
+            .enumerate()
+            .map(|(index, fixture_id)| (*fixture_id, index))
+            .collect();
+        self.membership_bits = vec![0; fixtures.len().div_ceil(64)];
+        self.fixture_weights = vec![0.0; fixtures.len()];
+        let fixture_indices: HashMap<_, _> = fixtures
+            .iter()
+            .enumerate()
+            .map(|(index, fixture)| (fixture.id, index))
+            .collect();
+        for fixture_id in &self.sorted_fixture_ids {
+            let Some(index) = fixture_indices.get(fixture_id).copied() else {
+                continue;
+            };
+            self.membership_bits[index / 64] |= 1_u64 << (index % 64);
+            self.fixture_weights[index] = weights.get(fixture_id).copied().unwrap_or(1.0);
+        }
+        self.partitions = partition_fixture_ids.map_or_else(
+            || {
+                let mut cursor = 0;
+                self.blocks
+                    .iter()
+                    .map(|block| {
+                        let start = cursor.min(self.len());
+                        let end = cursor.saturating_add(*block).min(self.len());
+                        let partition = self.sorted_fixture_ids[start..end]
+                            .iter()
+                            .filter_map(|fixture_id| fixture_indices.get(fixture_id).copied())
+                            .collect();
+                        cursor = end;
+                        partition
+                    })
+                    .collect()
+            },
+            |partitions| {
+                partitions
+                    .iter()
+                    .map(|partition| {
+                        partition
+                            .iter()
+                            .filter_map(|fixture_id| fixture_indices.get(fixture_id).copied())
+                            .collect()
+                    })
+                    .collect()
+            },
+        );
+    }
+
     pub fn index_of(&self, id: u32) -> Option<usize> {
-        self.sorted_fixture_ids.iter().position(|&x| x == id)
+        self.fixture_order.get(&id).copied()
+    }
+
+    pub fn contains_fixture_index(&self, fixture_index: usize) -> bool {
+        self.membership_bits
+            .get(fixture_index / 64)
+            .is_some_and(|word| word & (1_u64 << (fixture_index % 64)) != 0)
+    }
+
+    pub fn weight_at(&self, fixture_index: usize) -> f32 {
+        self.fixture_weights
+            .get(fixture_index)
+            .copied()
+            .unwrap_or(0.0)
     }
 
     // Get the block index and the total number of blocks
@@ -774,12 +872,7 @@ impl Compiler {
 
             groups.insert(
                 g.id.clone(),
-                CompiledGroup {
-                    id: g.id.clone(),
-                    name: g.name.clone(),
-                    sorted_fixture_ids: ids,
-                    blocks,
-                },
+                CompiledGroup::new(g.id.clone(), g.name.clone(), ids, blocks, _fixtures),
             );
         }
         groups
@@ -1165,6 +1258,9 @@ fn compile_effect_models(
                     ));
                     0
                 }),
+                phase_offset: 0.0,
+                priority: 0,
+                mix_overrides: HashMap::new(),
                 spatial_offsets: HashMap::new(),
             },
         );

@@ -104,7 +104,7 @@ pub(crate) fn render_resolved(
                 let Some(group) = show.groups.get(&instance.target_group_id) else {
                     continue;
                 };
-                if group.index_of(fixture.id).is_none() {
+                if !group.contains_fixture_index(fixture_index) {
                     continue;
                 }
                 let phase_offset = resolve_effect_scalar(
@@ -114,7 +114,7 @@ pub(crate) fn render_resolved(
                     parameters,
                     PHASE_PARAMETER_ID,
                     0.0,
-                );
+                ) + instance.phase_offset;
                 let direction = definition
                     .parameter_handle(DIRECTION_PARAMETER_ID)
                     .and_then(|handle| {
@@ -231,11 +231,11 @@ pub(crate) fn render_resolved(
                         value,
                         source_id: &active.source_id,
                         layer: active.layer,
-                        priority: 0,
+                        priority: instance.priority,
                         activation_order: active.activation_order,
                         stable_source_order: active.stable_source_order,
-                        weight: active.weight,
-                        policy_override: None,
+                        weight: Some(active.weight.unwrap_or(1.0) * group.weight_at(fixture_index)),
+                        policy_override: instance.mix_policy_override(fixture.profile, handle),
                     });
                 }
             }
