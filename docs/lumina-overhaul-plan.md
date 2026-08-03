@@ -230,7 +230,7 @@ flowchart TD
 | 4     | 可扩展 Effect Engine                        | completed   | 3      | EffectGraph/参数/空间相位可确定性求值       |
 | 5     | Timeline、Keyframe 与 Undo/Redo             | completed   | 4      | 多关键帧、seek/replay、无隐式数据破坏       |
 | 6     | 用户工作区与 Effect Lab                     | completed   | 5      | Stage→Effect→Arrange→Live 主路径可用        |
-| 7     | TempoMap 资产边界、Cue 与多 Arrangement     | not_started | 6      | 音频退出；Stage/Effect/Cue/Arrangement 解耦 |
+| 7     | TempoMap 资产边界、Cue 与多 Arrangement     | in_progress | 6      | 音频退出；Stage/Effect/Cue/Arrangement 解耦 |
 | 7.5   | Production Layout、Catalog 与动态 Targeting | not_started | 7      | 30×30 分区与生产效果库通过视觉/性能验收     |
 | 8     | AI TempoMap 编排                            | not_started | 7、7.5 | AI 计划可验证、可解释、可预览、可撤销       |
 | 9     | 舞台输出、安全与 Release                    | not_started | 3、8   | Art-Net/sACN、故障保护和发布门槛完成        |
@@ -1129,7 +1129,7 @@ flowchart LR
 | ADR-0007 | Audio analysis 与缓存策略                         | 7     | superseded                       |
 | ADR-0008 | AI ArrangementPlan 与 provider 边界               | 8     | pending                          |
 | ADR-0009 | OutputSink fail-safe 与 Blackout                  | 9     | pending                          |
-| ADR-0010 | TempoMap 与 Stage/Effect/Cue/Arrangement 资产边界 | 7     | pending                          |
+| ADR-0010 | TempoMap 与 Stage/Effect/Cue/Arrangement 资产边界 | 7     | accepted                         |
 | ADR-0011 | Immutable TargetSet、动态分区与 Spatial Mask      | 7.5   | pending                          |
 
 ## 20. Progress Ledger
@@ -1233,34 +1233,36 @@ flowchart LR
 | 2026-08-03 | 6        | 旧 Audio/Song 安全撤出     | completed  | `1f84fdc`               | 45 frontend files / 103 tests；source/dependency/command/type/evidence audit | 恢复 stash 保留；交付分支从 `abd973a` 建立干净提交边界         | 多段 tempo 回归与最终门禁                   |
 | 2026-08-03 | 6        | 多段 TempoMap 长时回归     | completed  | `27c2ebf`               | 120→60 BPM 两段、30 分钟等效 tick↔microseconds 往返误差 0                    | TempoMap 是 Arrangement 时钟，不等同于音频能力                 | 统一门禁与原生复核                          |
 | 2026-08-03 | 6        | Stage 6 发布最终门禁       | completed  | 本切片提交              | `check:all`；103 frontend；93 Rust；schema；strict Clippy；build；debug app  | 原生四工作区无 Song；4×4→Pulse→Arrange→automation→Live；无 DSL | push、PR、merge 后停止                      |
+| 2026-08-03 | 7        | ADR + 原生预览边界基线     | completed  | 本切片提交              | `main/origin@aa14242`；源码/依赖/命令无音频审计；真实 Tauri 四工作区走查     | ADR-0010 accepted；新增 R-024                                  | 独立资产 schema + PreviewSession contract   |
 
 ## 21. Open Risks
 
-| ID    | Risk                                                | Severity | Owner Stage | Mitigation                                                                          | Status |
-| ----- | --------------------------------------------------- | -------- | ----------- | ----------------------------------------------------------------------------------- | ------ |
-| R-001 | scheduler 重复线程或锁反转导致演出冻结              | critical | 1           | 单 worker、统一锁策略、压力测试                                                     | closed |
-| R-002 | schema 漂移导致用户/AI 字段静默丢失                 | critical | 2           | Rust 权威、strict semantic gate、generated schema/TS/capability、AJV contract       | closed |
-| R-003 | 所有属性使用 max 混合产生错误颜色/运动              | high     | 3           | 属性级 HTP/LTP/Add/Multiply/Mask、稳定 tie-break 与 conflict inspection             | closed |
-| R-004 | Preview 80ms 插值掩盖真实频闪输出                   | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                                                | closed |
-| R-005 | Raw DSL 热编译破坏 Live active show                 | critical | 6           | immutable revisions；Draft preview；显式 Publish 与 Take live；native AX 复核       | closed |
-| R-006 | 单体配置与不稳定资产引用导致 AI 编排不可复现        | high     | 7           | 独立 Stage/Effect/Cue/Arrangement revision；版本化 TempoMap；deterministic compiler | open   |
-| R-007 | AI 直接生成无效或不安全效果                         | critical | 8           | typed plan、capability、validator、safety budget                                    | open   |
-| R-008 | 硬件故障时无法自动 Blackout                         | critical | 9           | 独立 safety controller 和 fail-safe tests                                           | open   |
-| R-009 | 首帧或 fixture topology 变化被 zip diff 丢弃        | high     | 1           | revision/topology 强制 full frame，并按 fixture ID diff                             | closed |
-| R-010 | jsdom 30 无法在固定 Node 20 启动测试 worker         | medium   | 0           | 改用 Vitest 官方支持的 happy-dom                                                    | closed |
-| R-011 | timer-only 漂移基线未覆盖 Tauri/锁/render load      | medium   | 1           | ManualClock 确定性测试 + loaded runtime 压力测试                                    | closed |
-| R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失  | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command                                       | closed |
-| R-013 | managed sandbox 内精确 toolchain 恢复下载超时       | low      | 0           | 同版本 stable 完整验证；干净 CI 执行 pin                                            | closed |
-| R-014 | compile/bridge 异常只写 console，用户无法定位       | high     | 0           | 稳定 Diagnostic envelope、前端 normalizer 与错误 Alert                              | closed |
-| R-015 | legacy Phaser 与 EffectGraph 过渡期存在双重 IR      | high     | 4           | typed graph evaluator 已替代 CompiledPhaser；旧 evaluator/runtime field 删除        | closed |
-| R-016 | 高频拖拽预览、分裂 snap 与 width 清空导致时间轴漂移 | high     | 5 后置      | rAF DOM preview、共享 TimelineGeometry、源快照、单 transaction 与聚焦回归           | closed |
-| R-017 | 默认小窗口与布局约束不足压缩或裁切主编辑区          | medium   | 5 后置      | 默认最大化、合理 min-size、1440×900/最小窗口布局矩阵和真实 Tauri 验收               | closed |
-| R-018 | popover 输入编辑键冒泡后误删 clip/keyframe/lane     | high     | 5 后置      | 编辑目标识别；clip/keyframe/lane/history shortcuts guard；unit + native test        | closed |
-| R-019 | macOS 默认 debug DMG bundler 在 app 生成后失败      | medium   | 9           | app-only bundle 已通过；发布阶段统一诊断默认 DMG post-build                         | open   |
-| R-020 | 真实 CoreAudio 设备与常见 codec 播放尚缺原生留证    | medium   | 7           | 产品方向移除音频导入、播放和分析，不再需要该验收                                    | closed |
-| R-021 | Effect/Cue revision 更新静默改写既有 Arrangement    | critical | 7           | 所有引用固定 ID+revision；显式 upgrade/diff；Published Snapshot immutable           | open   |
-| R-022 | 播放中修改 Group membership 破坏 Seek/Replay 确定性 | high     | 7/7.5       | immutable TargetSet；compile bitset；连续变化使用 Spatial Mask/Weight               | open   |
-| R-023 | 已停止的 Stage 7 音频改动混入无音频新基线           | high     | 7           | 从 `abd973a` 形成干净交付分支；提交、依赖、命令、source 与 evidence 均已审计        | closed |
+| ID    | Risk                                                                             | Severity | Owner Stage | Mitigation                                                                                  | Status |
+| ----- | -------------------------------------------------------------------------------- | -------- | ----------- | ------------------------------------------------------------------------------------------- | ------ |
+| R-001 | scheduler 重复线程或锁反转导致演出冻结                                           | critical | 1           | 单 worker、统一锁策略、压力测试                                                             | closed |
+| R-002 | schema 漂移导致用户/AI 字段静默丢失                                              | critical | 2           | Rust 权威、strict semantic gate、generated schema/TS/capability、AJV contract               | closed |
+| R-003 | 所有属性使用 max 混合产生错误颜色/运动                                           | high     | 3           | 属性级 HTP/LTP/Add/Multiply/Mask、稳定 tie-break 与 conflict inspection                     | closed |
+| R-004 | Preview 80ms 插值掩盖真实频闪输出                                                | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                                                        | closed |
+| R-005 | Raw DSL 热编译破坏 Live active show                                              | critical | 6           | immutable revisions；Draft preview；显式 Publish 与 Take live；native AX 复核               | closed |
+| R-006 | 单体配置与不稳定资产引用导致 AI 编排不可复现                                     | high     | 7           | 独立 Stage/Effect/Cue/Arrangement revision；版本化 TempoMap；deterministic compiler         | open   |
+| R-007 | AI 直接生成无效或不安全效果                                                      | critical | 8           | typed plan、capability、validator、safety budget                                            | open   |
+| R-008 | 硬件故障时无法自动 Blackout                                                      | critical | 9           | 独立 safety controller 和 fail-safe tests                                                   | open   |
+| R-009 | 首帧或 fixture topology 变化被 zip diff 丢弃                                     | high     | 1           | revision/topology 强制 full frame，并按 fixture ID diff                                     | closed |
+| R-010 | jsdom 30 无法在固定 Node 20 启动测试 worker                                      | medium   | 0           | 改用 Vitest 官方支持的 happy-dom                                                            | closed |
+| R-011 | timer-only 漂移基线未覆盖 Tauri/锁/render load                                   | medium   | 1           | ManualClock 确定性测试 + loaded runtime 压力测试                                            | closed |
+| R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失                               | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command                                               | closed |
+| R-013 | managed sandbox 内精确 toolchain 恢复下载超时                                    | low      | 0           | 同版本 stable 完整验证；干净 CI 执行 pin                                                    | closed |
+| R-014 | compile/bridge 异常只写 console，用户无法定位                                    | high     | 0           | 稳定 Diagnostic envelope、前端 normalizer 与错误 Alert                                      | closed |
+| R-015 | legacy Phaser 与 EffectGraph 过渡期存在双重 IR                                   | high     | 4           | typed graph evaluator 已替代 CompiledPhaser；旧 evaluator/runtime field 删除                | closed |
+| R-016 | 高频拖拽预览、分裂 snap 与 width 清空导致时间轴漂移                              | high     | 5 后置      | rAF DOM preview、共享 TimelineGeometry、源快照、单 transaction 与聚焦回归                   | closed |
+| R-017 | 默认小窗口与布局约束不足压缩或裁切主编辑区                                       | medium   | 5 后置      | 默认最大化、合理 min-size、1440×900/最小窗口布局矩阵和真实 Tauri 验收                       | closed |
+| R-018 | popover 输入编辑键冒泡后误删 clip/keyframe/lane                                  | high     | 5 后置      | 编辑目标识别；clip/keyframe/lane/history shortcuts guard；unit + native test                | closed |
+| R-019 | macOS 默认 debug DMG bundler 在 app 生成后失败                                   | medium   | 9           | app-only bundle 已通过；发布阶段统一诊断默认 DMG post-build                                 | open   |
+| R-020 | 真实 CoreAudio 设备与常见 codec 播放尚缺原生留证                                 | medium   | 7           | 产品方向移除音频导入、播放和分析，不再需要该验收                                            | closed |
+| R-021 | Effect/Cue revision 更新静默改写既有 Arrangement                                 | critical | 7           | 所有引用固定 ID+revision；显式 upgrade/diff；Published Snapshot immutable                   | open   |
+| R-022 | 播放中修改 Group membership 破坏 Seek/Replay 确定性                              | high     | 7/7.5       | immutable TargetSet；compile bitset；连续变化使用 Spatial Mask/Weight                       | open   |
+| R-023 | 已停止的 Stage 7 音频改动混入无音频新基线                                        | high     | 7           | 从 `abd973a` 形成干净交付分支；提交、依赖、命令、source 与 evidence 均已审计                | closed |
+| R-024 | 隐式 Canvas context 混用 Draft layout/Live frame，并在切换时重置 preview session | critical | 7           | 独立 PreviewSession/RenderContext；layout+frame 原子绑定 snapshot identity；状态机/原生回归 | open   |
 
 ## 22. Deferred Backlog
 

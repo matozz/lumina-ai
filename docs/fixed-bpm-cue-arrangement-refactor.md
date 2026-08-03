@@ -1,6 +1,6 @@
 # Lumina 无音频 TempoMap、Cue 与 Arrangement 架构重构指引
 
-> - 状态：Proposed，等待新 Goal 实施
+> - 状态：Active，Stage 7 Goal 实施中
 > - 决策日期：2026-08-03
 > - 前置状态：Stage 6 已完成；原 Stage 7 音频方向已停止
 > - 推荐分支：`codex/tempo-cue-arrangement`
