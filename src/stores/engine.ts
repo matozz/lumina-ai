@@ -1,6 +1,14 @@
 import { create } from "zustand";
 import { validateShowDocument } from "../document/showDocument";
-import type { CompileResult, Diagnostic, FullDSL, TransportState } from "../bridge/types";
+import type {
+  CompileResult,
+  Diagnostic,
+  EngineStatePayload,
+  FullDSL,
+  LiveEffectCatalog,
+  LiveEffectInfo,
+  TransportState,
+} from "../bridge/types";
 import { applyDocumentTransaction, type DocumentTransaction } from "../document/commands";
 
 export type SequencerMode = "live" | "timeline";
@@ -17,6 +25,13 @@ export interface EngineState {
   tempo: number;
   globalBeat: number;
   activePhasers: ActivePhaserState[];
+  liveEffects: LiveEffectInfo[];
+  blackout: boolean;
+  outputRateHz: number;
+  frameLagMs: number;
+  outputAdapter: string;
+  lastOutputError: string | null;
+  liveShowRevision: number | null;
   compileResult: CompileResult | null;
   compileErrors: Diagnostic[];
   compileStatus: CompileStatus;
@@ -42,6 +57,13 @@ export const useEngineStore = create<EngineState>()(() => ({
   tempo: 120,
   globalBeat: 0,
   activePhasers: [],
+  liveEffects: [],
+  blackout: false,
+  outputRateHz: 60,
+  frameLagMs: 0,
+  outputAdapter: "preview",
+  lastOutputError: null,
+  liveShowRevision: null,
   compileResult: null,
   compileErrors: [],
   compileStatus: "idle",
@@ -61,6 +83,28 @@ export const engineActions = {
   setTempo: (val: number) => useEngineStore.setState({ tempo: val }),
   setGlobalBeat: (val: number) => useEngineStore.setState({ globalBeat: val }),
   setActivePhasers: (val: ActivePhaserState[]) => useEngineStore.setState({ activePhasers: val }),
+  setLiveEffects: (liveEffects: LiveEffectInfo[]) => useEngineStore.setState({ liveEffects }),
+  setLiveEffectCatalog: (catalog: LiveEffectCatalog) =>
+    useEngineStore.setState({
+      liveEffects: catalog.effects,
+      liveShowRevision: catalog.show_revision,
+    }),
+  applyRuntimeState: (payload: EngineStatePayload) =>
+    useEngineStore.setState((state) => ({
+      transportState: payload.transport_state,
+      transportRevision: payload.transport_revision,
+      tempo: payload.tempo,
+      globalBeat: payload.global_beat,
+      activePhasers: sameActivePhasers(state.activePhasers, payload.active_phasers)
+        ? state.activePhasers
+        : payload.active_phasers,
+      blackout: payload.blackout,
+      outputRateHz: payload.output_rate_hz,
+      frameLagMs: payload.frame_lag_ms,
+      outputAdapter: payload.output_adapter,
+      lastOutputError: payload.last_output_error,
+      liveShowRevision: payload.live_revision,
+    })),
   setCompileResult: (res: CompileResult | null) => useEngineStore.setState({ compileResult: res }),
   setCompileErrors: (errors: Diagnostic[]) => useEngineStore.setState({ compileErrors: errors }),
   setCompileStatus: (status: CompileStatus) => useEngineStore.setState({ compileStatus: status }),
@@ -146,6 +190,13 @@ export const engineSelectors = {
   tempo: (state: EngineState) => state.tempo,
   globalBeat: (state: EngineState) => state.globalBeat,
   activePhasers: (state: EngineState) => state.activePhasers,
+  liveEffects: (state: EngineState) => state.liveEffects,
+  blackout: (state: EngineState) => state.blackout,
+  outputRateHz: (state: EngineState) => state.outputRateHz,
+  frameLagMs: (state: EngineState) => state.frameLagMs,
+  outputAdapter: (state: EngineState) => state.outputAdapter,
+  lastOutputError: (state: EngineState) => state.lastOutputError,
+  liveShowRevision: (state: EngineState) => state.liveShowRevision,
   compileResult: (state: EngineState) => state.compileResult,
   compileErrors: (state: EngineState) => state.compileErrors,
   compileStatus: (state: EngineState) => state.compileStatus,
@@ -156,6 +207,16 @@ export const engineSelectors = {
   isDocumentDirty: (state: EngineState) => state.isDocumentDirty,
   sequencerMode: (state: EngineState) => state.sequencerMode,
 };
+
+function sameActivePhasers(left: ActivePhaserState[], right: ActivePhaserState[]) {
+  return (
+    left.length === right.length &&
+    left.every(
+      (active, index) =>
+        active.id === right[index]?.id && active.multiplier === right[index].multiplier,
+    )
+  );
+}
 
 function parseDslCode(code: string): FullDSL | null {
   try {

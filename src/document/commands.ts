@@ -2,12 +2,30 @@ import type {
   AutomationLaneDSL,
   ClipPlaybackDSL,
   EffectClipDSL,
+  EffectDefinitionDSL,
+  EffectInstanceDSL,
   FullDSL,
+  GroupDSL,
   KeyframeDSL,
+  LayoutDSL,
+  PatchDSL,
   TimelineTrackDSL,
 } from "@/bridge/types";
 
 export type DocumentCommand =
+  | { type: "replace_stage_setup"; patch: PatchDSL[]; layout: LayoutDSL; groups: GroupDSL[] }
+  | {
+      type: "create_effect";
+      definition: EffectDefinitionDSL;
+      instance: EffectInstanceDSL;
+    }
+  | {
+      type: "revise_effect";
+      definition_id: string;
+      definition: EffectDefinitionDSL;
+      primary_instance: EffectInstanceDSL;
+    }
+  | { type: "delete_effect"; definition_id: string }
   | {
       type: "add_clip";
       track_id: string;
@@ -134,6 +152,84 @@ export function applyDocumentTransaction(
 
 function applyCommand(document: FullDSL, command: DocumentCommand) {
   switch (command.type) {
+    case "replace_stage_setup": {
+      document.patch = structuredClone(command.patch);
+      document.layout = structuredClone(command.layout);
+      document.groups = structuredClone(command.groups);
+      return;
+    }
+    case "create_effect": {
+      if (document.effect_definitions.some((item) => item.id === command.definition.id)) {
+        throw new DocumentCommandError(`EffectDefinition already exists: ${command.definition.id}`);
+      }
+      if (document.effect_instances.some((item) => item.id === command.instance.id)) {
+        throw new DocumentCommandError(`EffectInstance already exists: ${command.instance.id}`);
+      }
+      assertEffectPair(command.definition, command.instance);
+      document.effect_definitions.push(structuredClone(command.definition));
+      document.effect_instances.push(structuredClone(command.instance));
+      return;
+    }
+    case "revise_effect": {
+      const definitionIndex = document.effect_definitions.findIndex(
+        (item) => item.id === command.definition_id,
+      );
+      if (definitionIndex < 0) throw missing("EffectDefinition", command.definition_id);
+      const previous = document.effect_definitions[definitionIndex];
+      if (
+        command.definition.id !== previous.id ||
+        command.definition.revision !== previous.revision + 1
+      ) {
+        throw new DocumentCommandError(
+          "Effect revision must keep its stable ID and increment once",
+        );
+      }
+      const primaryIndex = document.effect_instances.findIndex(
+        (item) => item.id === command.primary_instance.id,
+      );
+      if (primaryIndex < 0) throw missing("EffectInstance", command.primary_instance.id);
+      if (document.effect_instances[primaryIndex].definition_id !== command.definition_id) {
+        throw new DocumentCommandError("Primary EffectInstance does not belong to this definition");
+      }
+      assertEffectPair(command.definition, command.primary_instance);
+      document.effect_definitions[definitionIndex] = structuredClone(command.definition);
+      document.effect_instances = document.effect_instances.map((instance, index) => {
+        if (index === primaryIndex) return structuredClone(command.primary_instance);
+        return instance.definition_id === command.definition_id
+          ? { ...instance, definition_revision: command.definition.revision }
+          : instance;
+      });
+      return;
+    }
+    case "delete_effect": {
+      const definitionIndex = document.effect_definitions.findIndex(
+        (item) => item.id === command.definition_id,
+      );
+      if (definitionIndex < 0) throw missing("EffectDefinition", command.definition_id);
+      const instanceIds = new Set(
+        document.effect_instances
+          .filter((instance) => instance.definition_id === command.definition_id)
+          .map((instance) => instance.id),
+      );
+      const isUsed = document.timeline?.tracks.some(
+        (track) =>
+          track.clips?.some((clip) => instanceIds.has(clip.instance_id)) ||
+          track.automation_lanes?.some(
+            (lane) =>
+              lane.target.scope === "effect_instance" && instanceIds.has(lane.target.instance_id),
+          ),
+      );
+      if (isUsed) {
+        throw new DocumentCommandError(
+          "Remove this effect from Arrange and automation before deleting it",
+        );
+      }
+      document.effect_definitions.splice(definitionIndex, 1);
+      document.effect_instances = document.effect_instances.filter(
+        (instance) => !instanceIds.has(instance.id),
+      );
+      return;
+    }
     case "add_clip": {
       assertItemIdAvailable(document, command.clip.id);
       assertClip(command.clip);
@@ -393,6 +489,17 @@ function assertItemIdAvailable(document: FullDSL, id: string) {
       track.automation_lanes?.some((lane) => lane.id === id),
   );
   if (exists) throw new DocumentCommandError(`timeline item ID already exists: ${id}`);
+}
+
+function assertEffectPair(definition: EffectDefinitionDSL, instance: EffectInstanceDSL) {
+  if (
+    instance.definition_id !== definition.id ||
+    instance.definition_revision !== definition.revision
+  ) {
+    throw new DocumentCommandError(
+      "EffectInstance must reference the supplied definition revision",
+    );
+  }
 }
 
 function assertTargetAvailable(document: FullDSL, lane: AutomationLaneDSL, exceptId?: string) {

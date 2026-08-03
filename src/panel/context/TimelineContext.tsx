@@ -8,6 +8,7 @@ export interface TimelineActions {
   onResizeStart: (e: React.PointerEvent, originalIndex: number, element: HTMLElement) => void;
   onDelete: (originalIndex: number) => void;
   onNudge: (originalIndex: number, deltaBeats: number) => void;
+  onResizeBy: (originalIndex: number, deltaBeats: number) => void;
   onTrimClipOverlaps: (originalIndex: number) => void;
   onReplaceClipOverlaps: (originalIndex: number) => void;
   onAddKeyframe: (
@@ -31,6 +32,7 @@ export interface TimelineActions {
     changes: Partial<Pick<KeyframeDSL, "time_tick" | "value" | "interpolation">>,
   ) => void;
   onGridClick: (e: React.MouseEvent<HTMLDivElement>, trackName: string) => void;
+  onDropEffect: (e: React.DragEvent<HTMLDivElement>, trackName: string) => void;
   onSnapPreview: (tick: number) => void;
   onSnapPreviewEnd: () => void;
 }

@@ -1,9 +1,10 @@
 use crate::compiler::{diagnostic::Diagnostic, Compiler, LayoutCoord};
 use crate::document::{load_document, MigrationReport, ShowDocumentV4};
-use crate::engine::effect::{EffectCatalog, EffectCatalogQuery, EffectSource};
-use crate::engine::render::{LivePhaser, RenderTime};
+use crate::engine::attribute::FixtureFramePayload;
+use crate::engine::effect::{EffectCatalog, EffectCatalogQuery, EffectSource, SPEED_PARAMETER_ID};
+use crate::engine::render::{render_at, LivePhaser, RenderSource, RenderTime};
 use crate::engine::transport::OutputRate;
-use crate::state::EngineState;
+use crate::state::{EngineState, LivePadQuantize, ScheduledLiveActionKind, ShowSnapshot};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -38,6 +39,32 @@ pub struct LoadShowResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ShowSnapshotState {
+    pub published_revision: Option<u64>,
+    pub live_revision: Option<u64>,
+}
+
+#[derive(serde::Serialize)]
+pub struct LiveEffectInfo {
+    pub instance_id: String,
+    pub definition_id: String,
+    pub definition_revision: u32,
+    pub name: String,
+    pub target_group_id: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct LiveEffectCatalog {
+    pub show_revision: u64,
+    pub effects: Vec<LiveEffectInfo>,
+}
+
+#[derive(serde::Serialize)]
+pub struct QueuedLivePad {
+    pub target_beat: f64,
+}
+
+#[derive(serde::Serialize)]
 pub struct EffectCatalogInfo {
     pub id: String,
     pub name: String,
@@ -56,7 +83,7 @@ pub async fn query_effect_catalog(
 ) -> Result<Vec<EffectCatalogInfo>, String> {
     let snapshot = state
         .shows
-        .current()
+        .latest_published()
         .await
         .ok_or_else(|| "No compiled show is loaded.".to_string())?;
     Ok(snapshot
@@ -80,7 +107,108 @@ pub async fn load_dsl(
     dsl_json: String,
     state: State<'_, Arc<EngineState>>,
 ) -> Result<CompileResult, Diagnostic> {
-    let loaded = load_document(&dsl_json)?;
+    let (mut result, compiled) = compile_dsl(&dsl_json)?;
+    if let Some(compiled) = compiled {
+        let snapshot = state.shows.publish_and_activate(compiled).await;
+        result.show_revision = Some(snapshot.revision);
+        state.runtime.write().await.live_phasers.clear();
+    }
+    Ok(result)
+}
+
+#[tauri::command]
+pub async fn publish_dsl(
+    dsl_json: String,
+    state: State<'_, Arc<EngineState>>,
+) -> Result<CompileResult, Diagnostic> {
+    let (mut result, compiled) = compile_dsl(&dsl_json)?;
+    if let Some(compiled) = compiled {
+        let snapshot = state.shows.publish(compiled).await;
+        result.show_revision = Some(snapshot.revision);
+    }
+    Ok(result)
+}
+
+#[tauri::command]
+pub fn preview_dsl(dsl_json: String) -> Result<CompileResult, Diagnostic> {
+    let (result, _) = compile_dsl(&dsl_json)?;
+    Ok(result)
+}
+
+#[tauri::command]
+pub async fn preview_effect_loop(
+    dsl_json: String,
+    instance_id: String,
+    frame_count: usize,
+) -> Result<Vec<Vec<FixtureFramePayload>>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let (result, compiled) = compile_dsl(&dsl_json).map_err(|error| error.to_string())?;
+        let show = compiled.ok_or_else(|| {
+            result
+                .errors
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join("\n")
+        })?;
+        let instance = show
+            .effect_instances
+            .get(&instance_id)
+            .ok_or_else(|| format!("Effect instance not found: {instance_id}"))?;
+        let definition = show
+            .effect_definitions
+            .get(instance.definition.index())
+            .ok_or_else(|| format!("Effect definition not found for instance: {instance_id}"))?;
+        let multiplier = definition
+            .parameter_handle(SPEED_PARAMETER_ID)
+            .and_then(|handle| instance.resolve_parameter(definition, handle))
+            .and_then(|value| value.as_scalar())
+            .unwrap_or(1.0);
+        let live = [LivePhaser {
+            id: instance_id,
+            start_beat: 0.0,
+            phase_offset: 0.0,
+            multiplier,
+        }];
+        let frame_count = frame_count.clamp(8, 128);
+        Ok((0..frame_count)
+            .map(|index| {
+                let beat = index as f64 / frame_count as f64 * 4.0;
+                render_at(&show, RenderTime { beat }, RenderSource::Live(&live))
+                    .into_iter()
+                    .map(|frame| frame.to_payload())
+                    .collect()
+            })
+            .collect())
+    })
+    .await
+    .map_err(|error| format!("Effect preview worker failed: {error}"))?
+}
+
+#[tauri::command]
+pub async fn activate_show_revision(
+    revision: u64,
+    state: State<'_, Arc<EngineState>>,
+) -> Result<ShowSnapshotState, String> {
+    state.shows.activate(revision).await?;
+    let mut runtime = state.runtime.write().await;
+    runtime.live_phasers.clear();
+    runtime.pending_live_actions.clear();
+    drop(runtime);
+    Ok(show_snapshot_state(state.inner()).await)
+}
+
+#[tauri::command]
+pub async fn get_show_snapshot_state(
+    state: State<'_, Arc<EngineState>>,
+) -> Result<ShowSnapshotState, String> {
+    Ok(show_snapshot_state(state.inner()).await)
+}
+
+fn compile_dsl(
+    dsl_json: &str,
+) -> Result<(CompileResult, Option<crate::compiler::CompiledShow>), Diagnostic> {
+    let loaded = load_document(dsl_json)?;
     let dsl = loaded.document;
     let mut group_names: Vec<String> = Vec::new();
     for g in &dsl.groups {
@@ -119,7 +247,7 @@ pub async fn load_dsl(
         migration_report: loaded.migration_report,
     };
 
-    match compiled {
+    let compiled = match compiled {
         Ok(c) => {
             result.success = true;
             result.fixture_count = c.fixtures.len();
@@ -127,19 +255,23 @@ pub async fn load_dsl(
             result.group_names = group_names;
             result.phasers = phasers;
 
-            let snapshot = state.shows.publish(c).await;
-            result.show_revision = Some(snapshot.revision);
-
-            // Reset active phasers when loading a new DSL (both live and timeline mode)
-            let mut r_state = state.runtime.write().await;
-            r_state.live_phasers.clear();
+            Some(c)
         }
         Err(e) => {
             result.errors = e;
+            None
         }
-    }
+    };
 
-    Ok(result)
+    Ok((result, compiled))
+}
+
+async fn show_snapshot_state(state: &EngineState) -> ShowSnapshotState {
+    let (published_revision, live_revision) = state.shows.revisions().await;
+    ShowSnapshotState {
+        published_revision,
+        live_revision,
+    }
 }
 
 #[tauri::command]
@@ -215,7 +347,133 @@ pub async fn set_output_rate(hz: u32, state: State<'_, Arc<EngineState>>) -> Res
         .scheduler
         .set_output_rate(output_rate)
         .await
-        .map_err(|error| error.to_string())
+        .map_err(|error| error.to_string())?;
+    state.runtime.write().await.output_rate_hz = output_rate.hz();
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_live_effects(
+    state: State<'_, Arc<EngineState>>,
+) -> Result<LiveEffectCatalog, String> {
+    let snapshot = state
+        .shows
+        .current()
+        .await
+        .ok_or_else(|| "No Live Snapshot is active.".to_string())?;
+    Ok(live_effect_catalog(&snapshot))
+}
+
+fn live_effect_catalog(snapshot: &ShowSnapshot) -> LiveEffectCatalog {
+    let mut effects: Vec<_> = snapshot
+        .show
+        .effect_instances
+        .values()
+        .filter_map(|instance| {
+            let definition = snapshot
+                .show
+                .effect_definitions
+                .get(instance.definition.index())?;
+            Some(LiveEffectInfo {
+                instance_id: instance.id.clone(),
+                definition_id: definition.id.clone(),
+                definition_revision: definition.revision,
+                name: definition.name.clone(),
+                target_group_id: instance.target_group_id.clone(),
+            })
+        })
+        .collect();
+    effects.sort_by(|left, right| {
+        left.name
+            .cmp(&right.name)
+            .then(left.instance_id.cmp(&right.instance_id))
+    });
+    LiveEffectCatalog {
+        show_revision: snapshot.revision,
+        effects,
+    }
+}
+
+#[tauri::command]
+pub async fn queue_live_pad(
+    effect_id: String,
+    action: String,
+    quantize: String,
+    multiplier: f64,
+    exclusive_ids: Vec<String>,
+    one_shot_beats: Option<f64>,
+    state: State<'_, Arc<EngineState>>,
+) -> Result<QueuedLivePad, String> {
+    if !multiplier.is_finite() || !(0.125..=8.0).contains(&multiplier) {
+        return Err("Live Pad multiplier must be between 0.125 and 8.".to_string());
+    }
+    if one_shot_beats
+        .is_some_and(|duration| !duration.is_finite() || !(0.25..=256.0).contains(&duration))
+    {
+        return Err("One-shot duration must be between 0.25 and 256 beats.".to_string());
+    }
+
+    let live = state
+        .shows
+        .current()
+        .await
+        .ok_or_else(|| "No Live Snapshot is active.".to_string())?;
+    if !live.show.effect_instances.contains_key(&effect_id) {
+        return Err(format!(
+            "Effect {effect_id:?} is not part of Live revision {}.",
+            live.revision
+        ));
+    }
+    let exclusive_ids = exclusive_ids
+        .into_iter()
+        .filter(|id| id != &effect_id && live.show.effect_instances.contains_key(id))
+        .collect();
+    let kind = match action.as_str() {
+        "start" => ScheduledLiveActionKind::Start {
+            multiplier,
+            exclusive_ids,
+        },
+        "stop" => ScheduledLiveActionKind::Stop,
+        _ => return Err("Live Pad action must be start or stop.".to_string()),
+    };
+    let quantize = match quantize.as_str() {
+        "off" => LivePadQuantize::Off,
+        "beat" => LivePadQuantize::Beat,
+        "bar" => LivePadQuantize::Bar,
+        _ => return Err("Live Pad quantize must be off, beat, or bar.".to_string()),
+    };
+
+    let now = state.clock.now();
+    let mut runtime = state.runtime.write().await;
+    let transport = runtime.transport.snapshot(now);
+    if transport.state != crate::engine::transport::TransportState::Playing {
+        return Err("Start or resume Transport before triggering a Live Pad.".to_string());
+    }
+    let target_beat = runtime.queue_live_pad(
+        effect_id,
+        kind,
+        quantize,
+        transport.cursor_beat,
+        if action == "start" {
+            one_shot_beats
+        } else {
+            None
+        },
+    );
+    Ok(QueuedLivePad { target_beat })
+}
+
+#[tauri::command]
+pub async fn set_blackout(
+    enabled: bool,
+    app_handle: AppHandle,
+    state: State<'_, Arc<EngineState>>,
+) -> Result<(), String> {
+    state
+        .scheduler
+        .set_blackout(&app_handle, state.inner(), enabled)
+        .await;
+    Ok(())
 }
 
 #[tauri::command]
@@ -286,6 +544,7 @@ pub async fn set_sequencer_mode(
 
     // Clear active phasers when switching modes
     r_state.live_phasers.clear();
+    r_state.pending_live_actions.clear();
 
     Ok(())
 }
@@ -336,8 +595,13 @@ async fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{atomic_write, SAVE_SEQUENCE};
+    use super::{
+        atomic_write, compile_dsl, live_effect_catalog, preview_dsl, preview_effect_loop,
+        SAVE_SEQUENCE,
+    };
+    use crate::state::ShowSnapshot;
     use std::sync::atomic::Ordering;
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn atomically_replaces_a_show_without_leaving_temporary_files() {
@@ -380,5 +644,85 @@ mod tests {
         tokio::fs::remove_dir_all(directory)
             .await
             .expect("test cleanup");
+    }
+
+    #[test]
+    fn draft_preview_compiles_without_assigning_a_show_revision() {
+        let source = r#"{
+          "schema_version": 4,
+          "meta": { "name": "Preview" },
+          "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 4] }],
+          "layout": { "type": "generator", "generator": { "shape": "matrix", "rows": 2, "columns": 2, "spacing": 64 } },
+          "groups": [{ "id": "all", "name": "All", "fixtures": { "range": [1, 4] } }],
+          "effect_definitions": [],
+          "effect_instances": [],
+          "timeline": { "ppq": 960, "tempo_map": { "points": [{ "time_tick": 0, "bpm": 120 }] }, "tracks": [] }
+        }"#;
+
+        let result = preview_dsl(source.to_string()).expect("draft preview");
+        assert!(result.success);
+        assert_eq!(result.show_revision, None);
+        assert_eq!(result.fixture_count, 4);
+        assert_eq!(result.layout_coords.len(), 4);
+    }
+
+    #[tokio::test]
+    async fn effect_loop_preview_renders_without_publishing() {
+        let source = r##"{
+          "schema_version": 4,
+          "meta": { "name": "Preview" },
+          "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 1] }],
+          "layout": { "type": "generator", "generator": { "shape": "matrix", "rows": 1, "columns": 1, "spacing": 64 } },
+          "groups": [{ "id": "all", "name": "All", "fixtures": { "range": [1, 1] } }],
+          "effect_definitions": [{
+            "id": "project.red-pulse", "name": "Red Pulse", "revision": 1, "source": "project_local",
+            "parameters": [
+              { "id": "speed", "name": "Speed", "value_type": "scalar", "default_value": { "type": "scalar", "value": 1.0 }, "range": [0.125, 8.0], "unit": "multiplier", "ui_hint": "slider", "automation": "continuous" },
+              { "id": "phase", "name": "Phase", "value_type": "scalar", "default_value": { "type": "scalar", "value": 0.0 }, "range": [-1.0, 1.0], "unit": "cycles", "ui_hint": "slider", "automation": "continuous" },
+              { "id": "width", "name": "Width", "value_type": "scalar", "default_value": { "type": "scalar", "value": 100.0 }, "range": [1.0, 100.0], "unit": "percent", "ui_hint": "slider", "automation": "continuous" },
+              { "id": "transition", "name": "Transition", "value_type": "scalar", "default_value": { "type": "scalar", "value": 20.0 }, "range": [0.0, 100.0], "unit": "percent", "ui_hint": "slider", "automation": "continuous" },
+              { "id": "color", "name": "Color", "value_type": "color", "default_value": { "type": "color", "value": "#ff0000" }, "unit": "color", "ui_hint": "color", "automation": "continuous" }
+            ],
+            "graph": { "nodes": [
+              { "type": "time", "id": "time" },
+              { "type": "step_sequence", "id": "shape-pulse", "phase": { "node_id": "time", "port": "scalar" }, "steps": [
+                { "values": { "dimmer": 1.0, "color": "#ff0000" }, "width": 50.0, "transition": 0.0 },
+                { "values": { "dimmer": 0.0, "color": "#ff0000" }, "width": 50.0, "transition": 0.0 }
+              ] },
+              { "type": "attribute_writer", "id": "output", "input": { "node_id": "shape-pulse", "port": "attribute_set" } }
+            ] },
+            "catalog": { "energy": 0.7, "density": 0.5, "motion": "pulse", "colorfulness": 1.0, "strobe_risk": "low", "required_attributes": ["intensity", "color.rgb"] }
+          }],
+          "effect_instances": [{ "id": "red-pulse", "definition_id": "project.red-pulse", "definition_revision": 1, "target_group_id": "all", "seed": "0000000000000001" }],
+          "timeline": { "ppq": 960, "tempo_map": { "points": [{ "time_tick": 0, "bpm": 120 }] }, "tracks": [] }
+        }"##;
+
+        let (_, compiled) = compile_dsl(source).expect("compile live catalog");
+        let catalog = live_effect_catalog(&ShowSnapshot {
+            revision: 7,
+            show: Arc::new(compiled.expect("compiled show")),
+        });
+        assert_eq!(catalog.show_revision, 7);
+        assert_eq!(catalog.effects.len(), 1);
+        assert_eq!(catalog.effects[0].instance_id, "red-pulse");
+        assert_eq!(catalog.effects[0].name, "Red Pulse");
+        assert_eq!(catalog.effects[0].definition_revision, 1);
+
+        let frames = preview_effect_loop(source.to_string(), "red-pulse".to_string(), 16)
+            .await
+            .expect("effect preview");
+        assert_eq!(frames.len(), 16);
+        assert!(frames.iter().all(|frame| frame.len() == 1));
+        let intensities: Vec<_> = frames
+            .iter()
+            .filter_map(|frame| {
+                frame[0]
+                    .attributes
+                    .iter()
+                    .find(|attribute| attribute.id == "intensity")
+                    .map(|attribute| attribute.value.clone())
+            })
+            .collect();
+        assert!(intensities.windows(2).any(|pair| pair[0] != pair[1]));
     }
 }

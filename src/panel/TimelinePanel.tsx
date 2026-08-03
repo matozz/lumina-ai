@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { engine } from "@/bridge/commands";
 import { useEngineStore, engineActions, engineSelectors } from "@/stores/engine";
 import { useTimelineStore, timelineActions, timelineSelectors } from "@/stores/timeline";
+import { workspaceActions } from "@/stores/workspace";
 import { cn } from "@/lib/utils";
 import { isTextEditingTarget } from "@/lib/dom";
 import { useTimelineEvents } from "./hooks/useTimelineEvents";
@@ -18,8 +20,11 @@ import {
   TimelinePlayhead,
 } from "./components";
 
-export const TimelinePanel = () => {
-  const compileResult = useEngineStore(engineSelectors.compileResult);
+interface TimelinePanelProps {
+  embedded?: boolean;
+}
+
+export const TimelinePanel = ({ embedded = false }: TimelinePanelProps) => {
   const canUndo = useEngineStore(engineSelectors.canUndo);
   const canRedo = useEngineStore(engineSelectors.canRedo);
   const isDocumentDirty = useEngineStore(engineSelectors.isDocumentDirty);
@@ -30,6 +35,7 @@ export const TimelinePanel = () => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackHeadersScrollRef = useRef<HTMLDivElement>(null);
+  const seekSequenceRef = useRef(0);
   const [viewport, setViewport] = useState<TimelineViewport>({
     startBeat: 0,
     endBeat: 40,
@@ -51,6 +57,7 @@ export const TimelinePanel = () => {
     addAutomationLane,
     deleteEvent,
     nudgeEvent,
+    resizeEventBy,
     trimClipOverlaps,
     replaceClipOverlaps,
     addKeyframe,
@@ -59,7 +66,7 @@ export const TimelinePanel = () => {
     updateKeyframe,
   } = useTimelineEvents({ beatWidth, scrollRef });
 
-  const tracks = useTimelineTracks(timelineEvents);
+  const tracks = useTimelineTracks(timelineEvents, document);
 
   const updateViewport = useCallback(
     (container: HTMLDivElement) => {
@@ -98,32 +105,65 @@ export const TimelinePanel = () => {
   }, [updateViewport]);
 
   useEffect(() => {
-    if (selectedPhaser && compileResult?.phasers) {
-      if (!compileResult.phasers.some((p) => p.id === selectedPhaser)) {
-        timelineActions.setSelectedPhaser(null);
-      }
-    } else if (!compileResult?.phasers || compileResult.phasers.length === 0) {
+    if (
+      selectedPhaser &&
+      !document?.effect_instances.some((instance) => instance.id === selectedPhaser)
+    ) {
       timelineActions.setSelectedPhaser(null);
     }
-  }, [compileResult, selectedPhaser]);
+  }, [document?.effect_instances, selectedPhaser]);
+
+  const placeEffect = useCallback(
+    (instanceId: string, clientX: number) => {
+      if (!document?.effect_instances.some((instance) => instance.id === instanceId)) {
+        workspaceActions.setPublishStatus(
+          "error",
+          "That effect revision is no longer available. Select it again from the library.",
+        );
+        return;
+      }
+      const container = scrollRef.current;
+      if (!container) return;
+      const x = clientX - container.getBoundingClientRect().left + container.scrollLeft;
+      const snappedTick = snapTick(pixelsToTicks(x, geometry), geometry);
+      try {
+        addEvent({
+          beat: snappedTick / geometry.ppq,
+          duration: 4,
+          action: { type: "effect", instance_id: instanceId },
+        });
+        workspaceActions.setPublishStatus(
+          "idle",
+          `Placed effect at beat ${snappedTick / geometry.ppq}.`,
+        );
+      } catch (error) {
+        workspaceActions.setPublishStatus(
+          "error",
+          error instanceof Error ? error.message : "Effect could not be placed.",
+        );
+      }
+    },
+    [addEvent, document?.effect_instances, geometry],
+  );
 
   const handleGridClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>, _trackName: string) => {
       if (interactionState.current.isInteracting) return;
       if (!selectedPhaser) return;
 
-      const container = scrollRef.current;
-      if (!container) return;
-      const x = e.clientX - container.getBoundingClientRect().left + container.scrollLeft;
-      const snappedTick = snapTick(pixelsToTicks(x, geometry), geometry);
-
-      addEvent({
-        beat: snappedTick / geometry.ppq,
-        duration: 4,
-        action: { type: "effect", instance_id: selectedPhaser },
-      });
+      placeEffect(selectedPhaser, e.clientX);
     },
-    [addEvent, geometry, interactionState, selectedPhaser],
+    [interactionState, placeEffect, selectedPhaser],
+  );
+
+  const handleEffectDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      const instanceId = event.dataTransfer.getData("application/x-lumina-effect-instance");
+      if (!instanceId) return;
+      event.preventDefault();
+      placeEffect(instanceId, event.clientX);
+    },
+    [placeEffect],
   );
 
   const handleZoom = useCallback(
@@ -143,6 +183,27 @@ export const TimelinePanel = () => {
     [beatWidth, updateViewport],
   );
 
+  const handleSeek = useCallback((beat: number) => {
+    const previousBeat = useEngineStore.getState().globalBeat;
+    const sequence = ++seekSequenceRef.current;
+    engineActions.setGlobalBeat(beat);
+    void engine
+      .seek(beat)
+      .then(() => {
+        if (seekSequenceRef.current === sequence) {
+          workspaceActions.setPublishStatus("idle", `Seeked to beat ${beat}.`);
+        }
+      })
+      .catch((error) => {
+        if (seekSequenceRef.current !== sequence) return;
+        engineActions.setGlobalBeat(previousBeat);
+        workspaceActions.setPublishStatus(
+          "error",
+          error instanceof Error ? error.message : "Timeline seek failed.",
+        );
+      });
+  }, []);
+
   const timelineActionsValue = useMemo(
     () => ({
       geometry,
@@ -161,6 +222,7 @@ export const TimelinePanel = () => {
         startResizing(originalIndex, e.clientX, element),
       onDelete: deleteEvent,
       onNudge: nudgeEvent,
+      onResizeBy: resizeEventBy,
       onTrimClipOverlaps: trimClipOverlaps,
       onReplaceClipOverlaps: replaceClipOverlaps,
       onAddKeyframe: addKeyframe,
@@ -168,6 +230,7 @@ export const TimelinePanel = () => {
       onDeleteKeyframes: deleteKeyframes,
       onUpdateKeyframe: updateKeyframe,
       onGridClick: handleGridClick,
+      onDropEffect: handleEffectDrop,
       onSnapPreview: showSnapPreview,
       onSnapPreviewEnd: hideSnapPreview,
     }),
@@ -175,12 +238,14 @@ export const TimelinePanel = () => {
       deleteEvent,
       deleteKeyframes,
       handleGridClick,
+      handleEffectDrop,
       geometry,
       hideSnapPreview,
       addKeyframe,
       moveKeyframes,
       nudgeEvent,
       replaceClipOverlaps,
+      resizeEventBy,
       showSnapPreview,
       startMoving,
       startResizing,
@@ -211,7 +276,10 @@ export const TimelinePanel = () => {
       tabIndex={0}
       onKeyDown={handleHistoryKeyDown}
       className={cn(
-        "relative z-20 flex h-[clamp(18rem,40vh,24rem)] min-h-0 min-w-0 shrink-0 flex-col border-t border-zinc-800 bg-zinc-950 shadow-[0_-8px_20px_rgba(0,0,0,0.5)] select-none",
+        "relative z-20 flex min-h-0 min-w-0 flex-col bg-zinc-950 select-none",
+        embedded
+          ? "h-full border-0 shadow-none"
+          : "h-[clamp(18rem,40vh,24rem)] shrink-0 border-t border-zinc-800 shadow-[0_-8px_20px_rgba(0,0,0,0.5)]",
       )}
       data-layout-region="timeline"
     >
@@ -227,9 +295,17 @@ export const TimelinePanel = () => {
         onZoomOut={() => handleZoom(beatWidth - BEAT_WIDTH_STEP)}
       />
 
+      {embedded && (
+        <div className="flex h-7 shrink-0 items-center border-b border-zinc-800 bg-cyan-950/20 px-3 text-[10px] text-cyan-200/70">
+          <span className="font-medium">TEMPO ARRANGEMENT</span>
+          <span className="ml-2">Lighting clips and automation share the same tick grid</span>
+          <span className="ml-auto font-mono">Stage 6</span>
+        </div>
+      )}
+
       <div className={cn("flex min-h-0 min-w-0 flex-1 overflow-hidden")}>
         <TimelineResourcePanel
-          compileResult={compileResult}
+          document={document}
           selectedPhaser={selectedPhaser}
           onSelectPhaser={timelineActions.setSelectedPhaser}
         />
@@ -253,7 +329,12 @@ export const TimelinePanel = () => {
             )}
           >
             <div style={{ width: SCROLL_WIDTH, height: "100%", position: "relative" }}>
-              <TimelineGrid geometry={geometry} viewport={viewport} />
+              <TimelineGrid
+                geometry={geometry}
+                viewport={viewport}
+                maxBeat={SCROLL_WIDTH / beatWidth}
+                onSeek={handleSeek}
+              />
 
               <div className="relative z-0 flex flex-col">
                 {tracks.map((t) => (

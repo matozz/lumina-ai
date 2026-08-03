@@ -203,4 +203,25 @@ mod tests {
         assert_eq!(map.micros_at(MusicalTime::from_ticks(5_760)), 4_000_000);
         assert_eq!(map.time_at_micros(4_000_000).ticks(), 5_760);
     }
+
+    #[test]
+    fn multi_tempo_map_roundtrips_thirty_minutes_without_drift() {
+        let first_segment_ticks = 120_u64 * 15 * u64::from(DEFAULT_PPQ);
+        let final_ticks = first_segment_ticks + 60_u64 * 15 * u64::from(DEFAULT_PPQ);
+        let map = TempoMap::new(
+            DEFAULT_PPQ,
+            vec![
+                TempoPoint::from_bpm(MusicalTime::ZERO, 120.0).expect("120 BPM"),
+                TempoPoint::from_bpm(MusicalTime::from_ticks(first_segment_ticks), 60.0)
+                    .expect("60 BPM"),
+            ],
+        )
+        .expect("multi-tempo map");
+
+        assert_eq!(
+            map.micros_at(MusicalTime::from_ticks(final_ticks)),
+            1_800_000_000
+        );
+        assert_eq!(map.time_at_micros(1_800_000_000).ticks(), final_ticks);
+    }
 }

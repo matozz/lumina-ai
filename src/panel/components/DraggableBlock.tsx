@@ -9,15 +9,16 @@ import { EffectClipOverlapInspector } from "./EffectClipOverlapInspector";
 interface BlockProps {
   event: UITimelineEvent;
   beatWidth: number;
+  label?: string;
 }
 
-export const DraggableBlock = memo(({ event, beatWidth }: BlockProps) => {
+export const DraggableBlock = memo(({ event, beatWidth, label: displayLabel }: BlockProps) => {
   const actions = useTimelineActions();
   const ref = useRef<HTMLDivElement>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   if (event.action.type !== "effect") return null;
 
-  const label = event.action.instance_id;
+  const label = displayLabel ?? event.action.instance_id;
   const duration = event.duration ?? 4;
 
   return (
@@ -40,6 +41,7 @@ export const DraggableBlock = memo(({ event, beatWidth }: BlockProps) => {
             role="button"
             tabIndex={0}
             aria-label={`${label}, starts at beat ${event.beat}, duration ${duration} beats`}
+            aria-keyshortcuts="ArrowLeft ArrowRight Alt+ArrowLeft Alt+ArrowRight Delete Backspace"
             onClick={(mouseEvent) => mouseEvent.stopPropagation()}
             onDoubleClick={(mouseEvent) => {
               mouseEvent.stopPropagation();
@@ -53,10 +55,14 @@ export const DraggableBlock = memo(({ event, beatWidth }: BlockProps) => {
               } else if (keyboardEvent.key === "ArrowLeft" || keyboardEvent.key === "ArrowRight") {
                 keyboardEvent.preventDefault();
                 const direction = keyboardEvent.key === "ArrowLeft" ? -1 : 1;
-                actions.onNudge(
-                  event.originalIndex,
-                  direction * (keyboardEvent.shiftKey ? 4 : 0.5),
-                );
+                if (keyboardEvent.altKey) {
+                  actions.onResizeBy(event.originalIndex, direction * 0.5);
+                } else {
+                  actions.onNudge(
+                    event.originalIndex,
+                    direction * (keyboardEvent.shiftKey ? 4 : 0.5),
+                  );
+                }
               }
             }}
             onPointerDown={(pointerEvent) => {

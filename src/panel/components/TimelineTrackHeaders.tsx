@@ -21,8 +21,7 @@ export const TimelineTrackHeaders = (props: TrackHeadersProps) => {
   const { tracks, scrollRef, expandedTracks, setExpandedTracks, document, onAddAutomationLane } =
     props;
 
-  const toggleTrack = (trackId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const toggleTrack = (trackId: string) => {
     setExpandedTracks({
       ...expandedTracks,
       [trackId]: !expandedTracks[trackId],
@@ -47,19 +46,40 @@ export const TimelineTrackHeaders = (props: TrackHeadersProps) => {
             <div key={t.id} className="flex flex-col">
               <div
                 className={cn(
-                  "group relative box-border flex h-10 cursor-pointer items-center border-b border-zinc-800/40 px-2 transition-colors",
+                  "group relative box-border flex h-10 items-center border-b border-zinc-800/40 px-2 transition-colors motion-reduce:transition-none",
+                  hasSubTracks && "cursor-pointer",
                 )}
-                onClick={(e) => hasSubTracks && toggleTrack(t.id, e)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (hasSubTracks) toggleTrack(t.id);
+                }}
               >
-                <div className="mr-1 flex h-4 w-4 items-center justify-center text-zinc-500 transition-colors hover:text-zinc-300">
-                  {hasSubTracks ? (
-                    isExpanded ? (
-                      <ChevronDown size={14} />
+                {hasSubTracks ? (
+                  <button
+                    type="button"
+                    className="mr-1 flex size-5 items-center justify-center rounded text-zinc-500 transition-colors hover:text-zinc-300 focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:outline-none motion-reduce:transition-none"
+                    aria-label={`${isExpanded ? "Collapse" : "Expand"} ${t.name}`}
+                    aria-expanded={isExpanded}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleTrack(t.id);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" && event.key !== " ") return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      toggleTrack(t.id);
+                    }}
+                  >
+                    {isExpanded ? (
+                      <ChevronDown size={14} aria-hidden="true" />
                     ) : (
-                      <ChevronRight size={14} />
-                    )
-                  ) : null}
-                </div>
+                      <ChevronRight size={14} aria-hidden="true" />
+                    )}
+                  </button>
+                ) : (
+                  <span className="mr-1 size-5" aria-hidden="true" />
+                )}
 
                 <div
                   className={cn(

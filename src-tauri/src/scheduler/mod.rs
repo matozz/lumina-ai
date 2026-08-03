@@ -9,7 +9,7 @@ use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Runtime};
 use tokio::sync::{watch, Mutex};
 use tokio::task::JoinHandle;
-use tokio::time::{interval, MissedTickBehavior};
+use tokio::time::{interval, Instant, MissedTickBehavior};
 
 /// Lock order: scheduler lifecycle -> completed ShowStore operation -> runtime state.
 /// The worker never locks lifecycle, and no code awaits ShowStore while holding runtime state.
@@ -59,6 +59,12 @@ pub struct EngineStatePayload {
     pub tempo: u32,
     pub global_beat: f64,
     pub active_phasers: Vec<ActivePhaserPayload>,
+    pub blackout: bool,
+    pub output_rate_hz: u32,
+    pub frame_lag_ms: f64,
+    pub output_adapter: &'static str,
+    pub last_output_error: Option<String>,
+    pub live_revision: Option<u64>,
 }
 
 #[derive(Clone, Serialize)]
@@ -132,6 +138,7 @@ impl Scheduler {
         let snapshot = {
             let mut runtime = state.runtime.write().await;
             runtime.live_phasers.clear();
+            runtime.pending_live_actions.clear();
             runtime.transport.stop(state.clock.now())
         };
         publish_blackout(app, state, snapshot).await;
@@ -158,7 +165,7 @@ impl Scheduler {
             let mut runtime = state.runtime.write().await;
             runtime.transport.complete_seek(now)?
         };
-        render_and_emit(app, state, true).await;
+        render_and_emit(app, state, true, 0.0).await;
         emit_state(app, state, settled).await;
 
         if settled.state == TransportState::Playing {
@@ -195,11 +202,28 @@ impl Scheduler {
         Ok(())
     }
 
+    pub async fn set_blackout<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        state: &Arc<EngineState>,
+        enabled: bool,
+    ) {
+        {
+            let mut runtime = state.runtime.write().await;
+            runtime.blackout = enabled;
+            if !enabled {
+                let _ = runtime.output_hub.request_preview_full();
+            }
+        }
+        render_and_emit(app, state, true, 0.0).await;
+    }
+
     pub async fn shutdown(&self, state: &Arc<EngineState>) -> Result<(), SchedulerError> {
         let mut lifecycle = self.lifecycle.lock().await;
         stop_worker(&mut lifecycle).await?;
         let mut runtime = state.runtime.write().await;
         runtime.live_phasers.clear();
+        runtime.pending_live_actions.clear();
         runtime.transport.stop(state.clock.now());
         let _ = runtime.output_hub.stop();
         Ok(())
@@ -253,7 +277,12 @@ fn spawn_worker<R: Runtime>(
                         break;
                     }
                 }
-                _ = ticker.tick() => render_and_emit(&app, &state, false).await,
+                deadline = ticker.tick() => {
+                    let frame_lag_ms = Instant::now()
+                        .saturating_duration_since(deadline)
+                        .as_secs_f64() * 1_000.0;
+                    render_and_emit(&app, &state, false, frame_lag_ms).await;
+                },
             }
         }
     });
@@ -275,15 +304,20 @@ async fn render_and_emit<R: Runtime>(
     app: &AppHandle<R>,
     state: &Arc<EngineState>,
     force_full: bool,
+    frame_lag_ms: f64,
 ) {
     let show_snapshot = state.shows.current().await;
     let now = state.clock.now();
-    let (transport, mode, live_phasers) = {
-        let runtime = state.runtime.read().await;
+    let (transport, mode, live_phasers, blackout) = {
+        let mut runtime = state.runtime.write().await;
+        let transport = runtime.transport.snapshot(now);
+        runtime.apply_due_live_actions(transport.cursor_beat);
+        runtime.last_frame_lag_ms = frame_lag_ms;
         (
-            runtime.transport.snapshot(now),
+            transport,
             runtime.sequencer_mode.clone(),
             runtime.live_phasers.clone(),
+            runtime.blackout,
         )
     };
 
@@ -292,15 +326,19 @@ async fn render_and_emit<R: Runtime>(
             SequencerMode::Timeline => RenderSource::Timeline,
             SequencerMode::Live => RenderSource::Live(&live_phasers),
         };
-        let frame = render_at(
-            &show_snapshot.show,
-            RenderTime {
-                beat: transport.cursor_beat,
-            },
-            source,
-        );
+        let frame = if blackout {
+            blackout_frame(&show_snapshot.show)
+        } else {
+            render_at(
+                &show_snapshot.show,
+                RenderTime {
+                    beat: transport.cursor_beat,
+                },
+                source,
+            )
+        };
         let payload = {
-            let runtime = state.runtime.write().await;
+            let mut runtime = state.runtime.write().await;
             if force_full {
                 let _ = runtime.output_hub.request_preview_full();
             }
@@ -309,7 +347,10 @@ async fn render_and_emit<R: Runtime>(
                 transport.cursor_beat,
                 frame,
             ));
-            let _ = runtime.output_hub.dispatch(logical_frame, false);
+            let report = runtime.output_hub.dispatch(logical_frame, blackout);
+            if let Some(error) = report.errors.first() {
+                runtime.last_output_error = Some(error.error.to_string());
+            }
             runtime.output_hub.take_preview_payload().ok().flatten()
         };
         if let Some(payload) = payload {
@@ -328,12 +369,7 @@ async fn publish_blackout<R: Runtime>(
     let Some(show_snapshot) = state.shows.current().await else {
         return;
     };
-    let blackout = show_snapshot
-        .show
-        .fixtures
-        .iter()
-        .map(|fixture| FixtureFrame::with_profile_defaults(fixture.id, fixture.profile))
-        .collect();
+    let blackout = blackout_frame(&show_snapshot.show);
     let payload = {
         let runtime = state.runtime.write().await;
         let logical_frame = Arc::new(LogicalFrame::new(
@@ -349,15 +385,25 @@ async fn publish_blackout<R: Runtime>(
     }
 }
 
+fn blackout_frame(show: &crate::compiler::CompiledShow) -> Vec<FixtureFrame> {
+    show.fixtures
+        .iter()
+        .map(|fixture| FixtureFrame::with_profile_defaults(fixture.id, fixture.profile))
+        .collect()
+}
+
 async fn emit_state<R: Runtime>(
     app: &AppHandle<R>,
     state: &Arc<EngineState>,
     transport: TransportSnapshot,
 ) {
-    let active_phasers = state
-        .runtime
-        .read()
+    let live_revision = state
+        .shows
+        .current()
         .await
+        .map(|snapshot| snapshot.revision);
+    let runtime = state.runtime.read().await;
+    let active_phasers = runtime
         .live_phasers
         .iter()
         .map(|phaser| ActivePhaserPayload {
@@ -371,6 +417,12 @@ async fn emit_state<R: Runtime>(
         tempo: transport.tempo_bpm,
         global_beat: transport.cursor_beat,
         active_phasers,
+        blackout: runtime.blackout,
+        output_rate_hz: runtime.output_rate_hz,
+        frame_lag_ms: runtime.last_frame_lag_ms,
+        output_adapter: "preview",
+        last_output_error: runtime.last_output_error.clone(),
+        live_revision,
     };
     let _ = app.emit("engine:state-change", payload);
 }
@@ -380,7 +432,7 @@ mod tests {
     use super::{Scheduler, SchedulerError};
     use crate::compiler::{CompiledShow, Fixture};
     use crate::engine::clock::{Clock, ManualClock};
-    use crate::engine::output::{OutputHub, RecordingSink};
+    use crate::engine::output::{OutputHub, RecordedFrameKind, RecordingSink};
     use crate::engine::profile::{profile_handle_by_id, GENERIC_RGB_PROFILE_ID};
     use crate::engine::render::LivePhaser;
     use crate::engine::transport::{OutputRate, Transport, TransportState};
@@ -398,7 +450,13 @@ mod tests {
             runtime: Arc::new(RwLock::new(RuntimeState {
                 transport: Transport::new(120, clock.now()).expect("transport"),
                 live_phasers: Vec::new(),
+                pending_live_actions: Vec::new(),
+                next_live_action_sequence: 0,
                 sequencer_mode: SequencerMode::Timeline,
+                blackout: false,
+                output_rate_hz: output_rate.hz(),
+                last_frame_lag_ms: 0.0,
+                last_output_error: None,
                 output_hub: OutputHub::default(),
             })),
         });
@@ -488,7 +546,7 @@ mod tests {
         let (state, clock) = engine_state(OutputRate::default());
         state
             .shows
-            .publish(CompiledShow {
+            .publish_and_activate(CompiledShow {
                 fixtures: vec![fixture(1)],
                 ..CompiledShow::default()
             })
@@ -536,7 +594,7 @@ mod tests {
             let (state, _) = engine_state(output_rate);
             state
                 .shows
-                .publish(CompiledShow {
+                .publish_and_activate(CompiledShow {
                     fixtures: vec![fixture(1)],
                     ..CompiledShow::default()
                 })
@@ -572,7 +630,7 @@ mod tests {
     async fn scheduler_fans_the_same_show_revision_to_preview_and_recording_sinks() {
         let app = tauri::test::mock_app();
         let (state, _) = engine_state(OutputRate::default());
-        let snapshot = state.shows.publish(show_with_fixture(1)).await;
+        let snapshot = state.shows.publish_and_activate(show_with_fixture(1)).await;
         let recording = Arc::new(RecordingSink::new(16));
         state
             .runtime
@@ -612,10 +670,72 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn blackout_is_a_latched_output_state_without_resetting_transport() {
+        let app = tauri::test::mock_app();
+        let (state, clock) = engine_state(OutputRate::default());
+        state.shows.publish_and_activate(show_with_fixture(1)).await;
+        let recording = Arc::new(RecordingSink::new(8));
+        state
+            .runtime
+            .write()
+            .await
+            .output_hub
+            .register(recording.clone())
+            .expect("register recording sink");
+        state
+            .scheduler
+            .play(app.handle().clone(), state.clone())
+            .await
+            .expect("play");
+        clock.advance(Duration::from_secs(2));
+
+        state
+            .scheduler
+            .set_blackout(app.handle(), &state, true)
+            .await;
+        let blackout_frames = recording.take_frames().expect("blackout frames");
+        assert_eq!(
+            blackout_frames.last().expect("blackout").kind,
+            RecordedFrameKind::Blackout
+        );
+        let during = state.runtime.read().await.transport.snapshot(clock.now());
+        assert_eq!(during.state, TransportState::Playing);
+        assert_eq!(during.cursor_beat, 4.0);
+        assert!(state.runtime.read().await.blackout);
+
+        state
+            .scheduler
+            .set_blackout(app.handle(), &state, false)
+            .await;
+        let restored = recording.take_frames().expect("restored frames");
+        assert_eq!(
+            restored.last().expect("normal").kind,
+            RecordedFrameKind::Frame
+        );
+        assert!(!state.runtime.read().await.blackout);
+        assert_eq!(
+            state
+                .runtime
+                .read()
+                .await
+                .transport
+                .snapshot(clock.now())
+                .cursor_beat,
+            4.0
+        );
+
+        state
+            .scheduler
+            .pause(app.handle(), &state)
+            .await
+            .expect("pause");
+    }
+
+    #[tokio::test]
     async fn shutdown_joins_active_worker_and_resets_transient_state() {
         let app = tauri::test::mock_app();
         let (state, clock) = engine_state(OutputRate::default());
-        state.shows.publish(show_with_fixture(1)).await;
+        state.shows.publish_and_activate(show_with_fixture(1)).await;
         state.runtime.write().await.live_phasers.push(LivePhaser {
             id: "active".to_string(),
             start_beat: 0.0,
@@ -645,7 +765,7 @@ mod tests {
     async fn concurrent_reload_transport_and_resync_finishes_without_deadlock() {
         let app = tauri::test::mock_app();
         let (state, clock) = engine_state(OutputRate::default());
-        state.shows.publish(show_with_fixture(1)).await;
+        state.shows.publish_and_activate(show_with_fixture(1)).await;
 
         let transport = async {
             for iteration in 0..40 {
@@ -700,7 +820,16 @@ mod tests {
         .await
         .expect("concurrent operations must not deadlock");
 
-        assert_eq!(state.shows.current().await.expect("show").revision, 101);
+        assert_eq!(
+            state
+                .shows
+                .latest_published()
+                .await
+                .expect("latest published show")
+                .revision,
+            101
+        );
+        assert_eq!(state.shows.current().await.expect("live show").revision, 1);
         assert!(!state.scheduler.is_running().await);
         assert_eq!(
             state

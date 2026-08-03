@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TimelineActionContext, type TimelineActions } from "../context/TimelineContext";
 import type { TimelineTrackData, UITimelineEvent } from "../types";
@@ -12,6 +12,7 @@ const actions: TimelineActions = {
   onResizeStart: vi.fn(),
   onDelete: vi.fn(),
   onNudge: vi.fn(),
+  onResizeBy: vi.fn(),
   onTrimClipOverlaps: vi.fn(),
   onReplaceClipOverlaps: vi.fn(),
   onAddKeyframe: vi.fn(),
@@ -19,6 +20,7 @@ const actions: TimelineActions = {
   onDeleteKeyframes: vi.fn(),
   onUpdateKeyframe: vi.fn(),
   onGridClick: vi.fn(),
+  onDropEffect: vi.fn(),
   onSnapPreview: vi.fn(),
   onSnapPreviewEnd: vi.fn(),
 };
@@ -47,5 +49,31 @@ describe("DroppableTrack virtualization", () => {
     );
 
     expect(container.querySelectorAll('[role="button"]')).toHaveLength(24);
+  });
+
+  it("accepts an effect-library native drop without changing pointer interactions", () => {
+    const track: TimelineTrackData = { id: "effects", name: "Lighting looks", events: [] };
+    const { container } = render(
+      <TimelineActionContext.Provider value={actions}>
+        <DroppableTrack
+          track={track}
+          selectedPhaser={null}
+          viewport={viewportFromScroll(0, 1_200, 40)}
+          beatWidth={40}
+        />
+      </TimelineActionContext.Provider>,
+    );
+    const target = container.querySelector('[data-track-name="effects"]');
+    expect(target).not.toBeNull();
+    const dataTransfer = {
+      types: ["application/x-lumina-effect-instance"],
+      dropEffect: "none",
+      getData: vi.fn(() => "red-pulse-instance"),
+    };
+
+    fireEvent.dragOver(target!, { dataTransfer });
+    fireEvent.drop(target!, { dataTransfer, clientX: 240 });
+
+    expect(actions.onDropEffect).toHaveBeenCalledOnce();
   });
 });

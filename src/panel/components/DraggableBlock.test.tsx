@@ -11,6 +11,7 @@ function renderBlock() {
     onResizeStart: vi.fn(),
     onDelete: vi.fn(),
     onNudge: vi.fn(),
+    onResizeBy: vi.fn(),
     onTrimClipOverlaps: vi.fn(),
     onReplaceClipOverlaps: vi.fn(),
     onAddKeyframe: vi.fn(),
@@ -18,6 +19,7 @@ function renderBlock() {
     onDeleteKeyframes: vi.fn(),
     onUpdateKeyframe: vi.fn(),
     onGridClick: vi.fn(),
+    onDropEffect: vi.fn(),
     onSnapPreview: vi.fn(),
     onSnapPreviewEnd: vi.fn(),
   };
@@ -25,6 +27,7 @@ function renderBlock() {
     <TimelineActionContext.Provider value={actions}>
       <DraggableBlock
         beatWidth={40}
+        label="Red pulse"
         event={{
           id: "pulse",
           originalIndex: 7,
@@ -41,7 +44,7 @@ function renderBlock() {
 describe("DraggableBlock keyboard controls", () => {
   it("can receive focus, nudge at two step sizes, and delete", () => {
     const actions = renderBlock();
-    const block = screen.getByRole("button", { name: /pulse, starts at beat 2/ });
+    const block = screen.getByRole("button", { name: /Red pulse, starts at beat 2/ });
 
     block.focus();
     expect(document.activeElement).toBe(block);
@@ -49,6 +52,7 @@ describe("DraggableBlock keyboard controls", () => {
 
     fireEvent.keyDown(block, { key: "ArrowRight" });
     fireEvent.keyDown(block, { key: "ArrowLeft", shiftKey: true });
+    fireEvent.keyDown(block, { key: "ArrowRight", altKey: true });
     const editorInput = document.createElement("input");
     block.append(editorInput);
     fireEvent.keyDown(editorInput, { key: "Delete" });
@@ -59,6 +63,7 @@ describe("DraggableBlock keyboard controls", () => {
 
     expect(actions.onNudge).toHaveBeenNthCalledWith(1, 7, 0.5);
     expect(actions.onNudge).toHaveBeenNthCalledWith(2, 7, -4);
+    expect(actions.onResizeBy).toHaveBeenCalledWith(7, 0.5);
     expect(actions.onDelete).toHaveBeenCalledWith(7);
   });
 });

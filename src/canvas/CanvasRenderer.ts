@@ -98,6 +98,23 @@ export class CanvasRenderer {
       ctx.fill();
     }
 
+    ctx.strokeStyle = "#52525b";
+    ctx.lineWidth = 1 / scale;
+    for (const visual of this.fixtures.values()) {
+      ctx.beginPath();
+      if (visual.type === "pixel") {
+        ctx.rect(
+          visual.x - visual.radius,
+          visual.y - visual.radius,
+          visual.radius * 2,
+          visual.radius * 2,
+        );
+      } else {
+        ctx.arc(visual.x, visual.y, visual.radius, 0, Math.PI * 2);
+      }
+      ctx.stroke();
+    }
+
     // Draw glow
     if (this.glowEnabled) {
       ctx.globalCompositeOperation = "lighter";

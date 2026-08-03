@@ -25,7 +25,13 @@ pub fn run() {
                 runtime: Arc::new(RwLock::new(state::RuntimeState {
                     transport,
                     live_phasers: Vec::new(),
+                    pending_live_actions: Vec::new(),
+                    next_live_action_sequence: 0,
                     sequencer_mode: state::SequencerMode::Live,
+                    blackout: false,
+                    output_rate_hz: engine::transport::OutputRate::default().hz(),
+                    last_frame_lag_ms: 0.0,
+                    last_output_error: None,
                     output_hub: engine::output::OutputHub::default(),
                 })),
             });
@@ -36,6 +42,11 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::load_dsl,
+            commands::publish_dsl,
+            commands::preview_dsl,
+            commands::preview_effect_loop,
+            commands::activate_show_revision,
+            commands::get_show_snapshot_state,
             commands::validate_dsl,
             commands::query_effect_catalog,
             commands::play,
@@ -44,6 +55,9 @@ pub fn run() {
             commands::seek,
             commands::set_tempo,
             commands::set_output_rate,
+            commands::get_live_effects,
+            commands::queue_live_pad,
+            commands::set_blackout,
             commands::trigger_phaser,
             commands::stop_phaser,
             commands::save_show,

@@ -67,6 +67,7 @@ function actions(): TimelineActions {
     onResizeStart: vi.fn(),
     onDelete: vi.fn(),
     onNudge: vi.fn(),
+    onResizeBy: vi.fn(),
     onTrimClipOverlaps: vi.fn(),
     onReplaceClipOverlaps: vi.fn(),
     onAddKeyframe: vi.fn(),
@@ -74,6 +75,7 @@ function actions(): TimelineActions {
     onDeleteKeyframes: vi.fn(),
     onUpdateKeyframe: vi.fn(),
     onGridClick: vi.fn(),
+    onDropEffect: vi.fn(),
     onSnapPreview: vi.fn(),
     onSnapPreviewEnd: vi.fn(),
   };

@@ -215,6 +215,22 @@ describe("timeline pointer interactions", () => {
     block.remove();
   });
 
+  it("resizes an effect clip from the keyboard as one undoable transaction", () => {
+    const { result } = renderTimelineEvents();
+
+    act(() => result.current.resizeEventBy(0, 0.5));
+
+    expect(useEngineStore.getState().parsedDsl?.timeline?.tracks[0].clips?.[0].duration_tick).toBe(
+      1_440,
+    );
+    expect(useEngineStore.getState().documentHistory).toHaveLength(1);
+
+    act(() => engineActions.undoDocument());
+    expect(useEngineStore.getState().parsedDsl?.timeline?.tracks[0].clips?.[0].duration_tick).toBe(
+      960,
+    );
+  });
+
   it("creates a typed automation lane at the current integer tick", () => {
     const option: AutomationParameterOption = {
       definition: {
