@@ -811,11 +811,11 @@ Stage 6 交付的一级工作区：
 
 #### 7.2 独立资产 Contract
 
-- [ ] 定义 ProjectManifest，只保存 Stage、Effect Library、Cue Library 和 Arrangement 引用。
-- [ ] StageDocument 只保存 Patch、Layout、Fixture Group 和 TargetSet。
-- [ ] EffectDefinition 保持 target-agnostic，不包含 Timeline。
-- [ ] 每类资产拥有独立 schema version、稳定 ID、revision 和 reference validator。
-- [ ] Arrangement 不内嵌 Layout、EffectGraph 或 CueDefinition。
+- [x] 定义 ProjectManifest，只保存 Stage、Effect Library、Cue Library 和 Arrangement 引用。
+- [x] StageDocument 只保存 Patch、Layout、Fixture Group 和 TargetSet。
+- [x] EffectDefinition 保持 target-agnostic，不包含 Timeline。
+- [x] 每类资产拥有独立 schema version、稳定 ID、revision 和 reference validator。
+- [x] Arrangement 不内嵌 Layout、EffectGraph 或 CueDefinition。
 
 #### 7.3 Cue 与 TargetSet
 
@@ -1234,6 +1234,7 @@ flowchart LR
 | 2026-08-03 | 6        | 多段 TempoMap 长时回归     | completed  | `27c2ebf`               | 120→60 BPM 两段、30 分钟等效 tick↔microseconds 往返误差 0                    | TempoMap 是 Arrangement 时钟，不等同于音频能力                 | 统一门禁与原生复核                          |
 | 2026-08-03 | 6        | Stage 6 发布最终门禁       | completed  | 本切片提交              | `check:all`；103 frontend；93 Rust；schema；strict Clippy；build；debug app  | 原生四工作区无 Song；4×4→Pulse→Arrange→automation→Live；无 DSL | push、PR、merge 后停止                      |
 | 2026-08-03 | 7        | ADR + 原生预览边界基线     | completed  | 本切片提交              | `main/origin@aa14242`；源码/依赖/命令无音频审计；真实 Tauri 四工作区走查     | ADR-0010 accepted；新增 R-024                                  | 独立资产 schema + PreviewSession contract   |
+| 2026-08-03 | 7        | 独立资产 schema + refs     | completed  | 本切片提交              | 6 independent schemas；Rust 9 / frontend 3；schema check；typecheck；Clippy  | 缺失/stale/cycle/capability 结构化诊断；R-006 部分缓解         | Project compiler + TargetSet cache          |
 
 ## 21. Open Risks
 

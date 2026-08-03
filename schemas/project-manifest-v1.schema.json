@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProjectManifest",
+  "type": "object",
+  "properties": {
+    "active_arrangement_id": {
+      "type": "string"
+    },
+    "arrangement_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AssetRef"
+      }
+    },
+    "cue_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AssetRef"
+      }
+    },
+    "effect_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AssetRef"
+      }
+    },
+    "name": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "revision": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 1
+    },
+    "schema_version": {
+      "type": "integer",
+      "format": "uint32",
+      "maximum": 1,
+      "minimum": 1
+    },
+    "stage_ref": {
+      "$ref": "#/$defs/AssetRef"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project_id",
+    "revision",
+    "name",
+    "stage_ref",
+    "effect_refs",
+    "cue_refs",
+    "arrangement_refs",
+    "active_arrangement_id"
+  ],
+  "$defs": {
+    "AssetRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "revision"]
+    }
+  }
+}

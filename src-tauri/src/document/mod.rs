@@ -6,10 +6,14 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 mod effect;
+mod project;
+mod project_validation;
 mod timeline;
 mod validation;
 
 pub use effect::*;
+pub use project::*;
+pub use project_validation::*;
 pub use timeline::*;
 pub use validation::{DocumentValidator, ValidatedShow};
 

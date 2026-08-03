@@ -1,0 +1,1273 @@
+use super::{
+    ArrangementAutomationTarget, ArrangementDocument, AssetRef, CueDefinition, CueLayer,
+    EffectDefinitionDocument, GeneratorDSL, ParameterValueDSL, ProjectBundle, StageDocument,
+    TargetSetDefinition, TargetSetSelector, ARRANGEMENT_DOCUMENT_SCHEMA_VERSION,
+    CUE_DEFINITION_SCHEMA_VERSION, EFFECT_DEFINITION_SCHEMA_VERSION, PROJECT_BUNDLE_SCHEMA_VERSION,
+    PROJECT_MANIFEST_SCHEMA_VERSION, STAGE_DOCUMENT_SCHEMA_VERSION,
+};
+use crate::compiler::diagnostic::{
+    Diagnostic, PROJECT_CAPABILITY_MISMATCH, PROJECT_DUPLICATE_ASSET, PROJECT_REFERENCE_CYCLE,
+    PROJECT_REFERENCE_NOT_FOUND, PROJECT_REVISION_MISMATCH, PROJECT_SCHEMA_INVALID,
+    TARGET_SET_INVALID,
+};
+use crate::engine::profile::profile_by_id;
+use std::collections::{BTreeMap, BTreeSet};
+
+#[derive(Debug, Clone)]
+pub struct ValidatedProject {
+    bundle: ProjectBundle,
+}
+
+impl ValidatedProject {
+    pub fn validate(bundle: ProjectBundle) -> Result<Self, Vec<Diagnostic>> {
+        let mut diagnostics = Vec::new();
+        validate_schema_versions(&bundle, &mut diagnostics);
+        validate_manifest(&bundle, &mut diagnostics);
+        validate_stages(&bundle, &mut diagnostics);
+        validate_cues(&bundle, &mut diagnostics);
+        validate_arrangements(&bundle, &mut diagnostics);
+        validate_bundle_graph(&bundle, &mut diagnostics);
+
+        if diagnostics.is_empty() {
+            Ok(Self { bundle })
+        } else {
+            Err(diagnostics)
+        }
+    }
+
+    pub fn into_bundle(self) -> ProjectBundle {
+        self.bundle
+    }
+}
+
+pub fn load_project_bundle(source: &str) -> Result<ValidatedProject, Vec<Diagnostic>> {
+    let bundle = serde_json::from_str(source).map_err(|error| {
+        vec![Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            format!("line {}, column {}", error.line(), error.column()),
+            error.to_string(),
+            "Update the project bundle to match the generated Stage 7 schemas.",
+        )]
+    })?;
+    ValidatedProject::validate(bundle)
+}
+
+fn validate_schema_versions(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
+    for (actual, expected, path) in [
+        (
+            bundle.schema_version,
+            PROJECT_BUNDLE_SCHEMA_VERSION,
+            "schema_version".to_string(),
+        ),
+        (
+            bundle.manifest.schema_version,
+            PROJECT_MANIFEST_SCHEMA_VERSION,
+            "manifest.schema_version".to_string(),
+        ),
+    ] {
+        validate_schema_version(actual, expected, path, diagnostics);
+    }
+    for (index, stage) in bundle.stages.iter().enumerate() {
+        validate_schema_version(
+            stage.schema_version,
+            STAGE_DOCUMENT_SCHEMA_VERSION,
+            format!("stages[{index}].schema_version"),
+            diagnostics,
+        );
+    }
+    for (index, effect) in bundle.effects.iter().enumerate() {
+        validate_schema_version(
+            effect.schema_version,
+            EFFECT_DEFINITION_SCHEMA_VERSION,
+            format!("effects[{index}].schema_version"),
+            diagnostics,
+        );
+    }
+    for (index, cue) in bundle.cues.iter().enumerate() {
+        validate_schema_version(
+            cue.schema_version,
+            CUE_DEFINITION_SCHEMA_VERSION,
+            format!("cues[{index}].schema_version"),
+            diagnostics,
+        );
+    }
+    for (index, arrangement) in bundle.arrangements.iter().enumerate() {
+        validate_schema_version(
+            arrangement.schema_version,
+            ARRANGEMENT_DOCUMENT_SCHEMA_VERSION,
+            format!("arrangements[{index}].schema_version"),
+            diagnostics,
+        );
+    }
+}
+
+fn validate_schema_version(
+    actual: u32,
+    expected: u32,
+    path: String,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if actual != expected {
+        diagnostics.push(Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            path,
+            format!("Expected schema version {expected}, received {actual}."),
+            "Migrate the asset with a supported Lumina version before opening it.",
+        ));
+    }
+}
+
+fn validate_manifest(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
+    validate_identity(
+        &bundle.manifest.project_id,
+        bundle.manifest.revision,
+        "manifest",
+        diagnostics,
+    );
+    validate_asset_collection(
+        &bundle.stages,
+        |asset| (&asset.id, asset.revision),
+        "stages",
+        diagnostics,
+    );
+    validate_asset_collection(
+        &bundle.effects,
+        |asset| (&asset.id, asset.revision),
+        "effects",
+        diagnostics,
+    );
+    validate_asset_collection(
+        &bundle.cues,
+        |asset| (&asset.id, asset.revision),
+        "cues",
+        diagnostics,
+    );
+    validate_asset_collection(
+        &bundle.arrangements,
+        |asset| (&asset.id, asset.revision),
+        "arrangements",
+        diagnostics,
+    );
+
+    resolve_ref(
+        &bundle.manifest.stage_ref,
+        &bundle.stages,
+        |asset| (&asset.id, asset.revision),
+        "manifest.stage_ref",
+        diagnostics,
+    );
+    validate_manifest_refs(
+        &bundle.manifest.effect_refs,
+        &bundle.effects,
+        |asset| (&asset.id, asset.revision),
+        "manifest.effect_refs",
+        diagnostics,
+    );
+    validate_manifest_refs(
+        &bundle.manifest.cue_refs,
+        &bundle.cues,
+        |asset| (&asset.id, asset.revision),
+        "manifest.cue_refs",
+        diagnostics,
+    );
+    validate_manifest_refs(
+        &bundle.manifest.arrangement_refs,
+        &bundle.arrangements,
+        |asset| (&asset.id, asset.revision),
+        "manifest.arrangement_refs",
+        diagnostics,
+    );
+
+    if !bundle
+        .manifest
+        .arrangement_refs
+        .iter()
+        .any(|reference| reference.id == bundle.manifest.active_arrangement_id)
+    {
+        diagnostics.push(Diagnostic::error(
+            PROJECT_REFERENCE_NOT_FOUND,
+            "manifest.active_arrangement_id",
+            format!(
+                "Active Arrangement {:?} is not referenced by the manifest.",
+                bundle.manifest.active_arrangement_id
+            ),
+            "Select an Arrangement listed in manifest.arrangement_refs.",
+        ));
+    }
+}
+
+fn validate_stages(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
+    for (stage_index, stage) in bundle.stages.iter().enumerate() {
+        validate_identity(
+            &stage.id,
+            stage.revision,
+            &format!("stages[{stage_index}]"),
+            diagnostics,
+        );
+        let fixture_profiles = stage_fixture_profiles(stage, stage_index, diagnostics);
+        let mut target_ids = BTreeSet::new();
+        for (target_index, target) in stage.target_sets.iter().enumerate() {
+            let path = format!("stages[{stage_index}].target_sets[{target_index}]");
+            if target.id.trim().is_empty() || !target_ids.insert(target.id.as_str()) {
+                diagnostics.push(Diagnostic::error(
+                    PROJECT_DUPLICATE_ASSET,
+                    format!("{path}.id"),
+                    format!("TargetSet ID {:?} is empty or duplicated.", target.id),
+                    "Use a stable, unique TargetSet ID within the Stage revision.",
+                ));
+            }
+            validate_target_set(stage, target, &fixture_profiles, &path, diagnostics);
+        }
+    }
+}
+
+fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
+    for (cue_index, cue) in bundle.cues.iter().enumerate() {
+        let cue_path = format!("cues[{cue_index}]");
+        validate_identity(&cue.id, cue.revision, &cue_path, diagnostics);
+        let Some(stage) = resolve_ref(
+            &cue.compatible_stage_ref,
+            &bundle.stages,
+            |asset| (&asset.id, asset.revision),
+            &format!("{cue_path}.compatible_stage_ref"),
+            diagnostics,
+        ) else {
+            continue;
+        };
+        if cue.compatible_stage_ref != bundle.manifest.stage_ref {
+            diagnostics.push(Diagnostic::error(
+                PROJECT_REVISION_MISMATCH,
+                format!("{cue_path}.compatible_stage_ref"),
+                "Cue Stage revision differs from the Project manifest Stage revision.",
+                "Explicitly upgrade the Cue to the active Stage revision before publishing it.",
+            ));
+        }
+        if cue.layers.is_empty() {
+            diagnostics.push(Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                format!("{cue_path}.layers"),
+                "Cue must contain at least one Effect layer.",
+                "Add an Effect layer before publishing the Cue.",
+            ));
+        }
+        let mut layer_ids = BTreeSet::new();
+        for (layer_index, layer) in cue.layers.iter().enumerate() {
+            let path = format!("{cue_path}.layers[{layer_index}]");
+            if layer.id.trim().is_empty() || !layer_ids.insert(layer.id.as_str()) {
+                diagnostics.push(Diagnostic::error(
+                    PROJECT_DUPLICATE_ASSET,
+                    format!("{path}.id"),
+                    format!("Cue layer ID {:?} is empty or duplicated.", layer.id),
+                    "Use a stable, unique layer ID within the Cue revision.",
+                ));
+            }
+            validate_cue_layer(bundle, stage, layer, &path, diagnostics);
+        }
+        for (lane_index, lane) in cue.automation_lanes.iter().enumerate() {
+            let path = format!("{cue_path}.automation_lanes[{lane_index}].target");
+            let Some(layer) = cue
+                .layers
+                .iter()
+                .find(|layer| layer.id == lane.target.layer_id)
+            else {
+                diagnostics.push(reference_not_found(
+                    path,
+                    format!("Cue layer {:?} does not exist.", lane.target.layer_id),
+                ));
+                continue;
+            };
+            validate_layer_parameter(bundle, layer, &lane.target.parameter_id, &path, diagnostics);
+        }
+    }
+}
+
+fn validate_cue_layer(
+    bundle: &ProjectBundle,
+    stage: &StageDocument,
+    layer: &CueLayer,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(effect) = resolve_ref(
+        &layer.effect_ref,
+        &bundle.effects,
+        |asset| (&asset.id, asset.revision),
+        &format!("{path}.effect_ref"),
+        diagnostics,
+    ) else {
+        return;
+    };
+    if !bundle.manifest.effect_refs.contains(&layer.effect_ref) {
+        diagnostics.push(reference_not_found(
+            format!("{path}.effect_ref"),
+            "Cue Effect revision is not part of manifest.effect_refs.".to_string(),
+        ));
+    }
+    if layer.target_set_ref.stage_id != stage.id
+        || layer.target_set_ref.stage_revision != stage.revision
+    {
+        diagnostics.push(Diagnostic::error(
+            PROJECT_REVISION_MISMATCH,
+            format!("{path}.target_set_ref"),
+            "Cue layer TargetSet belongs to a different Stage revision.",
+            "Select a TargetSet from the Cue compatible Stage revision.",
+        ));
+        return;
+    }
+    let Some(target_set) = stage
+        .target_sets
+        .iter()
+        .find(|target| target.id == layer.target_set_ref.target_set_id)
+    else {
+        diagnostics.push(reference_not_found(
+            format!("{path}.target_set_ref.target_set_id"),
+            format!(
+                "TargetSet {:?} does not exist in Stage {} r{}.",
+                layer.target_set_ref.target_set_id, stage.id, stage.revision
+            ),
+        ));
+        return;
+    };
+    if !layer.phase.is_finite() {
+        diagnostics.push(Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            format!("{path}.phase"),
+            "Cue layer phase must be finite.",
+            "Use a finite phase offset in cycles.",
+        ));
+    }
+    if layer.seed.len() != 16 || !layer.seed.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        diagnostics.push(Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            format!("{path}.seed"),
+            "Cue layer seed must contain exactly 16 hexadecimal characters.",
+            "Generate a stable 64-bit hexadecimal seed for the layer.",
+        ));
+    }
+    for (parameter_id, value) in &layer.parameter_overrides {
+        validate_parameter_value(effect, parameter_id, value, path, diagnostics);
+    }
+    validate_effect_capability(stage, target_set, effect, path, diagnostics);
+}
+
+fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
+    for (arrangement_index, arrangement) in bundle.arrangements.iter().enumerate() {
+        let path = format!("arrangements[{arrangement_index}]");
+        validate_identity(&arrangement.id, arrangement.revision, &path, diagnostics);
+        validate_tempo_map(arrangement, &path, diagnostics);
+        let mut clip_ids: BTreeMap<&str, (&CueDefinition, &super::CueClip)> = BTreeMap::new();
+        for (track_index, track) in arrangement.tracks.iter().enumerate() {
+            for (clip_index, clip) in track.clips.iter().enumerate() {
+                let clip_path = format!("{path}.tracks[{track_index}].clips[{clip_index}]");
+                let Some(cue) = resolve_ref(
+                    &clip.cue_ref,
+                    &bundle.cues,
+                    |asset| (&asset.id, asset.revision),
+                    &format!("{clip_path}.cue_ref"),
+                    diagnostics,
+                ) else {
+                    continue;
+                };
+                if !bundle.manifest.cue_refs.contains(&clip.cue_ref) {
+                    diagnostics.push(reference_not_found(
+                        format!("{clip_path}.cue_ref"),
+                        "Cue revision is not part of manifest.cue_refs.".to_string(),
+                    ));
+                }
+                if clip_ids.insert(&clip.id, (cue, clip)).is_some() {
+                    diagnostics.push(Diagnostic::error(
+                        PROJECT_DUPLICATE_ASSET,
+                        format!("{clip_path}.id"),
+                        format!("CueClip ID {:?} is duplicated.", clip.id),
+                        "Use a unique CueClip ID within the Arrangement revision.",
+                    ));
+                }
+                if clip.start_tick.saturating_add(clip.duration_tick) > arrangement.length_ticks {
+                    diagnostics.push(Diagnostic::error(
+                        PROJECT_SCHEMA_INVALID,
+                        format!("{clip_path}.duration_tick"),
+                        "CueClip extends beyond Arrangement length_ticks.",
+                        "Extend the Arrangement or trim the CueClip without changing its start tick.",
+                    ));
+                }
+                for (override_index, layer_override) in clip.layer_overrides.iter().enumerate() {
+                    let override_path = format!("{clip_path}.layer_overrides[{override_index}]");
+                    let Some(layer) = cue
+                        .layers
+                        .iter()
+                        .find(|layer| layer.id == layer_override.layer_id)
+                    else {
+                        diagnostics.push(reference_not_found(
+                            format!("{override_path}.layer_id"),
+                            format!("Cue layer {:?} does not exist.", layer_override.layer_id),
+                        ));
+                        continue;
+                    };
+                    for (parameter_id, value) in &layer_override.parameter_overrides {
+                        let Some(effect) =
+                            exact_asset(&bundle.effects, &layer.effect_ref, |asset| {
+                                (&asset.id, asset.revision)
+                            })
+                        else {
+                            continue;
+                        };
+                        validate_parameter_value(
+                            effect,
+                            parameter_id,
+                            value,
+                            &override_path,
+                            diagnostics,
+                        );
+                    }
+                }
+            }
+        }
+        for (track_index, track) in arrangement.tracks.iter().enumerate() {
+            for (lane_index, lane) in track.automation_lanes.iter().enumerate() {
+                let lane_path =
+                    format!("{path}.tracks[{track_index}].automation_lanes[{lane_index}]");
+                if let ArrangementAutomationTarget::CueLayer {
+                    clip_id,
+                    layer_id,
+                    parameter_id,
+                } = &lane.target
+                {
+                    let Some((cue, _)) = clip_ids.get(clip_id.as_str()) else {
+                        diagnostics.push(reference_not_found(
+                            format!("{lane_path}.target.clip_id"),
+                            format!("CueClip {clip_id:?} does not exist."),
+                        ));
+                        continue;
+                    };
+                    let Some(layer) = cue.layers.iter().find(|layer| layer.id == *layer_id) else {
+                        diagnostics.push(reference_not_found(
+                            format!("{lane_path}.target.layer_id"),
+                            format!("Cue layer {layer_id:?} does not exist."),
+                        ));
+                        continue;
+                    };
+                    validate_layer_parameter(
+                        bundle,
+                        layer,
+                        parameter_id,
+                        &format!("{lane_path}.target.parameter_id"),
+                        diagnostics,
+                    );
+                }
+                validate_keyframes(
+                    lane.keyframes.as_slice(),
+                    arrangement.length_ticks,
+                    &lane_path,
+                    diagnostics,
+                );
+            }
+        }
+    }
+}
+
+fn validate_tempo_map(
+    arrangement: &ArrangementDocument,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let points = &arrangement.tempo_map.points;
+    if points.first().is_none_or(|point| point.time_tick != 0)
+        || points
+            .windows(2)
+            .any(|pair| pair[0].time_tick >= pair[1].time_tick)
+    {
+        diagnostics.push(Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            format!("{path}.tempo_map.points"),
+            "TempoMap must start at tick zero and use strictly increasing ticks.",
+            "Sort tempo points by their unchanged integer tick positions.",
+        ));
+    }
+    for (index, point) in points.iter().enumerate() {
+        if !point.bpm.is_finite() || !(1.0..=1000.0).contains(&point.bpm) {
+            diagnostics.push(Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                format!("{path}.tempo_map.points[{index}].bpm"),
+                "TempoMap BPM must be finite and between 1 and 1000.",
+                "Enter a valid Arrangement tempo without moving its tick position.",
+            ));
+        }
+    }
+    if arrangement
+        .time_signatures
+        .first()
+        .is_none_or(|signature| signature.time_tick != 0)
+        || arrangement
+            .time_signatures
+            .windows(2)
+            .any(|pair| pair[0].time_tick >= pair[1].time_tick)
+    {
+        diagnostics.push(Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            format!("{path}.time_signatures"),
+            "Time signatures must start at tick zero and use strictly increasing ticks.",
+            "Add a tick-zero time signature and keep later changes ordered by tick.",
+        ));
+    }
+    for (index, signature) in arrangement.time_signatures.iter().enumerate() {
+        if !signature.denominator.is_power_of_two() {
+            diagnostics.push(Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                format!("{path}.time_signatures[{index}].denominator"),
+                "Time-signature denominator must be a power of two.",
+                "Use 1, 2, 4, 8, 16, or 32.",
+            ));
+        }
+    }
+}
+
+fn validate_keyframes(
+    keyframes: &[super::KeyframeDSL],
+    length_ticks: u32,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if keyframes
+        .windows(2)
+        .any(|pair| pair[0].time_tick >= pair[1].time_tick)
+    {
+        diagnostics.push(Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            format!("{path}.keyframes"),
+            "Automation keyframes must use strictly increasing tick positions.",
+            "Sort keyframes by tick and resolve duplicate positions explicitly.",
+        ));
+    }
+    if keyframes
+        .iter()
+        .any(|keyframe| keyframe.time_tick > length_ticks)
+    {
+        diagnostics.push(Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            format!("{path}.keyframes"),
+            "Automation keyframe lies beyond Arrangement length_ticks.",
+            "Extend the Arrangement or move the keyframe with an explicit edit command.",
+        ));
+    }
+}
+
+fn validate_target_set(
+    stage: &StageDocument,
+    target: &TargetSetDefinition,
+    fixture_profiles: &BTreeMap<u32, &str>,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let matrix = match stage.layout.generator {
+        GeneratorDSL::Matrix { rows, columns, .. } => Some((rows, columns)),
+        _ => None,
+    };
+    match &target.selector {
+        TargetSetSelector::All => {}
+        TargetSetSelector::FixtureIds { fixture_ids } => {
+            validate_indices(
+                fixture_ids,
+                None,
+                &format!("{path}.selector.fixture_ids"),
+                diagnostics,
+            );
+            for fixture_id in fixture_ids {
+                if !fixture_profiles.contains_key(fixture_id) {
+                    diagnostics.push(reference_not_found(
+                        format!("{path}.selector.fixture_ids"),
+                        format!("Fixture {fixture_id} is not patched by this Stage revision."),
+                    ));
+                }
+            }
+        }
+        TargetSetSelector::Rows { indices } => {
+            let Some((rows, _)) = matrix else {
+                diagnostics.push(matrix_target_diagnostic(path));
+                return;
+            };
+            validate_indices(
+                indices,
+                Some(rows),
+                &format!("{path}.selector.indices"),
+                diagnostics,
+            );
+        }
+        TargetSetSelector::Columns { indices } => {
+            let Some((_, columns)) = matrix else {
+                diagnostics.push(matrix_target_diagnostic(path));
+                return;
+            };
+            validate_indices(
+                indices,
+                Some(columns),
+                &format!("{path}.selector.indices"),
+                diagnostics,
+            );
+        }
+        TargetSetSelector::GridZones {
+            rows,
+            columns,
+            zones,
+        } => {
+            if matrix.is_none() {
+                diagnostics.push(matrix_target_diagnostic(path));
+                return;
+            }
+            if *rows == 0 || *columns == 0 || zones.is_empty() {
+                diagnostics.push(Diagnostic::error(
+                    TARGET_SET_INVALID,
+                    format!("{path}.selector"),
+                    "GridZones requires non-zero rows/columns and at least one selected zone.",
+                    "Select one or more deterministic grid zones.",
+                ));
+            }
+            let mut unique = BTreeSet::new();
+            for zone in zones {
+                if zone.row >= *rows
+                    || zone.column >= *columns
+                    || !unique.insert((zone.row, zone.column))
+                {
+                    diagnostics.push(Diagnostic::error(
+                        TARGET_SET_INVALID,
+                        format!("{path}.selector.zones"),
+                        "Grid zone is out of range or duplicated.",
+                        "Use unique zero-based zone coordinates inside the declared grid.",
+                    ));
+                }
+            }
+        }
+        TargetSetSelector::Checkerboard { .. } => {
+            if matrix.is_none() {
+                diagnostics.push(matrix_target_diagnostic(path));
+            }
+        }
+    }
+    let mut weighted = BTreeSet::new();
+    for weight in &target.weights {
+        if !fixture_profiles.contains_key(&weight.fixture_id)
+            || !weight.weight.is_finite()
+            || !(0.0..=1.0).contains(&weight.weight)
+            || !weighted.insert(weight.fixture_id)
+        {
+            diagnostics.push(Diagnostic::error(
+                TARGET_SET_INVALID,
+                format!("{path}.weights"),
+                "TargetSet weight has an unknown/duplicate fixture or a value outside 0–1.",
+                "Use at most one finite weight per patched fixture.",
+            ));
+        }
+    }
+}
+
+fn validate_effect_capability(
+    stage: &StageDocument,
+    target: &TargetSetDefinition,
+    effect: &EffectDefinitionDocument,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let fixture_profiles = stage_fixture_profile_map(stage);
+    let target_fixture_ids = target_fixture_ids(stage, target);
+    for attribute_id in &effect.catalog.required_attributes {
+        for fixture_id in &target_fixture_ids {
+            let supported = fixture_profiles
+                .get(fixture_id)
+                .and_then(|profile_id| profile_by_id(profile_id))
+                .is_some_and(|profile| {
+                    profile
+                        .attributes
+                        .iter()
+                        .any(|attribute| attribute.id == *attribute_id)
+                });
+            if !supported {
+                diagnostics.push(Diagnostic::error(
+                    PROJECT_CAPABILITY_MISMATCH,
+                    format!("{path}.target_set_ref"),
+                    format!(
+                        "Fixture {fixture_id} does not support required attribute {attribute_id:?}."
+                    ),
+                    "Choose a compatible TargetSet or remove the incompatible Effect layer.",
+                ));
+                break;
+            }
+        }
+    }
+}
+
+fn validate_layer_parameter(
+    bundle: &ProjectBundle,
+    layer: &CueLayer,
+    parameter_id: &str,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(effect) = exact_asset(&bundle.effects, &layer.effect_ref, |asset| {
+        (&asset.id, asset.revision)
+    }) else {
+        return;
+    };
+    if !effect
+        .parameters
+        .iter()
+        .any(|parameter| parameter.id == parameter_id)
+    {
+        diagnostics.push(reference_not_found(
+            path.to_string(),
+            format!(
+                "Parameter {parameter_id:?} does not exist in Effect {} r{}.",
+                effect.id, effect.revision
+            ),
+        ));
+    }
+}
+
+fn validate_parameter_value(
+    effect: &EffectDefinitionDocument,
+    parameter_id: &str,
+    value: &ParameterValueDSL,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(parameter) = effect
+        .parameters
+        .iter()
+        .find(|parameter| parameter.id == parameter_id)
+    else {
+        diagnostics.push(reference_not_found(
+            format!("{path}.parameter_overrides.{parameter_id}"),
+            format!(
+                "Parameter {parameter_id:?} does not exist in Effect {} r{}.",
+                effect.id, effect.revision
+            ),
+        ));
+        return;
+    };
+    if parameter.value_type != value.value_type() {
+        diagnostics.push(Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            format!("{path}.parameter_overrides.{parameter_id}"),
+            "Parameter override type does not match the pinned Effect parameter schema.",
+            "Use the value type declared by the referenced Effect revision.",
+        ));
+    }
+    if let (Some(range), ParameterValueDSL::Scalar(value)) = (parameter.range, value) {
+        if !value.is_finite() || !(range.0..=range.1).contains(value) {
+            diagnostics.push(Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                format!("{path}.parameter_overrides.{parameter_id}"),
+                "Scalar override is outside the pinned Effect parameter range.",
+                "Use a finite value within the Effect revision's declared range.",
+            ));
+        }
+    }
+}
+
+fn validate_bundle_graph(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
+    let project = format!(
+        "project:{}@{}",
+        bundle.manifest.project_id, bundle.manifest.revision
+    );
+    let mut edges: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    edges.insert(
+        project,
+        std::iter::once(asset_key("stage", &bundle.manifest.stage_ref))
+            .chain(
+                bundle
+                    .manifest
+                    .effect_refs
+                    .iter()
+                    .map(|reference| asset_key("effect", reference)),
+            )
+            .chain(
+                bundle
+                    .manifest
+                    .cue_refs
+                    .iter()
+                    .map(|reference| asset_key("cue", reference)),
+            )
+            .chain(
+                bundle
+                    .manifest
+                    .arrangement_refs
+                    .iter()
+                    .map(|reference| asset_key("arrangement", reference)),
+            )
+            .collect(),
+    );
+    for cue in &bundle.cues {
+        let key = format!("cue:{}@{}", cue.id, cue.revision);
+        let dependencies = std::iter::once(asset_key("stage", &cue.compatible_stage_ref))
+            .chain(
+                cue.layers
+                    .iter()
+                    .map(|layer| asset_key("effect", &layer.effect_ref)),
+            )
+            .collect();
+        edges.insert(key, dependencies);
+    }
+    for arrangement in &bundle.arrangements {
+        let key = format!("arrangement:{}@{}", arrangement.id, arrangement.revision);
+        let dependencies = arrangement
+            .tracks
+            .iter()
+            .flat_map(|track| track.clips.iter())
+            .map(|clip| asset_key("cue", &clip.cue_ref))
+            .collect();
+        edges.insert(key, dependencies);
+    }
+    if let Some(cycle) = dependency_cycle(&edges) {
+        diagnostics.push(Diagnostic::error(
+            PROJECT_REFERENCE_CYCLE,
+            "manifest",
+            format!(
+                "Project dependency graph contains a cycle: {}.",
+                cycle.join(" -> ")
+            ),
+            "Remove the circular asset reference before compiling the Project.",
+        ));
+    }
+}
+
+fn dependency_cycle(edges: &BTreeMap<String, Vec<String>>) -> Option<Vec<String>> {
+    fn visit(
+        node: &str,
+        edges: &BTreeMap<String, Vec<String>>,
+        visiting: &mut Vec<String>,
+        visited: &mut BTreeSet<String>,
+    ) -> Option<Vec<String>> {
+        if let Some(start) = visiting.iter().position(|candidate| candidate == node) {
+            let mut cycle = visiting[start..].to_vec();
+            cycle.push(node.to_string());
+            return Some(cycle);
+        }
+        if !visited.insert(node.to_string()) {
+            return None;
+        }
+        visiting.push(node.to_string());
+        if let Some(dependencies) = edges.get(node) {
+            for dependency in dependencies {
+                if let Some(cycle) = visit(dependency, edges, visiting, visited) {
+                    return Some(cycle);
+                }
+            }
+        }
+        visiting.pop();
+        None
+    }
+
+    let mut visited = BTreeSet::new();
+    for node in edges.keys() {
+        if let Some(cycle) = visit(node, edges, &mut Vec::new(), &mut visited) {
+            return Some(cycle);
+        }
+    }
+    None
+}
+
+fn target_fixture_ids(stage: &StageDocument, target: &TargetSetDefinition) -> Vec<u32> {
+    let fixture_ids: Vec<_> = stage_fixture_profile_map(stage).into_keys().collect();
+    let GeneratorDSL::Matrix { rows, columns, .. } = stage.layout.generator else {
+        return match &target.selector {
+            TargetSetSelector::All => fixture_ids,
+            TargetSetSelector::FixtureIds { fixture_ids } => fixture_ids.clone(),
+            _ => Vec::new(),
+        };
+    };
+    fixture_ids
+        .into_iter()
+        .enumerate()
+        .filter_map(|(index, fixture_id)| {
+            let row = index as u32 / columns;
+            let column = index as u32 % columns;
+            let selected = match &target.selector {
+                TargetSetSelector::All => true,
+                TargetSetSelector::Rows { indices } => indices.contains(&row),
+                TargetSetSelector::Columns { indices } => indices.contains(&column),
+                TargetSetSelector::Checkerboard { parity } => {
+                    let even = (row + column).is_multiple_of(2);
+                    even == matches!(parity, super::CheckerboardParity::Even)
+                }
+                TargetSetSelector::FixtureIds { fixture_ids } => fixture_ids.contains(&fixture_id),
+                TargetSetSelector::GridZones {
+                    rows: zone_rows,
+                    columns: zone_columns,
+                    zones,
+                } => {
+                    let zone_row = row.saturating_mul(*zone_rows) / rows.max(1);
+                    let zone_column = column.saturating_mul(*zone_columns) / columns.max(1);
+                    zones
+                        .iter()
+                        .any(|zone| zone.row == zone_row && zone.column == zone_column)
+                }
+            };
+            selected.then_some(fixture_id)
+        })
+        .collect()
+}
+
+fn stage_fixture_profiles<'a>(
+    stage: &'a StageDocument,
+    stage_index: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> BTreeMap<u32, &'a str> {
+    let mut profiles = BTreeMap::new();
+    for (patch_index, patch) in stage.patch.iter().enumerate() {
+        if patch.id_range.0 == 0 || patch.id_range.0 > patch.id_range.1 {
+            diagnostics.push(Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                format!("stages[{stage_index}].patch[{patch_index}].id_range"),
+                "Patch range must contain positive ascending fixture IDs.",
+                "Use a valid inclusive fixture ID range.",
+            ));
+            continue;
+        }
+        if profile_by_id(&patch.profile_id).is_none() {
+            diagnostics.push(reference_not_found(
+                format!("stages[{stage_index}].patch[{patch_index}].profile_id"),
+                format!("Fixture profile {:?} is not registered.", patch.profile_id),
+            ));
+        }
+        for fixture_id in patch.id_range.0..=patch.id_range.1 {
+            if profiles
+                .insert(fixture_id, patch.profile_id.as_str())
+                .is_some()
+            {
+                diagnostics.push(Diagnostic::error(
+                    PROJECT_DUPLICATE_ASSET,
+                    format!("stages[{stage_index}].patch[{patch_index}].id_range"),
+                    format!("Fixture ID {fixture_id} is patched more than once."),
+                    "Use unique fixture IDs across all Stage patch ranges.",
+                ));
+            }
+        }
+    }
+    profiles
+}
+
+fn stage_fixture_profile_map(stage: &StageDocument) -> BTreeMap<u32, &str> {
+    stage
+        .patch
+        .iter()
+        .flat_map(|patch| {
+            (patch.id_range.0..=patch.id_range.1)
+                .map(move |fixture_id| (fixture_id, patch.profile_id.as_str()))
+        })
+        .collect()
+}
+
+fn validate_indices(
+    indices: &[u32],
+    upper_bound: Option<u32>,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let unique: BTreeSet<_> = indices.iter().copied().collect();
+    if indices.is_empty()
+        || unique.len() != indices.len()
+        || upper_bound.is_some_and(|upper| indices.iter().any(|index| *index >= upper))
+    {
+        diagnostics.push(Diagnostic::error(
+            TARGET_SET_INVALID,
+            path,
+            "TargetSet indices must be unique, non-empty, and inside the Stage matrix.",
+            "Use unique zero-based indices within the matrix dimensions.",
+        ));
+    }
+}
+
+fn validate_identity(id: &str, revision: u32, path: &str, diagnostics: &mut Vec<Diagnostic>) {
+    if id.trim().is_empty() || revision == 0 {
+        diagnostics.push(Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            path,
+            "Asset ID must be non-empty and revision must be at least one.",
+            "Assign a stable asset ID and positive revision.",
+        ));
+    }
+}
+
+fn validate_asset_collection<T, F>(
+    assets: &[T],
+    identity: F,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) where
+    F: Fn(&T) -> (&String, u32),
+{
+    let mut exact = BTreeSet::new();
+    for (index, asset) in assets.iter().enumerate() {
+        let (id, revision) = identity(asset);
+        validate_identity(id, revision, &format!("{path}[{index}]"), diagnostics);
+        if !exact.insert((id.as_str(), revision)) {
+            diagnostics.push(Diagnostic::error(
+                PROJECT_DUPLICATE_ASSET,
+                format!("{path}[{index}]"),
+                format!("Asset {id:?} revision {revision} is duplicated."),
+                "Store each immutable asset revision exactly once in the bundle.",
+            ));
+        }
+    }
+}
+
+fn validate_manifest_refs<T, F>(
+    references: &[AssetRef],
+    assets: &[T],
+    identity: F,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) where
+    F: Copy + Fn(&T) -> (&String, u32),
+{
+    let mut ids = BTreeSet::new();
+    for (index, reference) in references.iter().enumerate() {
+        if !ids.insert(reference.id.as_str()) {
+            diagnostics.push(Diagnostic::error(
+                PROJECT_DUPLICATE_ASSET,
+                format!("{path}[{index}]"),
+                format!(
+                    "Manifest references asset ID {:?} more than once.",
+                    reference.id
+                ),
+                "Reference one exact revision per asset ID in a Project manifest revision.",
+            ));
+        }
+        resolve_ref(
+            reference,
+            assets,
+            identity,
+            &format!("{path}[{index}]"),
+            diagnostics,
+        );
+    }
+}
+
+fn resolve_ref<'a, T, F>(
+    reference: &AssetRef,
+    assets: &'a [T],
+    identity: F,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Option<&'a T>
+where
+    F: Fn(&T) -> (&String, u32),
+{
+    if let Some(asset) = exact_asset(assets, reference, &identity) {
+        return Some(asset);
+    }
+    let has_id = assets
+        .iter()
+        .any(|asset| identity(asset).0 == &reference.id);
+    let (code, message, hint) = if has_id {
+        (
+            PROJECT_REVISION_MISMATCH,
+            format!(
+                "Asset {:?} revision {} is not available.",
+                reference.id, reference.revision
+            ),
+            "Select an available revision explicitly; never substitute latest implicitly.",
+        )
+    } else {
+        (
+            PROJECT_REFERENCE_NOT_FOUND,
+            format!("Asset {:?} does not exist.", reference.id),
+            "Add the referenced asset to the Project bundle or repair the reference.",
+        )
+    };
+    diagnostics.push(Diagnostic::error(code, path, message, hint));
+    None
+}
+
+fn exact_asset<'a, T, F>(assets: &'a [T], reference: &AssetRef, identity: F) -> Option<&'a T>
+where
+    F: Fn(&T) -> (&String, u32),
+{
+    assets.iter().find(|asset| {
+        let (id, revision) = identity(asset);
+        id == &reference.id && revision == reference.revision
+    })
+}
+
+fn asset_key(kind: &str, reference: &AssetRef) -> String {
+    format!("{kind}:{}@{}", reference.id, reference.revision)
+}
+
+fn reference_not_found(path: impl Into<String>, message: String) -> Diagnostic {
+    Diagnostic::error(
+        PROJECT_REFERENCE_NOT_FOUND,
+        path,
+        message,
+        "Repair the pinned reference before publishing the Project.",
+    )
+}
+
+fn matrix_target_diagnostic(path: &str) -> Diagnostic {
+    Diagnostic::error(
+        TARGET_SET_INVALID,
+        format!("{path}.selector"),
+        "Rows, Columns, GridZones, and Checkerboard require a matrix Stage layout.",
+        "Use All/FixtureIds or switch the Stage to a matrix layout.",
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::{json, Value};
+
+    fn valid_bundle() -> ProjectBundle {
+        serde_json::from_value(json!({
+            "schema_version": 1,
+            "manifest": {
+                "schema_version": 1,
+                "project_id": "project-1",
+                "revision": 1,
+                "name": "Project",
+                "stage_ref": { "id": "stage-1", "revision": 1 },
+                "effect_refs": [{ "id": "pulse", "revision": 1 }],
+                "cue_refs": [{ "id": "cue-1", "revision": 1 }],
+                "arrangement_refs": [{ "id": "arrangement-1", "revision": 1 }],
+                "active_arrangement_id": "arrangement-1"
+            },
+            "stages": [{
+                "schema_version": 1,
+                "id": "stage-1",
+                "revision": 1,
+                "name": "Stage",
+                "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 4] }],
+                "layout": { "type": "generator", "generator": {
+                    "shape": "matrix", "rows": 2, "columns": 2, "spacing": 64.0
+                }},
+                "groups": [{
+                    "id": "all-fixtures", "name": "All fixtures",
+                    "fixtures": { "range": [1, 4] }, "sort_by": "none"
+                }],
+                "target_sets": [{
+                    "id": "all", "name": "All", "selector": { "type": "all" }
+                }]
+            }],
+            "effects": [{
+                "schema_version": 1,
+                "id": "pulse",
+                "name": "Pulse",
+                "revision": 1,
+                "source": "project_local",
+                "parameters": [{
+                    "id": "intensity", "name": "Intensity", "value_type": "scalar",
+                    "default_value": { "type": "scalar", "value": 1.0 },
+                    "range": [0.0, 1.0], "unit": "normalized", "ui_hint": "slider",
+                    "automation": "continuous"
+                }],
+                "graph": { "nodes": [] },
+                "catalog": {
+                    "energy": 0.5, "density": 0.5, "motion": "pulse",
+                    "colorfulness": 0.5, "strobe_risk": "low",
+                    "required_attributes": ["intensity"]
+                }
+            }],
+            "cues": [{
+                "schema_version": 1,
+                "id": "cue-1",
+                "revision": 1,
+                "name": "Cue",
+                "compatible_stage_ref": { "id": "stage-1", "revision": 1 },
+                "nominal_length_ticks": 3840,
+                "layers": [{
+                    "id": "pulse-layer",
+                    "effect_ref": { "id": "pulse", "revision": 1 },
+                    "target_set_ref": {
+                        "stage_id": "stage-1", "stage_revision": 1, "target_set_id": "all"
+                    },
+                    "parameter_overrides": {
+                        "intensity": { "type": "scalar", "value": 0.8 }
+                    },
+                    "phase": 0.0,
+                    "seed": "0000000000000001",
+                    "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+                }],
+                "trigger_policy": { "mode": "timeline", "quantize": "beat" },
+                "capability_summary": { "required_attributes": ["intensity"] },
+                "risk_summary": { "strobe_risk": "low" }
+            }],
+            "arrangements": [{
+                "schema_version": 1,
+                "id": "arrangement-1",
+                "revision": 1,
+                "name": "House 128",
+                "ppq": 960,
+                "tempo_map": { "points": [{ "time_tick": 0, "bpm": 128.0 }] },
+                "time_signatures": [{ "time_tick": 0, "numerator": 4, "denominator": 4 }],
+                "length_ticks": 30720,
+                "tracks": [{
+                    "id": "cues", "name": "Cues", "overlap_policy": "layer",
+                    "clips": [{
+                        "id": "clip-1", "cue_ref": { "id": "cue-1", "revision": 1 },
+                        "start_tick": 0, "duration_tick": 3840
+                    }]
+                }]
+            }]
+        }))
+        .expect("valid project fixture")
+    }
+
+    #[test]
+    fn validates_exact_revision_dependency_graph() {
+        let validated = ValidatedProject::validate(valid_bundle()).expect("project validates");
+        assert_eq!(
+            validated.into_bundle().manifest.active_arrangement_id,
+            "arrangement-1"
+        );
+    }
+
+    #[test]
+    fn distinguishes_missing_and_stale_revisions() {
+        let mut stale = valid_bundle();
+        stale.cues[0].layers[0].effect_ref.revision = 2;
+        let stale_diagnostics = ValidatedProject::validate(stale).expect_err("revision is stale");
+        assert!(stale_diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == PROJECT_REVISION_MISMATCH));
+
+        let mut missing = valid_bundle();
+        missing.cues[0].layers[0].effect_ref.id = "missing".to_string();
+        let missing_diagnostics =
+            ValidatedProject::validate(missing).expect_err("reference is missing");
+        assert!(missing_diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == PROJECT_REFERENCE_NOT_FOUND));
+    }
+
+    #[test]
+    fn rejects_capability_mismatch_for_pinned_target_set() {
+        let mut bundle = valid_bundle();
+        bundle.effects[0].catalog.required_attributes = vec!["position.pan".to_string()];
+        let diagnostics =
+            ValidatedProject::validate(bundle).expect_err("RGB pixels lack pan capability");
+        assert!(diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == PROJECT_CAPABILITY_MISMATCH));
+    }
+
+    #[test]
+    fn detects_generic_dependency_cycles() {
+        let edges = BTreeMap::from([
+            ("cue:a@1".to_string(), vec!["cue:b@1".to_string()]),
+            ("cue:b@1".to_string(), vec!["cue:a@1".to_string()]),
+        ]);
+        let cycle = dependency_cycle(&edges).expect("cycle is detected");
+        assert_eq!(cycle.first(), cycle.last());
+    }
+
+    #[test]
+    fn parser_rejects_unknown_asset_fields() {
+        let mut value = serde_json::to_value(valid_bundle()).expect("bundle serializes");
+        value
+            .get_mut("manifest")
+            .and_then(Value::as_object_mut)
+            .expect("manifest object")
+            .insert("latest".to_string(), Value::Bool(true));
+        let diagnostics = load_project_bundle(&value.to_string()).expect_err("unknown field");
+        assert!(diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.code == PROJECT_SCHEMA_INVALID));
+    }
+}

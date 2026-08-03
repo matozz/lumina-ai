@@ -43,6 +43,39 @@ export type {
   TimelineV4DSL,
 } from "@/generated/show-document-v4";
 
+export type {
+  ArrangementAutomationLane,
+  ArrangementAutomationTarget,
+  ArrangementDocument,
+  ArrangementMarker,
+  AssetRef,
+  CheckerboardParity,
+  CueAutomationLane,
+  CueAutomationTarget,
+  CueCapabilitySummary,
+  CueClip,
+  CueDefinition,
+  CueLayer,
+  CueLayerOverride,
+  CueMixOverride,
+  CueQuantize,
+  CueRiskSummary,
+  CueTrack,
+  CueTriggerMode,
+  CueTriggerPolicy,
+  EffectDefinitionDocument,
+  GridZone,
+  MixPolicy,
+  ProjectBundle,
+  ProjectManifest,
+  StageDocument,
+  TargetSetDefinition,
+  TargetSetRef,
+  TargetSetSelector,
+  TargetSetWeight,
+  TimeSignaturePoint,
+} from "@/generated/project-contract-v1";
+
 export type FullDSL = ShowDocumentV4;
 export type TimelineDSL = TimelineV4DSL;
 export type FromTo = number | string;

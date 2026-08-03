@@ -217,4 +217,4 @@ Stage 7 保存格式不能无损降级回单体 V4；rollback 只能保留 V1–
 
 ## Related commits
 
-- ADR and Stage 7 baseline: pending
+- ADR and Stage 7 baseline: `61c150b`
