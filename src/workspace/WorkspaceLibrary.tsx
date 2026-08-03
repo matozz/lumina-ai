@@ -1,4 +1,4 @@
-import { AudioLines, Boxes, Layers3, Lightbulb, RadioTower, Star } from "lucide-react";
+import { Boxes, Layers3, Lightbulb, RadioTower, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -64,8 +64,6 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
               />
             ))}
 
-          {workspace === "song" && <SongEmptyState />}
-
           {workspace === "live" && liveEffects.length === 0 && (
             <CompactEmpty
               icon={Boxes}
@@ -85,16 +83,6 @@ function LibraryRow({ label, meta }: { label: string; meta: string }) {
       <span className="min-w-0 flex-1 truncate text-xs">{label}</span>
       <span className="text-muted-foreground shrink-0 text-[10px]">{meta}</span>
     </div>
-  );
-}
-
-function SongEmptyState() {
-  return (
-    <CompactEmpty
-      icon={AudioLines}
-      title="No song imported"
-      description="Audio import and beat correction arrive in Stage 7."
-    />
   );
 }
 
@@ -124,7 +112,6 @@ function LibraryIcon({ workspace }: { workspace: WorkspaceId }) {
   const Icon = {
     stage: Lightbulb,
     "effect-lab": Boxes,
-    song: AudioLines,
     arrange: Layers3,
     live: RadioTower,
   }[workspace];
@@ -135,7 +122,6 @@ function libraryTitle(workspace: WorkspaceId) {
   return {
     stage: "Stage groups",
     "effect-lab": "Effect catalog",
-    song: "Song assets",
     arrange: "Arrangement tracks",
     live: "Live effects",
   }[workspace];

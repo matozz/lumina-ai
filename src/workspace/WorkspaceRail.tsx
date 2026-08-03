@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Activity, AudioLines, FlaskConical, Layers3, Lightbulb } from "lucide-react";
+import { Activity, FlaskConical, Layers3, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,6 @@ interface WorkspaceDefinition {
 const workspaces: WorkspaceDefinition[] = [
   { id: "stage", label: "Stage", shortLabel: "Stage", icon: Lightbulb },
   { id: "effect-lab", label: "Effect Lab", shortLabel: "Lab", icon: FlaskConical },
-  { id: "song", label: "Song", shortLabel: "Song", icon: AudioLines },
   { id: "arrange", label: "Arrange", shortLabel: "Arrange", icon: Layers3 },
   { id: "live", label: "Live / Rehearse", shortLabel: "Live", icon: Activity },
 ];

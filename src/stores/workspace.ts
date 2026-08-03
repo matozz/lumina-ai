@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { ShowSnapshotState } from "@/bridge/types";
 
-export type WorkspaceId = "stage" | "effect-lab" | "song" | "arrange" | "live";
+export type WorkspaceId = "stage" | "effect-lab" | "arrange" | "live";
 export type PublishStatus = "idle" | "publishing" | "activating" | "error";
 export type LivePadMode = "toggle" | "momentary" | "one_shot";
 export type LivePadQuantize = "off" | "beat" | "bar";
@@ -55,7 +55,16 @@ const initialState: WorkspaceState = {
 export const useWorkspaceStore = create<WorkspaceState>()(
   persist(() => initialState, {
     name: "lumina-workspace-v1",
-    version: 1,
+    version: 2,
+    migrate: (persistedState, version) => {
+      const state = persistedState as Omit<Partial<WorkspaceState>, "activeWorkspace"> & {
+        activeWorkspace?: string;
+      };
+      if (version < 2 && state.activeWorkspace === "song") {
+        return { ...state, activeWorkspace: "arrange" } as WorkspaceState;
+      }
+      return state as WorkspaceState;
+    },
     partialize: (state) => ({
       activeWorkspace: state.activeWorkspace,
       libraryVisible: state.libraryVisible,

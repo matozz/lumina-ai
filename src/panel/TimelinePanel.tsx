@@ -297,9 +297,9 @@ export const TimelinePanel = ({ embedded = false }: TimelinePanelProps) => {
 
       {embedded && (
         <div className="flex h-7 shrink-0 items-center border-b border-zinc-800 bg-cyan-950/20 px-3 text-[10px] text-cyan-200/70">
-          <span className="font-medium">SONG SPINE</span>
-          <span className="ml-2">No audio · waveform, sections and markers</span>
-          <span className="ml-auto font-mono">Stage 7 ready</span>
+          <span className="font-medium">FIXED BPM ARRANGEMENT</span>
+          <span className="ml-2">Lighting clips and automation share the same tick grid</span>
+          <span className="ml-auto font-mono">Stage 6</span>
         </div>
       )}
 

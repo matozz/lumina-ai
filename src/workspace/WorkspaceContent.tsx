@@ -1,13 +1,5 @@
-import { AudioLines, FlaskConical, Lightbulb, RadioTower } from "lucide-react";
+import { FlaskConical, Layers3, Lightbulb, RadioTower } from "lucide-react";
 import { CanvasView } from "@/canvas/CanvasView";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { TimelinePanel } from "@/panel/TimelinePanel";
 import { engineSelectors, useEngineStore } from "@/stores/engine";
@@ -29,7 +21,6 @@ export function WorkspaceContent({ workspace }: { workspace: WorkspaceId }) {
     );
   }
 
-  if (workspace === "song") return <SongPlaceholder />;
   if (workspace === "effect-lab") return <EffectLabPreview />;
 
   return <WorkspaceSurface workspace={workspace} />;
@@ -57,28 +48,6 @@ function WorkspaceSurface({ workspace }: { workspace: WorkspaceId }) {
   );
 }
 
-function SongPlaceholder() {
-  return (
-    <section className="bg-background flex h-full min-h-0 p-3">
-      <Empty className="bg-card/40 border">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <AudioLines aria-hidden="true" />
-          </EmptyMedia>
-          <EmptyTitle>Build the show around a song</EmptyTitle>
-          <EmptyDescription>
-            Audio import, cached waveform peaks and manual beat-grid correction are implemented in
-            Stage 7 after this workspace shell is stable.
-          </EmptyDescription>
-        </EmptyHeader>
-        <EmptyContent>
-          <span className="text-muted-foreground text-xs">No audio asset attached</span>
-        </EmptyContent>
-      </Empty>
-    </section>
-  );
-}
-
 function surfaceMeta(workspace: WorkspaceId) {
   return {
     stage: {
@@ -91,11 +60,10 @@ function surfaceMeta(workspace: WorkspaceId) {
       title: "Effect loop preview",
       description: "One bar · draft preview",
     },
-    song: { icon: AudioLines, title: "Song", description: "Waveform and beat grid" },
     arrange: {
-      icon: AudioLines,
-      title: "Song spine",
-      description: "Canvas and lighting arrangement share one timeline",
+      icon: Layers3,
+      title: "Arrangement canvas",
+      description: "Canvas and lighting tracks share one fixed-BPM timeline",
     },
     live: {
       icon: RadioTower,

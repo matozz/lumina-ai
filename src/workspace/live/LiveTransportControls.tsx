@@ -55,7 +55,7 @@ export function LiveTransportControls() {
           className="text-muted-foreground"
           disabled={transportState === "stopped"}
           onClick={() => void run(engine.stop, "Transport could not stop.")}
-          title="Stop and return to song start"
+          title="Stop and return to arrangement start"
         >
           <Square data-icon="inline-start" aria-hidden="true" />
           Stop
@@ -81,7 +81,8 @@ export function LiveTransportControls() {
         {blackout ? "Release blackout" : "Blackout"}
       </Button>
       <p className="text-muted-foreground mt-1.5 text-[10px] leading-relaxed">
-        Pause holds song time. Stop returns to the start. Blackout only latches lighting output.
+        Pause holds arrangement time. Stop returns to the start. Blackout only latches lighting
+        output.
       </p>
     </section>
   );

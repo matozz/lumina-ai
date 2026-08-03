@@ -74,7 +74,6 @@ function inspectorTitle(workspace: WorkspaceId) {
   return {
     stage: "Stage setup",
     "effect-lab": "Effect parameters",
-    song: "Song and beat grid",
     arrange: "Timeline selection",
     live: "Live control",
   }[workspace];
@@ -84,7 +83,6 @@ function inspectorDescription(workspace: WorkspaceId) {
   return {
     stage: "Select fixtures, groups or layout items to edit stage properties.",
     "effect-lab": "Select an effect to edit its target, waveform and loop parameters.",
-    song: "Import a song, then correct tempo, downbeat and sections here.",
     arrange: "Select a clip or automation keyframe to inspect typed values.",
     live: "Published snapshot controls and output diagnostics.",
   }[workspace];

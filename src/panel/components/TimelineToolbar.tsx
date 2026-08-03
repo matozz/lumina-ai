@@ -1,4 +1,4 @@
-import { AudioWaveform, CircleHelp, Redo2, Undo2, ZoomIn, ZoomOut } from "lucide-react";
+import { ChartNoAxesGantt, CircleHelp, Redo2, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
@@ -33,7 +33,7 @@ export const TimelineToolbar = (props: ToolbarProps) => {
       )}
     >
       <div className="flex items-center gap-3">
-        <AudioWaveform className="h-4 w-4 text-indigo-400" />
+        <ChartNoAxesGantt className="h-4 w-4 text-indigo-400" aria-hidden="true" />
         <span className="text-xs font-semibold tracking-wide text-zinc-200">SEQUENCER</span>
         <span
           className={cn("text-[10px] text-amber-400", !isDirty && "invisible")}

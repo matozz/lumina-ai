@@ -7,13 +7,24 @@ describe("workspace state", () => {
     workspaceActions.reset();
   });
 
-  it("keeps five product workspaces separate from Advanced Mode", () => {
+  it("keeps the four Stage 6 workspaces separate from Advanced Mode", () => {
     workspaceActions.setAdvancedMode(true);
     workspaceActions.setActiveWorkspace("effect-lab");
 
     expect(useWorkspaceStore.getState()).toMatchObject({
       activeWorkspace: "effect-lab",
       advancedMode: false,
+    });
+  });
+
+  it("migrates the removed Song workspace to Arrange", async () => {
+    const migrate = useWorkspaceStore.persist.getOptions().migrate;
+
+    expect(migrate).toBeDefined();
+    const migrated = await Promise.resolve(migrate?.({ activeWorkspace: "song" }, 1));
+
+    expect(migrated).toMatchObject({
+      activeWorkspace: "arrange",
     });
   });
 
