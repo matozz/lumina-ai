@@ -8,10 +8,13 @@ use crate::document::{
     CueCapabilitySummary, CueDefinition, CueLayer, CueMixOverride, CueRiskSummary,
     CueTriggerPolicy, EffectClipDSL, EffectDefinitionDSL, EffectInstanceDSL, GroupDSL,
     GroupFixturesDSL, MetaDSL, MixPolicy as CueMixPolicy, ProjectBundle, ShowDocumentV4,
-    StageDocument, TimeSignaturePoint, TimelineTrackDSL, TimelineV4DSL, ValidatedProject,
+    StageDocument, TargetSetSelector, TimeSignaturePoint, TimelineTrackDSL, TimelineV4DSL,
+    ValidatedProject,
 };
-use crate::engine::profile::{profile_by_handle, MixPolicy};
+use crate::engine::effect::EffectInstance;
+use crate::engine::profile::{profile_by_handle, profile_by_id, MixPolicy};
 use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct CompiledCueLayer {
@@ -42,7 +45,8 @@ pub struct CompiledProjectSnapshot {
     pub time_signatures: Vec<TimeSignaturePoint>,
     pub markers: Vec<ArrangementMarker>,
     pub cues: HashMap<AssetRef, CompiledCue>,
-    pub show: CompiledShow,
+    pub effect_previews: HashMap<AssetRef, EffectInstanceHandle>,
+    pub show: Arc<CompiledShow>,
 }
 
 #[derive(Clone)]
@@ -124,6 +128,56 @@ impl Compiler {
         let mut instances = Vec::new();
         let mut customizations = HashMap::new();
         let mut compiled_cues = HashMap::new();
+        let mut effect_previews = HashMap::new();
+
+        for effect in bundle
+            .manifest
+            .effect_refs
+            .iter()
+            .filter_map(|reference| exact_effect(&bundle, reference))
+        {
+            let Some(target) = stage
+                .target_sets
+                .iter()
+                .find(|target| {
+                    matches!(target.selector, TargetSetSelector::All)
+                        && target_supports_effect(&stage, target, effect)
+                })
+                .or_else(|| {
+                    stage
+                        .target_sets
+                        .iter()
+                        .find(|target| target_supports_effect(&stage, target, effect))
+                })
+            else {
+                continue;
+            };
+            let instance_id = effect_preview_instance_id(&effect.id, effect.revision);
+            let seed = EffectInstance::stable_seed(&instance_id);
+            instances.push(EffectInstanceDSL {
+                id: instance_id.clone(),
+                definition_id: effect.id.clone(),
+                definition_revision: effect.revision,
+                target_group_id: target_group_id(&stage, &target.id),
+                parameter_overrides: BTreeMap::new(),
+                seed: format!("{seed:016x}"),
+            });
+            customizations.insert(
+                instance_id.clone(),
+                InstanceCustomization {
+                    phase_offset: 0.0,
+                    priority: 0,
+                    mix_overrides: Vec::new(),
+                },
+            );
+            effect_previews.insert(
+                AssetRef {
+                    id: effect.id.clone(),
+                    revision: effect.revision,
+                },
+                instance_id.into(),
+            );
+        }
 
         for cue in &cues {
             let mut compiled_layers = Vec::new();
@@ -370,7 +424,8 @@ impl Compiler {
             time_signatures: arrangement.time_signatures,
             markers: arrangement.markers,
             cues: compiled_cues,
-            show,
+            effect_previews,
+            show: Arc::new(show),
         })
     }
 }
@@ -463,6 +518,38 @@ fn cue_preview_instance_id(cue: &CueDefinition, layer: &CueLayer) -> String {
         layer.id.len(),
         layer.id
     )
+}
+
+fn effect_preview_instance_id(effect_id: &str, revision: u32) -> String {
+    format!(
+        "__effect_preview__:{}:{}:{}",
+        effect_id.len(),
+        effect_id,
+        revision
+    )
+}
+
+fn target_supports_effect(
+    stage: &StageDocument,
+    target: &crate::document::TargetSetDefinition,
+    effect: &crate::document::EffectDefinitionDocument,
+) -> bool {
+    let resolved = resolve_target_set(stage, target);
+    resolved.fixture_ids.iter().all(|fixture_id| {
+        let profile_id = stage.patch.iter().find_map(|patch| {
+            (patch.id_range.0..=patch.id_range.1)
+                .contains(fixture_id)
+                .then_some(patch.profile_id.as_str())
+        });
+        profile_id.and_then(profile_by_id).is_some_and(|profile| {
+            effect.catalog.required_attributes.iter().all(|required| {
+                profile
+                    .attributes
+                    .iter()
+                    .any(|attribute| attribute.id == *required)
+            })
+        })
+    })
 }
 
 fn cue_clip_instance_id(
@@ -865,6 +952,10 @@ mod tests {
         revision_two.revision = 2;
         revision_two.name = "Pulse v2".to_string();
         bundle.effects.push(revision_two);
+        bundle.manifest.effect_refs.push(AssetRef {
+            id: "pulse".to_string(),
+            revision: 2,
+        });
 
         let snapshot = Compiler::compile_active_project(
             ValidatedProject::validate(bundle).expect("multiple revisions validate"),

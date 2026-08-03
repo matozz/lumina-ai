@@ -2,12 +2,19 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   CompileResult,
   Diagnostic,
+  AssetRef,
   FixtureFramePayload,
   LayoutCoord,
   FullDSL,
   LoadShowResult,
   LiveEffectCatalog,
   QueuedLivePad,
+  MigratedProject,
+  ProjectBundle,
+  ProjectCompileResult,
+  ProjectPreviewFrame,
+  PreviewSource,
+  RenderContext,
   ShowSnapshotState,
 } from "./types";
 
@@ -23,6 +30,30 @@ export const engine = {
       dslJson: json,
       instanceId,
       frameCount,
+    }),
+
+  previewProject: (options: {
+    project?: ProjectBundle;
+    arrangementRef?: AssetRef;
+    source: PreviewSource;
+    context: RenderContext;
+    playheadTick: number;
+  }) =>
+    invoke<ProjectPreviewFrame>("preview_project", {
+      projectJson: options.project ? JSON.stringify(options.project) : null,
+      arrangementRef: options.arrangementRef ?? null,
+      source: options.source,
+      context: options.context,
+      playheadTick: options.playheadTick,
+    }),
+
+  renderProjectPreview: (context: RenderContext, playheadTick: number) =>
+    invoke<ProjectPreviewFrame>("render_project_preview", { context, playheadTick }),
+
+  publishProject: (project: ProjectBundle, arrangementRef: AssetRef) =>
+    invoke<ProjectCompileResult>("publish_project", {
+      projectJson: JSON.stringify(project),
+      arrangementRef,
     }),
 
   activateShowRevision: (revision: number) =>
@@ -69,6 +100,14 @@ export const engine = {
     invoke("save_show", { path, dslJson: JSON.stringify(dsl) }),
 
   loadShow: (path: string) => invoke<LoadShowResult>("load_show", { path }),
+
+  saveProject: (path: string, project: ProjectBundle) =>
+    invoke("save_project", { path, projectJson: JSON.stringify(project) }),
+
+  loadProject: (path: string) => invoke<ProjectBundle>("load_project", { path }),
+
+  migrateShowProject: (json: string) =>
+    invoke<MigratedProject>("migrate_show_project", { dslJson: json }),
 
   setSequencerMode: (mode: "live" | "timeline") => invoke("set_sequencer_mode", { mode }),
 

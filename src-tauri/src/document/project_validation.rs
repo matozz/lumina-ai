@@ -1228,17 +1228,17 @@ fn validate_manifest_refs<T, F>(
 ) where
     F: Copy + Fn(&T) -> (&String, u32),
 {
-    let mut ids = BTreeSet::new();
+    let mut identities = BTreeSet::new();
     for (index, reference) in references.iter().enumerate() {
-        if !ids.insert(reference.id.as_str()) {
+        if !identities.insert((reference.id.as_str(), reference.revision)) {
             diagnostics.push(Diagnostic::error(
                 PROJECT_DUPLICATE_ASSET,
                 format!("{path}[{index}]"),
                 format!(
-                    "Manifest references asset ID {:?} more than once.",
-                    reference.id
+                    "Manifest references asset {:?} revision {} more than once.",
+                    reference.id, reference.revision
                 ),
-                "Reference one exact revision per asset ID in a Project manifest revision.",
+                "Reference each exact asset identity at most once in a Project manifest revision.",
             ));
         }
         resolve_ref(

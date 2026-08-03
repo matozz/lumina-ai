@@ -1,10 +1,16 @@
-use crate::compiler::{diagnostic::Diagnostic, Compiler, LayoutCoord};
-use crate::document::{load_document, MigrationReport, ShowDocumentV4};
+use crate::compiler::diagnostic::{Diagnostic, PROJECT_REFERENCE_NOT_FOUND};
+use crate::compiler::{CompiledProjectSnapshot, Compiler, LayoutCoord};
+use crate::document::{
+    load_document, load_project_bundle, AssetRef, MigrationReport, ProjectBundle, ShowDocumentV4,
+};
 use crate::engine::attribute::FixtureFramePayload;
 use crate::engine::effect::{EffectCatalog, EffectCatalogQuery, EffectSource, SPEED_PARAMETER_ID};
 use crate::engine::render::{render_at, LivePhaser, RenderSource, RenderTime};
 use crate::engine::transport::OutputRate;
-use crate::state::{EngineState, LivePadQuantize, ScheduledLiveActionKind, ShowSnapshot};
+use crate::state::{
+    EngineState, LivePadQuantize, PreviewSession, PreviewSource, RenderContext,
+    ScheduledLiveActionKind, ShowSnapshot,
+};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -42,6 +48,31 @@ pub struct LoadShowResult {
 pub struct ShowSnapshotState {
     pub published_revision: Option<u64>,
     pub live_revision: Option<u64>,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProjectCompileResult {
+    pub success: bool,
+    pub show_revision: Option<u64>,
+    pub project_ref: Option<AssetRef>,
+    pub stage_ref: Option<AssetRef>,
+    pub arrangement_ref: Option<AssetRef>,
+    pub fixture_count: usize,
+    pub layout_coords: Vec<LayoutCoord>,
+    pub errors: Vec<Diagnostic>,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProjectPreviewFrame {
+    pub generation: u64,
+    pub source: PreviewSource,
+    pub context: RenderContext,
+    pub project_ref: AssetRef,
+    pub stage_ref: AssetRef,
+    pub arrangement_ref: AssetRef,
+    pub playhead_tick: u64,
+    pub layout_coords: Vec<LayoutCoord>,
+    pub outputs: Vec<FixtureFramePayload>,
 }
 
 #[derive(serde::Serialize)]
@@ -133,6 +164,133 @@ pub async fn publish_dsl(
 pub fn preview_dsl(dsl_json: String) -> Result<CompileResult, Diagnostic> {
     let (result, _) = compile_dsl(&dsl_json)?;
     Ok(result)
+}
+
+#[tauri::command]
+pub async fn preview_project(
+    project_json: Option<String>,
+    arrangement_ref: Option<AssetRef>,
+    source: PreviewSource,
+    context: RenderContext,
+    playhead_tick: u64,
+    state: State<'_, Arc<EngineState>>,
+) -> Result<ProjectPreviewFrame, Vec<Diagnostic>> {
+    let snapshot = match &source {
+        PreviewSource::AuthoringDraft | PreviewSource::RehearsalDraft => {
+            let project_json = project_json.ok_or_else(|| {
+                vec![project_diagnostic(
+                    "project_json",
+                    "Draft preview requires the current Project bundle.",
+                )]
+            })?;
+            let arrangement_ref = arrangement_ref.ok_or_else(|| {
+                vec![project_diagnostic(
+                    "arrangement_ref",
+                    "Draft preview requires an exact Arrangement reference.",
+                )]
+            })?;
+            Arc::new(compile_project_json(&project_json, &arrangement_ref)?)
+        }
+        PreviewSource::RehearsalPublished { revision } => state
+            .shows
+            .revision(*revision)
+            .await
+            .and_then(|snapshot| snapshot.project)
+            .ok_or_else(|| {
+                vec![project_diagnostic(
+                    "source.revision",
+                    format!(
+                        "Published revision {revision} does not contain a Stage 7 Project snapshot."
+                    ),
+                )]
+            })?,
+    };
+    let session = state
+        .previews
+        .replace(source, context, playhead_tick, snapshot)
+        .await;
+    render_preview_session(&session)
+}
+
+#[tauri::command]
+pub async fn render_project_preview(
+    context: RenderContext,
+    playhead_tick: u64,
+    state: State<'_, Arc<EngineState>>,
+) -> Result<ProjectPreviewFrame, Vec<Diagnostic>> {
+    let session = state
+        .previews
+        .update_context(context, playhead_tick)
+        .await
+        .ok_or_else(|| {
+            vec![project_diagnostic(
+                "preview_session",
+                "No PreviewSession has been compiled.",
+            )]
+        })?;
+    render_preview_session(&session)
+}
+
+#[tauri::command]
+pub async fn publish_project(
+    project_json: String,
+    arrangement_ref: AssetRef,
+    state: State<'_, Arc<EngineState>>,
+) -> Result<ProjectCompileResult, String> {
+    let validated = match load_project_bundle(&project_json) {
+        Ok(validated) => validated,
+        Err(errors) => return Ok(project_compile_failure(errors)),
+    };
+    let bundle = validated.bundle().clone();
+    let compiled = match Compiler::compile_project(validated, &arrangement_ref) {
+        Ok(compiled) => compiled,
+        Err(errors) => return Ok(project_compile_failure(errors)),
+    };
+    let result = project_compile_success(&compiled, None);
+    match state.shows.publish_project(compiled, &bundle).await {
+        Ok(snapshot) => Ok(ProjectCompileResult {
+            show_revision: Some(snapshot.revision),
+            ..result
+        }),
+        Err(errors) => Ok(project_compile_failure(errors)),
+    }
+}
+
+#[tauri::command]
+pub async fn save_project(path: String, project_json: String) -> Result<(), String> {
+    let validated = load_project_bundle(&project_json).map_err(|diagnostics| {
+        diagnostics
+            .into_iter()
+            .map(|diagnostic| diagnostic.to_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+    })?;
+    let serialized = serde_json::to_string_pretty(&validated.into_bundle())
+        .map_err(|error| format!("Project serialization error: {error}"))?;
+    atomic_write(Path::new(&path), serialized.as_bytes()).await
+}
+
+#[tauri::command]
+pub async fn load_project(path: String) -> Result<ProjectBundle, String> {
+    let content = tokio::fs::read_to_string(&path)
+        .await
+        .map_err(|error| format!("Project read error: {error}"))?;
+    load_project_bundle(&content)
+        .map(|validated| validated.into_bundle())
+        .map_err(|diagnostics| {
+            diagnostics
+                .into_iter()
+                .map(|diagnostic| diagnostic.to_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        })
+}
+
+#[tauri::command]
+pub fn migrate_show_project(
+    dsl_json: String,
+) -> Result<crate::document::MigratedProject, Vec<Diagnostic>> {
+    crate::document::migrate_show_to_project(&dsl_json)
 }
 
 #[tauri::command]
@@ -571,6 +729,120 @@ pub async fn request_full_frame(state: State<'_, Arc<EngineState>>) -> Result<()
         .map_err(|error| error.to_string())
 }
 
+fn compile_project_json(
+    project_json: &str,
+    arrangement_ref: &AssetRef,
+) -> Result<CompiledProjectSnapshot, Vec<Diagnostic>> {
+    let validated = load_project_bundle(project_json)?;
+    Compiler::compile_project(validated, arrangement_ref)
+}
+
+fn project_compile_success(
+    project: &CompiledProjectSnapshot,
+    show_revision: Option<u64>,
+) -> ProjectCompileResult {
+    ProjectCompileResult {
+        success: true,
+        show_revision,
+        project_ref: Some(project.project_ref.clone()),
+        stage_ref: Some(project.stage_ref.clone()),
+        arrangement_ref: Some(project.arrangement_ref.clone()),
+        fixture_count: project.show.fixtures.len(),
+        layout_coords: project.show.coords.clone(),
+        errors: Vec::new(),
+    }
+}
+
+fn project_compile_failure(errors: Vec<Diagnostic>) -> ProjectCompileResult {
+    ProjectCompileResult {
+        success: false,
+        show_revision: None,
+        project_ref: None,
+        stage_ref: None,
+        arrangement_ref: None,
+        fixture_count: 0,
+        layout_coords: Vec::new(),
+        errors,
+    }
+}
+
+fn render_preview_session(
+    session: &PreviewSession,
+) -> Result<ProjectPreviewFrame, Vec<Diagnostic>> {
+    let show = &session.snapshot.show;
+    let beat = session.playhead_tick as f64
+        / f64::from(show.timeline.as_ref().map_or(960, |timeline| timeline.ppq));
+    let mut live_phasers = Vec::new();
+    let source = match &session.context {
+        RenderContext::Stage => RenderSource::Live(&live_phasers),
+        RenderContext::Arrangement => RenderSource::Timeline,
+        RenderContext::Effect { effect_ref } => {
+            let instance = session
+                .snapshot
+                .effect_previews
+                .get(effect_ref)
+                .ok_or_else(|| {
+                    vec![project_diagnostic(
+                        "context.effect_ref",
+                        format!(
+                            "Effect {:?} revision {} has no capability-compatible preview target.",
+                            effect_ref.id, effect_ref.revision
+                        ),
+                    )]
+                })?;
+            live_phasers.push(LivePhaser {
+                id: instance.as_str().to_string(),
+                start_beat: 0.0,
+                phase_offset: 0.0,
+                multiplier: 1.0,
+            });
+            RenderSource::Live(&live_phasers)
+        }
+        RenderContext::Cue { cue_ref } => {
+            let cue = session.snapshot.cues.get(cue_ref).ok_or_else(|| {
+                vec![project_diagnostic(
+                    "context.cue_ref",
+                    format!(
+                        "Cue {:?} revision {} is not part of the compiled Project closure.",
+                        cue_ref.id, cue_ref.revision
+                    ),
+                )]
+            })?;
+            live_phasers.extend(cue.layers.iter().map(|layer| LivePhaser {
+                id: layer.instance.as_str().to_string(),
+                start_beat: 0.0,
+                phase_offset: 0.0,
+                multiplier: 1.0,
+            }));
+            RenderSource::Live(&live_phasers)
+        }
+    };
+    let outputs = render_at(show, RenderTime { beat }, source)
+        .into_iter()
+        .map(|frame| frame.to_payload())
+        .collect();
+    Ok(ProjectPreviewFrame {
+        generation: session.generation,
+        source: session.source.clone(),
+        context: session.context.clone(),
+        project_ref: session.snapshot.project_ref.clone(),
+        stage_ref: session.snapshot.stage_ref.clone(),
+        arrangement_ref: session.snapshot.arrangement_ref.clone(),
+        playhead_tick: session.playhead_tick,
+        layout_coords: show.coords.clone(),
+        outputs,
+    })
+}
+
+fn project_diagnostic(path: impl Into<String>, message: impl Into<String>) -> Diagnostic {
+    Diagnostic::error(
+        PROJECT_REFERENCE_NOT_FOUND,
+        path,
+        message,
+        "Rebuild the PreviewSession from a valid exact Project revision graph.",
+    )
+}
+
 async fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), String> {
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
     let file_name = path
@@ -701,6 +973,7 @@ mod tests {
         let catalog = live_effect_catalog(&ShowSnapshot {
             revision: 7,
             show: Arc::new(compiled.expect("compiled show")),
+            project: None,
         });
         assert_eq!(catalog.show_revision, 7);
         assert_eq!(catalog.effects.len(), 1);

@@ -22,6 +22,7 @@ pub fn run() {
                 scheduler: scheduler::Scheduler::new(),
                 clock,
                 shows: state::ShowStore::default(),
+                previews: state::PreviewStore::default(),
                 runtime: Arc::new(RwLock::new(state::RuntimeState {
                     transport,
                     live_phasers: Vec::new(),
@@ -45,6 +46,9 @@ pub fn run() {
             commands::publish_dsl,
             commands::preview_dsl,
             commands::preview_effect_loop,
+            commands::preview_project,
+            commands::render_project_preview,
+            commands::publish_project,
             commands::activate_show_revision,
             commands::get_show_snapshot_state,
             commands::validate_dsl,
@@ -62,6 +66,9 @@ pub fn run() {
             commands::stop_phaser,
             commands::save_show,
             commands::load_show,
+            commands::save_project,
+            commands::load_project,
+            commands::migrate_show_project,
             commands::set_sequencer_mode,
             commands::get_layout_coords,
             commands::request_full_frame

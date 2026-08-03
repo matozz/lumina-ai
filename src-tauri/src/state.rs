@@ -1,4 +1,6 @@
-use crate::compiler::CompiledShow;
+use crate::compiler::diagnostic::{Diagnostic, PROJECT_REVISION_IMMUTABLE};
+use crate::compiler::{CompiledProjectSnapshot, CompiledShow};
+use crate::document::{AssetRef, ProjectBundle};
 use crate::engine::clock::Clock;
 use crate::engine::output::OutputHub;
 use crate::engine::render::LivePhaser;
@@ -13,6 +15,7 @@ pub struct EngineState {
     pub scheduler: Scheduler,
     pub clock: Arc<dyn Clock>,
     pub shows: ShowStore,
+    pub previews: PreviewStore,
     pub runtime: Arc<RwLock<RuntimeState>>,
 }
 
@@ -20,6 +23,7 @@ pub struct EngineState {
 pub struct ShowSnapshot {
     pub revision: u64,
     pub show: Arc<CompiledShow>,
+    pub project: Option<Arc<CompiledProjectSnapshot>>,
 }
 
 pub struct ShowStore {
@@ -32,6 +36,7 @@ struct ShowStoreState {
     snapshots: BTreeMap<u64, ShowSnapshot>,
     latest_published_revision: Option<u64>,
     live_revision: Option<u64>,
+    asset_fingerprints: BTreeMap<String, String>,
 }
 
 impl Default for ShowStore {
@@ -48,11 +53,50 @@ impl ShowStore {
         let snapshot = ShowSnapshot {
             revision: self.next_revision.fetch_add(1, Ordering::Relaxed),
             show: Arc::new(show),
+            project: None,
         };
         let mut state = self.state.write().await;
         state.snapshots.insert(snapshot.revision, snapshot.clone());
         state.latest_published_revision = Some(snapshot.revision);
         snapshot
+    }
+
+    pub async fn publish_project(
+        &self,
+        project: CompiledProjectSnapshot,
+        bundle: &ProjectBundle,
+    ) -> Result<ShowSnapshot, Vec<Diagnostic>> {
+        let fingerprints = project_asset_fingerprints(bundle);
+        let mut state = self.state.write().await;
+        let mut diagnostics = Vec::new();
+        for (identity, fingerprint) in &fingerprints {
+            if state
+                .asset_fingerprints
+                .get(identity)
+                .is_some_and(|published| published != fingerprint)
+            {
+                diagnostics.push(Diagnostic::error(
+                    PROJECT_REVISION_IMMUTABLE,
+                    identity,
+                    format!("Published asset identity {identity} was reused with different content."),
+                    "Increment the asset revision and update references explicitly before publishing.",
+                ));
+            }
+        }
+        if !diagnostics.is_empty() {
+            return Err(diagnostics);
+        }
+
+        let project = Arc::new(project);
+        let snapshot = ShowSnapshot {
+            revision: self.next_revision.fetch_add(1, Ordering::Relaxed),
+            show: project.show.clone(),
+            project: Some(project),
+        };
+        state.snapshots.insert(snapshot.revision, snapshot.clone());
+        state.latest_published_revision = Some(snapshot.revision);
+        state.asset_fingerprints.extend(fingerprints);
+        Ok(snapshot)
     }
 
     pub async fn publish_and_activate(&self, show: CompiledShow) -> ShowSnapshot {
@@ -87,10 +131,126 @@ impl ShowStore {
             .and_then(|revision| state.snapshots.get(&revision).cloned())
     }
 
+    pub async fn revision(&self, revision: u64) -> Option<ShowSnapshot> {
+        self.state.read().await.snapshots.get(&revision).cloned()
+    }
+
     pub async fn revisions(&self) -> (Option<u64>, Option<u64>) {
         let state = self.state.read().await;
         (state.latest_published_revision, state.live_revision)
     }
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum PreviewSource {
+    AuthoringDraft,
+    RehearsalDraft,
+    RehearsalPublished { revision: u64 },
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum RenderContext {
+    Stage,
+    Effect { effect_ref: AssetRef },
+    Cue { cue_ref: AssetRef },
+    Arrangement,
+}
+
+#[derive(Clone)]
+pub struct PreviewSession {
+    pub generation: u64,
+    pub source: PreviewSource,
+    pub context: RenderContext,
+    pub playhead_tick: u64,
+    pub snapshot: Arc<CompiledProjectSnapshot>,
+}
+
+pub struct PreviewStore {
+    state: RwLock<Option<PreviewSession>>,
+    next_generation: AtomicU64,
+}
+
+impl Default for PreviewStore {
+    fn default() -> Self {
+        Self {
+            state: RwLock::new(None),
+            next_generation: AtomicU64::new(1),
+        }
+    }
+}
+
+impl PreviewStore {
+    pub async fn replace(
+        &self,
+        source: PreviewSource,
+        context: RenderContext,
+        playhead_tick: u64,
+        snapshot: Arc<CompiledProjectSnapshot>,
+    ) -> PreviewSession {
+        let session = PreviewSession {
+            generation: self.next_generation.fetch_add(1, Ordering::Relaxed),
+            source,
+            context,
+            playhead_tick,
+            snapshot,
+        };
+        *self.state.write().await = Some(session.clone());
+        session
+    }
+
+    pub async fn update_context(
+        &self,
+        context: RenderContext,
+        playhead_tick: u64,
+    ) -> Option<PreviewSession> {
+        let mut state = self.state.write().await;
+        let session = state.as_mut()?;
+        session.context = context;
+        session.playhead_tick = playhead_tick;
+        Some(session.clone())
+    }
+
+    pub async fn current(&self) -> Option<PreviewSession> {
+        self.state.read().await.clone()
+    }
+}
+
+fn project_asset_fingerprints(bundle: &ProjectBundle) -> BTreeMap<String, String> {
+    let mut fingerprints = BTreeMap::new();
+    fingerprints.insert(
+        format!(
+            "project:{}@{}",
+            bundle.manifest.project_id, bundle.manifest.revision
+        ),
+        serde_json::to_string(&bundle.manifest).expect("ProjectManifest serializes"),
+    );
+    for stage in &bundle.stages {
+        fingerprints.insert(
+            format!("stage:{}@{}", stage.id, stage.revision),
+            serde_json::to_string(stage).expect("StageDocument serializes"),
+        );
+    }
+    for effect in &bundle.effects {
+        fingerprints.insert(
+            format!("effect:{}@{}", effect.id, effect.revision),
+            serde_json::to_string(effect).expect("EffectDefinition serializes"),
+        );
+    }
+    for cue in &bundle.cues {
+        fingerprints.insert(
+            format!("cue:{}@{}", cue.id, cue.revision),
+            serde_json::to_string(cue).expect("CueDefinition serializes"),
+        );
+    }
+    for arrangement in &bundle.arrangements {
+        fingerprints.insert(
+            format!("arrangement:{}@{}", arrangement.id, arrangement.revision),
+            serde_json::to_string(arrangement).expect("ArrangementDocument serializes"),
+        );
+    }
+    fingerprints
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -244,8 +404,13 @@ pub struct ActivePhaser {
 
 #[cfg(test)]
 mod tests {
-    use super::{LivePadQuantize, RuntimeState, ScheduledLiveActionKind, SequencerMode, ShowStore};
-    use crate::compiler::{CompiledShow, Fixture};
+    use super::{
+        LivePadQuantize, PreviewSource, PreviewStore, RenderContext, RuntimeState,
+        ScheduledLiveActionKind, SequencerMode, ShowStore,
+    };
+    use crate::compiler::diagnostic::PROJECT_REVISION_IMMUTABLE;
+    use crate::compiler::{CompiledShow, Compiler, Fixture};
+    use crate::document::{valid_bundle, AssetRef, ProjectBundle, ValidatedProject};
     use crate::engine::attribute::resolve_attribute;
     use crate::engine::output::OutputHub;
     use crate::engine::profile::{
@@ -299,6 +464,71 @@ mod tests {
             store.current().await.expect("live").revision,
             first.revision
         );
+    }
+
+    #[tokio::test]
+    async fn published_asset_identity_cannot_be_reused_with_changed_content() {
+        let store = ShowStore::default();
+        let bundle = publishable_bundle();
+        let compiled = Compiler::compile_active_project(
+            ValidatedProject::validate(bundle.clone()).expect("Project validates"),
+        )
+        .expect("Project compiles");
+        store
+            .publish_project(compiled, &bundle)
+            .await
+            .expect("first Project publish");
+
+        let mut changed = bundle;
+        changed.arrangements[0].name = "Changed without a new revision".to_string();
+        let compiled = Compiler::compile_active_project(
+            ValidatedProject::validate(changed.clone()).expect("changed Draft validates"),
+        )
+        .expect("changed Draft compiles");
+        let diagnostics = match store.publish_project(compiled, &changed).await {
+            Ok(_) => panic!("same revision with changed content must be rejected"),
+            Err(diagnostics) => diagnostics,
+        };
+        assert!(diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == PROJECT_REVISION_IMMUTABLE));
+    }
+
+    #[tokio::test]
+    async fn preview_context_switch_retains_snapshot_source_and_generation() {
+        let bundle = publishable_bundle();
+        let compiled = std::sync::Arc::new(
+            Compiler::compile_active_project(
+                ValidatedProject::validate(bundle).expect("Project validates"),
+            )
+            .expect("Project compiles"),
+        );
+        let previews = PreviewStore::default();
+        let started = previews
+            .replace(
+                PreviewSource::AuthoringDraft,
+                RenderContext::Stage,
+                960,
+                compiled.clone(),
+            )
+            .await;
+        let switched = previews
+            .update_context(
+                RenderContext::Cue {
+                    cue_ref: AssetRef {
+                        id: "cue-1".to_string(),
+                        revision: 1,
+                    },
+                },
+                1920,
+            )
+            .await
+            .expect("PreviewSession remains active");
+
+        assert_eq!(switched.generation, started.generation);
+        assert_eq!(switched.source, PreviewSource::AuthoringDraft);
+        assert_eq!(switched.playhead_tick, 1920);
+        assert!(std::sync::Arc::ptr_eq(&switched.snapshot, &compiled));
     }
 
     #[test]
@@ -387,6 +617,27 @@ mod tests {
             fixtures: vec![fixture(id)],
             ..CompiledShow::default()
         }
+    }
+
+    fn publishable_bundle() -> ProjectBundle {
+        let mut bundle = valid_bundle();
+        bundle.effects[0].graph = serde_json::from_value(serde_json::json!({
+            "nodes": [
+                {
+                    "type": "constant",
+                    "id": "value",
+                    "value": { "type": "scalar", "value": 0.5 }
+                },
+                {
+                    "type": "attribute_writer",
+                    "id": "output",
+                    "input": { "node_id": "value", "port": "scalar" },
+                    "attribute_id": "intensity"
+                }
+            ]
+        }))
+        .expect("test graph");
+        bundle
     }
 
     fn runtime_state() -> RuntimeState {
