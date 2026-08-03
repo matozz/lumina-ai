@@ -527,6 +527,10 @@ fn live_effect_catalog(snapshot: &ShowSnapshot) -> LiveEffectCatalog {
         .show
         .effect_instances
         .values()
+        .filter(|instance| {
+            !instance.id.starts_with("__effect_preview__")
+                && !instance.id.starts_with("__cue_preview__")
+        })
         .filter_map(|instance| {
             let definition = snapshot
                 .show
@@ -776,17 +780,20 @@ fn render_preview_session(
     let source = match &session.context {
         RenderContext::Stage => RenderSource::Live(&live_phasers),
         RenderContext::Arrangement => RenderSource::Timeline,
-        RenderContext::Effect { effect_ref } => {
+        RenderContext::Effect {
+            effect_ref,
+            target_set_id,
+        } => {
             let instance = session
                 .snapshot
                 .effect_previews
-                .get(effect_ref)
+                .get(&(effect_ref.clone(), target_set_id.clone()))
                 .ok_or_else(|| {
                     vec![project_diagnostic(
                         "context.effect_ref",
                         format!(
-                            "Effect {:?} revision {} has no capability-compatible preview target.",
-                            effect_ref.id, effect_ref.revision
+                            "Effect {:?} revision {} cannot preview TargetSet {:?}.",
+                            effect_ref.id, effect_ref.revision, target_set_id
                         ),
                     )]
                 })?;
@@ -868,9 +875,10 @@ async fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        atomic_write, compile_dsl, live_effect_catalog, preview_dsl, preview_effect_loop,
-        SAVE_SEQUENCE,
+        atomic_write, compile_dsl, live_effect_catalog, load_project, preview_dsl,
+        preview_effect_loop, save_project, SAVE_SEQUENCE,
     };
+    use crate::document::{valid_bundle, AssetRef, TempoPointDSL};
     use crate::state::ShowSnapshot;
     use std::sync::atomic::Ordering;
     use std::sync::Arc;
@@ -913,6 +921,55 @@ mod tests {
             entry_count += 1;
         }
         assert_eq!(entry_count, 1);
+        tokio::fs::remove_dir_all(directory)
+            .await
+            .expect("test cleanup");
+    }
+
+    #[tokio::test]
+    async fn saves_and_reopens_multiple_arrangements_without_moving_ticks() {
+        let sequence = SAVE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let directory = std::env::temp_dir().join(format!(
+            "lumina-project-save-{}-{sequence}",
+            std::process::id()
+        ));
+        tokio::fs::create_dir(&directory)
+            .await
+            .expect("test directory");
+        let project_path = directory.join("project.lumina.json");
+        let mut bundle = valid_bundle();
+        let mut journey = bundle.arrangements[0].clone();
+        journey.id = "tempo-journey".to_string();
+        journey.name = "Tempo Journey".to_string();
+        journey.tempo_map.points.push(TempoPointDSL {
+            time_tick: 7_680,
+            bpm: 96.0,
+        });
+        let expected_clip_tick = journey.tracks[0].clips[0].start_tick;
+        bundle.manifest.arrangement_refs.push(AssetRef {
+            id: journey.id.clone(),
+            revision: journey.revision,
+        });
+        bundle.manifest.active_arrangement_id = journey.id.clone();
+        bundle.arrangements.push(journey);
+
+        save_project(
+            project_path.to_string_lossy().into_owned(),
+            serde_json::to_string(&bundle).expect("serialize Project"),
+        )
+        .await
+        .expect("save Project");
+        let reopened = load_project(project_path.to_string_lossy().into_owned())
+            .await
+            .expect("reopen Project");
+
+        assert_eq!(reopened.arrangements.len(), 2);
+        assert_eq!(reopened.manifest.active_arrangement_id, "tempo-journey");
+        assert_eq!(reopened.arrangements[1].tempo_map.points.len(), 2);
+        assert_eq!(
+            reopened.arrangements[1].tracks[0].clips[0].start_tick,
+            expected_clip_tick
+        );
         tokio::fs::remove_dir_all(directory)
             .await
             .expect("test cleanup");

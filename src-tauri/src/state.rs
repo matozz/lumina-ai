@@ -153,8 +153,13 @@ pub enum PreviewSource {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum RenderContext {
     Stage,
-    Effect { effect_ref: AssetRef },
-    Cue { cue_ref: AssetRef },
+    Effect {
+        effect_ref: AssetRef,
+        target_set_id: String,
+    },
+    Cue {
+        cue_ref: AssetRef,
+    },
     Arrangement,
 }
 

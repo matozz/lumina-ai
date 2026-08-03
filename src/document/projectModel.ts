@@ -16,6 +16,15 @@ export function assetKey(reference: AssetRef) {
   return `${reference.id}@${reference.revision}`;
 }
 
+export function latestRefsById(references: AssetRef[]) {
+  const latest = new Map<string, AssetRef>();
+  for (const reference of references) {
+    const current = latest.get(reference.id);
+    if (!current || reference.revision > current.revision) latest.set(reference.id, reference);
+  }
+  return [...latest.values()];
+}
+
 export function exactAsset<T extends { id: string; revision: number }>(
   assets: T[],
   reference: AssetRef | null,

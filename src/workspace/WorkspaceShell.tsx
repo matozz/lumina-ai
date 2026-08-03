@@ -1,8 +1,5 @@
-import { DslEditor } from "@/editor/DslEditor";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { cn } from "@/lib/utils";
-import { engine } from "@/bridge/commands";
-import { engineActions } from "@/stores/engine";
 import {
   type WorkspaceId,
   useWorkspaceStore,
@@ -14,30 +11,19 @@ import { WorkspaceHeader } from "./WorkspaceHeader";
 import { WorkspaceInspector } from "./WorkspaceInspector";
 import { WorkspaceLibrary } from "./WorkspaceLibrary";
 import { WorkspaceRail } from "./WorkspaceRail";
+import { ProjectAssetInspector } from "./advanced/ProjectAssetInspector";
+import { useProjectPreviewController } from "./useProjectPreviewController";
 
 export function WorkspaceShell() {
   const activeWorkspace = useWorkspaceStore(workspaceSelectors.activeWorkspace);
   const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
   const libraryVisible = useWorkspaceStore(workspaceSelectors.libraryVisible);
   const inspectorVisible = useWorkspaceStore(workspaceSelectors.inspectorVisible);
-  const showContextLibrary = libraryVisible && activeWorkspace !== "arrange";
+  const showContextLibrary = libraryVisible;
+  useProjectPreviewController(activeWorkspace);
 
-  const selectWorkspace = async (workspace: WorkspaceId) => {
+  const selectWorkspace = (workspace: WorkspaceId) => {
     workspaceActions.setActiveWorkspace(workspace);
-    const mode = workspace === "arrange" ? "timeline" : "live";
-    try {
-      await engine.setSequencerMode(mode);
-      engineActions.setSequencerMode(mode);
-      if (workspace === "live") {
-        const catalog = await engine.getLiveEffects();
-        engineActions.setLiveEffectCatalog(catalog);
-      }
-    } catch (error) {
-      workspaceActions.setPublishStatus(
-        "error",
-        error instanceof Error ? error.message : "Workspace mode could not be changed.",
-      );
-    }
   };
 
   return (
@@ -49,10 +35,7 @@ export function WorkspaceShell() {
     >
       <WorkspaceHeader />
       <div className="flex min-h-0 min-w-0 flex-1">
-        <WorkspaceRail
-          activeWorkspace={activeWorkspace}
-          onSelect={(id) => void selectWorkspace(id)}
-        />
+        <WorkspaceRail activeWorkspace={activeWorkspace} onSelect={selectWorkspace} />
         <ResizablePanelGroup orientation="horizontal" className="min-w-0">
           {showContextLibrary && (
             <>
@@ -66,7 +49,7 @@ export function WorkspaceShell() {
           <ResizablePanel id="main-workspace" defaultSize="61%" minSize="34rem">
             <main className="h-full min-h-0 min-w-0" data-layout-region="workspace">
               {advancedMode ? (
-                <DslEditor embedded />
+                <ProjectAssetInspector workspace={activeWorkspace} />
               ) : (
                 <WorkspaceContent workspace={activeWorkspace} />
               )}

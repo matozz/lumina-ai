@@ -1,4 +1,4 @@
-import { Pause, Play, RotateCw } from "lucide-react";
+import { Layers2, Pause, Play } from "lucide-react";
 import { CanvasView } from "@/canvas/CanvasView";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,44 +6,45 @@ import { Slider } from "@/components/ui/slider";
 import { exactAsset } from "@/document/projectModel";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 
-export function EffectLabPreview() {
+export function CuePreview() {
   const bundle = useProjectStore(projectSelectors.bundle);
-  const selected = useProjectStore(projectSelectors.selectedEffectRef);
-  const playback = useProjectStore(projectSelectors.effectPreviewPlayback);
-  const tick = useProjectStore(projectSelectors.effectPreviewTick);
+  const selected = useProjectStore(projectSelectors.selectedCueRef);
+  const playback = useProjectStore(projectSelectors.cuePreviewPlayback);
+  const tick = useProjectStore(projectSelectors.cuePreviewTick);
   const error = useProjectStore(projectSelectors.previewError);
-  const effect = exactAsset(bundle.effects, selected);
+  const cue = exactAsset(bundle.cues, selected);
   const playing = playback === "playing";
+  const maximum = Math.max(1, (cue?.nominal_length_ticks ?? 3_840) - 1);
 
   return (
     <section className="bg-background relative flex h-full min-h-0 flex-col">
       <div className="border-border bg-card/70 flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
-        <RotateCw className="text-primary" aria-hidden="true" />
-        <span className="text-xs font-medium">Effect loop preview</span>
+        <Layers2 className="text-primary" aria-hidden="true" />
+        <span className="text-xs font-medium">Cue loop preview</span>
         <Badge variant="outline">Authoring Preview</Badge>
         <span className="text-muted-foreground ml-auto truncate text-[10px]">
-          {effect ? `${effect.name} · r${effect.revision}` : "No Effect selected"}
+          {cue ? `${cue.name} · ${cue.layers.length} layers · r${cue.revision}` : "No Cue selected"}
         </span>
         <Button
           variant="ghost"
           size="icon-xs"
-          aria-label={playing ? "Pause effect loop preview" : "Play effect loop preview"}
-          disabled={!effect}
-          onClick={() => projectActions.setEffectPreviewPlayback(playing ? "paused" : "playing")}
+          aria-label={playing ? "Pause Cue loop preview" : "Play Cue loop preview"}
+          disabled={!cue}
+          onClick={() => projectActions.setCuePreviewPlayback(playing ? "paused" : "playing")}
         >
           {playing ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
         </Button>
       </div>
       <div className="border-border flex h-7 shrink-0 items-center gap-2 border-b px-2.5">
         <Slider
-          aria-label="Scrub Effect preview"
+          aria-label="Scrub Cue preview"
           min={0}
-          max={3_839}
+          max={maximum}
           step={1}
-          value={[tick]}
-          disabled={!effect}
+          value={[Math.min(tick, maximum)]}
+          disabled={!cue}
           onValueChange={(value) =>
-            projectActions.setEffectPreviewTick(Array.isArray(value) ? (value[0] ?? 0) : value)
+            projectActions.setCuePreviewTick(Array.isArray(value) ? (value[0] ?? 0) : value)
           }
         />
         <span className="text-muted-foreground w-16 text-right font-mono text-[10px] tabular-nums">
@@ -52,8 +53,8 @@ export function EffectLabPreview() {
       </div>
       <div className="relative min-h-0 flex-1">
         <CanvasView frameSource="preview" />
-        {!effect && <PreviewMessage>Create or select an Effect to preview.</PreviewMessage>}
-        {effect && error && <PreviewMessage>{error}</PreviewMessage>}
+        {!cue && <PreviewMessage>Create or select a Cue to preview.</PreviewMessage>}
+        {cue && error && <PreviewMessage>{error}</PreviewMessage>}
       </div>
     </section>
   );

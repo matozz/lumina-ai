@@ -8,8 +8,7 @@ use crate::document::{
     CueCapabilitySummary, CueDefinition, CueLayer, CueMixOverride, CueRiskSummary,
     CueTriggerPolicy, EffectClipDSL, EffectDefinitionDSL, EffectInstanceDSL, GroupDSL,
     GroupFixturesDSL, MetaDSL, MixPolicy as CueMixPolicy, ProjectBundle, ShowDocumentV4,
-    StageDocument, TargetSetSelector, TimeSignaturePoint, TimelineTrackDSL, TimelineV4DSL,
-    ValidatedProject,
+    StageDocument, TimeSignaturePoint, TimelineTrackDSL, TimelineV4DSL, ValidatedProject,
 };
 use crate::engine::effect::EffectInstance;
 use crate::engine::profile::{profile_by_handle, profile_by_id, MixPolicy};
@@ -45,7 +44,7 @@ pub struct CompiledProjectSnapshot {
     pub time_signatures: Vec<TimeSignaturePoint>,
     pub markers: Vec<ArrangementMarker>,
     pub cues: HashMap<AssetRef, CompiledCue>,
-    pub effect_previews: HashMap<AssetRef, EffectInstanceHandle>,
+    pub effect_previews: HashMap<(AssetRef, String), EffectInstanceHandle>,
     pub show: Arc<CompiledShow>,
 }
 
@@ -136,47 +135,41 @@ impl Compiler {
             .iter()
             .filter_map(|reference| exact_effect(&bundle, reference))
         {
-            let Some(target) = stage
+            for target in stage
                 .target_sets
                 .iter()
-                .find(|target| {
-                    matches!(target.selector, TargetSetSelector::All)
-                        && target_supports_effect(&stage, target, effect)
-                })
-                .or_else(|| {
-                    stage
-                        .target_sets
-                        .iter()
-                        .find(|target| target_supports_effect(&stage, target, effect))
-                })
-            else {
-                continue;
-            };
-            let instance_id = effect_preview_instance_id(&effect.id, effect.revision);
-            let seed = EffectInstance::stable_seed(&instance_id);
-            instances.push(EffectInstanceDSL {
-                id: instance_id.clone(),
-                definition_id: effect.id.clone(),
-                definition_revision: effect.revision,
-                target_group_id: target_group_id(&stage, &target.id),
-                parameter_overrides: BTreeMap::new(),
-                seed: format!("{seed:016x}"),
-            });
-            customizations.insert(
-                instance_id.clone(),
-                InstanceCustomization {
-                    phase_offset: 0.0,
-                    priority: 0,
-                    mix_overrides: Vec::new(),
-                },
-            );
-            effect_previews.insert(
-                AssetRef {
-                    id: effect.id.clone(),
-                    revision: effect.revision,
-                },
-                instance_id.into(),
-            );
+                .filter(|target| target_supports_effect(&stage, target, effect))
+            {
+                let instance_id =
+                    effect_preview_instance_id(&effect.id, effect.revision, &target.id);
+                let seed = EffectInstance::stable_seed(&instance_id);
+                instances.push(EffectInstanceDSL {
+                    id: instance_id.clone(),
+                    definition_id: effect.id.clone(),
+                    definition_revision: effect.revision,
+                    target_group_id: target_group_id(&stage, &target.id),
+                    parameter_overrides: BTreeMap::new(),
+                    seed: format!("{seed:016x}"),
+                });
+                customizations.insert(
+                    instance_id.clone(),
+                    InstanceCustomization {
+                        phase_offset: 0.0,
+                        priority: 0,
+                        mix_overrides: Vec::new(),
+                    },
+                );
+                effect_previews.insert(
+                    (
+                        AssetRef {
+                            id: effect.id.clone(),
+                            revision: effect.revision,
+                        },
+                        target.id.clone(),
+                    ),
+                    instance_id.into(),
+                );
+            }
         }
 
         for cue in &cues {
@@ -520,12 +513,14 @@ fn cue_preview_instance_id(cue: &CueDefinition, layer: &CueLayer) -> String {
     )
 }
 
-fn effect_preview_instance_id(effect_id: &str, revision: u32) -> String {
+fn effect_preview_instance_id(effect_id: &str, revision: u32, target_set_id: &str) -> String {
     format!(
-        "__effect_preview__:{}:{}:{}",
+        "__effect_preview__:{}:{}:{}:{}:{}",
         effect_id.len(),
         effect_id,
-        revision
+        revision,
+        target_set_id.len(),
+        target_set_id
     )
 }
 

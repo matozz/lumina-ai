@@ -41,6 +41,25 @@ export function createStarterProjectBundle(): ProjectBundle {
         ],
         target_sets: [
           { id: "all", name: "All", selector: { type: "all" } },
+          { id: "rows", name: "Rows", selector: { type: "rows", indices: [0, 1, 2, 3] } },
+          {
+            id: "columns",
+            name: "Columns",
+            selector: { type: "columns", indices: [0, 1, 2, 3] },
+          },
+          {
+            id: "zones-3x3",
+            name: "3×3 Zones",
+            selector: {
+              type: "grid_zones",
+              rows: 3,
+              columns: 3,
+              zones: Array.from({ length: 9 }, (_, index) => ({
+                row: Math.floor(index / 3),
+                column: index % 3,
+              })),
+            },
+          },
           {
             id: "checkerboard",
             name: "Checkerboard",

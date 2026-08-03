@@ -1,4 +1,5 @@
-import { Boxes, Layers3, Lightbulb, RadioTower, Star } from "lucide-react";
+import { Boxes, Layers2, Layers3, Lightbulb, Plus, RadioTower, Star } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -8,35 +9,145 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { activeStage, assetKey, exactAsset, latestRefsById } from "@/document/projectModel";
 import { engineSelectors, useEngineStore } from "@/stores/engine";
+import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import {
   type WorkspaceId,
   useWorkspaceStore,
   workspaceActions,
   workspaceSelectors,
 } from "@/stores/workspace";
-import { EffectCatalogLibrary } from "./effect-lab/EffectCatalogLibrary";
 
 export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
-  const document = useEngineStore(engineSelectors.parsedDsl);
+  const bundle = useProjectStore(projectSelectors.bundle);
+  const selectedEffectRef = useProjectStore(projectSelectors.selectedEffectRef);
+  const selectedCueRef = useProjectStore(projectSelectors.selectedCueRef);
   const liveEffects = useEngineStore(engineSelectors.liveEffects);
   const selectedLiveEffectId = useWorkspaceStore(workspaceSelectors.selectedLiveEffectId);
   const favorites = useWorkspaceStore(workspaceSelectors.favoriteEffectIds);
+  const stage = activeStage(bundle);
 
   return (
     <aside className="bg-card flex h-full min-h-0 flex-col" aria-label={`${workspace} library`}>
       <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
         <LibraryIcon workspace={workspace} />
         <span className="truncate text-xs font-medium">{libraryTitle(workspace)}</span>
+        {workspace === "effect-lab" && (
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            className="ml-auto"
+            aria-label="Create Effect"
+            onClick={() => projectActions.createEffect("Pulse")}
+          >
+            <Plus aria-hidden="true" />
+          </Button>
+        )}
+        {workspace === "cues" && (
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            className="ml-auto"
+            aria-label="Create Cue"
+            disabled={!selectedEffectRef}
+            onClick={() => selectedEffectRef && projectActions.createCue([selectedEffectRef])}
+          >
+            <Plus aria-hidden="true" />
+          </Button>
+        )}
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1.5 p-2">
-          {workspace === "stage" &&
-            document?.groups.map((group) => (
-              <LibraryRow key={group.id} label={group.name} meta={fixtureCount(group.fixtures)} />
-            ))}
+          {workspace === "stage" && (
+            <>
+              {stage.groups.map((group) => (
+                <LibraryRow key={group.id} label={group.name} meta={fixtureCount(group.fixtures)} />
+              ))}
+              {stage.target_sets.map((target) => (
+                <LibraryRow key={target.id} label={target.name} meta={target.selector.type} />
+              ))}
+            </>
+          )}
 
-          {workspace === "effect-lab" && document && <EffectCatalogLibrary document={document} />}
+          {workspace === "effect-lab" && (
+            <>
+              <div className="grid grid-cols-2 gap-1.5">
+                <Button
+                  size="xs"
+                  variant="outline"
+                  onClick={() => projectActions.createEffect("Pulse")}
+                >
+                  Pulse
+                </Button>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  onClick={() => projectActions.createEffect("Gradient")}
+                >
+                  Gradient
+                </Button>
+              </div>
+              {latestRefsById(bundle.manifest.effect_refs).map((reference) => {
+                const effect = exactAsset(bundle.effects, reference);
+                if (!effect) return null;
+                return (
+                  <Button
+                    key={assetKey(reference)}
+                    variant={
+                      selectedEffectRef && assetKey(selectedEffectRef) === assetKey(reference)
+                        ? "secondary"
+                        : "ghost"
+                    }
+                    size="sm"
+                    className="h-auto w-full justify-start py-1.5"
+                    onClick={() => projectActions.setSelectedEffectRef(reference)}
+                  >
+                    <span className="min-w-0 flex-1 truncate text-left">{effect.name}</span>
+                    <Badge variant="outline">r{effect.revision}</Badge>
+                  </Button>
+                );
+              })}
+            </>
+          )}
+
+          {(workspace === "cues" || workspace === "arrange") && (
+            <>
+              {workspace === "arrange" && (
+                <p className="text-muted-foreground px-1 text-[10px]">
+                  Select a Cue, then place it at the authoring playhead.
+                </p>
+              )}
+              {latestRefsById(bundle.manifest.cue_refs).map((reference) => {
+                const cue = exactAsset(bundle.cues, reference);
+                if (!cue) return null;
+                return (
+                  <Button
+                    key={assetKey(reference)}
+                    variant={
+                      selectedCueRef && assetKey(selectedCueRef) === assetKey(reference)
+                        ? "secondary"
+                        : "ghost"
+                    }
+                    size="sm"
+                    className="h-auto w-full justify-start py-1.5"
+                    onClick={() => projectActions.setSelectedCueRef(reference)}
+                  >
+                    <span className="min-w-0 flex-1 truncate text-left">{cue.name}</span>
+                    <span className="text-muted-foreground text-[9px]">{cue.layers.length}L</span>
+                    <Badge variant="outline">r{cue.revision}</Badge>
+                  </Button>
+                );
+              })}
+              {bundle.cues.length === 0 && (
+                <CompactEmpty
+                  icon={Layers2}
+                  title="No Cues yet"
+                  description="Create Effects first, then combine them in Cues."
+                />
+              )}
+            </>
+          )}
 
           {workspace === "live" &&
             liveEffects.map((effect) => (
@@ -55,20 +166,11 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
               </Button>
             ))}
 
-          {workspace === "arrange" &&
-            document?.timeline?.tracks.map((track) => (
-              <LibraryRow
-                key={track.id}
-                label={track.name}
-                meta={`${track.clips?.length ?? 0} clips`}
-              />
-            ))}
-
           {workspace === "live" && liveEffects.length === 0 && (
             <CompactEmpty
               icon={Boxes}
-              title="No effects yet"
-              description="Create the first reusable look in Effect Lab."
+              title="No Live snapshot"
+              description="Publish a Project revision, then explicitly Take live."
             />
           )}
         </div>
@@ -112,17 +214,19 @@ function LibraryIcon({ workspace }: { workspace: WorkspaceId }) {
   const Icon = {
     stage: Lightbulb,
     "effect-lab": Boxes,
+    cues: Layers2,
     arrange: Layers3,
     live: RadioTower,
   }[workspace];
-  return <Icon className="text-muted-foreground size-3.5" aria-hidden="true" />;
+  return <Icon className="text-muted-foreground" aria-hidden="true" />;
 }
 
 function libraryTitle(workspace: WorkspaceId) {
   return {
-    stage: "Stage groups",
-    "effect-lab": "Effect catalog",
-    arrange: "Arrangement tracks",
+    stage: "Stage groups & targets",
+    "effect-lab": "Effect assets",
+    cues: "Cue assets",
+    arrange: "Cue Library",
     live: "Live effects",
   }[workspace];
 }

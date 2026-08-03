@@ -127,4 +127,55 @@ describe("Stage 7 Project state", () => {
     expect(state.effectPreviewPlayback).toBe("paused");
     expect(state.cuePreviewPlayback).toBe("playing");
   });
+
+  it("preserves an Arrangement session when a Published asset forks to a new revision", () => {
+    const reference = useProjectStore.getState().selectedArrangementRef;
+    projectActions.setArrangementPlayhead(reference, 5_760);
+    projectActions.setArrangementLoop(reference, {
+      loopEnabled: true,
+      loopStartTick: 960,
+      loopEndTick: 7_680,
+    });
+    projectActions.markPublished();
+
+    projectActions.renameArrangement(reference, "House 128 Revised");
+    const revised = useProjectStore.getState().selectedArrangementRef;
+
+    expect(revised).toEqual({ id: reference.id, revision: reference.revision + 1 });
+    expect(useProjectStore.getState().arrangementSessions[assetKey(revised)]).toMatchObject({
+      playheadTick: 5_760,
+      loopEnabled: true,
+      loopStartTick: 960,
+      loopEndTick: 7_680,
+    });
+  });
+
+  it("persists multiple Arrangements and their independent authoring sessions for reopen", async () => {
+    const house = useProjectStore.getState().selectedArrangementRef;
+    const journey = projectActions.duplicateArrangement(house, "Tempo Journey")!;
+    const journeyId = useProjectStore.getState().selectedArrangementRef.id;
+    projectActions.updateArrangement(journey, "Add multi-tempo map", (arrangement) => {
+      arrangement.tempo_map.points.push({ time_tick: 7_680, bpm: 96 });
+    });
+    const revisedJourney = useProjectStore.getState().selectedArrangementRef;
+    projectActions.setArrangementPlayhead(revisedJourney, 8_640);
+    const persisted = localStorage.getItem("lumina-project-v1");
+    expect(persisted).not.toBeNull();
+
+    projectActions.reset();
+    localStorage.setItem("lumina-project-v1", persisted!);
+    await useProjectStore.persist.rehydrate();
+
+    const reopened = useProjectStore.getState();
+    expect(reopened.bundle.manifest.arrangement_refs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: house.id }),
+        expect.objectContaining({ id: journeyId }),
+      ]),
+    );
+    expect(
+      exactAsset(reopened.bundle.arrangements, reopened.selectedArrangementRef)?.tempo_map.points,
+    ).toHaveLength(2);
+    expect(reopened.arrangementSessions[assetKey(revisedJourney)]?.playheadTick).toBe(8_640);
+  });
 });

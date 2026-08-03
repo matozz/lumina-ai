@@ -206,7 +206,11 @@ export type PreviewSource =
 
 export type RenderContext =
   | { type: "stage" }
-  | { type: "effect"; effect_ref: import("@/generated/project-contract-v1").AssetRef }
+  | {
+      type: "effect";
+      effect_ref: import("@/generated/project-contract-v1").AssetRef;
+      target_set_id: string;
+    }
   | { type: "cue"; cue_ref: import("@/generated/project-contract-v1").AssetRef }
   | { type: "arrangement" };
 

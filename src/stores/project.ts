@@ -45,7 +45,10 @@ export interface ProjectState {
   selectedTargetSetId: string;
   arrangementSessions: Record<string, ArrangementSessionState>;
   previewSource: PreviewSourceMode;
+  liveViewMode: "live" | "rehearsal";
   rehearsalPublishedRevision: number | null;
+  effectPreviewTick: number;
+  cuePreviewTick: number;
   effectPreviewPlayback: PreviewPlayback;
   cuePreviewPlayback: PreviewPlayback;
   previewGeneration: number | null;
@@ -66,7 +69,10 @@ const initialState: ProjectState = {
   selectedTargetSetId: "all",
   arrangementSessions: {},
   previewSource: "authoring_draft",
+  liveViewMode: "live",
   rehearsalPublishedRevision: null,
+  effectPreviewTick: 0,
+  cuePreviewTick: 0,
   effectPreviewPlayback: "playing",
   cuePreviewPlayback: "playing",
   previewGeneration: null,
@@ -89,6 +95,8 @@ export const useProjectStore = create<ProjectState>()(
       arrangementSessions: state.arrangementSessions,
       effectPreviewPlayback: state.effectPreviewPlayback,
       cuePreviewPlayback: state.cuePreviewPlayback,
+      effectPreviewTick: state.effectPreviewTick,
+      cuePreviewTick: state.cuePreviewTick,
     }),
   }),
 );
@@ -146,6 +154,11 @@ export const projectActions = {
     previewSource: PreviewSourceMode,
     rehearsalPublishedRevision: number | null = null,
   ) => useProjectStore.setState({ previewSource, rehearsalPublishedRevision }),
+  setLiveViewMode: (liveViewMode: "live" | "rehearsal") =>
+    useProjectStore.setState({ liveViewMode }),
+  setEffectPreviewTick: (effectPreviewTick: number) =>
+    useProjectStore.setState({ effectPreviewTick }),
+  setCuePreviewTick: (cuePreviewTick: number) => useProjectStore.setState({ cuePreviewTick }),
   setEffectPreviewPlayback: (effectPreviewPlayback: PreviewPlayback) =>
     useProjectStore.setState({ effectPreviewPlayback }),
   setCuePreviewPlayback: (cuePreviewPlayback: PreviewPlayback) =>
@@ -172,6 +185,43 @@ export const projectActions = {
       const effect = exactAsset(bundle.effects, selected);
       if (!effect) throw new Error("Effect revision is missing");
       effect.name = name.trim();
+      bumpManifestRevision(bundle, published);
+    });
+    useProjectStore.setState({ selectedEffectRef: selected });
+  },
+  deleteEffect: (reference: AssetRef) => {
+    const state = useProjectStore.getState();
+    if (
+      state.bundle.cues.some((cue) =>
+        cue.layers.some((layer) => assetKey(layer.effect_ref) === assetKey(reference)),
+      )
+    ) {
+      throw new Error("Effect revision is referenced by a Cue");
+    }
+    transact("Delete Effect", (bundle, published) => {
+      bumpManifestRevision(bundle, published);
+      bundle.manifest.effect_refs = bundle.manifest.effect_refs.filter(
+        (candidate) => assetKey(candidate) !== assetKey(reference),
+      );
+      bundle.effects = bundle.effects.filter((effect) => assetKey(effect) !== assetKey(reference));
+    });
+    const bundle = useProjectStore.getState().bundle;
+    useProjectStore.setState({
+      selectedEffectRef:
+        bundle.manifest.effect_refs[bundle.manifest.effect_refs.length - 1] ?? null,
+    });
+  },
+  updateEffect: (
+    reference: AssetRef,
+    label: string,
+    update: (effect: ProjectBundle["effects"][number]) => void,
+  ) => {
+    let selected = reference;
+    transact(label, (bundle, published) => {
+      selected = forkAssetRevision(bundle, published, "effect", reference);
+      const effect = exactAsset(bundle.effects, selected);
+      if (!effect) throw new Error("Effect revision is missing");
+      update(effect);
       bumpManifestRevision(bundle, published);
     });
     useProjectStore.setState({ selectedEffectRef: selected });
@@ -213,6 +263,29 @@ export const projectActions = {
     useProjectStore.setState({ selectedCueRef: created });
     return created;
   },
+  deleteCue: (reference: AssetRef) => {
+    const state = useProjectStore.getState();
+    if (
+      state.bundle.arrangements.some((arrangement) =>
+        arrangement.tracks.some((track) =>
+          track.clips?.some((clip) => assetKey(clip.cue_ref) === assetKey(reference)),
+        ),
+      )
+    ) {
+      throw new Error("Cue revision is referenced by an Arrangement");
+    }
+    transact("Delete Cue", (bundle, published) => {
+      bumpManifestRevision(bundle, published);
+      bundle.manifest.cue_refs = bundle.manifest.cue_refs.filter(
+        (candidate) => assetKey(candidate) !== assetKey(reference),
+      );
+      bundle.cues = bundle.cues.filter((cue) => assetKey(cue) !== assetKey(reference));
+    });
+    const bundle = useProjectStore.getState().bundle;
+    useProjectStore.setState({
+      selectedCueRef: bundle.manifest.cue_refs[bundle.manifest.cue_refs.length - 1] ?? null,
+    });
+  },
   renameCue: (reference: AssetRef, name: string) =>
     updateCue(reference, "Rename Cue", (cue) => {
       cue.name = name.trim();
@@ -245,6 +318,11 @@ export const projectActions = {
         trigger_policy: { mode: "timeline", quantize: "beat" },
       });
     }),
+  removeCueLayer: (reference: AssetRef, layerId: string) =>
+    updateCue(reference, "Remove Cue layer", (cue) => {
+      if (cue.layers.length <= 1) throw new Error("A Cue requires at least one layer");
+      cue.layers = cue.layers.filter((layer) => layer.id !== layerId);
+    }),
   duplicateArrangement: (reference: AssetRef, name?: string) => {
     let created: AssetRef | null = null;
     transact("Duplicate Arrangement", (bundle, published) => {
@@ -260,6 +338,28 @@ export const projectActions = {
     useProjectStore.setState({ selectedArrangementRef: created ?? reference });
     return created;
   },
+  createArrangement: (name = "New Arrangement") => {
+    const source = useProjectStore.getState().selectedArrangementRef;
+    let created: AssetRef | null = null;
+    transact("Create Arrangement", (bundle, published) => {
+      const arrangement = exactAsset(bundle.arrangements, source);
+      if (!arrangement) throw new Error("Arrangement revision is missing");
+      bumpManifestRevision(bundle, published);
+      const next = duplicateArrangementAsset(bundle, arrangement, name);
+      next.tracks = arrangement.tracks.map((track) => ({
+        ...structuredClone(track),
+        clips: [],
+        automation_lanes: [],
+      }));
+      next.markers = [];
+      bundle.arrangements.push(next);
+      created = { id: next.id, revision: next.revision };
+      appendExactRef(bundle.manifest.arrangement_refs, created);
+      bundle.manifest.active_arrangement_id = next.id;
+    });
+    useProjectStore.setState({ selectedArrangementRef: created ?? source });
+    return created;
+  },
   renameArrangement: (reference: AssetRef, name: string) =>
     updateArrangement(reference, "Rename Arrangement", (arrangement) => {
       arrangement.name = name.trim();
@@ -269,6 +369,16 @@ export const projectActions = {
     label: string,
     update: (arrangement: ArrangementDocument) => void,
   ) => updateArrangement(reference, label, update),
+  updateStage: (label: string, update: (stage: ProjectBundle["stages"][number]) => void) => {
+    transact(label, (bundle, published) => {
+      const reference = bundle.manifest.stage_ref;
+      const selected = forkAssetRevision(bundle, published, "stage", reference);
+      const stage = exactAsset(bundle.stages, selected);
+      if (!stage) throw new Error("Stage revision is missing");
+      update(stage);
+      bumpManifestRevision(bundle, published);
+    });
+  },
   undo: () => {
     const state = useProjectStore.getState();
     if (state.historyCursor === 0) return;
@@ -299,9 +409,12 @@ export const projectSelectors = {
   selectedArrangementRef: (state: ProjectState) => state.selectedArrangementRef,
   selectedTargetSetId: (state: ProjectState) => state.selectedTargetSetId,
   previewSource: (state: ProjectState) => state.previewSource,
+  liveViewMode: (state: ProjectState) => state.liveViewMode,
   rehearsalPublishedRevision: (state: ProjectState) => state.rehearsalPublishedRevision,
   effectPreviewPlayback: (state: ProjectState) => state.effectPreviewPlayback,
   cuePreviewPlayback: (state: ProjectState) => state.cuePreviewPlayback,
+  effectPreviewTick: (state: ProjectState) => state.effectPreviewTick,
+  cuePreviewTick: (state: ProjectState) => state.cuePreviewTick,
   previewGeneration: (state: ProjectState) => state.previewGeneration,
   previewError: (state: ProjectState) => state.previewError,
   canUndo: (state: ProjectState) => state.historyCursor > 0,
@@ -344,6 +457,7 @@ function updateArrangement(
   label: string,
   update: (arrangement: ArrangementDocument) => void,
 ) {
+  const previousSession = useProjectStore.getState().arrangementSessions[assetKey(reference)];
   let selected = reference;
   transact(label, (bundle, published) => {
     selected = forkAssetRevision(bundle, published, "arrangement", reference);
@@ -353,7 +467,16 @@ function updateArrangement(
     bundle.manifest.active_arrangement_id = arrangement.id;
     bumpManifestRevision(bundle, published);
   });
-  useProjectStore.setState({ selectedArrangementRef: selected });
+  useProjectStore.setState((state) => ({
+    selectedArrangementRef: selected,
+    arrangementSessions:
+      previousSession && assetKey(selected) !== assetKey(reference)
+        ? {
+            ...state.arrangementSessions,
+            [assetKey(selected)]: { ...previousSession },
+          }
+        : state.arrangementSessions,
+  }));
 }
 
 function repairSelections() {
