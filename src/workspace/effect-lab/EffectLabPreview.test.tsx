@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { projectActions, useProjectStore } from "@/stores/project";
 import { useProjectPreviewController } from "../useProjectPreviewController";
@@ -52,4 +52,49 @@ describe("EffectLabPreview", () => {
     );
     expect(useProjectStore.getState().previewGeneration).toBe(1);
   });
+
+  it("switches to a newly created Effect while playing without a tick-driven restart loop", async () => {
+    const pulse = projectActions.createEffect("Pulse")!;
+    projectActions.setEffectPreviewPlayback("playing");
+    vi.stubGlobal("requestAnimationFrame", vi.fn().mockReturnValue(1));
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    commandMocks.previewProject.mockImplementation(
+      (options: { source: { type: "authoring_draft" }; context: object; playheadTick: number }) =>
+        Promise.resolve(previewFrame(options.source, options.context, options.playheadTick)),
+    );
+    commandMocks.renderProjectPreview.mockResolvedValue(
+      previewFrame(
+        { type: "authoring_draft" },
+        { type: "effect", effect_ref: pulse, target_set_id: "all" },
+        0,
+      ),
+    );
+    render(<Harness />);
+    await waitFor(() => expect(commandMocks.previewProject).toHaveBeenCalledOnce());
+
+    act(() => {
+      projectActions.createEffect("Gradient");
+    });
+
+    await waitFor(() => expect(commandMocks.previewProject).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("Gradient · r1")).toBeTruthy();
+  });
 });
+
+function previewFrame(source: object, context: object, playheadTick: number) {
+  const state = useProjectStore.getState();
+  return {
+    generation: 1,
+    source,
+    context,
+    project_ref: {
+      id: state.bundle.manifest.project_id,
+      revision: state.bundle.manifest.revision,
+    },
+    stage_ref: state.bundle.manifest.stage_ref,
+    arrangement_ref: state.selectedArrangementRef,
+    playhead_tick: playheadTick,
+    layout_coords: [],
+    outputs: [],
+  };
+}

@@ -10,6 +10,7 @@ export class CanvasRenderer {
   private glowEnabled: boolean = true;
   private camera: Camera;
   private animationFrameId: number = 0;
+  private dirty: boolean = true;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -24,6 +25,7 @@ export class CanvasRenderer {
       this.fixtures.set(id, new FixtureVisual(id, x, y, type));
     }
     this.camera.fitToContent(coords);
+    this.dirty = true;
   }
 
   applyFrame(outputs: FixtureFramePayload[], _full: boolean): void {
@@ -34,11 +36,24 @@ export class CanvasRenderer {
         visual.applyOutput(out.r, out.g, out.b, out.dimmer);
       }
     }
+    this.dirty = true;
   }
 
   startRenderLoop(): void {
     const loop = () => {
-      this.draw();
+      const rect = this.canvas.getBoundingClientRect();
+      const width = Math.round(rect.width);
+      const height = Math.round(rect.height);
+      if (this.canvas.width !== width || this.canvas.height !== height) {
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.camera.fitToContent(Array.from(this.fixtures.values()));
+        this.dirty = true;
+      }
+      if (this.dirty) {
+        this.draw();
+        this.dirty = false;
+      }
 
       this.animationFrameId = requestAnimationFrame(loop);
     };
@@ -52,17 +67,6 @@ export class CanvasRenderer {
   private draw(): void {
     const { ctx, canvas } = this;
     const { offsetX, offsetY, scale } = this.camera;
-
-    // Fix DPI scaling
-    const rect = canvas.getBoundingClientRect();
-    const isResized = canvas.width !== rect.width || canvas.height !== rect.height;
-
-    if (isResized) {
-      canvas.width = rect.width;
-      canvas.height = rect.height;
-      // Re-center when canvas size changes
-      this.camera.fitToContent(Array.from(this.fixtures.values()));
-    }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -100,8 +104,8 @@ export class CanvasRenderer {
 
     ctx.strokeStyle = "#52525b";
     ctx.lineWidth = 1 / scale;
+    ctx.beginPath();
     for (const visual of this.fixtures.values()) {
-      ctx.beginPath();
       if (visual.type === "pixel") {
         ctx.rect(
           visual.x - visual.radius,
@@ -110,13 +114,14 @@ export class CanvasRenderer {
           visual.radius * 2,
         );
       } else {
+        ctx.moveTo(visual.x + visual.radius, visual.y);
         ctx.arc(visual.x, visual.y, visual.radius, 0, Math.PI * 2);
       }
-      ctx.stroke();
     }
+    ctx.stroke();
 
     // Draw glow
-    if (this.glowEnabled) {
+    if (this.glowEnabled && this.fixtures.size <= 400) {
       ctx.globalCompositeOperation = "lighter";
       for (const visual of this.fixtures.values()) {
         if (visual.brightness > 0.05) {

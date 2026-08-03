@@ -527,10 +527,7 @@ fn live_effect_catalog(snapshot: &ShowSnapshot) -> LiveEffectCatalog {
         .show
         .effect_instances
         .values()
-        .filter(|instance| {
-            !instance.id.starts_with("__effect_preview__")
-                && !instance.id.starts_with("__cue_preview__")
-        })
+        .filter(|instance| is_live_catalog_instance(&instance.id))
         .filter_map(|instance| {
             let definition = snapshot
                 .show
@@ -554,6 +551,10 @@ fn live_effect_catalog(snapshot: &ShowSnapshot) -> LiveEffectCatalog {
         show_revision: snapshot.revision,
         effects,
     }
+}
+
+fn is_live_catalog_instance(instance_id: &str) -> bool {
+    !instance_id.starts_with("__effect_preview__") && !instance_id.starts_with("__cue__:")
 }
 
 #[tauri::command]
@@ -875,8 +876,8 @@ async fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        atomic_write, compile_dsl, live_effect_catalog, load_project, preview_dsl,
-        preview_effect_loop, save_project, SAVE_SEQUENCE,
+        atomic_write, compile_dsl, is_live_catalog_instance, live_effect_catalog, load_project,
+        preview_dsl, preview_effect_loop, save_project, SAVE_SEQUENCE,
     };
     use crate::document::{valid_bundle, AssetRef, TempoPointDSL};
     use crate::state::ShowSnapshot;
@@ -973,6 +974,13 @@ mod tests {
         tokio::fs::remove_dir_all(directory)
             .await
             .expect("test cleanup");
+    }
+
+    #[test]
+    fn live_catalog_excludes_authoring_preview_instances() {
+        assert!(is_live_catalog_instance("__arr__:house-128:clip-1:layer-1"));
+        assert!(!is_live_catalog_instance("__effect_preview__:pulse-r1:all"));
+        assert!(!is_live_catalog_instance("__cue__:pulse-gradient:layer-1"));
     }
 
     #[test]
