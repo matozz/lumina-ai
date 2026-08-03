@@ -38,7 +38,7 @@ function WorkspaceSurface({ workspace }: { workspace: WorkspaceId }) {
         <span className="text-xs font-medium">{meta.title}</span>
         <span className="text-muted-foreground truncate text-[10px]">{meta.description}</span>
         <span className="text-muted-foreground ml-auto font-mono text-[10px] tabular-nums">
-          {document?.timeline?.tempo_map.points[0]?.bpm ?? 120} BPM · 4/4
+          {document?.timeline?.tempo_map.points[0]?.bpm ?? 120} BPM start · TempoMap
         </span>
       </div>
       <div className="relative min-h-0 flex-1">
@@ -63,7 +63,7 @@ function surfaceMeta(workspace: WorkspaceId) {
     arrange: {
       icon: Layers3,
       title: "Arrangement canvas",
-      description: "Canvas and lighting tracks share one fixed-BPM timeline",
+      description: "Canvas and lighting tracks share one tempo-driven timeline",
     },
     live: {
       icon: RadioTower,
