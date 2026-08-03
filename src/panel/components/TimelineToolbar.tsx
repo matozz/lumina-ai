@@ -104,6 +104,8 @@ export const TimelineToolbar = (props: ToolbarProps) => {
             </PopoverTitle>
             <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[11px]">
               <Shortcut keys="Click / drag" action="Place selected effect at snap" />
+              <Shortcut keys="Click ruler" action="Seek transport to snap" />
+              <Shortcut keys="Ruler ← / →" action="Seek by current snap" />
               <Shortcut keys="← / →" action="Nudge clip by 1/2 beat" />
               <Shortcut keys="Shift + ← / →" action="Nudge clip by 4 beats" />
               <Shortcut keys="Alt + ← / →" action="Resize clip by 1/2 beat" />

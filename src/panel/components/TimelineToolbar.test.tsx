@@ -51,5 +51,6 @@ describe("TimelineToolbar musical time", () => {
 
     expect(await screen.findByText("Arrange controls")).toBeTruthy();
     expect(screen.getByText("Shift + ← / →")).toBeTruthy();
+    expect(screen.getByText("Click ruler")).toBeTruthy();
   });
 });

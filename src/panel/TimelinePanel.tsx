@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { engine } from "@/bridge/commands";
 import { useEngineStore, engineActions, engineSelectors } from "@/stores/engine";
 import { useTimelineStore, timelineActions, timelineSelectors } from "@/stores/timeline";
 import { workspaceActions } from "@/stores/workspace";
@@ -34,6 +35,7 @@ export const TimelinePanel = ({ embedded = false }: TimelinePanelProps) => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackHeadersScrollRef = useRef<HTMLDivElement>(null);
+  const seekSequenceRef = useRef(0);
   const [viewport, setViewport] = useState<TimelineViewport>({
     startBeat: 0,
     endBeat: 40,
@@ -181,6 +183,27 @@ export const TimelinePanel = ({ embedded = false }: TimelinePanelProps) => {
     [beatWidth, updateViewport],
   );
 
+  const handleSeek = useCallback((beat: number) => {
+    const previousBeat = useEngineStore.getState().globalBeat;
+    const sequence = ++seekSequenceRef.current;
+    engineActions.setGlobalBeat(beat);
+    void engine
+      .seek(beat)
+      .then(() => {
+        if (seekSequenceRef.current === sequence) {
+          workspaceActions.setPublishStatus("idle", `Seeked to beat ${beat}.`);
+        }
+      })
+      .catch((error) => {
+        if (seekSequenceRef.current !== sequence) return;
+        engineActions.setGlobalBeat(previousBeat);
+        workspaceActions.setPublishStatus(
+          "error",
+          error instanceof Error ? error.message : "Timeline seek failed.",
+        );
+      });
+  }, []);
+
   const timelineActionsValue = useMemo(
     () => ({
       geometry,
@@ -306,7 +329,12 @@ export const TimelinePanel = ({ embedded = false }: TimelinePanelProps) => {
             )}
           >
             <div style={{ width: SCROLL_WIDTH, height: "100%", position: "relative" }}>
-              <TimelineGrid geometry={geometry} viewport={viewport} />
+              <TimelineGrid
+                geometry={geometry}
+                viewport={viewport}
+                maxBeat={SCROLL_WIDTH / beatWidth}
+                onSeek={handleSeek}
+              />
 
               <div className="relative z-0 flex flex-col">
                 {tracks.map((t) => (
