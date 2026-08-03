@@ -218,3 +218,16 @@ Stage 7 保存格式不能无损降级回单体 V4；rollback 只能保留 V1–
 ## Related commits
 
 - ADR and Stage 7 baseline: `61c150b`
+- Independent asset schemas and references: `040e44b`
+- Cue compiler and precomputed TargetSet caches: `9e67d53`
+- Preview/revision snapshots and V1–V4 migration: `8087071`
+- Cue-first authoring workspaces: `004fca4`
+- Native preview performance and Live catalog isolation: `9de1301`
+
+## Implementation evidence
+
+- Draft Authoring Preview、Draft/Published Rehearsal 与 Live Snapshot 复用同一 project compiler/evaluator，分别写入 preview sink 与 immutable live sink；Preview 不调用 Publish/Take Live。
+- 30×30 All→3×3 Zones→All、100 次随机 Seek/Replay、Effect revision pin、多 Arrangement TempoMap 与 30 分钟分段 tempo 均有确定性测试。
+- V1–V4 显式迁移为默认 Stage/Effect/Cue/Arrangement；当前基线没有已发布 V5，因此未引入 Audio/Song loss runtime。
+- 最终 `pnpm check:all`、`pnpm build`、101 Rust unit、12 integration/contracts、116 frontend tests 与真实 Tauri 最大化/1440×900/1100×720 路径通过。
+- 原生验收证据：[`../evidence/stage7-tempo-cue-arrangement/`](../evidence/stage7-tempo-cue-arrangement/README.md)。

@@ -1,6 +1,6 @@
 # Lumina 无音频 TempoMap、Cue 与 Arrangement 架构重构指引
 
-> - 状态：Active，Stage 7 Goal 实施中
+> - 状态：Completed，Stage 7 退出条件已满足
 > - 决策日期：2026-08-03
 > - 前置状态：Stage 6 已完成；原 Stage 7 音频方向已停止
 > - 推荐分支：`codex/tempo-cue-arrangement`
@@ -271,3 +271,18 @@ Stage 7.5 不再负责发明 Cue/Arrangement 边界，只在稳定 contract 上�
 - Stage 7.5 的完整 Production Effect Catalog。
 - Art-Net、sACN 和真实硬件输出。
 - 3D 舞台或视频映射。
+
+## 13. 实现与验证结果
+
+Stage 7 已在 `codex/tempo-cue-arrangement` 上按 Slice A–F 完成，严格停止在本指引边界：
+
+- `61c150b`：ADR-0010、Stage 6/无音频基线与 Authoring Preview 问题清单。
+- `040e44b`：独立 Project、Stage、Effect、Cue、Arrangement schema 与引用诊断。
+- `9e67d53`：Cue compiler、TargetSet bitset/index/partition/weight cache、30×30 确定性测试。
+- `8087071`：PreviewSession/RenderContext、Draft/Published/Live revision 边界、V1–V4 migration。
+- `004fca4`：Stage、Effect Lab、Cues、Arrange、Live/Rehearse 无 Raw DSL 用户路径。
+- `9de1301`：真实 Tauri 验收发现的大矩阵 Canvas、preview 重启和 Live catalog 隔离修复。
+
+最终验证：`pnpm check:all`、`pnpm build`、debug Tauri app bundle、116 个前端测试、101 个 Rust unit 与 12 个 integration/contract 测试全部通过。真实 Tauri 已完成最大化、配置 1440×900 和最小 1100×720 路径；详细证据见 [`evidence/stage7-tempo-cue-arrangement/`](./evidence/stage7-tempo-cue-arrangement/README.md)。
+
+Stage 7.5 Production Catalog/动态可视化编辑、AI、音频与真实硬件输出未进入实现。
