@@ -42,7 +42,7 @@ revision 设为当前 Live Snapshot。三个状态必须共享同一编译器和
   Live。
 - 当前 session 会保留已发布 snapshot 以支持回滚。长期工程文件只保存用户文档；compiled snapshot
   可在重新打开工程时确定性重建。
-- Stage 7 的 Audio/TempoMap 文档变化沿用同一发布边界，歌曲校正不会在用户确认前影响 Live。
+- 后续 TempoMap-driven Arrangement 与 Cue revision 沿用同一发布边界，草稿编辑不会在用户确认前影响 Live。
 
 ## Migration and rollback
 

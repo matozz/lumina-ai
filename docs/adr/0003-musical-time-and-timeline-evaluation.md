@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-08-02
 - Related Stage: Stage 5
+- Amendment: 2026-08-03，原 Audio/Song 方向被撤销；多段 TempoMap 明确保留为 Arrangement 时钟能力，不等同于音频能力
 
 ## Context
 
@@ -13,7 +14,7 @@ Stage 5 需要更换时间与 arrangement contract，同时保持 Stage 1 Transp
 ## Decision
 
 - 文档和 compiled arrangement 的权威音乐时间使用 `MusicalTime(u64)`，单位为整数 tick；默认且当前固定 PPQ 为 960。beat/seconds 只允许出现在 Transport、显示和兼容 migration 边界。
-- `TempoMap` 从 Stage 5 起成为稳定接口。文档保存按 tick 排序的 tempo points；每个点的 BPM 在 compiler 中量化为整数 microseconds-per-quarter，tick↔microseconds 的分段换算不累计浮点 tick 误差。Stage 7 可以增加检测和编辑能力，但不更换接口。
+- `TempoMap` 从 Stage 5 起成为稳定接口。文档保存按 tick 排序的 tempo points；每个 point 的 BPM 在 compiler 中量化为整数 microseconds-per-quarter，tick↔microseconds 的分段换算不累计浮点 tick 误差。它属于 Arrangement 自身的确定性时钟，不依赖音频、歌曲分析或 sample position。
 - ShowDocument V4 用 Track、EffectClip、AutomationLane 和任意多个 Keyframe 替代 V3 event 列表。clip 和 keyframe 的 start/duration/boundary/snap 都是 tick；V3→V4 migration 使用 PPQ=960 对 beat 做最近 tick 量化，并报告任何非精确转换。
 - Keyframe interpolation 支持 hold、linear、ease-in、ease-out、ease-in-out 和 cubic-bezier/Hermite tangents。颜色继续使用 LAB；direction/discrete 参数使用 hold。clip 结束 tick 不再 active，而 automation 在最后一个 keyframe 及其后精确保持终值。
 - 每个 typed automation target 在一个文档中只有一条权威 `AutomationLane`；migration 合并旧的连续 event 段并在相同 tick 保留后写入的关键帧，避免运行时按遍历顺序选择多个真值。scalar bezier 以 in/out tangent 的 value/time 斜率做解析 Hermite 求值和积分；color 保持 LAB 插值，并因 tangent value 只对 scalar 有定义而使用确定性 smoothstep 进度。
@@ -37,7 +38,7 @@ Stage 5 需要更换时间与 arrangement contract，同时保持 Stage 1 Transp
 
 - V1–V3 schema/artifact 继续作为 loader 输入；V4 成为 editor、Rust validator、compiler 和 generated TypeScript 的当前契约。
 - Transport 可以暂时继续对外报告 beat，但进入 arrangement evaluator 时必须在单一边界量化为 MusicalTime。
-- 多 tempo point 的 UI 和音频推断留到 Stage 7；Stage 5 只提供确定性数据结构、换算和单/多点 contract tests。
+- 多 tempo point 继续由 V4 contract 与 Advanced DSL 支持；音频推断和 beat-grid 校正 UI 已取消。30 分钟两段 TempoMap 的 tick↔microseconds 往返误差为 0。
 - 旧模板将机械迁移到 V4。视觉布局不重设计，只增加完成 Stage 5 验证所需的 keyframe/automation 与键盘路径。
 
 ## Migration and rollback
