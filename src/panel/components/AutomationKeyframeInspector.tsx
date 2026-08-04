@@ -6,7 +6,12 @@ import type {
   ParameterDefinitionDSL,
   ParameterValueDSL,
   TempoMapDSL,
+  TimeSignaturePoint,
 } from "@/bridge/types";
+import {
+  formatMusicalPosition as formatMeterPosition,
+  musicalPositionAtTick,
+} from "@/authoring/musicalTime";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +36,7 @@ interface AutomationKeyframeInspectorProps {
   onDelete: () => void;
   ppq: number;
   tempoMap: TempoMapDSL;
+  timeSignatures?: TimeSignaturePoint[];
 }
 
 const INTERPOLATIONS: KeyframeInterpolationDSL[] = [
@@ -52,6 +58,7 @@ export const AutomationKeyframeInspector = ({
   onDelete,
   ppq,
   tempoMap,
+  timeSignatures,
 }: AutomationKeyframeInspectorProps) => {
   const id = useId();
   const [timeTick, setTimeTick] = useState(String(keyframe.time_tick));
@@ -65,9 +72,9 @@ export const AutomationKeyframeInspector = ({
   const timeDescription = useMemo(
     () =>
       isTickValid
-        ? `${formatMusicalPosition(parsedTick, ppq)} · ${formatSeconds(ticksToSeconds(parsedTick, ppq, tempoMap))}`
+        ? `${timeSignatures ? formatMeterPosition(musicalPositionAtTick(parsedTick, ppq, timeSignatures)) : formatMusicalPosition(parsedTick, ppq)} · ${formatSeconds(ticksToSeconds(parsedTick, ppq, tempoMap))}`
         : "Enter a valid integer tick",
-    [isTickValid, parsedTick, ppq, tempoMap],
+    [isTickValid, parsedTick, ppq, tempoMap, timeSignatures],
   );
 
   return (

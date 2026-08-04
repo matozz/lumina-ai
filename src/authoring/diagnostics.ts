@@ -13,7 +13,7 @@ export function authoringDiagnostic(
   path: string,
   fallback = "The authoring action could not be completed.",
 ): AuthoringDiagnostic {
-  if (error instanceof AuthoringTransportError) {
+  if (error instanceof AuthoringTransportError || isStructuredAuthoringError(error)) {
     return {
       code: error.code,
       severity: "error",
@@ -29,4 +29,16 @@ export function authoringDiagnostic(
     message: error instanceof Error ? error.message : fallback,
     hint: "Review the selected asset and retry the action.",
   };
+}
+
+function isStructuredAuthoringError(
+  error: unknown,
+): error is Error & { code: string; hint: string } {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    "hint" in error &&
+    typeof error.hint === "string"
+  );
 }

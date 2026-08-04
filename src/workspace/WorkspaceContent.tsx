@@ -7,7 +7,7 @@ import { projectSelectors, useProjectStore } from "@/stores/project";
 import type { WorkspaceId } from "@/stores/workspace";
 import { EffectLabPreview } from "./effect-lab/EffectLabPreview";
 import { CuePreview } from "./cues/CuePreview";
-import { CueTimelinePanel } from "./arrange/CueTimelinePanel";
+import { ArrangementTimeline } from "./arrange/ArrangementTimeline";
 
 export function WorkspaceContent({ workspace }: { workspace: WorkspaceId }) {
   if (workspace === "arrange") {
@@ -18,7 +18,7 @@ export function WorkspaceContent({ workspace }: { workspace: WorkspaceId }) {
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel id="arrange-timeline" defaultSize="57%" minSize="36%">
-          <CueTimelinePanel />
+          <ArrangementTimeline />
         </ResizablePanel>
       </ResizablePanelGroup>
     );
