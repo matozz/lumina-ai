@@ -431,6 +431,93 @@ pub struct EffectInstance {
     pub priority: i32,
     pub mix_overrides: HashMap<FixtureProfileHandle, Vec<Option<MixPolicy>>>,
     pub spatial_offsets: HashMap<EffectNodeHandle, Vec<f64>>,
+    pub targeting_scene: Option<CompiledTargetingScene>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CompiledTargetingStep {
+    pub end_tick: u64,
+    pub transition_ticks: u64,
+    pub fixture_weights: Vec<f32>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CompiledTargetingScene {
+    pub steps: Vec<CompiledTargetingStep>,
+    pub total_ticks: u64,
+    pub looped: bool,
+    pub phase_continuity: bool,
+}
+
+impl CompiledTargetingScene {
+    pub fn weight_at(&self, tick: u64, fixture_index: usize) -> f32 {
+        if self.steps.is_empty() || self.total_ticks == 0 {
+            return 0.0;
+        }
+        if !self.looped && tick >= self.total_ticks {
+            return self
+                .steps
+                .last()
+                .and_then(|step| step.fixture_weights.get(fixture_index))
+                .copied()
+                .unwrap_or(0.0);
+        }
+        let local_tick = if self.looped {
+            tick % self.total_ticks
+        } else {
+            tick.min(self.total_ticks.saturating_sub(1))
+        };
+        let index = self
+            .steps
+            .partition_point(|step| step.end_tick <= local_tick)
+            .min(self.steps.len().saturating_sub(1));
+        let step = &self.steps[index];
+        let current = step
+            .fixture_weights
+            .get(fixture_index)
+            .copied()
+            .unwrap_or(0.0);
+        if step.transition_ticks == 0 {
+            return current;
+        }
+        let start_tick = index
+            .checked_sub(1)
+            .and_then(|previous| self.steps.get(previous))
+            .map_or(0, |previous| previous.end_tick);
+        let elapsed = local_tick.saturating_sub(start_tick);
+        if elapsed >= step.transition_ticks {
+            return current;
+        }
+        let previous_index = index
+            .checked_sub(1)
+            .or_else(|| self.looped.then_some(self.steps.len() - 1));
+        let previous = previous_index
+            .and_then(|previous| self.steps.get(previous))
+            .and_then(|previous| previous.fixture_weights.get(fixture_index))
+            .copied()
+            .unwrap_or(current);
+        let progress = elapsed as f32 / step.transition_ticks as f32;
+        previous + (current - previous) * progress.clamp(0.0, 1.0)
+    }
+
+    pub fn step_start_tick(&self, tick: u64) -> u64 {
+        if self.steps.is_empty() || self.total_ticks == 0 {
+            return 0;
+        }
+        let local_tick = if self.looped {
+            tick % self.total_ticks
+        } else {
+            tick.min(self.total_ticks.saturating_sub(1))
+        };
+        let index = self
+            .steps
+            .partition_point(|step| step.end_tick <= local_tick)
+            .min(self.steps.len().saturating_sub(1));
+        index
+            .checked_sub(1)
+            .and_then(|previous| self.steps.get(previous))
+            .map_or(0, |previous| previous.end_tick)
+    }
 }
 
 impl EffectInstance {
@@ -948,6 +1035,7 @@ mod tests {
             priority: 0,
             mix_overrides: HashMap::new(),
             spatial_offsets: HashMap::new(),
+            targeting_scene: None,
         };
 
         assert_eq!(
@@ -1062,6 +1150,7 @@ mod tests {
             priority: 0,
             mix_overrides: HashMap::new(),
             spatial_offsets: HashMap::from([(handles(1), vec![0.25])]),
+            targeting_scene: None,
         };
 
         let first = evaluate_effect_graph(
@@ -1150,6 +1239,7 @@ mod tests {
                 priority: 0,
                 mix_overrides: HashMap::new(),
                 spatial_offsets: HashMap::new(),
+                targeting_scene: None,
             };
             let writes = evaluate_effect_graph(
                 &definition,

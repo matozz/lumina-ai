@@ -17,7 +17,7 @@ use crate::state::ActivePhaser;
 use attribute::FixtureFrame;
 
 pub fn compute_frame(
-    _global_beat: f64, // we now rely on active.accumulated_beat instead for accurate phase
+    global_beat: f64,
     active_phasers: &[ActivePhaser],
     compiled_show: &CompiledShow,
     parameter_context: &animation::ParameterContext,
@@ -25,14 +25,33 @@ pub fn compute_frame(
     let resolved: Vec<_> = active_phasers
         .iter()
         .enumerate()
-        .map(|(index, active)| render::ResolvedPhaser {
-            source_id: active.id.clone(),
-            instance: active.id.clone().into(),
-            phase: active.accumulated_beat,
-            layer: 0,
-            weight: None,
-            activation_order: index as u64,
-            stable_source_order: u32::try_from(index).unwrap_or(u32::MAX),
+        .map(|(index, active)| {
+            let ppq = compiled_show
+                .timeline
+                .as_ref()
+                .map_or(960, |timeline| timeline.ppq);
+            let targeting_tick =
+                ((global_beat - active.start_beat).max(0.0) * f64::from(ppq)).round() as u64;
+            let phase = compiled_show
+                .effect_instances
+                .get(&active.id)
+                .and_then(|instance| instance.targeting_scene.as_ref())
+                .filter(|scene| !scene.phase_continuity)
+                .map_or(active.accumulated_beat, |scene| {
+                    targeting_tick.saturating_sub(scene.step_start_tick(targeting_tick)) as f64
+                        / f64::from(ppq)
+                        * active.multiplier
+                });
+            render::ResolvedPhaser {
+                source_id: active.id.clone(),
+                instance: active.id.clone().into(),
+                phase,
+                layer: 0,
+                weight: None,
+                activation_order: index as u64,
+                stable_source_order: u32::try_from(index).unwrap_or(u32::MAX),
+                targeting_tick,
+            }
         })
         .collect();
     render::render_resolved(compiled_show, &resolved, parameter_context)

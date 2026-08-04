@@ -938,6 +938,9 @@ mod tests {
             .expect("test directory");
         let project_path = directory.join("project.lumina.json");
         let mut bundle = valid_bundle();
+        bundle.layouts[0].name = "Saved Matrix Layout".to_string();
+        bundle.stages[0].target_sets[0].name = "Saved All Target".to_string();
+        let expected_layout_ref = bundle.stages[0].layout_ref.clone();
         let mut journey = bundle.arrangements[0].clone();
         journey.id = "tempo-journey".to_string();
         journey.name = "Tempo Journey".to_string();
@@ -964,6 +967,12 @@ mod tests {
             .expect("reopen Project");
 
         assert_eq!(reopened.bundle.arrangements.len(), 2);
+        assert_eq!(reopened.bundle.layouts[0].name, "Saved Matrix Layout");
+        assert_eq!(reopened.bundle.stages[0].layout_ref, expected_layout_ref);
+        assert_eq!(
+            reopened.bundle.stages[0].target_sets[0].name,
+            "Saved All Target"
+        );
         assert_eq!(
             reopened.bundle.manifest.active_arrangement_id,
             "tempo-journey"

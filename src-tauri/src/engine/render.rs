@@ -50,6 +50,7 @@ pub(crate) struct ResolvedPhaser {
     pub weight: Option<f32>,
     pub activation_order: u64,
     pub stable_source_order: u32,
+    pub targeting_tick: u64,
 }
 
 pub fn render_at(
@@ -64,14 +65,36 @@ pub fn render_at(
                 .iter()
                 .filter(|phaser| show.effect_instances.contains_key(&phaser.id))
                 .enumerate()
-                .map(|(index, phaser)| ResolvedPhaser {
-                    source_id: phaser.id.clone(),
-                    instance: phaser.id.clone().into(),
-                    phase: phaser.phase_at(time),
-                    layer: 0,
-                    weight: None,
-                    activation_order: index as u64,
-                    stable_source_order: u32::try_from(index).unwrap_or(u32::MAX),
+                .map(|(index, phaser)| {
+                    let ppq = show.timeline.as_ref().map_or(960, |timeline| timeline.ppq);
+                    let targeting_tick =
+                        ((time.beat - phaser.start_beat).max(0.0) * f64::from(ppq)).round() as u64;
+                    let phase = show
+                        .effect_instances
+                        .get(&phaser.id)
+                        .and_then(|instance| instance.targeting_scene.as_ref())
+                        .filter(|scene| !scene.phase_continuity)
+                        .map_or_else(
+                            || phaser.phase_at(time),
+                            |scene| {
+                                phaser.phase_offset
+                                    + targeting_tick
+                                        .saturating_sub(scene.step_start_tick(targeting_tick))
+                                        as f64
+                                        / f64::from(ppq)
+                                        * phaser.multiplier
+                            },
+                        );
+                    ResolvedPhaser {
+                        source_id: phaser.id.clone(),
+                        instance: phaser.id.clone().into(),
+                        phase,
+                        layer: 0,
+                        weight: None,
+                        activation_order: index as u64,
+                        stable_source_order: u32::try_from(index).unwrap_or(u32::MAX),
+                        targeting_tick,
+                    }
                 })
                 .collect(),
             ParameterContext::new(),
@@ -105,6 +128,12 @@ pub(crate) fn render_resolved(
                     continue;
                 };
                 if !group.contains_fixture_index(fixture_index) {
+                    continue;
+                }
+                let targeting_weight = instance.targeting_scene.as_ref().map_or(1.0, |scene| {
+                    scene.weight_at(active.targeting_tick, fixture_index)
+                });
+                if targeting_weight <= f32::EPSILON {
                     continue;
                 }
                 let phase_offset = resolve_effect_scalar(
@@ -234,7 +263,11 @@ pub(crate) fn render_resolved(
                         priority: instance.priority,
                         activation_order: active.activation_order,
                         stable_source_order: active.stable_source_order,
-                        weight: Some(active.weight.unwrap_or(1.0) * group.weight_at(fixture_index)),
+                        weight: Some(
+                            active.weight.unwrap_or(1.0)
+                                * group.weight_at(fixture_index)
+                                * targeting_weight,
+                        ),
                         policy_override: instance.mix_policy_override(fixture.profile, handle),
                     });
                 }
@@ -333,9 +366,8 @@ fn resolve_timeline_at(
     for track in &timeline.tracks {
         for active in active_clips_at(track, target_time) {
             let clip = active.clip;
-            let default_speed = show
-                .effect_instances
-                .get(clip.instance.as_str())
+            let instance = show.effect_instances.get(clip.instance.as_str());
+            let default_speed = instance
                 .and_then(|instance| {
                     let definition = show.effect_definitions.get(instance.definition.index())?;
                     let handle = definition.parameter_handle(SPEED_PARAMETER_ID)?;
@@ -353,17 +385,32 @@ fn resolve_timeline_at(
                 .automation_index
                 .get(&speed_target)
                 .and_then(|index| timeline.automation_lanes.get(*index));
+            let targeting_tick = target_time.ticks().saturating_sub(clip.start.ticks());
+            let phase_start = instance
+                .and_then(|instance| instance.targeting_scene.as_ref())
+                .filter(|scene| !scene.phase_continuity)
+                .map(|scene| {
+                    clip.start
+                        .checked_add(scene.step_start_tick(targeting_tick))
+                        .unwrap_or(target_time)
+                })
+                .unwrap_or(clip.start);
             let phase_ticks =
-                integrate_lane_scalar_ticks(speed_lane, clip.start, target_time, default_speed);
+                integrate_lane_scalar_ticks(speed_lane, phase_start, target_time, default_speed);
+            let phase_offset = if phase_start == clip.start {
+                clip.source_offset_ticks as f64 / f64::from(timeline.ppq)
+            } else {
+                0.0
+            };
             active_phasers.push(ResolvedPhaser {
                 source_id: clip.id.clone(),
                 instance: clip.instance.clone(),
-                phase: clip.source_offset_ticks as f64 / f64::from(timeline.ppq)
-                    + phase_ticks / f64::from(timeline.ppq),
+                phase: phase_offset + phase_ticks / f64::from(timeline.ppq),
                 layer: clip.layer,
                 weight: active.weight,
                 activation_order: clip.start.ticks(),
                 stable_source_order: clip.stable_order,
+                targeting_tick,
             });
         }
     }

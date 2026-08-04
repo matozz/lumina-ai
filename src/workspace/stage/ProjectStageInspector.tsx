@@ -1,52 +1,441 @@
-import { Copy, LayoutTemplate } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, Copy, Eye, LayoutTemplate, PencilLine, Save, Trash2 } from "lucide-react";
+import { engine } from "@/bridge/commands";
+import type { Diagnostic, LayoutDefinition } from "@/bridge/types";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  diagnoseLayoutDefinition,
+  fixtureIdsForStage,
+  layoutCapacity,
+  previewBundleForLayout,
+} from "@/document/layoutDefinition";
 import { activeLayout, activeStage, assetKey, exactAsset } from "@/document/projectModel";
+import { analyzeStageTopology } from "@/document/stageTopology";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
+import { LayoutGeometryEditor } from "./LayoutGeometryEditor";
+import { ProjectGroupEditor } from "./ProjectGroupEditor";
+import { StageLayoutImpactPanel } from "./StageLayoutImpactPanel";
+import { TargetSetEditor } from "./TargetSetEditor";
+import { TargetingSceneEditor } from "./TargetingSceneEditor";
+
+type SaveAsState = "closed" | "open";
 
 export function ProjectStageInspector() {
   const bundle = useProjectStore(projectSelectors.bundle);
   const selectedLayoutRef = useProjectStore(projectSelectors.selectedLayoutRef);
+  const selectedArrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
   const stage = activeStage(bundle);
   const stageLayout = activeLayout(bundle);
   const selectedLayout = exactAsset(bundle.layouts, selectedLayoutRef) ?? stageLayout;
+  const [draft, setDraft] = useState<LayoutDefinition>(() => structuredClone(selectedLayout));
+  const [previewDiagnostics, setPreviewDiagnostics] = useState<Diagnostic[]>([]);
+  const [previewing, setPreviewing] = useState(false);
+  const [saveAsState, setSaveAsState] = useState<SaveAsState>("closed");
+  const [saveAsName, setSaveAsName] = useState(`${selectedLayout.name} Copy`);
+  const [actionDiagnostic, setActionDiagnostic] = useState<Diagnostic | null>(null);
+  const [impactOpen, setImpactOpen] = useState(false);
+  const [view, setView] = useState<"layout" | "groups" | "targets" | "scenes">("layout");
+  const fixtureIds = useMemo(() => fixtureIdsForStage(stage), [stage]);
+  const localDiagnostics = useMemo(
+    () => diagnoseLayoutDefinition(draft, fixtureIds),
+    [draft, fixtureIds],
+  );
   const usedOnStage = assetKey(stage.layout_ref) === assetKey(selectedLayoutRef);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(selectedLayout);
+  const editable = draft.editor.mode !== "read_only";
+
+  useEffect(() => {
+    setDraft(structuredClone(selectedLayout));
+    setSaveAsName(`${selectedLayout.name} Copy`);
+    setSaveAsState("closed");
+    setActionDiagnostic(null);
+    setImpactOpen(false);
+  }, [selectedLayout]);
+
+  useEffect(() => {
+    if (view !== "layout") return;
+    if (localDiagnostics.length > 0) {
+      setPreviewDiagnostics([]);
+      setPreviewing(false);
+      return;
+    }
+    const request = new AbortController();
+    setPreviewing(true);
+    const timer = window.setTimeout(() => {
+      void engine
+        .previewProject({
+          project: previewBundleForLayout(bundle, draft),
+          arrangementRef: selectedArrangementRef,
+          source: { type: "authoring_draft" },
+          context: { type: "stage" },
+          playheadTick: 0,
+        })
+        .then((frame) => {
+          if (request.signal.aborted) return;
+          setPreviewDiagnostics([]);
+          window.dispatchEvent(new CustomEvent("engine:project-preview-frame", { detail: frame }));
+        })
+        .catch((error) => {
+          if (request.signal.aborted) return;
+          setPreviewDiagnostics(normalizeDiagnostics(error, "layout.preview"));
+        })
+        .finally(() => {
+          if (!request.signal.aborted) setPreviewing(false);
+        });
+    }, 100);
+    return () => {
+      request.abort();
+      window.clearTimeout(timer);
+    };
+  }, [bundle, draft, localDiagnostics.length, selectedArrangementRef, view]);
+
+  useEffect(() => {
+    if (view === "layout") return;
+    let active = true;
+    void engine
+      .previewProject({
+        project: bundle,
+        arrangementRef: selectedArrangementRef,
+        source: { type: "authoring_draft" },
+        context: { type: "stage" },
+        playheadTick: 0,
+      })
+      .then((frame) => {
+        if (!active) return;
+        window.dispatchEvent(new CustomEvent("engine:project-preview-frame", { detail: frame }));
+      })
+      .catch((error) => {
+        if (active) setPreviewDiagnostics(normalizeDiagnostics(error, "stage.preview"));
+      });
+    return () => {
+      active = false;
+    };
+  }, [bundle, selectedArrangementRef, view]);
+
+  const runAction = (path: string, action: () => void) => {
+    try {
+      action();
+      setActionDiagnostic(null);
+    } catch (error) {
+      setActionDiagnostic(normalizeDiagnostics(error, path)[0]);
+    }
+  };
 
   return (
     <aside className="bg-card flex h-full min-h-0 flex-col" aria-label="Stage inspector">
       <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
-        <LayoutTemplate className="text-primary" aria-hidden="true" />
+        <LayoutTemplate className="text-primary size-3.5" aria-hidden="true" />
         <span className="text-xs font-medium">Layout Draft</span>
-        <Badge variant="outline" className="ml-auto">
+        {dirty && <Badge variant="secondary">Unsaved</Badge>}
+        <Badge variant="outline" className="ml-auto font-mono">
           r{selectedLayout.revision}
         </Badge>
       </div>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-3 p-3">
-          <div className="flex items-center gap-2">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{selectedLayout.name}</p>
-              <p className="text-muted-foreground text-[10px]">
-                {selectedLayout.geometry.shape} · {selectedLayout.editor.mode}
-              </p>
-            </div>
-            {usedOnStage && <Badge variant="secondary">On Stage</Badge>}
+      <div className="border-border flex shrink-0 items-center border-b px-2 py-1.5">
+        <ToggleGroup
+          variant="outline"
+          size="sm"
+          spacing={0}
+          value={[view]}
+          onValueChange={(value) => {
+            const next = value[0];
+            if (next === "layout" || next === "groups" || next === "targets" || next === "scenes") {
+              setView(next);
+            }
+          }}
+          aria-label="Stage secondary editor"
+          className="w-full"
+        >
+          <ToggleGroupItem value="layout" className="min-w-0 flex-1">
+            Setup
+          </ToggleGroupItem>
+          <ToggleGroupItem value="groups" className="min-w-0 flex-1">
+            Groups
+          </ToggleGroupItem>
+          <ToggleGroupItem value="targets" className="min-w-0 flex-1">
+            TargetSets
+          </ToggleGroupItem>
+          <ToggleGroupItem value="scenes" className="min-w-0 flex-1">
+            Scenes
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+      {view === "groups" ? (
+        <ScrollArea className="min-h-0 flex-1">
+          <ProjectGroupEditor />
+        </ScrollArea>
+      ) : view === "targets" ? (
+        <ScrollArea className="min-h-0 flex-1">
+          <TargetSetEditor />
+        </ScrollArea>
+      ) : view === "scenes" ? (
+        <ScrollArea className="min-h-0 flex-1">
+          <TargetingSceneEditor />
+        </ScrollArea>
+      ) : (
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="flex flex-col gap-3 p-3">
+            <section className="border-border flex flex-col gap-2.5 border-b pb-3">
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{selectedLayout.name}</p>
+                  <p className="text-muted-foreground font-mono text-[9px]">
+                    {selectedLayout.id}@{selectedLayout.revision}
+                  </p>
+                </div>
+                {usedOnStage && <Badge variant="secondary">On Stage</Badge>}
+              </div>
+              <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border">
+                <Metric label="Shape" value={draft.geometry.shape} />
+                <Metric label="Capacity" value={String(layoutCapacity(draft))} />
+                <Metric label="Patched" value={String(fixtureIds.length)} />
+              </div>
+              <div className="text-muted-foreground flex items-center gap-1.5 text-[10px]">
+                <Eye className="text-primary size-3" aria-hidden="true" />
+                <span>
+                  {previewing ? "Compiling Canvas preview…" : "Canvas follows this isolated Draft"}
+                </span>
+                <Badge variant="outline" className="ml-auto">
+                  {draft.editor.mode}
+                </Badge>
+              </div>
+            </section>
+
+            <Field>
+              <FieldLabel htmlFor="layout-draft-name">Library name</FieldLabel>
+              <Input
+                id="layout-draft-name"
+                value={draft.name}
+                disabled={!editable}
+                onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+              />
+              <FieldDescription>
+                Editing and previewing do not change Stage, Cue, Arrangement, Published revisions,
+                or Live Snapshot.
+              </FieldDescription>
+            </Field>
+
+            <LayoutGeometryEditor layout={draft} stage={stage} onChange={setDraft} />
+
+            {localDiagnostics.map((diagnostic) => (
+              <LayoutDiagnosticAlert
+                key={`${diagnostic.code}:${diagnostic.path}`}
+                code={diagnostic.code}
+                path={diagnostic.path}
+                message={diagnostic.message}
+                recovery={diagnostic.recovery}
+              />
+            ))}
+            {previewDiagnostics.map((diagnostic) => (
+              <LayoutDiagnosticAlert
+                key={`${diagnostic.code}:${diagnostic.path}`}
+                code={diagnostic.code}
+                path={diagnostic.path}
+                message={diagnostic.message}
+                recovery={diagnostic.hint ?? "Repair the Draft parameters and retry preview."}
+              />
+            ))}
+            {actionDiagnostic && (
+              <LayoutDiagnosticAlert
+                code={actionDiagnostic.code}
+                path={actionDiagnostic.path}
+                message={actionDiagnostic.message}
+                recovery={actionDiagnostic.hint ?? "Review the references and retry the action."}
+              />
+            )}
+
+            <section className="border-border flex flex-col gap-2 border-t pt-3">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  size="sm"
+                  disabled={!dirty || !editable || localDiagnostics.length > 0}
+                  onClick={() =>
+                    runAction("layout.save_draft", () => {
+                      const reference = projectActions.saveLayoutDraft(selectedLayoutRef, draft);
+                      setDraft({ ...draft, revision: reference.revision });
+                    })
+                  }
+                >
+                  <Save data-icon="inline-start" aria-hidden="true" />
+                  Save Draft
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!editable || localDiagnostics.length > 0}
+                  onClick={() => setSaveAsState(saveAsState === "open" ? "closed" : "open")}
+                >
+                  Save As…
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    runAction("layout.duplicate", () => {
+                      projectActions.duplicateLayout(selectedLayoutRef);
+                    })
+                  }
+                >
+                  <Copy data-icon="inline-start" aria-hidden="true" />
+                  Duplicate
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!draft.name.trim() || draft.name === selectedLayout.name || !editable}
+                  onClick={() =>
+                    runAction("layout.rename", () => {
+                      projectActions.renameLayout(selectedLayoutRef, draft.name);
+                    })
+                  }
+                >
+                  <PencilLine data-icon="inline-start" aria-hidden="true" />
+                  Rename
+                </Button>
+              </div>
+
+              {saveAsState === "open" && (
+                <div className="border-border bg-background/40 flex flex-col gap-2 rounded-md border p-2">
+                  <Field>
+                    <FieldLabel htmlFor="layout-save-as-name">New Layout name</FieldLabel>
+                    <Input
+                      id="layout-save-as-name"
+                      autoFocus
+                      value={saveAsName}
+                      onChange={(event) => setSaveAsName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") setSaveAsState("closed");
+                      }}
+                    />
+                  </Field>
+                  <div className="flex justify-end gap-1.5">
+                    <Button size="xs" variant="ghost" onClick={() => setSaveAsState("closed")}>
+                      Cancel
+                    </Button>
+                    <Button
+                      size="xs"
+                      disabled={!saveAsName.trim()}
+                      onClick={() =>
+                        runAction("layout.save_as", () => {
+                          projectActions.saveLayoutAs(draft, saveAsName);
+                          setSaveAsState("closed");
+                        })
+                      }
+                    >
+                      Save new Layout
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-destructive hover:text-destructive"
+                disabled={usedOnStage}
+                title={usedOnStage ? "The current Stage pins this Layout revision." : undefined}
+                onClick={() =>
+                  runAction("layout.delete", () => projectActions.deleteLayout(selectedLayoutRef))
+                }
+              >
+                <Trash2 data-icon="inline-start" aria-hidden="true" />
+                Delete Layout
+              </Button>
+            </section>
+
+            {impactOpen ? (
+              <StageLayoutImpactPanel
+                impact={analyzeStageTopology(bundle, selectedLayoutRef)}
+                onClose={() => setImpactOpen(false)}
+                onApply={(request) =>
+                  runAction("stage.layout_upgrade", () => {
+                    projectActions.useLayoutOnStage(request);
+                    setImpactOpen(false);
+                  })
+                }
+              />
+            ) : (
+              <section className="border-primary/30 bg-primary/5 flex flex-col gap-2 rounded-md border p-2.5">
+                <div className="flex items-center gap-2">
+                  <LayoutTemplate className="text-primary size-3.5" aria-hidden="true" />
+                  <span className="text-xs font-medium">Use on {stage.name}</span>
+                </div>
+                <p className="text-muted-foreground text-[10px] leading-relaxed">
+                  Opens topology diff and reference impact. No Stage revision is created until an
+                  explicit compatible upgrade or remap transaction is confirmed.
+                </p>
+                <Button
+                  size="sm"
+                  disabled={usedOnStage || dirty || localDiagnostics.length > 0}
+                  onClick={() => setImpactOpen(true)}
+                >
+                  Review impact &amp; use on Stage
+                </Button>
+              </section>
+            )}
           </div>
-          <p className="text-muted-foreground text-xs leading-relaxed">
-            Layout edits are isolated from {stage.name}. Canvas preview and explicit Use on Stage
-            impact/remap controls are provided by the Layout Draft editor.
-          </p>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => projectActions.duplicateLayout(selectedLayoutRef)}
-          >
-            <Copy data-icon="inline-start" aria-hidden="true" />
-            Duplicate Layout
-          </Button>
-        </div>
-      </ScrollArea>
+        </ScrollArea>
+      )}
     </aside>
   );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-background/50 min-w-0 px-2 py-1.5">
+      <p className="text-muted-foreground text-[8px] tracking-wide uppercase">{label}</p>
+      <p className="truncate font-mono text-[10px] capitalize">{value.replace(/_/g, " ")}</p>
+    </div>
+  );
+}
+
+function LayoutDiagnosticAlert({
+  code,
+  path,
+  message,
+  recovery,
+}: {
+  code: string;
+  path: string;
+  message: string;
+  recovery: string;
+}) {
+  return (
+    <Alert variant="destructive">
+      <AlertTriangle aria-hidden="true" />
+      <AlertTitle>
+        {code} · {path}
+      </AlertTitle>
+      <AlertDescription>
+        {message} {recovery}
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+function normalizeDiagnostics(error: unknown, path: string): Diagnostic[] {
+  if (Array.isArray(error)) {
+    return error.map((item, index) => ({
+      code: typeof item?.code === "string" ? item.code : "LAYOUT_PREVIEW_FAILED",
+      severity: item?.severity === "warning" ? "warning" : "error",
+      path: typeof item?.path === "string" ? item.path : `${path}[${index}]`,
+      message: typeof item?.message === "string" ? item.message : String(item),
+      hint: typeof item?.hint === "string" ? item.hint : null,
+    }));
+  }
+  return [
+    {
+      code: "LAYOUT_ACTION_FAILED",
+      severity: "error",
+      path,
+      message: error instanceof Error ? error.message : String(error),
+      hint: "Review the exact Layout and Stage revisions, then retry at this editor.",
+    },
+  ];
 }

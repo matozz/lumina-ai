@@ -6,14 +6,19 @@ import type {
   AssetRef,
   CueDefinition,
   CueLayer,
+  GroupDSL,
   LayoutDefinition,
   ProjectBundle,
+  TargetSetDefinition,
+  TargetingSceneDefinition,
 } from "@/bridge/types";
 import {
+  activeStage,
   activeArrangementRef,
   appendExactRef,
   assetKey,
   bumpManifestRevision,
+  cloneAssetRevision,
   createCueAsset,
   createEffectAsset,
   duplicateArrangementAsset,
@@ -22,9 +27,17 @@ import {
   uniqueId,
 } from "@/document/projectModel";
 import { migrateProjectBundle } from "@/document/projectMigration";
+import { analyzeStageTopology, resolveTargetSet } from "@/document/stageTopology";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
 
 export type PreviewSourceMode = "authoring_draft" | "rehearsal_draft" | "rehearsal_published";
+
+export interface StageLayoutUpgradeRequest {
+  layoutRef: AssetRef;
+  mode: "upgrade" | "remap" | "create_stage";
+  targetMappings?: Record<string, string>;
+  upgradeDependents: boolean;
+}
 
 interface ProjectHistoryEntry {
   label: string;
@@ -145,7 +158,9 @@ export const projectActions = {
   saveLayoutDraft: (reference: AssetRef, draft: LayoutDefinition) => {
     let selected = reference;
     transact("Save Layout Draft", (bundle, published) => {
-      selected = forkAssetRevision(bundle, published, "layout", reference);
+      selected = bundle.stages.some((stage) => assetKey(stage.layout_ref) === assetKey(reference))
+        ? cloneAssetRevision(bundle, "layout", reference)
+        : forkAssetRevision(bundle, published, "layout", reference);
       const layout = exactAsset(bundle.layouts, selected);
       if (!layout) throw new Error("Layout revision is missing");
       layout.name = draft.name.trim();
@@ -202,10 +217,386 @@ export const projectActions = {
     if (!selectedLayoutRef) throw new Error("Project requires at least one Layout");
     useProjectStore.setState({ selectedLayoutRef });
   },
+  useLayoutOnStage: (request: StageLayoutUpgradeRequest) => {
+    const current = useProjectStore.getState();
+    const impact = analyzeStageTopology(current.bundle, request.layoutRef);
+    if (request.mode === "upgrade" && !impact.compatible) {
+      throw new Error("Topology changed; choose an explicit TargetSet remap or create a new Stage");
+    }
+    let nextStageRef = current.bundle.manifest.stage_ref;
+    let createdArrangementRef: AssetRef | null = null;
+    const cueUpgrades = new Map<string, AssetRef>();
+    const arrangementUpgrades = new Map<string, AssetRef>();
+    transact("Use Layout on Stage", (bundle, published) => {
+      const sourceStageRef = structuredClone(bundle.manifest.stage_ref);
+      const sourceStage = exactAsset(bundle.stages, sourceStageRef);
+      const layout = exactAsset(bundle.layouts, request.layoutRef);
+      if (!sourceStage || !layout) throw new Error("Stage or Layout revision is missing");
+      const targetMappings = request.targetMappings ?? {};
+      const validTargets = sourceStage.target_sets.filter(
+        (target) => resolveTargetSet(sourceStage, layout, target) !== null,
+      );
+      if (validTargets.length === 0) throw new Error("Candidate Layout has no valid TargetSet");
+      const validIds = new Set(validTargets.map((target) => target.id));
+      for (const target of sourceStage.target_sets) {
+        if (validIds.has(target.id)) continue;
+        const mapped = targetMappings[target.id];
+        if (!mapped || !validIds.has(mapped)) {
+          throw new Error(`TargetSet ${target.name} requires an explicit valid remap`);
+        }
+      }
+
+      if (request.mode === "create_stage") {
+        const name = uniqueStageName(
+          `${sourceStage.name} · ${layout.name}`,
+          bundle.stages.map((stage) => stage.name),
+        );
+        const stage = structuredClone(sourceStage);
+        stage.id = uniqueId(
+          slugLayoutName(name),
+          bundle.stages.map((candidate) => candidate.id),
+        );
+        stage.revision = 1;
+        stage.name = name;
+        bundle.stages.push(stage);
+        nextStageRef = { id: stage.id, revision: stage.revision };
+        bundle.manifest.stage_ref = nextStageRef;
+        const sourceArrangement = exactAsset(bundle.arrangements, current.selectedArrangementRef);
+        if (!sourceArrangement) throw new Error("Selected Arrangement revision is missing");
+        const arrangementName = uniqueLayoutName(
+          `${sourceArrangement.name} · ${layout.name}`,
+          bundle.arrangements.map((arrangement) => arrangement.name),
+        );
+        const arrangement = structuredClone(sourceArrangement);
+        arrangement.id = uniqueId(
+          slugLayoutName(arrangementName),
+          bundle.arrangements.map((candidate) => candidate.id),
+        );
+        arrangement.revision = 1;
+        arrangement.name = arrangementName;
+        arrangement.tracks = arrangement.tracks.map((track) => ({
+          ...track,
+          clips: [],
+          automation_lanes: (track.automation_lanes ?? []).filter(
+            (lane) => lane.target.scope === "global",
+          ),
+        }));
+        bundle.arrangements.push(arrangement);
+        createdArrangementRef = { id: arrangement.id, revision: arrangement.revision };
+        appendExactRef(bundle.manifest.arrangement_refs, createdArrangementRef);
+        bundle.manifest.active_arrangement_id = arrangement.id;
+      } else {
+        nextStageRef = cloneAssetRevision(bundle, "stage", sourceStageRef);
+      }
+
+      const nextStage = exactAsset(bundle.stages, nextStageRef);
+      if (!nextStage) throw new Error("Upgraded Stage revision is missing");
+      nextStage.layout_ref = structuredClone(request.layoutRef);
+      nextStage.target_sets = validTargets.map((target) => {
+        const nextTarget = structuredClone(target);
+        const selected = new Set(resolveTargetSet(nextStage, layout, nextTarget)?.fixtureIds ?? []);
+        nextTarget.weights = (nextTarget.weights ?? []).filter((weight) =>
+          selected.has(weight.fixture_id),
+        );
+        return nextTarget;
+      });
+      nextStage.targeting_scenes = (nextStage.targeting_scenes ?? []).map((scene) => ({
+        ...scene,
+        steps: scene.steps.map((step) => {
+          const target_set_id =
+            targetMappings[step.selection.target_set_id] ?? step.selection.target_set_id;
+          const target = nextStage.target_sets.find((candidate) => candidate.id === target_set_id);
+          const partitions = target
+            ? (resolveTargetSet(nextStage, layout, target)?.partitions.length ?? 1)
+            : 1;
+          return {
+            ...step,
+            selection: {
+              target_set_id,
+              partition_index:
+                step.selection.partition_index === null ||
+                step.selection.partition_index === undefined ||
+                partitions <= 1
+                  ? null
+                  : Math.min(step.selection.partition_index, partitions - 1),
+            },
+          };
+        }),
+      }));
+
+      if (request.upgradeDependents && request.mode !== "create_stage") {
+        const cueRefs = [...bundle.manifest.cue_refs];
+        for (const cueRef of cueRefs) {
+          const cue = exactAsset(bundle.cues, cueRef);
+          if (!cue || assetKey(cue.compatible_stage_ref) !== assetKey(sourceStageRef)) continue;
+          const nextCueRef = cloneAssetRevision(bundle, "cue", cueRef);
+          const nextCue = exactAsset(bundle.cues, nextCueRef);
+          if (!nextCue) throw new Error("Upgraded Cue revision is missing");
+          nextCue.compatible_stage_ref = structuredClone(nextStageRef);
+          nextCue.layers = nextCue.layers.map((layer) => ({
+            ...layer,
+            target_set_ref: {
+              stage_id: nextStageRef.id,
+              stage_revision: nextStageRef.revision,
+              target_set_id:
+                targetMappings[layer.target_set_ref.target_set_id] ??
+                layer.target_set_ref.target_set_id,
+            },
+            targeting_scene_ref: layer.targeting_scene_ref
+              ? {
+                  ...layer.targeting_scene_ref,
+                  stage_id: nextStageRef.id,
+                  stage_revision: nextStageRef.revision,
+                }
+              : null,
+          }));
+          cueUpgrades.set(assetKey(cueRef), nextCueRef);
+        }
+
+        const arrangementRefs = [...bundle.manifest.arrangement_refs];
+        for (const arrangementRef of arrangementRefs) {
+          const arrangement = exactAsset(bundle.arrangements, arrangementRef);
+          if (
+            !arrangement?.tracks.some((track) =>
+              track.clips?.some((clip) => cueUpgrades.has(assetKey(clip.cue_ref))),
+            )
+          ) {
+            continue;
+          }
+          const nextArrangementRef = cloneAssetRevision(bundle, "arrangement", arrangementRef);
+          const nextArrangement = exactAsset(bundle.arrangements, nextArrangementRef);
+          if (!nextArrangement) throw new Error("Upgraded Arrangement revision is missing");
+          for (const track of nextArrangement.tracks) {
+            for (const clip of track.clips ?? []) {
+              clip.cue_ref = cueUpgrades.get(assetKey(clip.cue_ref)) ?? clip.cue_ref;
+            }
+          }
+          arrangementUpgrades.set(assetKey(arrangementRef), nextArrangementRef);
+        }
+      }
+      bumpManifestRevision(bundle, published);
+    });
+    const updates: Partial<ProjectState> = { selectedLayoutRef: request.layoutRef };
+    const selectedCueRef = current.selectedCueRef
+      ? cueUpgrades.get(assetKey(current.selectedCueRef))
+      : null;
+    if (selectedCueRef) updates.selectedCueRef = selectedCueRef;
+    const selectedArrangementRef = arrangementUpgrades.get(
+      assetKey(current.selectedArrangementRef),
+    );
+    if (selectedArrangementRef) updates.selectedArrangementRef = selectedArrangementRef;
+    if (createdArrangementRef) updates.selectedArrangementRef = createdArrangementRef;
+    useProjectStore.setState(updates);
+    return { stageRef: nextStageRef, cueUpgrades, arrangementUpgrades };
+  },
   setSelectedCueRef: (selectedCueRef: AssetRef | null) =>
     useProjectStore.setState({ selectedCueRef }),
   setSelectedTargetSetId: (selectedTargetSetId: string) =>
     useProjectStore.setState({ selectedTargetSetId }),
+  duplicateTargetSet: (targetSetId: string) => {
+    const state = useProjectStore.getState();
+    const stage = exactAsset(state.bundle.stages, state.bundle.manifest.stage_ref);
+    const source = stage?.target_sets.find((target) => target.id === targetSetId);
+    if (!stage || !source) throw new Error("TargetSet is missing from the active Stage revision");
+    const id = uniqueId(
+      `${source.id}-copy`,
+      stage.target_sets.map((target) => target.id),
+    );
+    const name = uniqueLayoutName(
+      `${source.name} Copy`,
+      stage.target_sets.map((target) => target.name),
+    );
+    updateActiveStageRevision("Duplicate TargetSet", (nextStage) => {
+      nextStage.target_sets.push({ ...structuredClone(source), id, name });
+    });
+    useProjectStore.setState({ selectedTargetSetId: id });
+    return id;
+  },
+  createTargetSet: () => {
+    const state = useProjectStore.getState();
+    const stage = exactAsset(state.bundle.stages, state.bundle.manifest.stage_ref);
+    if (!stage) throw new Error("Active Stage revision is missing");
+    const id = uniqueId(
+      "target-set",
+      stage.target_sets.map((target) => target.id),
+    );
+    const target: TargetSetDefinition = {
+      id,
+      name: uniqueLayoutName(
+        "New TargetSet",
+        stage.target_sets.map((candidate) => candidate.name),
+      ),
+      selector: { type: "all" },
+      weights: [],
+    };
+    updateActiveStageRevision("Create TargetSet", (nextStage) => {
+      nextStage.target_sets.push(target);
+    });
+    useProjectStore.setState({ selectedTargetSetId: id });
+    return id;
+  },
+  saveTargetSet: (targetSetId: string, draft: TargetSetDefinition) => {
+    updateActiveStageRevision("Save TargetSet", (stage) => {
+      const index = stage.target_sets.findIndex((target) => target.id === targetSetId);
+      if (index < 0) throw new Error("TargetSet is missing from the active Stage revision");
+      stage.target_sets[index] = structuredClone(draft);
+    });
+    useProjectStore.setState({ selectedTargetSetId: draft.id });
+  },
+  deleteTargetSet: (targetSetId: string) => {
+    const state = useProjectStore.getState();
+    const stage = exactAsset(state.bundle.stages, state.bundle.manifest.stage_ref);
+    if (!stage) throw new Error("Active Stage revision is missing");
+    if (targetSetId === "all") throw new Error("The canonical All TargetSet cannot be deleted");
+    const cueReferences = state.bundle.cues.filter(
+      (cue) =>
+        assetKey(cue.compatible_stage_ref) === assetKey(stage) &&
+        cue.layers.some((layer) => layer.target_set_ref.target_set_id === targetSetId),
+    );
+    const sceneReferences = (stage.targeting_scenes ?? []).filter((scene) =>
+      scene.steps.some((step) => step.selection.target_set_id === targetSetId),
+    );
+    if (cueReferences.length > 0 || sceneReferences.length > 0) {
+      throw new Error(
+        `TargetSet is referenced by ${cueReferences.length} Cue and ${sceneReferences.length} TargetingScene revisions`,
+      );
+    }
+    updateActiveStageRevision("Delete TargetSet", (nextStage) => {
+      nextStage.target_sets = nextStage.target_sets.filter((target) => target.id !== targetSetId);
+    });
+    const nextStage = activeStage(useProjectStore.getState().bundle);
+    useProjectStore.setState({ selectedTargetSetId: nextStage.target_sets[0]?.id ?? "all" });
+  },
+  createStageGroup: () => {
+    const stage = activeStage(useProjectStore.getState().bundle);
+    const id = uniqueId(
+      "fixture-group",
+      stage.groups.map((group) => group.id),
+    );
+    const group: GroupDSL = {
+      id,
+      name: uniqueLayoutName(
+        "New fixture group",
+        stage.groups.map((candidate) => candidate.name),
+      ),
+      fixtures: [],
+      sort_by: "none",
+    };
+    updateActiveStageRevision("Create fixture Group", (nextStage) => {
+      nextStage.groups.push(group);
+    });
+    return id;
+  },
+  duplicateStageGroup: (groupId: string) => {
+    const stage = activeStage(useProjectStore.getState().bundle);
+    const source = stage.groups.find((group) => group.id === groupId);
+    if (!source) throw new Error("Fixture Group is missing from the active Stage revision");
+    const id = uniqueId(
+      `${source.id}-copy`,
+      stage.groups.map((group) => group.id),
+    );
+    const name = uniqueLayoutName(
+      `${source.name} Copy`,
+      stage.groups.map((group) => group.name),
+    );
+    updateActiveStageRevision("Duplicate fixture Group", (nextStage) => {
+      nextStage.groups.push({ ...structuredClone(source), id, name });
+    });
+    return id;
+  },
+  saveStageGroup: (groupId: string, draft: GroupDSL) => {
+    updateActiveStageRevision("Save fixture Group", (stage) => {
+      const index = stage.groups.findIndex((group) => group.id === groupId);
+      if (index < 0) throw new Error("Fixture Group is missing from the active Stage revision");
+      stage.groups[index] = structuredClone(draft);
+    });
+  },
+  deleteStageGroup: (groupId: string) => {
+    if (groupId === "all-fixtures")
+      throw new Error("The canonical fixture Group cannot be deleted");
+    updateActiveStageRevision("Delete fixture Group", (stage) => {
+      if (!stage.groups.some((group) => group.id === groupId)) {
+        throw new Error("Fixture Group is missing from the active Stage revision");
+      }
+      stage.groups = stage.groups.filter((group) => group.id !== groupId);
+    });
+  },
+  duplicateTargetingScene: (sceneId: string) => {
+    const state = useProjectStore.getState();
+    const stage = activeStage(state.bundle);
+    const source = (stage.targeting_scenes ?? []).find((scene) => scene.id === sceneId);
+    if (!source) throw new Error("TargetingScene is missing from the active Stage revision");
+    const id = uniqueId(
+      `${source.id}-copy`,
+      (stage.targeting_scenes ?? []).map((scene) => scene.id),
+    );
+    const name = uniqueLayoutName(
+      `${source.name} Copy`,
+      (stage.targeting_scenes ?? []).map((scene) => scene.name),
+    );
+    updateActiveStageRevision("Duplicate TargetingScene", (nextStage) => {
+      nextStage.targeting_scenes = [
+        ...(nextStage.targeting_scenes ?? []),
+        { ...structuredClone(source), id, name },
+      ];
+    });
+    return id;
+  },
+  createTargetingScene: () => {
+    const state = useProjectStore.getState();
+    const stage = activeStage(state.bundle);
+    const id = uniqueId(
+      "targeting-scene",
+      (stage.targeting_scenes ?? []).map((scene) => scene.id),
+    );
+    const scene: TargetingSceneDefinition = {
+      id,
+      name: uniqueLayoutName(
+        "New TargetingScene",
+        (stage.targeting_scenes ?? []).map((candidate) => candidate.name),
+      ),
+      looped: false,
+      phase_continuity: true,
+      steps: [
+        {
+          id: "all",
+          selection: { target_set_id: stage.target_sets[0]?.id ?? "all" },
+          duration: { value: 1, unit: "bar" },
+          transition: { type: "hard" },
+        },
+      ],
+    };
+    updateActiveStageRevision("Create TargetingScene", (nextStage) => {
+      nextStage.targeting_scenes = [...(nextStage.targeting_scenes ?? []), scene];
+    });
+    return id;
+  },
+  saveTargetingScene: (sceneId: string, draft: TargetingSceneDefinition) => {
+    updateActiveStageRevision("Save TargetingScene", (stage) => {
+      const scenes = stage.targeting_scenes ?? [];
+      const index = scenes.findIndex((scene) => scene.id === sceneId);
+      if (index < 0) throw new Error("TargetingScene is missing from the active Stage revision");
+      scenes[index] = structuredClone(draft);
+      stage.targeting_scenes = scenes;
+    });
+  },
+  deleteTargetingScene: (sceneId: string) => {
+    const state = useProjectStore.getState();
+    const stage = activeStage(state.bundle);
+    const references = state.bundle.cues.filter(
+      (cue) =>
+        assetKey(cue.compatible_stage_ref) === assetKey(stage) &&
+        cue.layers.some((layer) => layer.targeting_scene_ref?.targeting_scene_id === sceneId),
+    );
+    if (references.length > 0) {
+      throw new Error(`TargetingScene is referenced by ${references.length} Cue revisions`);
+    }
+    updateActiveStageRevision("Delete TargetingScene", (nextStage) => {
+      nextStage.targeting_scenes = (nextStage.targeting_scenes ?? []).filter(
+        (scene) => scene.id !== sceneId,
+      );
+    });
+  },
   selectArrangement: (selectedArrangementRef: AssetRef) => {
     useProjectStore.setState({ selectedArrangementRef });
   },
@@ -421,16 +812,8 @@ export const projectActions = {
     label: string,
     update: (arrangement: ArrangementDocument) => void,
   ) => updateArrangement(reference, label, update),
-  updateStage: (label: string, update: (stage: ProjectBundle["stages"][number]) => void) => {
-    transact(label, (bundle, published) => {
-      const reference = bundle.manifest.stage_ref;
-      const selected = forkAssetRevision(bundle, published, "stage", reference);
-      const stage = exactAsset(bundle.stages, selected);
-      if (!stage) throw new Error("Stage revision is missing");
-      update(stage);
-      bumpManifestRevision(bundle, published);
-    });
-  },
+  updateStage: (label: string, update: (stage: ProjectBundle["stages"][number]) => void) =>
+    updateActiveStageRevision(label, update),
   undo: () => {
     const state = useProjectStore.getState();
     if (state.historyCursor === 0) return;
@@ -530,6 +913,78 @@ function updateArrangement(
   }
 }
 
+function updateActiveStageRevision(
+  label: string,
+  update: (stage: ProjectBundle["stages"][number]) => void,
+) {
+  const current = useProjectStore.getState();
+  const sourceStageRef = structuredClone(current.bundle.manifest.stage_ref);
+  const cueUpgrades = new Map<string, AssetRef>();
+  const arrangementUpgrades = new Map<string, AssetRef>();
+  transact(label, (bundle, published) => {
+    const nextStageRef = cloneAssetRevision(bundle, "stage", sourceStageRef);
+    const nextStage = exactAsset(bundle.stages, nextStageRef);
+    if (!nextStage) throw new Error("Upgraded Stage revision is missing");
+    update(nextStage);
+
+    const cueRefs = [...bundle.manifest.cue_refs];
+    for (const cueRef of cueRefs) {
+      const cue = exactAsset(bundle.cues, cueRef);
+      if (!cue || assetKey(cue.compatible_stage_ref) !== assetKey(sourceStageRef)) continue;
+      const nextCueRef = cloneAssetRevision(bundle, "cue", cueRef);
+      const nextCue = exactAsset(bundle.cues, nextCueRef);
+      if (!nextCue) throw new Error("Upgraded Cue revision is missing");
+      nextCue.compatible_stage_ref = structuredClone(nextStageRef);
+      nextCue.layers = nextCue.layers.map((layer) => ({
+        ...layer,
+        target_set_ref: {
+          ...layer.target_set_ref,
+          stage_id: nextStageRef.id,
+          stage_revision: nextStageRef.revision,
+        },
+        targeting_scene_ref: layer.targeting_scene_ref
+          ? {
+              ...layer.targeting_scene_ref,
+              stage_id: nextStageRef.id,
+              stage_revision: nextStageRef.revision,
+            }
+          : null,
+      }));
+      cueUpgrades.set(assetKey(cueRef), nextCueRef);
+    }
+
+    const arrangementRefs = [...bundle.manifest.arrangement_refs];
+    for (const arrangementRef of arrangementRefs) {
+      const arrangement = exactAsset(bundle.arrangements, arrangementRef);
+      if (
+        !arrangement?.tracks.some((track) =>
+          track.clips?.some((clip) => cueUpgrades.has(assetKey(clip.cue_ref))),
+        )
+      ) {
+        continue;
+      }
+      const nextArrangementRef = cloneAssetRevision(bundle, "arrangement", arrangementRef);
+      const nextArrangement = exactAsset(bundle.arrangements, nextArrangementRef);
+      if (!nextArrangement) throw new Error("Upgraded Arrangement revision is missing");
+      for (const track of nextArrangement.tracks) {
+        for (const clip of track.clips ?? []) {
+          clip.cue_ref = cueUpgrades.get(assetKey(clip.cue_ref)) ?? clip.cue_ref;
+        }
+      }
+      arrangementUpgrades.set(assetKey(arrangementRef), nextArrangementRef);
+    }
+    bumpManifestRevision(bundle, published);
+  });
+  const updates: Partial<ProjectState> = {};
+  const selectedCueRef = current.selectedCueRef
+    ? cueUpgrades.get(assetKey(current.selectedCueRef))
+    : null;
+  if (selectedCueRef) updates.selectedCueRef = selectedCueRef;
+  const selectedArrangementRef = arrangementUpgrades.get(assetKey(current.selectedArrangementRef));
+  if (selectedArrangementRef) updates.selectedArrangementRef = selectedArrangementRef;
+  useProjectStore.setState(updates);
+}
+
 function repairSelections() {
   const state = useProjectStore.getState();
   useProjectStore.setState({
@@ -579,4 +1034,8 @@ function slugLayoutName(value: string) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "") || "layout"
   );
+}
+
+function uniqueStageName(base: string, existing: string[]) {
+  return uniqueLayoutName(base, existing);
 }

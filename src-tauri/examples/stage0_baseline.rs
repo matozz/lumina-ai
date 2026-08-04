@@ -205,6 +205,7 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
         priority: 0,
         mix_overrides: HashMap::new(),
         spatial_offsets: HashMap::new(),
+        targeting_scene: None,
     };
 
     CompiledShow {

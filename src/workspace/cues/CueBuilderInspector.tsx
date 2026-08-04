@@ -64,6 +64,10 @@ export function CueBuilderInspector() {
     value: target.id,
     label: target.name,
   }));
+  const targetingSceneItems = [
+    { value: "__static__", label: "Static TargetSet" },
+    ...(stage.targeting_scenes ?? []).map((scene) => ({ value: scene.id, label: scene.name })),
+  ];
   const saveName = () => {
     if (name.trim() && name.trim() !== cue.name) projectActions.renameCue(reference, name.trim());
   };
@@ -223,6 +227,43 @@ export function CueBuilderInspector() {
                       </SelectGroup>
                     </SelectContent>
                   </Select>
+                </Field>
+                <Field>
+                  <FieldLabel>TargetingScene / Spatial Mask</FieldLabel>
+                  <Select
+                    items={targetingSceneItems}
+                    value={layer.targeting_scene_ref?.targeting_scene_id ?? "__static__"}
+                    onValueChange={(value) =>
+                      value &&
+                      projectActions.updateCueLayer(reference, layer.id, {
+                        targeting_scene_ref:
+                          value === "__static__"
+                            ? null
+                            : {
+                                stage_id: stage.id,
+                                stage_revision: stage.revision,
+                                targeting_scene_id: value,
+                              },
+                      })
+                    }
+                  >
+                    <SelectTrigger size="sm" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent alignItemWithTrigger={false}>
+                      <SelectGroup>
+                        {targetingSceneItems.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FieldDescription>
+                    Scene selection changes immutable fixture weights; Effect phase remains
+                    continuous when the scene requests it.
+                  </FieldDescription>
                 </Field>
                 <div className="grid grid-cols-2 gap-2">
                   <Field>

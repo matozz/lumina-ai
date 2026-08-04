@@ -322,14 +322,6 @@ fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
         }) else {
             continue;
         };
-        if cue.compatible_stage_ref != bundle.manifest.stage_ref {
-            diagnostics.push(Diagnostic::error(
-                PROJECT_REVISION_MISMATCH,
-                format!("{cue_path}.compatible_stage_ref"),
-                "Cue Stage revision differs from the Project manifest Stage revision.",
-                "Explicitly upgrade the Cue to the active Stage revision before publishing it.",
-            ));
-        }
         if cue.layers.is_empty() {
             diagnostics.push(Diagnostic::error(
                 PROJECT_SCHEMA_INVALID,

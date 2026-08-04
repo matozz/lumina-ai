@@ -4,7 +4,7 @@ import {
   authoringTransportActions,
   useAuthoringTransportStore,
 } from "@/authoring/transport";
-import { assetKey, exactAsset } from "@/document/projectModel";
+import { activeStage, assetKey, exactAsset } from "@/document/projectModel";
 import { projectActions, useProjectStore } from "./project";
 
 describe("Stage 7 Project state", () => {
@@ -111,6 +111,224 @@ describe("Stage 7 Project state", () => {
     expect(clip?.cue_ref).toEqual(cue);
   });
 
+  it("saves a Stage-pinned Layout as a new exact revision without changing the Stage", () => {
+    const state = useProjectStore.getState();
+    const stageRef = structuredClone(state.bundle.manifest.stage_ref);
+    const layoutRef = structuredClone(state.selectedLayoutRef);
+    const layout = structuredClone(exactAsset(state.bundle.layouts, layoutRef)!);
+    layout.name = "Matrix Zero Gap";
+    if (layout.geometry.shape !== "matrix") throw new Error("starter matrix missing");
+    layout.geometry.gap = { x: 0, y: 0 };
+    layout.geometry.pitch = {
+      x: layout.geometry.fixture_size.width,
+      y: layout.geometry.fixture_size.height,
+    };
+
+    const saved = projectActions.saveLayoutDraft(layoutRef, layout);
+    const next = useProjectStore.getState();
+
+    expect(saved).toEqual({ id: layoutRef.id, revision: layoutRef.revision + 1 });
+    expect(exactAsset(next.bundle.stages, stageRef)?.layout_ref).toEqual(layoutRef);
+    expect(exactAsset(next.bundle.layouts, layoutRef)?.name).not.toBe("Matrix Zero Gap");
+    expect(exactAsset(next.bundle.layouts, saved)?.name).toBe("Matrix Zero Gap");
+
+    projectActions.undo();
+    expect(exactAsset(useProjectStore.getState().bundle.layouts, saved)).toBeUndefined();
+    projectActions.redo();
+    expect(exactAsset(useProjectStore.getState().bundle.layouts, saved)?.name).toBe(
+      "Matrix Zero Gap",
+    );
+  });
+
+  it("upgrades compatible Stage, Cue, and Arrangement revisions as one explicit transaction", () => {
+    const effect = projectActions.createEffect("Pulse")!;
+    const cue = projectActions.createCue([effect], "Pulse Cue")!;
+    const arrangement = useProjectStore.getState().selectedArrangementRef;
+    projectActions.updateArrangement(arrangement, "Place Cue", (document) => {
+      document.tracks[0].clips = [
+        { id: "clip", cue_ref: cue, start_tick: 0, duration_tick: 3_840 },
+      ];
+    });
+    const source = useProjectStore.getState();
+    const sourceStageRef = structuredClone(source.bundle.manifest.stage_ref);
+    const sourceArrangementRef = structuredClone(source.selectedArrangementRef);
+    const wall = source.bundle.manifest.layout_refs.find(
+      (reference) => reference.id === "wall-4x4",
+    )!;
+    projectActions.markPublished();
+
+    const result = projectActions.useLayoutOnStage({
+      layoutRef: wall,
+      mode: "upgrade",
+      upgradeDependents: true,
+    });
+    const next = useProjectStore.getState();
+    const upgradedCue = result.cueUpgrades.get(assetKey(cue))!;
+    const upgradedArrangement = result.arrangementUpgrades.get(assetKey(sourceArrangementRef))!;
+
+    expect(result.stageRef).toEqual({ id: sourceStageRef.id, revision: 2 });
+    expect(exactAsset(next.bundle.stages, sourceStageRef)?.layout_ref).not.toEqual(wall);
+    expect(exactAsset(next.bundle.stages, result.stageRef)?.layout_ref).toEqual(wall);
+    expect(exactAsset(next.bundle.cues, cue)?.compatible_stage_ref).toEqual(sourceStageRef);
+    expect(exactAsset(next.bundle.cues, upgradedCue)?.compatible_stage_ref).toEqual(
+      result.stageRef,
+    );
+    expect(
+      exactAsset(next.bundle.arrangements, upgradedArrangement)?.tracks[0].clips?.[0].cue_ref,
+    ).toEqual(upgradedCue);
+    expect(next.publishedBundle?.manifest.stage_ref).toEqual(sourceStageRef);
+
+    projectActions.undo();
+    expect(useProjectStore.getState().bundle.manifest.stage_ref).toEqual(sourceStageRef);
+    projectActions.redo();
+    expect(useProjectStore.getState().bundle.manifest.stage_ref).toEqual(result.stageRef);
+  });
+
+  it("remaps incompatible grid TargetSets without mutating their historical Stage revision", () => {
+    const state = useProjectStore.getState();
+    const sourceStageRef = structuredClone(state.bundle.manifest.stage_ref);
+    const circle = state.bundle.manifest.layout_refs.find(
+      (reference) => reference.id === "circle-16",
+    )!;
+    const targetMappings = Object.fromEntries(
+      state.bundle.stages[0].target_sets
+        .filter((target) => target.id !== "all")
+        .map((target) => [target.id, "all"]),
+    );
+
+    const result = projectActions.useLayoutOnStage({
+      layoutRef: circle,
+      mode: "remap",
+      targetMappings,
+      upgradeDependents: true,
+    });
+    const next = useProjectStore.getState();
+    const oldStage = exactAsset(next.bundle.stages, sourceStageRef)!;
+    const upgradedStage = exactAsset(next.bundle.stages, result.stageRef)!;
+
+    expect(oldStage.target_sets).toHaveLength(7);
+    expect(oldStage.targeting_scenes?.[0].steps[1].selection).toEqual({
+      target_set_id: "zones-3x3",
+      partition_index: 0,
+    });
+    expect(upgradedStage.target_sets.map((target) => target.id)).toEqual(["all"]);
+    expect(upgradedStage.targeting_scenes?.[0].steps[1].selection).toEqual({
+      target_set_id: "all",
+      partition_index: null,
+    });
+  });
+
+  it("creates a separate Stage and empty Arrangement while preserving pinned dependents", () => {
+    const effect = projectActions.createEffect("Pulse")!;
+    const cue = projectActions.createCue([effect], "Pinned Cue")!;
+    const arrangement = useProjectStore.getState().selectedArrangementRef;
+    projectActions.updateArrangement(arrangement, "Place pinned Cue", (document) => {
+      document.tracks[0].clips = [
+        { id: "clip", cue_ref: cue, start_tick: 0, duration_tick: 3_840 },
+      ];
+    });
+    const source = useProjectStore.getState();
+    const sourceStageRef = structuredClone(source.bundle.manifest.stage_ref);
+    const sourceArrangementRef = structuredClone(source.selectedArrangementRef);
+    const circle = source.bundle.manifest.layout_refs.find(
+      (reference) => reference.id === "circle-16",
+    )!;
+    const targetMappings = Object.fromEntries(
+      activeStage(source.bundle)
+        .target_sets.filter((target) => target.id !== "all")
+        .map((target) => [target.id, "all"]),
+    );
+
+    const result = projectActions.useLayoutOnStage({
+      layoutRef: circle,
+      mode: "create_stage",
+      targetMappings,
+      upgradeDependents: false,
+    });
+    const next = useProjectStore.getState();
+    const newArrangement = exactAsset(next.bundle.arrangements, next.selectedArrangementRef)!;
+
+    expect(result.stageRef.id).not.toBe(sourceStageRef.id);
+    expect(exactAsset(next.bundle.stages, sourceStageRef)).toBeDefined();
+    expect(exactAsset(next.bundle.cues, cue)?.compatible_stage_ref).toEqual(sourceStageRef);
+    expect(
+      exactAsset(next.bundle.arrangements, sourceArrangementRef)?.tracks[0].clips,
+    ).toHaveLength(1);
+    expect(newArrangement.tracks.every((track) => (track.clips ?? []).length === 0)).toBe(true);
+    expect(next.bundle.manifest.active_arrangement_id).toBe(newArrangement.id);
+  });
+
+  it("forks Stage and pinned draft references when a TargetSet revision is saved", () => {
+    const effect = projectActions.createEffect("Pulse")!;
+    const cue = projectActions.createCue([effect], "Rows Cue")!;
+    projectActions.updateCueLayer(
+      cue,
+      exactAsset(useProjectStore.getState().bundle.cues, cue)!.layers[0].id,
+      {
+        target_set_ref: {
+          stage_id: "main-stage",
+          stage_revision: 1,
+          target_set_id: "rows",
+        },
+      },
+    );
+    const state = useProjectStore.getState();
+    const rows = structuredClone(
+      activeStage(state.bundle).target_sets.find((target) => target.id === "rows")!,
+    );
+    rows.name = "Alternating rows";
+    if (rows.selector.type !== "rows") throw new Error("rows selector missing");
+    rows.selector.indices = [0, 2];
+
+    projectActions.saveTargetSet("rows", rows);
+    const next = useProjectStore.getState();
+    const upgradedStage = activeStage(next.bundle);
+    const upgradedCue = exactAsset(next.bundle.cues, next.selectedCueRef)!;
+
+    expect(next.bundle.manifest.stage_ref).toEqual({ id: "main-stage", revision: 2 });
+    expect(
+      exactAsset(next.bundle.stages, { id: "main-stage", revision: 1 })?.target_sets.find(
+        (target) => target.id === "rows",
+      )?.name,
+    ).toBe("Rows");
+    expect(upgradedStage.target_sets.find((target) => target.id === "rows")?.name).toBe(
+      "Alternating rows",
+    );
+    expect(upgradedCue.compatible_stage_ref).toEqual(next.bundle.manifest.stage_ref);
+    expect(upgradedCue.layers[0].target_set_ref.stage_revision).toBe(2);
+    expect(() => projectActions.deleteTargetSet("zones-3x3")).toThrow(/TargetingScene/);
+  });
+
+  it("forks TargetingScene and Cue references without changing fixture Group membership", () => {
+    const effect = projectActions.createEffect("Pulse")!;
+    const cue = projectActions.createCue([effect], "Scene Cue")!;
+    const cueAsset = exactAsset(useProjectStore.getState().bundle.cues, cue)!;
+    projectActions.updateCueLayer(cue, cueAsset.layers[0].id, {
+      targeting_scene_ref: {
+        stage_id: "main-stage",
+        stage_revision: 1,
+        targeting_scene_id: "all-zones-all",
+      },
+    });
+    const before = useProjectStore.getState();
+    const groupMembership = structuredClone(activeStage(before.bundle).groups);
+    const scene = structuredClone(activeStage(before.bundle).targeting_scenes?.[0])!;
+    scene.looped = true;
+
+    projectActions.saveTargetingScene(scene.id, scene);
+    const next = useProjectStore.getState();
+    const upgradedStage = activeStage(next.bundle);
+    const upgradedCue = exactAsset(next.bundle.cues, next.selectedCueRef)!;
+
+    expect(upgradedStage.groups).toEqual(groupMembership);
+    expect(upgradedStage.targeting_scenes?.[0].looped).toBe(true);
+    expect(upgradedCue.layers[0].targeting_scene_ref).toMatchObject({
+      stage_revision: upgradedStage.revision,
+      targeting_scene_id: scene.id,
+    });
+    expect(() => projectActions.deleteTargetingScene(scene.id)).toThrow(/Cue revisions/);
+  });
+
   it("undoes and redoes an Arrangement edit as one transaction", () => {
     const reference = useProjectStore.getState().selectedArrangementRef;
     projectActions.updateArrangement(reference, "Tempo edit", (arrangement) => {
@@ -185,6 +403,11 @@ describe("Stage 7 Project state", () => {
 
   it("persists multiple Arrangements without serializing session-only authoring state", async () => {
     const house = useProjectStore.getState().selectedArrangementRef;
+    const stageBeforeSceneSave = activeStage(useProjectStore.getState().bundle);
+    const scene = structuredClone(stageBeforeSceneSave.targeting_scenes?.[0]);
+    if (!scene) throw new Error("starter TargetingScene missing");
+    scene.looped = true;
+    projectActions.saveTargetingScene(scene.id, scene);
     const journey = projectActions.duplicateArrangement(house, "Tempo Journey")!;
     const journeyId = useProjectStore.getState().selectedArrangementRef.id;
     projectActions.updateArrangement(journey, "Add multi-tempo map", (arrangement) => {
@@ -215,6 +438,7 @@ describe("Stage 7 Project state", () => {
     expect(
       exactAsset(reopened.bundle.arrangements, reopened.selectedArrangementRef)?.tempo_map.points,
     ).toHaveLength(2);
+    expect(activeStage(reopened.bundle).targeting_scenes?.[0].looped).toBe(true);
     expect(useAuthoringTransportStore.getState().sessions[sessionKey]).toBeUndefined();
     expect(persisted).not.toContain("cursorTick");
   });

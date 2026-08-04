@@ -65,10 +65,10 @@ export const CanvasView = ({ frameSource = "live" }: { frameSource?: "preview" |
       rendererRef.current?.applyFrame((event as CustomEvent<FixtureFramePayload[]>).detail, true);
     };
 
+    window.addEventListener("workspace:test-fixtures", handleFixtureTest);
     if (frameSource === "live") {
       window.addEventListener("engine:layout-ready", handleLayoutUpdate);
       window.addEventListener("engine:draft-layout", handleDraftLayout);
-      window.addEventListener("workspace:test-fixtures", handleFixtureTest);
       void handleLayoutUpdate();
     }
     return () => {

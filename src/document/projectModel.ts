@@ -222,6 +222,26 @@ export function forkAssetRevision(
   return nextRef;
 }
 
+export function cloneAssetRevision(
+  bundle: ProjectBundle,
+  kind: ProjectAssetKind,
+  reference: AssetRef,
+): AssetRef {
+  const nextRef =
+    kind === "stage"
+      ? cloneNextRevision(bundle.stages, reference)
+      : kind === "layout"
+        ? cloneNextRevision(bundle.layouts, reference)
+        : kind === "effect"
+          ? cloneNextRevision(bundle.effects, reference)
+          : kind === "cue"
+            ? cloneNextRevision(bundle.cues, reference)
+            : cloneNextRevision(bundle.arrangements, reference);
+  if (kind === "stage") bundle.manifest.stage_ref = nextRef;
+  else appendExactRef(manifestRefs(bundle, kind), nextRef);
+  return nextRef;
+}
+
 export function appendExactRef(references: AssetRef[], reference: AssetRef) {
   if (!references.some((candidate) => assetKey(candidate) === assetKey(reference))) {
     references.push(reference);

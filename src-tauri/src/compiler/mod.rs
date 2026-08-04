@@ -1262,6 +1262,7 @@ fn compile_effect_models(
                 priority: 0,
                 mix_overrides: HashMap::new(),
                 spatial_offsets: HashMap::new(),
+                targeting_scene: None,
             },
         );
     }

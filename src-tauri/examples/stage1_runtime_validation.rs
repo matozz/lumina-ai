@@ -227,6 +227,7 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
             EffectNodeHandle::from_index(1).expect("spatial handle"),
             offsets,
         )]),
+        targeting_scene: None,
     };
 
     CompiledShow {
