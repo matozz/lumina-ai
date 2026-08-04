@@ -893,21 +893,25 @@ LayoutPreset、动态 Targeting 或 Production Catalog。
 
 ### 7.5B LayoutPreset 与 Stage 工作流
 
-- [ ] 新增独立、可版本化 LayoutPreset/Definition；Project manifest 保存 layout refs，Stage 显式引用选中的 layout revision。
-- [ ] Stage 左侧改为 Layout Library，按 Basic 与 Generated/Advanced 分区；Group/TargetSet 移到当前 Stage 的次级视图。
-- [ ] Basic 支持 matrix、circle、strip/bar、wall、frame；Generated/Advanced 支持 formula、SVG path、custom 和算法生成，并声明 `form`、`parameter_schema`、`advanced_only` 或 `read_only` editor capability。
-- [ ] 支持 Duplicate、Save Draft、Save As、Rename、Delete 和 Use on Stage；保存布局不应自动改写当前 Stage/Cue/Arrangement。
-- [ ] Use on Stage 在提交前显示 Cue/TargetSet 影响；兼容 topology 可显式升级，非兼容时提供 remap、保留旧 Stage revision 或创建新 Stage。
-- [ ] 移除当前“工程存在任意 Cue 就无反馈阻止 Apply”的临时流程；不得通过静默改写 Cue revision 规避引用校验。
-- [ ] 支持 n×n/rows×columns 无缝矩阵、矩形灯条、灯条墙和灯框；fixture size 与 gap/pitch 分离，gap 可以为 0。
-- [ ] 完成 ADR-0012，固定 LayoutPreset、Stage revision upgrade、动态 TargetSet 与 Spatial Mask 边界。
+- [x] 新增独立、可版本化 LayoutPreset/Definition；Project manifest 保存 layout refs，Stage 显式引用选中的 layout revision。
+- [x] Stage 左侧改为 Layout Library，按 Basic 与 Generated/Advanced 分区；Group/TargetSet 移到当前 Stage 的次级视图。
+- [x] Basic 支持 matrix、circle、strip/bar、wall、frame；Generated/Advanced 支持 formula、SVG path、custom 和算法生成，并声明 `form`、`parameter_schema`、`advanced_only` 或 `read_only` editor capability。
+- [x] 支持 Duplicate、Save Draft、Save As、Rename、Delete 和 Use on Stage；保存布局不应自动改写当前 Stage/Cue/Arrangement。
+- [x] Use on Stage 在提交前显示 Cue/TargetSet 影响；兼容 topology 可显式升级，非兼容时提供 remap、保留旧 Stage revision 或创建新 Stage。
+- [x] 移除当前“工程存在任意 Cue 就无反馈阻止 Apply”的临时流程；不得通过静默改写 Cue revision 规避引用校验。
+- [x] 支持 n×n/rows×columns 无缝矩阵、矩形灯条、灯条墙和灯框；fixture size 与 gap/pitch 分离，gap 可以为 0。
+- [x] 完成 ADR-0012，固定 LayoutPreset、Stage revision upgrade、动态 TargetSet 与 Spatial Mask 边界。
 
 ### 7.5C Production Targeting
 
-- [ ] 提供 30×30 的 R×C Zones、Rows、Columns、Checkerboard、Center/Edges、Fixture IDs 和 Per-bar TargetingScene 可视化编辑。
-- [ ] 完成 hard switch、weighted transition、phase continuity 和 beat/bar snap。
-- [ ] All → 多分区 → All 通过 immutable TargetSet/TargetingScene 编排，不在播放中修改 Fixture Group membership。
-- [ ] TargetSet 支持命名、复制、预览、引用影响检查，并继续使用 compiler bitset/index/cache 热路径。
+- [x] 提供 30×30 的 R×C Zones、Rows、Columns、Checkerboard、Center/Edges、Fixture IDs 和 Per-bar TargetingScene 可视化编辑。
+- [x] 完成 hard switch、weighted transition、phase continuity 和 beat/bar snap。
+- [x] All → 多分区 → All 通过 immutable TargetSet/TargetingScene 编排，不在播放中修改 Fixture Group membership。
+- [x] TargetSet 支持命名、复制、预览、引用影响检查，并继续使用 compiler bitset/index/cache 热路径。
+
+2026-08-05：7.5B/7.5C 已按
+[`stage7-5bc-acceptance.md`](./stage7-5bc-acceptance.md) 完成 scoped 退出。Stage 7.5 总状态仍为
+`in_progress`；7.5D Production Catalog 与 7.5E 全 Stage 收口未开始，本次明确停止在 7.5C。
 
 ### 7.5D Production Effect/Cue Catalog
 
@@ -1078,18 +1082,18 @@ flowchart LR
 
 任何任务只有同时满足以下条件才可以在 Progress Ledger 标记完成：
 
-以下勾选状态已在 2026-08-04 的 Stage 7.5A 最终收口重新验证。
+以下勾选状态已在 2026-08-05 的 Stage 7.5B/7.5C scoped 收口重新验证。
 
 - [x] 实现与当前 Stage 设计一致；若偏离，已有 ADR。
 - [x] 没有无关重构、调试日志、死代码或生成噪音。
 - [x] `pnpm build` 通过；仅保留既有 Vite 大 chunk 警告。
-- [x] 当前阶段规定的前端测试通过（55 files / 141 tests，包含 1,000-CueClip viewport 断言）。
+- [x] 当前阶段规定的前端测试通过（59 files / 150 tests，包含 migration、revision isolation、Undo/Redo、TargetSet/Scene 编辑器与 1,000-CueClip viewport 断言）。
 - [x] `cargo fmt --check` 通过。
 - [x] `cargo clippy --all-targets -- -D warnings` 通过，或例外已记录。
-- [x] `cargo test` 通过且新增行为有测试（101 unit + 12 integration/contracts = 113）。
-- [x] 对实时路径的修改包含确定性、Seek/Replay 或性能验证（30×30 All→3×3 zones→All、100 次随机 Seek、30 分钟多段 TempoMap、60Hz 平均帧预算）。
-- [x] 对 schema 的修改包含 migration、生成文件和模板检查（V1–V4→Project assets、6 类独立 contract、reference/revision/cycle/capability diagnostics）。
-- [x] 对 UI 的修改包含状态机、回归和真实窗口验证（Draft Preview、Published Rehearsal、Live isolation；当前宿主最大化 1240×768，既有窗口配置/最小尺寸 contract 保留；完整无 Raw DSL 路径）。
+- [x] `cargo test` 通过且新增行为有测试（107 unit + 12 integration/contracts = 119）。
+- [x] 对实时路径的修改包含确定性、Seek/Replay 或性能验证（30×30 All→3×3 zones→All、1,000 fixtures 四并行分区层、weighted transition、随机 Seek/Replay、60Hz 平均帧预算）。
+- [x] 对 schema 的修改包含 migration、生成文件和模板检查（内嵌 Layout→独立资产、精确 Layout/Stage/Cue refs、TargetingScene 与 reference/revision/capability diagnostics）。
+- [x] 对 UI 的修改包含状态机、回归和真实窗口验证（Layout Draft/Canvas、impact/remap、TargetSet/Scene preview、保存重开、inline recovery、键盘；宿主显示限制下验证最大化及 1100×720 content contract）。
 - [x] 相关文档、Stage checklist、ADR 和 Progress Ledger 已更新。
 - [x] 已进行自审并形成符合仓库规范的增量 commit。
 
@@ -1145,15 +1149,15 @@ flowchart LR
 
 ## Handoff
 
-- Current Stage: Stage 7.5 为 `in_progress`；Stage 7.5A Authoring Workflow Foundation 已完成 scoped 退出，7.5B–7.5E 未开始。
-- Slice completed: 共享 Authoring PreviewClock/Transport 已接入 Effect Lab、Cues、Arrange；最小 `CueTimelinePanel` 已由 production `ArrangementTimeline` 替换；Stage 7 资产、revision pin、PreviewSession/RenderContext 与 Draft/Published/Live 边界保留。
-- Commits: `18f864c`、`cd90388`、`c5223c5`、`e8b2bdd`，以及本次 7.5A 验收/交接提交。
-- Files changed: 新增 `src/authoring/` transport/clock/UI、`src/workspace/arrange/ArrangementTimeline.tsx` 与 CueClip/automation adapter；删除临时 `CueTimelinePanel`；新增 ADR-0011、parity matrix 和 acceptance 记录。
-- Validation: `pnpm test` 55 files/141 tests；`pnpm build`；`pnpm format:check`；`pnpm check:rust`（101 unit + 12 integration/contracts）；app-only debug bundle 与真实 Tauri Lab→Cues→Arrange→Rehearse、保存重开路径。
-- ADRs added/updated: ADR-0011 Accepted，并补充实现提交；ADR-0001、ADR-0003、ADR-0010 继续成立；ADR-0012 仍 Pending。
-- Risks opened/closed: R-029、R-030 closed；R-031 的 Arrangement 临时双实现已移除，但 V4-only Stage Setup/Timeline reference shell 仍按 7.5E 删除门槛保持 open；R-028 未触碰。
-- Remaining exit criteria: 7.5A 无剩余 scoped blocker。Stage 7.5B LayoutPreset、7.5C Targeting、7.5D Catalog、7.5E 总验收均未开始。
-- Recommended next slice: 停止当前 Goal。只有新的显式 Goal 才开始 7.5B LayoutPreset/Stage upgrade；不得顺带进入动态 Targeting 或 Catalog。
+- Current Stage: Stage 7.5 为 `in_progress`；7.5A、7.5B、7.5C 已完成 scoped 退出；7.5D/7.5E 未开始。
+- Slice completed: 独立 LayoutDefinition/迁移、Layout Library/Draft/Canvas、Stage topology impact/remap、可视化 TargetSet/TargetingScene、预计算 spatial weight cache 与确定性运行时全部接通；Stage 7/7.5A revision 和 AuthoringTransport 边界保留。
+- Commits: `8402091`、`0c79132`、`871b6cb`、`c99b8aa`，以及本次 7.5B/C 验收/交接提交。
+- Files changed: Project schema/migration/compiler/store；Stage Layout/Group/TargetSet/Scene 工作区；删除已完成 capability parity 的 V4 Stage Setup shell；新增 ADR-0012 与 7.5B/C acceptance。
+- Validation: `pnpm check:all`；59 frontend files/150 tests；107 Rust unit + 12 integration/contracts；app-only debug bundle；真实 Tauri Duplicate/Edit/Save As/Canvas/impact/remap/TargetSet/Scene/save-reopen/keyboard/inline recovery。
+- ADRs added/updated: ADR-0012 Accepted 并补充实现 commits；ADR-0002、ADR-0006、ADR-0010、ADR-0011 继续成立。
+- Risks opened/closed: R-028 closed；R-031 closed；R-019 的默认 debug DMG bundler 问题仍 open，但 app-only bundle 成功且不阻塞本 scope。
+- Remaining exit criteria: 7.5B/7.5C 无剩余 scoped blocker。Production Effect/Cue Catalog（7.5D）与 Stage 7.5 全目录/整链路收口（7.5E）保持未实现。
+- Recommended next slice: 停止当前 Goal，不进入 7.5D。只有新的显式 Goal 才启动 Production Effect/Cue Catalog。
 
 ## 19. ADR 规范
 
@@ -1298,8 +1302,11 @@ flowchart LR
 | 2026-08-04 | 7.5A     | PreviewClock + Transport       | completed  | `cd90388`、`c5223c5`    | Local/Follow；3/4、4/4、多 tempo；workspace/Draft-Live tests；131 frontend     | R-029 closed；Preview 设置不进入 ProjectBundle                 | production ArrangementTimeline              |
 | 2026-08-04 | 7.5A     | Production ArrangementTimeline | completed  | `e8b2bdd`               | zoom/snap；CueClip move/resize/keyboard/inspector；typed automation；141 tests | R-030 closed；Pointer move 为 rAF DOM preview + 单 transaction | native app + save/reopen gate               |
 | 2026-08-04 | 7.5A     | Scoped final gate              | completed  | 本次交接提交            | build/format；strict Rust；debug app；真实 Lab→Cue→Arrange→Rehearse/reopen     | R-031 Arrangement half closed；Stage shell residual 保持 open  | 停止；等待显式 7.5B Goal                    |
-| 2026-08-05 | 7.5B/C   | ADR + contract/impact mapping  | completed  | 本切片提交              | 最新 `main@a725ee6`；指定文档与旧 Stage Setup/compiler/test mapping            | ADR-0012 accepted；R-028/R-031 保持 open                       | Layout asset schema + explicit migration    |
-| 2026-08-05 | 7.5B/C   | Layout contract + migration    | completed  | 本切片提交              | schema check；144 frontend；113 Rust；v1 embedded layout migration/save-reopen | exact Layout ref；size/gap/pitch；TargetingScene contract      | Layout Draft editor + Canvas preview        |
+| 2026-08-05 | 7.5B/C   | ADR + contract/impact mapping  | completed  | `8402091`               | 最新 `main@a725ee6`；指定文档与旧 Stage Setup/compiler/test mapping            | ADR-0012 accepted；R-028/R-031 保持 open                       | Layout asset schema + explicit migration    |
+| 2026-08-05 | 7.5B/C   | Layout contract + migration    | completed  | `0c79132`               | schema check；144 frontend；113 Rust；v1 embedded layout migration/save-reopen | exact Layout ref；size/gap/pitch；TargetingScene contract      | Layout Draft editor + Canvas preview        |
+| 2026-08-05 | 7.5B     | Layout workflow + Stage remap  | completed  | `871b6cb`               | Draft/Canvas；compatible + 20×45 incompatible impact/remap；Undo/Redo/reopen   | R-028 closed；Published/Live 与旧 revisions 保持隔离           | Production Targeting runtime                |
+| 2026-08-05 | 7.5C     | Targeting editor + runtime     | completed  | `871b6cb`               | 30×30/1,000 fixtures；All→3×3→All；weighted；random seek；60Hz average gate    | immutable TargetSet/Scene；precomputed weights/index/cache     | native scoped acceptance                    |
+| 2026-08-05 | 7.5B/C   | Scoped final gate              | completed  | 本次交接提交            | `check:all`；150 frontend；119 Rust；debug app；native remap/reopen/keyboard   | R-031 closed；7.5D/7.5E 未开始                                 | 停止；等待显式 7.5D Goal                    |
 
 ## 21. Open Risks
 
@@ -1332,10 +1339,10 @@ flowchart LR
 | R-025 | 30×30 Canvas 无变化时持续重绘导致 WebView 主线程饥饿                                  | high     | 7           | dirty-frame rendering；批量轮廓；大矩阵关闭 glow；Canvas 回归                               | closed |
 | R-026 | 播放 tick 进入 preview session effect 依赖，导致切换 Effect 时反复 cleanup/restart    | high     | 7           | tick 使用 ref/独立 rAF；session 只在 context/snapshot identity 变化时重建                   | closed |
 | R-027 | Live 目录暴露内部 Cue authoring preview instance                                      | critical | 7           | Live catalog 过滤 `__effect_preview__` 与 `__cue__:`；原生与 Rust 回归                      | closed |
-| R-028 | Stage topology 修改被任意 Cue 硬阻塞，且没有 dependency impact、upgrade 或 remap 路径 | critical | 7.5         | LayoutPreset + Stage impact diff；显式 upgrade/remap/keep-old/create-new transaction        | open   |
+| R-028 | Stage topology 修改被任意 Cue 硬阻塞，且没有 dependency impact、upgrade 或 remap 路径 | critical | 7.5         | LayoutPreset + Stage impact diff；显式 upgrade/remap/keep-old/create-new transaction        | closed |
 | R-029 | Lab/Cue/Arrange 的作者时钟隐藏且语义分裂，首 BPM、固定 PPQ/4/4 造成错误预览           | high     | 7.5         | 共享 AuthoringTransport/PreviewClock；读取完整 TempoMap/TimeSignatureMap；原生回归          | closed |
 | R-030 | 最小 CueTimelinePanel 丢失 zoom、snap、resize、键盘和 typed automation 编辑           | critical | 7.5         | production ArrangementTimeline + CueClip adapter；rAF DOM preview；单 transaction           | closed |
-| R-031 | 无调用者的 V4 Stage Setup/Timeline reference shell 可能与当前资产工作区继续漂移       | medium   | 7.5         | 临时 CueTimelinePanel 已删除且共享 kernel 已迁移；Stage shell 等到 7.5B 迁移、7.5E 删除     | open   |
+| R-031 | 无调用者的 V4 Stage Setup/Timeline reference shell 可能与当前资产工作区继续漂移       | medium   | 7.5         | Timeline 与 Stage Setup 能力完成迁移和回归后删除旧 shell                                    | closed |
 
 ## 22. Deferred Backlog
 

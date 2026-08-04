@@ -5,6 +5,10 @@
 > - 审计方式：真实 Tauri 应用、当前持久化 Stage 7 工程、源码与资产 contract 对照
 > - 结论：Stage 7 的资产与运行时边界保持；Stage 7.5 必须先补齐作者工作流，再进入 Production Catalog
 
+> 2026-08-05 状态更新：本审计提出的 7.5A、7.5B、7.5C 替换路径已完成；Layout Library、Stage
+> impact/remap、TargetSet/TargetingScene 和旧 V4 Stage Setup 壳清理的验收见
+> [`stage7-5bc-acceptance.md`](./stage7-5bc-acceptance.md)。7.5D Production Catalog 未开始。
+
 ## 1. 总体判断
 
 Stage 7 已正确建立 Project、Stage、Effect、Cue、Arrangement、TargetSet、PreviewSession 和
@@ -111,6 +115,8 @@ Authoring Workflow Foundation，先建立共享预览时钟、生产级 CueClip 
 
 ### 7.5B：LayoutPreset 与 Stage 工作流
 
+状态：2026-08-05 completed。
+
 - 新增可版本化 LayoutPreset/Definition，并由 Project manifest 保存引用；Stage 显式引用选中 layout revision。
 - 左侧 Layout Library 分为 Basic 与 Generated/Advanced，但底层使用同一 contract：
   - Basic：matrix、circle、strip/bar、wall、frame，可由表单完整编辑。
@@ -121,6 +127,8 @@ Authoring Workflow Foundation，先建立共享预览时钟、生产级 CueClip 
   或创建新 Stage，不允许无反馈返回。
 
 ### 7.5C：Production Targeting
+
+状态：2026-08-05 completed。
 
 - 在稳定 Layout revision 上实现 Rows、Columns、R×C Zones、Checkerboard、Center/Edges、fixture IDs、Spatial
   Mask/weight 与 per-bar TargetingScene。

@@ -170,4 +170,8 @@ Stage 7、7.5A、Published/Live isolation 和 save/reopen tests。
 
 ## Related commits
 
-- Pending implementation commits on `codex/layout-presets-dynamic-targeting`.
+- `8402091`：接受 ADR-0012，并记录 Stage 7.5B/C contract/impact mapping。
+- `0c79132`：新增独立 LayoutDefinition、精确引用、schema/generated types 与显式 migration。
+- `871b6cb`：接通 Layout Library/Draft、Stage impact/remap、TargetSet/TargetingScene 编辑器、
+  compiler cache、确定性 render 与 V4 Stage Setup 壳清理。
+- `c99b8aa`：锁定 TargetingScene 在 phase continuity 开启/关闭时的分区边界相位行为。

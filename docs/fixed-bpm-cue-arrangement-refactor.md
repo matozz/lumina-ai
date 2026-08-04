@@ -247,6 +247,11 @@ Stage | Effect Lab | Cues | Arrange | Live / Rehearse | Advanced
 
 ## 10. Stage 7.5 的剩余范围
 
+2026-08-05 更新：下列列表中的 Authoring Workflow、LayoutPreset/Stage upgrade 与 Production Targeting
+已经由 Stage 7.5A–7.5C 完成并验证；权威交接见
+[`stage7-5bc-acceptance.md`](./stage7-5bc-acceptance.md)。剩余范围从 7.5D Production Effect/Cue Catalog
+开始，且不得在 7.5B/C Goal 中提前实施。
+
 2026-08-04 对 Stage 7 最终实现的真实 Tauri 复审确认：资产/revision/compiler 边界已经成立，不应重新打开；但新 contract 接入时采用的 Stage、Lab/Cues 和 Arrange 临时面板没有达到 Stage 5/6 的作者工作流能力。详细证据与替换边界见 [`stage7-workflow-audit.md`](./stage7-workflow-audit.md)。
 
 Stage 7.5 必须按以下顺序继续：
