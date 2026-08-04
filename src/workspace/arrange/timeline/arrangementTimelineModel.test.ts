@@ -12,6 +12,7 @@ import {
   moveCueClip,
   resizeCueClip,
   updateAutomationKeyframe,
+  visibleCueClips,
 } from "./arrangementTimelineModel";
 
 describe("Arrangement timeline model", () => {
@@ -107,5 +108,26 @@ describe("Arrangement timeline model", () => {
       moveCueClip(draft, "clip-a", 5_760);
     });
     expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 1);
+  });
+
+  it("mounts only viewport-adjacent CueClips from a 1,000-clip Arrangement", () => {
+    const clips = Array.from({ length: 1_000 }, (_, index) => ({
+      id: `clip-${index}`,
+      cue_ref: { id: "cue-a", revision: 1 },
+      start_tick: index * 960,
+      duration_tick: 480,
+    }));
+
+    expect(visibleCueClips(clips, 0, 7_680).map((clip) => clip.id)).toEqual([
+      "clip-0",
+      "clip-1",
+      "clip-2",
+      "clip-3",
+      "clip-4",
+      "clip-5",
+      "clip-6",
+      "clip-7",
+      "clip-8",
+    ]);
   });
 });

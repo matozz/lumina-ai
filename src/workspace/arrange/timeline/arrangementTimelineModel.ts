@@ -52,6 +52,12 @@ export function findCueClip(arrangement: ArrangementDocument, clipId: string) {
   );
 }
 
+export function visibleCueClips(clips: CueClip[], startTick: number, endTick: number) {
+  return clips.filter(
+    (clip) => clip.start_tick + clip.duration_tick >= startTick && clip.start_tick <= endTick,
+  );
+}
+
 export function moveCueClip(arrangement: ArrangementDocument, clipId: string, startTick: number) {
   const { track, clip } = findCueClip(arrangement, clipId);
   validateClipRange(arrangement, startTick, clip.duration_tick);

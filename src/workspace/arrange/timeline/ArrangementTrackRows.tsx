@@ -15,6 +15,7 @@ import {
   resizeCueClip,
   resolveAutomationOption,
   updateAutomationKeyframe,
+  visibleCueClips,
 } from "./arrangementTimelineModel";
 
 export type RunArrangementCommand = (
@@ -49,46 +50,44 @@ export function ArrangementTrackRows({
   return arrangement.tracks.map((track) => (
     <div key={track.id}>
       <div className="border-border relative h-16 border-b">
-        {(track.clips ?? [])
-          .filter(
-            (clip) =>
-              clip.start_tick + clip.duration_tick >= viewport.startBeat * arrangement.ppq &&
-              clip.start_tick <= viewport.endBeat * arrangement.ppq,
-          )
-          .map((clip) => (
-            <CueClipBlock
-              key={clip.id}
-              arrangementLength={arrangement.length_ticks}
-              clip={clip}
-              cueName={exactAsset(bundle.cues, clip.cue_ref)?.name ?? clip.cue_ref.id}
-              geometry={geometry}
-              selected={selectedClipId === clip.id}
-              viewportRef={viewportRef}
-              onSelect={() => onSelectClip(clip.id)}
-              onSnapPreview={onSnapPreview}
-              onCommitMove={(startTick) =>
-                runCommand("Move CueClip", `arrangement.clip.${clip.id}.move`, (draft) =>
-                  moveCueClip(draft, clip.id, startTick),
-                )
-              }
-              onCommitResize={(durationTick) =>
-                runCommand("Resize CueClip", `arrangement.clip.${clip.id}.resize`, (draft) =>
-                  resizeCueClip(draft, clip.id, durationTick),
-                )
-              }
-              onDelete={() =>
-                runCommand("Delete CueClip", `arrangement.clip.${clip.id}.delete`, (draft) => {
-                  deleteCueClip(draft, clip.id);
-                  onSelectClip(null);
-                })
-              }
-              onDuplicate={() =>
-                runCommand("Duplicate CueClip", `arrangement.clip.${clip.id}.duplicate`, (draft) =>
-                  onSelectClip(duplicateCueClip(draft, clip.id, geometry.snapTicks)),
-                )
-              }
-            />
-          ))}
+        {visibleCueClips(
+          track.clips ?? [],
+          viewport.startBeat * arrangement.ppq,
+          viewport.endBeat * arrangement.ppq,
+        ).map((clip) => (
+          <CueClipBlock
+            key={clip.id}
+            arrangementLength={arrangement.length_ticks}
+            clip={clip}
+            cueName={exactAsset(bundle.cues, clip.cue_ref)?.name ?? clip.cue_ref.id}
+            geometry={geometry}
+            selected={selectedClipId === clip.id}
+            viewportRef={viewportRef}
+            onSelect={() => onSelectClip(clip.id)}
+            onSnapPreview={onSnapPreview}
+            onCommitMove={(startTick) =>
+              runCommand("Move CueClip", `arrangement.clip.${clip.id}.move`, (draft) =>
+                moveCueClip(draft, clip.id, startTick),
+              )
+            }
+            onCommitResize={(durationTick) =>
+              runCommand("Resize CueClip", `arrangement.clip.${clip.id}.resize`, (draft) =>
+                resizeCueClip(draft, clip.id, durationTick),
+              )
+            }
+            onDelete={() =>
+              runCommand("Delete CueClip", `arrangement.clip.${clip.id}.delete`, (draft) => {
+                deleteCueClip(draft, clip.id);
+                onSelectClip(null);
+              })
+            }
+            onDuplicate={() =>
+              runCommand("Duplicate CueClip", `arrangement.clip.${clip.id}.duplicate`, (draft) =>
+                onSelectClip(duplicateCueClip(draft, clip.id, geometry.snapTicks)),
+              )
+            }
+          />
+        ))}
       </div>
       {track.automation_lanes?.map((lane) => {
         const option = resolveAutomationOption(bundle, arrangement, lane.target);
