@@ -518,6 +518,10 @@ impl CompiledTargetingScene {
             .and_then(|previous| self.steps.get(previous))
             .map_or(0, |previous| previous.end_tick)
     }
+
+    pub fn phase_reset_start_tick(&self, tick: u64) -> Option<u64> {
+        (!self.phase_continuity).then(|| self.step_start_tick(tick))
+    }
 }
 
 impl EffectInstance {
@@ -974,11 +978,11 @@ fn scalar_parameter(
 mod tests {
     use super::{
         deterministic_random, evaluate_effect_graph, query_effect_catalog, CompiledColorStop,
-        CompiledEffectGraph, CompiledEffectNode, CompiledEffectStep, Direction, EffectCatalog,
-        EffectCatalogQuery, EffectDefinition, EffectDefinitionHandle, EffectInstance,
-        EffectNodeHandle, EffectSource, MathOperation, MotionTag, OscillatorWaveform,
-        ParameterValue, SpatialBasis, StrobeRisk, COLOR_PARAMETER_ID, DIRECTION_PARAMETER_ID,
-        SPEED_PARAMETER_ID,
+        CompiledEffectGraph, CompiledEffectNode, CompiledEffectStep, CompiledTargetingScene,
+        CompiledTargetingStep, Direction, EffectCatalog, EffectCatalogQuery, EffectDefinition,
+        EffectDefinitionHandle, EffectInstance, EffectNodeHandle, EffectSource, MathOperation,
+        MotionTag, OscillatorWaveform, ParameterValue, SpatialBasis, StrobeRisk,
+        COLOR_PARAMETER_ID, DIRECTION_PARAMETER_ID, SPEED_PARAMETER_ID,
     };
     use crate::engine::attribute::resolve_attribute;
     use crate::engine::profile::{
@@ -986,6 +990,31 @@ mod tests {
         GENERIC_RGB_PROFILE_ID, INTENSITY_ATTRIBUTE, PAN_ATTRIBUTE,
     };
     use std::collections::HashMap;
+
+    #[test]
+    fn targeting_scene_phase_continuity_controls_step_boundary_reset() {
+        let mut scene = CompiledTargetingScene {
+            steps: vec![
+                CompiledTargetingStep {
+                    end_tick: 960,
+                    transition_ticks: 0,
+                    fixture_weights: vec![1.0],
+                },
+                CompiledTargetingStep {
+                    end_tick: 1_920,
+                    transition_ticks: 0,
+                    fixture_weights: vec![1.0],
+                },
+            ],
+            total_ticks: 1_920,
+            looped: false,
+            phase_continuity: true,
+        };
+
+        assert_eq!(scene.phase_reset_start_tick(1_440), None);
+        scene.phase_continuity = false;
+        assert_eq!(scene.phase_reset_start_tick(1_440), Some(960));
+    }
 
     #[test]
     fn typed_parameters_reject_wrong_types_and_ranges() {

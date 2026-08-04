@@ -73,14 +73,12 @@ pub fn render_at(
                         .effect_instances
                         .get(&phaser.id)
                         .and_then(|instance| instance.targeting_scene.as_ref())
-                        .filter(|scene| !scene.phase_continuity)
+                        .and_then(|scene| scene.phase_reset_start_tick(targeting_tick))
                         .map_or_else(
                             || phaser.phase_at(time),
-                            |scene| {
+                            |phase_start_tick| {
                                 phaser.phase_offset
-                                    + targeting_tick
-                                        .saturating_sub(scene.step_start_tick(targeting_tick))
-                                        as f64
+                                    + targeting_tick.saturating_sub(phase_start_tick) as f64
                                         / f64::from(ppq)
                                         * phaser.multiplier
                             },
@@ -388,10 +386,10 @@ fn resolve_timeline_at(
             let targeting_tick = target_time.ticks().saturating_sub(clip.start.ticks());
             let phase_start = instance
                 .and_then(|instance| instance.targeting_scene.as_ref())
-                .filter(|scene| !scene.phase_continuity)
-                .map(|scene| {
+                .and_then(|scene| scene.phase_reset_start_tick(targeting_tick))
+                .map(|phase_start_tick| {
                     clip.start
-                        .checked_add(scene.step_start_tick(targeting_tick))
+                        .checked_add(phase_start_tick)
                         .unwrap_or(target_time)
                 })
                 .unwrap_or(clip.start);

@@ -36,10 +36,9 @@ pub fn compute_frame(
                 .effect_instances
                 .get(&active.id)
                 .and_then(|instance| instance.targeting_scene.as_ref())
-                .filter(|scene| !scene.phase_continuity)
-                .map_or(active.accumulated_beat, |scene| {
-                    targeting_tick.saturating_sub(scene.step_start_tick(targeting_tick)) as f64
-                        / f64::from(ppq)
+                .and_then(|scene| scene.phase_reset_start_tick(targeting_tick))
+                .map_or(active.accumulated_beat, |phase_start_tick| {
+                    targeting_tick.saturating_sub(phase_start_tick) as f64 / f64::from(ppq)
                         * active.multiplier
                 });
             render::ResolvedPhaser {
