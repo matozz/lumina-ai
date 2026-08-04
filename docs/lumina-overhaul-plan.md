@@ -1182,7 +1182,7 @@ flowchart LR
 | ADR-0009 | OutputSink fail-safe 与 Blackout                          | 9     | pending                          |
 | ADR-0010 | TempoMap 与 Stage/Effect/Cue/Arrangement 资产边界         | 7     | accepted                         |
 | ADR-0011 | Authoring Preview Clock、Transport 与 CueClip Timeline    | 7.5   | accepted                         |
-| ADR-0012 | LayoutPreset、Stage upgrade 与动态 TargetSet/Spatial Mask | 7.5   | pending                          |
+| ADR-0012 | LayoutPreset、Stage upgrade 与动态 TargetSet/Spatial Mask | 7.5   | accepted                         |
 
 ## 20. Progress Ledger
 
@@ -1298,6 +1298,7 @@ flowchart LR
 | 2026-08-04 | 7.5A     | PreviewClock + Transport       | completed  | `cd90388`、`c5223c5`    | Local/Follow；3/4、4/4、多 tempo；workspace/Draft-Live tests；131 frontend     | R-029 closed；Preview 设置不进入 ProjectBundle                 | production ArrangementTimeline              |
 | 2026-08-04 | 7.5A     | Production ArrangementTimeline | completed  | `e8b2bdd`               | zoom/snap；CueClip move/resize/keyboard/inspector；typed automation；141 tests | R-030 closed；Pointer move 为 rAF DOM preview + 单 transaction | native app + save/reopen gate               |
 | 2026-08-04 | 7.5A     | Scoped final gate              | completed  | 本次交接提交            | build/format；strict Rust；debug app；真实 Lab→Cue→Arrange→Rehearse/reopen     | R-031 Arrangement half closed；Stage shell residual 保持 open  | 停止；等待显式 7.5B Goal                    |
+| 2026-08-05 | 7.5B/C   | ADR + contract/impact mapping  | completed  | 本切片提交              | 最新 `main@a725ee6`；指定文档与旧 Stage Setup/compiler/test mapping            | ADR-0012 accepted；R-028/R-031 保持 open                       | Layout asset schema + explicit migration    |
 
 ## 21. Open Risks
 
