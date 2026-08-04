@@ -1,0 +1,106 @@
+import { useMemo, useState } from "react";
+import { Braces, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { assetKey, exactAsset } from "@/document/projectModel";
+import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
+import type { WorkspaceId } from "@/stores/workspace";
+
+type AssetKind = "manifest" | "stage" | "effects" | "cues" | "arrangements";
+
+const assetKinds = [
+  { value: "manifest", label: "Project Manifest" },
+  { value: "stage", label: "Stage revisions" },
+  { value: "effects", label: "Effect revisions" },
+  { value: "cues", label: "Cue revisions" },
+  { value: "arrangements", label: "Arrangement revisions" },
+] satisfies Array<{ value: AssetKind; label: string }>;
+
+export function ProjectAssetInspector({ workspace }: { workspace: WorkspaceId }) {
+  const bundle = useProjectStore(projectSelectors.bundle);
+  const effectRef = useProjectStore(projectSelectors.selectedEffectRef);
+  const arrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
+  const sessions = useProjectStore((state) => state.arrangementSessions);
+  const [kind, setKind] = useState<AssetKind>("manifest");
+  const value = useMemo(() => {
+    if (kind === "manifest") return bundle.manifest;
+    if (kind === "stage") return bundle.stages;
+    return bundle[kind];
+  }, [bundle, kind]);
+  const effect = exactAsset(bundle.effects, effectRef);
+
+  const placeSingleEffect = () => {
+    if (!effectRef || !effect) return;
+    projectActions.createCue([effectRef], `Advanced · ${effect.name}`);
+    const cueRef = useProjectStore.getState().selectedCueRef;
+    const cue = exactAsset(useProjectStore.getState().bundle.cues, cueRef);
+    if (!cueRef || !cue) return;
+    const playheadTick = sessions[assetKey(arrangementRef)]?.playheadTick ?? 0;
+    projectActions.updateArrangement(
+      arrangementRef,
+      "Place single Effect as explicit Cue",
+      (arrangement) => {
+        const track = arrangement.tracks[0];
+        track.clips ??= [];
+        track.clips.push({
+          id: `${cue.id}-clip-${track.clips.length + 1}`,
+          cue_ref: cueRef,
+          start_tick: playheadTick,
+          duration_tick: cue.nominal_length_ticks,
+          source_offset_tick: 0,
+          playback: "loop",
+          layer: 0,
+          layer_overrides: [],
+        });
+      },
+    );
+  };
+
+  return (
+    <section className="bg-background flex h-full min-h-0 flex-col" aria-label="Advanced assets">
+      <div className="border-border bg-card flex h-10 shrink-0 items-center gap-2 border-b px-3">
+        <Braces className="text-muted-foreground" aria-hidden="true" />
+        <span className="text-xs font-medium">Independent asset inspector</span>
+        <Badge variant="outline">JSON read-only</Badge>
+        {workspace === "arrange" && (
+          <Button size="xs" variant="outline" disabled={!effect} onClick={placeSingleEffect}>
+            <Plus data-icon="inline-start" aria-hidden="true" />
+            Place selected Effect as Cue
+          </Button>
+        )}
+        <Select
+          items={assetKinds}
+          value={kind}
+          onValueChange={(next) => next && setKind(next as AssetKind)}
+        >
+          <SelectTrigger size="sm" className="ml-auto min-w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent alignItemWithTrigger={false}>
+            <SelectGroup>
+              {assetKinds.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </div>
+      <ScrollArea className="min-h-0 flex-1">
+        <pre className="text-foreground overflow-x-auto p-4 font-mono text-xs leading-relaxed">
+          {JSON.stringify(value, null, 2)}
+        </pre>
+      </ScrollArea>
+    </section>
+  );
+}

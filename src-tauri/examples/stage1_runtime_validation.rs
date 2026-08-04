@@ -157,12 +157,13 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
             intensity: resolve_attribute(profile, INTENSITY_ATTRIBUTE),
         })
         .collect();
-    let group = CompiledGroup {
-        id: "all".to_string(),
-        name: "All".to_string(),
-        sorted_fixture_ids: fixtures.iter().map(|fixture| fixture.id).collect(),
-        blocks: vec![1; fixture_count],
-    };
+    let group = CompiledGroup::new(
+        "all".to_string(),
+        "All".to_string(),
+        fixtures.iter().map(|fixture| fixture.id).collect(),
+        vec![1; fixture_count],
+        &fixtures,
+    );
     let definition = EffectDefinition {
         id: "benchmark.loaded".to_string(),
         name: "Loaded runtime".to_string(),
@@ -219,6 +220,9 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
         target_group_id: "all".to_string(),
         parameter_overrides: HashMap::new(),
         seed: EffectInstance::stable_seed("loaded"),
+        phase_offset: 0.0,
+        priority: 0,
+        mix_overrides: HashMap::new(),
         spatial_offsets: HashMap::from([(
             EffectNodeHandle::from_index(1).expect("spatial handle"),
             offsets,

@@ -230,7 +230,7 @@ flowchart TD
 | 4     | 可扩展 Effect Engine                        | completed   | 3      | EffectGraph/参数/空间相位可确定性求值       |
 | 5     | Timeline、Keyframe 与 Undo/Redo             | completed   | 4      | 多关键帧、seek/replay、无隐式数据破坏       |
 | 6     | 用户工作区与 Effect Lab                     | completed   | 5      | Stage→Effect→Arrange→Live 主路径可用        |
-| 7     | TempoMap 资产边界、Cue 与多 Arrangement     | not_started | 6      | 音频退出；Stage/Effect/Cue/Arrangement 解耦 |
+| 7     | TempoMap 资产边界、Cue 与多 Arrangement     | completed   | 6      | 音频退出；Stage/Effect/Cue/Arrangement 解耦 |
 | 7.5   | Production Layout、Catalog 与动态 Targeting | not_started | 7      | 30×30 分区与生产效果库通过视觉/性能验收     |
 | 8     | AI TempoMap 编排                            | not_started | 7、7.5 | AI 计划可验证、可解释、可预览、可撤销       |
 | 9     | 舞台输出、安全与 Release                    | not_started | 3、8   | Art-Net/sACN、故障保护和发布门槛完成        |
@@ -800,6 +800,14 @@ Stage 6 交付的一级工作区：
 
 ### 范围
 
+#### 7.0 Authoring Preview、Rehearsal 与 Live 边界
+
+- [x] Authoring Preview 使用当前 Draft、选择对象和 playhead，写入独立 preview sink，永不自动 Publish/Take Live。
+- [x] Rehearsal 显式选择 Draft 或 Published Revision；Live 只读取 Take Live 后的 immutable snapshot。
+- [x] PreviewSession/RenderContext 覆盖 Stage、Effect、Cue、Arrangement，并与 Live 复用 deterministic compiler/evaluator。
+- [x] Canvas 根据编辑上下文立即展示结果；切换工作区按明确规则保留资产、Arrangement、playhead、loop 和 preview mode。
+- [x] Draft Preview、Published Rehearsal、Live isolation 与工作区切换均有状态机、集成测试和真实 Tauri 证据。
+
 #### 7.1 音频能力退出
 
 > 以下基线清理已在 Stage 6 发布收口中完成；不表示 Stage 7 的资产/Cue 重构已经开始。
@@ -811,42 +819,42 @@ Stage 6 交付的一级工作区：
 
 #### 7.2 独立资产 Contract
 
-- [ ] 定义 ProjectManifest，只保存 Stage、Effect Library、Cue Library 和 Arrangement 引用。
-- [ ] StageDocument 只保存 Patch、Layout、Fixture Group 和 TargetSet。
-- [ ] EffectDefinition 保持 target-agnostic，不包含 Timeline。
-- [ ] 每类资产拥有独立 schema version、稳定 ID、revision 和 reference validator。
-- [ ] Arrangement 不内嵌 Layout、EffectGraph 或 CueDefinition。
+- [x] 定义 ProjectManifest，只保存 Stage、Effect Library、Cue Library 和 Arrangement 引用。
+- [x] StageDocument 只保存 Patch、Layout、Fixture Group 和 TargetSet。
+- [x] EffectDefinition 保持 target-agnostic，不包含 Timeline。
+- [x] 每类资产拥有独立 schema version、稳定 ID、revision 和 reference validator。
+- [x] Arrangement 不内嵌 Layout、EffectGraph 或 CueDefinition。
 
 #### 7.3 Cue 与 TargetSet
 
-- [ ] CueDefinition 组合一个或多个 Effect layer、TargetSet、参数、phase、seed、mix 和 trigger policy。
-- [ ] Cue 固定引用 Effect revision；更新 Effect 不静默改变既有 Cue。
-- [ ] Fixture Group 保持静态；All/Rows/Columns/R×C Zones/Checkerboard 等 TargetSet 在 compile 阶段预计算。
-- [ ] 支持硬切 TargetSet 和 fixture weight/spatial mask 边界，为 Stage 7.5 动态分区打底。
-- [ ] render 热路径使用 bitset/index/cache，不对 Group Vec 做逐灯线性查找。
+- [x] CueDefinition 组合一个或多个 Effect layer、TargetSet、参数、phase、seed、mix 和 trigger policy。
+- [x] Cue 固定引用 Effect revision；更新 Effect 不静默改变既有 Cue。
+- [x] Fixture Group 保持静态；All/Rows/Columns/R×C Zones/Checkerboard 等 TargetSet 在 compile 阶段预计算。
+- [x] 支持硬切 TargetSet 和 fixture weight/spatial mask 边界，为 Stage 7.5 动态分区打底。
+- [x] render 热路径使用 bitset/index/cache，不对 Group Vec 做逐灯线性查找。
 
 #### 7.4 TempoMap-driven Arrangement
 
-- [ ] Arrangement 保存 TempoMap、拍号、PPQ、长度、CueClip tracks、automation 和可选人工 marker。
-- [ ] CueClip 固定引用 Cue revision，只允许受控的实例 override。
-- [ ] 同一工程可创建、复制、重命名、选择和保存多个 Arrangement。
-- [ ] 修改 TempoMap 不移动 clip/keyframe 的 tick；Draft 修改不影响 Published/Live revision。
-- [ ] 单段/多段 tempo 的 tick ↔ seconds 边界、30 分钟等效漂移和随机 Seek 有自动化测试。
+- [x] Arrangement 保存 TempoMap、拍号、PPQ、长度、CueClip tracks、automation 和可选人工 marker。
+- [x] CueClip 固定引用 Cue revision，只允许受控的实例 override。
+- [x] 同一工程可创建、复制、重命名、选择和保存多个 Arrangement。
+- [x] 修改 TempoMap 不移动 clip/keyframe 的 tick；Draft 修改不影响 Published/Live revision。
+- [x] 单段/多段 tempo 的 tick ↔ seconds 边界、30 分钟等效漂移和随机 Seek 有自动化测试。
 
 #### 7.5 用户路径调整
 
-- [ ] 一级工作区变为 Stage、Effect Lab、Cues、Arrange、Live/Rehearse。
-- [ ] Cues 提供创建、组合、版本化、loop preview 和 capability/risk summary。
-- [ ] Arrange 提供 Arrangement selector、TempoMap/拍号/长度编辑和 Cue Library。
-- [ ] 普通用户主要放置 Cue；单 Effect placement 可保留为 Advanced 能力。
-- [ ] 原 Song、waveform、section 和 A/V diagnostics 不保留禁用占位。
+- [x] 一级工作区变为 Stage、Effect Lab、Cues、Arrange、Live/Rehearse。
+- [x] Cues 提供创建、组合、版本化、loop preview 和 capability/risk summary。
+- [x] Arrange 提供 Arrangement selector、TempoMap/拍号/长度编辑和 Cue Library。
+- [x] 普通用户主要放置 Cue；单 Effect placement 可保留为 Advanced 能力。
+- [x] 原 Song、waveform、section 和 A/V diagnostics 不保留禁用占位。
 
 #### 7.6 Migration 与 Compiler
 
-- [ ] 编译入口解析 project dependency graph，再生成选中 Arrangement 的 immutable snapshot。
-- [ ] 引用缺失、revision 过期、循环依赖和 capability 不匹配返回结构化 Diagnostic。
-- [ ] 旧 V1–V4 工程迁移到默认 Stage/Effect/Cue/Arrangement；如需读取 V5，输出显式 loss report。
-- [ ] Raw DSL/Advanced Mode 能查看独立资产，但不能重新把它们静默合并成单体配置。
+- [x] 编译入口解析 project dependency graph，再生成选中 Arrangement 的 immutable snapshot。
+- [x] 引用缺失、revision 过期、循环依赖和 capability 不匹配返回结构化 Diagnostic。
+- [x] 旧 V1–V4 工程迁移到默认 Stage/Effect/Cue/Arrangement；当前不存在已发布 V5，未引入其音频 runtime。
+- [x] Raw DSL/Advanced Mode 能查看独立资产，但不能重新把它们静默合并成单体配置。
 
 ### 用户验收路径
 
@@ -1027,18 +1035,18 @@ flowchart LR
 
 任何任务只有同时满足以下条件才可以在 Progress Ledger 标记完成：
 
-以下勾选状态已在 2026-08-02 的 Stage 4+5 scoped Goal 最终收口重新验证。
+以下勾选状态已在 2026-08-03 的 Stage 7 最终收口重新验证。
 
 - [x] 实现与当前 Stage 设计一致；若偏离，已有 ADR。
 - [x] 没有无关重构、调试日志、死代码或生成噪音。
 - [x] `pnpm build` 通过；仅保留既有 Vite 大 chunk 警告。
-- [x] 当前阶段规定的前端测试通过（27 files / 52 tests）。
+- [x] 当前阶段规定的前端测试通过（49 files / 116 tests）。
 - [x] `cargo fmt --check` 通过。
 - [x] `cargo clippy --all-targets -- -D warnings` 通过，或例外已记录。
-- [x] `cargo test` 通过且新增行为有测试（73 unit + 12 integration/contracts = 85）。
-- [x] 对实时路径的修改包含确定性、Seek/Replay 或性能验证（100 次随机 Seek、1,000 clip index、1,000 fixtures × 4 effect layers p95 481.125µs）。
-- [x] 对 schema 的修改包含 migration、生成文件和模板检查（V0→V1→V2→V3→V4 report、V1–V4 Rust→JSON Schema→TypeScript/capability artifacts、18/18 V4 模板 contract）。
-- [x] 对 UI 的修改包含空态、错误态、键盘路径和真实窗口验证（typed lane/keyframe/overlap/component states；原生 Tauri IPC、V4 `combined`、时间轴/typed automation 可访问性树与焦点交接）。
+- [x] `cargo test` 通过且新增行为有测试（101 unit + 12 integration/contracts = 113）。
+- [x] 对实时路径的修改包含确定性、Seek/Replay 或性能验证（30×30 All→3×3 zones→All、100 次随机 Seek、30 分钟多段 TempoMap、60Hz 平均帧预算）。
+- [x] 对 schema 的修改包含 migration、生成文件和模板检查（V1–V4→Project assets、6 类独立 contract、reference/revision/cycle/capability diagnostics）。
+- [x] 对 UI 的修改包含状态机、回归和真实窗口验证（Draft Preview、Published Rehearsal、Live isolation；最大化、1440×900、1100×720；完整无 Raw DSL 路径）。
 - [x] 相关文档、Stage checklist、ADR 和 Progress Ledger 已更新。
 - [x] 已进行自审并形成符合仓库规范的增量 commit。
 
@@ -1094,15 +1102,15 @@ flowchart LR
 
 ## Handoff
 
-- Current Stage: Stage 6 已满足退出条件并进入发布收口；新的 TempoMap/Cue Stage 7 保持 `not_started`；原 Audio/Song Stage 7 已取消。
-- Slice completed: 从产品树撤出旧 Audio/Song runtime；删除 Song 一级工作区、Song spine、音频空态及相关语义；保留四个 Stage 6 工作区、Advanced DSL 多段 TempoMap 和确定性 Transport。
-- Commits: Stage 6 closure `abd973a`；workspace 清理 `1f84fdc`；多段 TempoMap 长时回归 `27c2ebf`；方向文档 `13e28ed` 与本次最终 ledger 更新。
-- Files changed: Stage 6 workspace/navigation/store/tests、Timeline/Live 文案、多段 TempoMap 测试、ADR-0003/0006/0007、本路线文档及 `docs/fixed-bpm-cue-arrangement-refactor.md`。
-- Validation: `pnpm check:all`、`pnpm build`、schema check、strict Clippy 全通过；103 frontend tests；81 Rust unit + 12 contract/integration tests；30 分钟两段 TempoMap 往返误差 0。
-- ADRs added/updated: ADR-0007 保持 Superseded 并记录撤销边界；Stage 7 首切片仍应建立 ADR-0010，Stage 7.5 前建立 ADR-0011。
-- Risks opened/closed: R-020 因取消音频能力关闭；R-023 经 commit/tree/dependency/dead-code 审计关闭；R-006/R-021/R-022 留给下一 Goal。
-- Remaining exit criteria: Stage 6 范围无剩余产品退出项；只剩分支推送与 PR 合并操作。Cue/TargetSet/多 Arrangement 不属于本 Goal。
-- Recommended next slice: 本 Goal 合并后停止。新的 Goal 才能依据无音频 TempoMap 重构指引建立 ADR-0010 和独立资产 contract。
+- Current Stage: Stage 7 已满足全部退出条件；Stage 7.5 保持 `not_started`。
+- Slice completed: 完成独立 Project/Stage/Effect/Cue/Arrangement contract、PreviewSession/RenderContext、Cue/TargetSet compiler、多 Arrangement、V1–V4 migration 与 Cue-first 用户路径。
+- Commits: `61c150b`、`040e44b`、`9e67d53`、`8087071`、`004fca4`、`9de1301` 及本次文档收口提交。
+- Files changed: ADR-0010、独立 schema/generated types、Rust document/compiler/state/commands、Project/Preview stores、Stage/Effect/Cues/Arrange/Live 工作区、Canvas/Timeline 及验证证据。
+- Validation: `pnpm check:all`、`pnpm build`、debug Tauri app bundle 全通过；116 frontend tests；101 Rust unit + 12 contract/integration tests；30×30/随机 Seek/多段 TempoMap/迁移/revision pin 全通过。
+- ADRs added/updated: ADR-0010 Accepted 并补齐实现证据；ADR-0011 仍留给 Stage 7.5。
+- Risks opened/closed: R-006、R-021、R-022、R-024 因独立 revision、immutable TargetSet、snapshot context 与原生回归关闭；原生验收发现的 R-025–R-027 均在 `9de1301` 关闭。
+- Remaining exit criteria: Stage 7 无剩余退出项；只剩用户明确授权后的 push/PR/merge。Production Catalog、AI、音频和真实硬件输出均未开始。
+- Recommended next slice: 停止在 Stage 7，等待明确合并指令；不得自动进入 Stage 7.5。
 
 ## 19. ADR 规范
 
@@ -1129,138 +1137,150 @@ flowchart LR
 | ADR-0007 | Audio analysis 与缓存策略                         | 7     | superseded                       |
 | ADR-0008 | AI ArrangementPlan 与 provider 边界               | 8     | pending                          |
 | ADR-0009 | OutputSink fail-safe 与 Blackout                  | 9     | pending                          |
-| ADR-0010 | TempoMap 与 Stage/Effect/Cue/Arrangement 资产边界 | 7     | pending                          |
+| ADR-0010 | TempoMap 与 Stage/Effect/Cue/Arrangement 资产边界 | 7     | accepted                         |
 | ADR-0011 | Immutable TargetSet、动态分区与 Spatial Mask      | 7.5   | pending                          |
 
 ## 20. Progress Ledger
 
 每次追加一行，不删除历史记录。验证失败也应记录，并在后续行注明关闭。
 
-| Date       | Stage    | Slice                      | Status     | Commit(s)               | Validation                                                                   | Decisions/Risks                                                | Next                                        |
-| ---------- | -------- | -------------------------- | ---------- | ----------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------- |
-| 2026-08-02 | Planning | 建立分阶段改造规格         | completed  | docs commit             | 基线审计：`pnpm build` 通过；`cargo test` 为 0 tests                         | 当前系统定位为 PoC；实时可信度优先于 AI 功能                   | Stage 0：建立 Rust/Frontend 测试与 baseline |
-| 2026-08-02 | 0        | Rust 行为基线              | failed     | none                    | 首次严格 Clippy 发现 13 个存量 lint                                          | 等价机械清理，不改变 scheduler 行为                            | 清理后复跑全部 Rust 门槛                    |
-| 2026-08-02 | 0        | Rust 行为基线              | completed  | 本切片提交              | `pnpm build`；fmt；Clippy；`cargo test` 10 passed                            | 新增 R-009；无 ADR                                             | 前端测试 runner + 18 模板 contract          |
-| 2026-08-02 | 0        | 前端 runner + 模板         | failed     | none                    | jsdom 30 在 Node 20 无法启动 Vitest worker                                   | 记录 R-010；改用 Vitest 官方 happy-dom                         | 复跑前端与 Rust template contract           |
-| 2026-08-02 | 0        | 前端 runner + 模板         | completed  | 本切片提交              | `pnpm test` 3 passed；`cargo test` 11 passed；build                          | R-010 closed；18/18 双侧 contract                              | release benchmark + 10 秒 drift baseline    |
-| 2026-08-02 | 0        | release 基线               | completed  | 本切片提交              | 4 档 fixture + 18 模板 + bundle + 10 秒 drift                                | 新增 R-011；基线 source `f1cdbb0`                              | Transport/topology 回归夹具                 |
-| 2026-08-02 | 0        | Transport 回归夹具         | completed  | 本切片提交              | `cargo test` 16 passed；MockRuntime 生命周期可执行                           | 确认 R-001/R-009；新增 R-012                                   | toolchain + unified checks + CI             |
-| 2026-08-02 | 0        | toolchain + checks         | failed     | none                    | 4 个存量 Prettier 文件；sandbox 阻止 rustup temp                             | 纯格式化；记录 R-013                                           | 复跑统一前端/Rust 门槛                      |
-| 2026-08-02 | 0        | toolchain + checks         | completed  | 本切片提交              | `pnpm check`；同版本 stable `pnpm check:rust`                                | R-013 closed；CI 调用同一命令                                  | Diagnostic contract + UI error              |
-| 2026-08-02 | 0        | Diagnostic contract        | failed     | none                    | serde 错误文本断言错误地假设固定措辞/列号                                    | 改为验证稳定 code、path、hint 与实际位置                       | 修正断言并复跑统一门槛                      |
-| 2026-08-02 | 0        | Diagnostic contract        | completed  | 本切片提交              | `pnpm check:all`；真实窗口 error/keyboard/ARIA 验证                          | R-014 closed；Stage 0 全部退出条件满足                         | Stage 1：ADR-0001 + ManualClock/Transport   |
-| 2026-08-02 | 1        | Clock + Transport          | failed     | none                    | Cargo 不接受两个位置测试过滤参数                                             | 改为执行完整 Rust test suite                                   | 全量验证 Clock/Transport 与存量契约         |
-| 2026-08-02 | 1        | Clock + Transport          | completed  | 本切片提交              | `cargo test` 24 passed；ManualClock 10 分钟零累计误差                        | ADR-0001 accepted；既有 Stage 1 风险仍 open                    | 纯 `render_at` + Seek/template contract     |
-| 2026-08-02 | 1        | 纯 render_at               | completed  | 本切片提交              | `pnpm check:all`；28 Rust tests/contracts；18/18 模板                        | Seek=顺序求值；automation/multiplier 时间重建                  | revision snapshot + Frame publisher         |
-| 2026-08-02 | 1        | Snapshot + Frame           | completed  | 本切片提交              | `pnpm check:all`；32 Rust/8 frontend tests                                   | R-009 closed；revision/sequence/full resync                    | 单 Tokio worker + Transport integration     |
-| 2026-08-02 | 1        | 单 worker integration      | failed     | none                    | paused Tokio timer 每两次 advance 才调度 worker                              | 测试调度假设错误；改用真实 30/60/120Hz 窗口                    | 复跑实际发布频率与完整 checks               |
-| 2026-08-02 | 1        | 单 worker integration      | completed  | 本切片提交              | `pnpm check:all`；33 Rust/8 frontend tests                                   | R-012 closed；R-001/R-011 待压力验证                           | concurrent stress + loaded drift artifact   |
-| 2026-08-02 | 1        | loaded runtime 验证        | failed     | none                    | 精确 toolchain 受 managed sandbox 的 rustup temp 阻止                        | 复用 R-013 缓解：以同版本 stable 执行                          | stable release harness                      |
-| 2026-08-02 | 1        | loaded runtime 验证        | failed     | none                    | 整数纳秒 tick 使零漂移断言产生 0.012ms 量化误差                              | 基线容差定为 0.1ms，保留量化误差可观测值                       | 复跑 release harness                        |
-| 2026-08-02 | 1        | 并发 + loaded runtime      | completed  | 本切片提交              | stress 通过；36k ticks/18m evaluations；0.012ms drift                        | R-001/R-011 closed；artifact source `c73a54a`                  | Preview raw Frame + 真实 Tauri 验收         |
-| 2026-08-02 | 1        | 并发 + loaded runtime      | failed     | none                    | Prettier 无 Rust parser，组合命令在 checks 前退出                            | Rust 改由 Cargo fmt；前端/文档仍用 Prettier                    | 分离格式化后复跑统一门禁                    |
-| 2026-08-02 | 1        | 并发 + loaded runtime      | failed     | none                    | 未覆盖环境的 Cargo fmt 再触发 rustup temp 权限错误                           | 所有本地 Rust 命令统一显式使用同版本 stable                    | stable fmt 后复跑统一门禁                   |
-| 2026-08-02 | 1        | 并发 + loaded runtime      | completed  | 本切片提交              | `pnpm check:all`；34 Rust/8 frontend tests                                   | 格式化/toolchain 执行问题均关闭                                | Preview raw Frame + 真实 Tauri 验收         |
-| 2026-08-02 | 1        | Preview raw Frame          | completed  | 本切片提交              | `pnpm check:all`；34 Rust/10 frontend tests                                  | R-004 closed；移除隐式 80ms 插值                               | 真实 Tauri 窗口验收                         |
-| 2026-08-02 | 1        | 真实 Tauri 窗口验收        | failed     | none                    | 窗口/IPC 正常；宿主前台为 loginwindow，输入不可投递                          | 属验证环境限制；不改变 runtime 架构                            | 自动化 UI command + shutdown 回归           |
-| 2026-08-02 | 1        | UI + app lifecycle         | completed  | 本切片提交              | native revision 1/Quit 0；35 Rust/12 frontend tests                          | 临时观测日志已移除；无新产品风险                               | 最终 Stage 0+1 验证与文档收口               |
-| 2026-08-02 | 0+1      | scoped Goal 收口           | completed  | 本切片提交              | 35 Rust/12 frontend；build；S0/S1 release baselines                          | 全局 DoD 通过；Stage 2 保持 not_started                        | 停止，不进入 Stage 2                        |
-| 2026-08-02 | 0+1      | 新 Goal 交接审计           | failed     | none                    | frontend 12 passed；pinned Rust 因 sandbox rustup temp 被阻止                | 复用 R-013 同版本 stable 缓解，不视为产品回归                  | stable 工具链复跑门禁与 release harness     |
-| 2026-08-02 | 0+1      | 新 Goal 交接审计           | completed  | none                    | 35 Rust/12 frontend；S0/S1 release harness；0.012ms drift                    | Stage 0/1 全部退出条件确认；开始 Stage 2                       | ADR-0002 + versioned contract               |
-| 2026-08-02 | 2        | Versioned contract         | completed  | `0ce3cbb`               | schema check；38 Rust/14 frontend；18/18 V1 templates                        | ADR-0002 accepted；R-002 部分缓解仍 open                       | `ValidatedShow` + strict diagnostics        |
-| 2026-08-02 | 2        | Strict contract gate       | failed     | none                    | frontend/build 通过；strict Clippy 命中 `filter_map_bool_then`               | 等价迭代器写法修正；无行为或架构变化                           | 修正后重跑统一门禁                          |
-| 2026-08-02 | 2        | Strict contract gate       | completed  | `06e14e3`               | `check:all`；48 Rust/16 frontend；18/18 templates；0.012ms drift             | Stage 2 全部退出条件满足；R-002 closed                         | Stage 3 ADR-0004 + Fixture Profile          |
-| 2026-08-02 | 3        | Fixture Profile + V2       | failed     | none                    | Rust 52 项通过；frontend 2 项仍断言 schema V1                                | 测试期望未随 V2 更新；实现/contract 无回归                     | 修正版本断言并复跑统一门禁                  |
-| 2026-08-02 | 3        | Fixture Profile + V2       | completed  | 本切片提交              | `check:all`；52 Rust/16 frontend；18/18 V2 templates                         | ADR-0004 accepted；R-003 仍 open                               | typed Attribute Frame + Canvas adapter      |
-| 2026-08-02 | 3        | Attribute Frame            | failed     | none                    | 新增 range contract 初跑受 `expect_err` 的 `Debug` bound 阻止                | 测试写法问题；改为显式匹配 `Result`                            | 复跑 Rust 全目标测试                        |
-| 2026-08-02 | 3        | Attribute Frame gate       | failed     | none                    | 58 Rust/18 frontend 通过；Clippy 命中 `map_entry`                            | 等价改用 `entry().or_insert_with()`                            | 修正后复跑 strict Clippy 与完整门禁         |
-| 2026-08-02 | 3        | Attribute Frame            | completed  | 本切片提交              | build/fmt/Clippy/schema；58 Rust/18 frontend；0.012ms drift                  | 3.2/3.5 完成；R-003 仍 open                                    | attribute Mixer + conflict inspection       |
-| 2026-08-02 | 3        | Attribute Mixer            | failed     | none                    | 62/63 Rust 通过；LTP weight=1 的 LAB 路径把白色舍入为 254                    | 权重 0/1 必须精确保留端点                                      | 修正端点并复跑混合矩阵                      |
-| 2026-08-02 | 3        | Attribute Mixer            | completed  | 本切片提交              | 63 Rust/18 frontend；gates；0.012ms；81.44×                                  | R-003 closed；ADR-0004 补充稳定 layer stack                    | Null/Preview/Recording OutputSink           |
-| 2026-08-02 | 3        | OutputSink                 | failed     | none                    | Rust compile 指出 `mut` 修正误命中 play guard                                | 精确恢复 transport mutable guard                               | 复跑 Rust/Clippy 与 sink matrix             |
-| 2026-08-02 | 3        | OutputSink + close         | completed  | 本切片提交              | 68 Rust/18 frontend；gates；0.012ms；73.93×                                  | Stage 3 exits；ADR-0004；无新风险                              | scoped Goal 最终审计                        |
-| 2026-08-02 | 2+3      | scoped Goal 收口           | completed  | 本切片提交              | clean full gate；18/18 V2；36k ticks/18m evals                               | 全局 DoD 通过；Stage 4 not_started                             | 停止，不进入 Stage 4                        |
-| 2026-08-02 | 4        | Effect core 验证           | failed     | none                    | Cargo 不接受多个位置测试过滤参数                                             | 测试命令调用错误；改为执行完整 Rust suite                      | 全量验证 typed parameter 与兼容 runtime     |
-| 2026-08-02 | 4        | Effect identity            | completed  | 本切片提交              | 70 Rust tests/contracts；既有 18/18 V2 模板保持确定性                        | ADR-0005 accepted；新增 R-015                                  | V3 Definition/Instance document contract    |
-| 2026-08-02 | 4        | V3 frontend gate           | failed     | none                    | AJV strict mode 拒绝未知 `uint64` format                                     | seed 改为精确 16 位 hex，避免 JS 精度损失                      | 重生成 V3 artifacts 并复跑前端              |
-| 2026-08-02 | 4        | V3 Rust gate               | failed     | none                    | 62/63 unit 通过；旧断言仍期望 Phaser target path                             | 更新为 V3 EffectInstance 诊断路径                              | 复跑完整 Rust suite                         |
-| 2026-08-02 | 4        | V3 effect contract         | completed  | 本切片提交              | 72 Rust/18 frontend；18/18 V3 templates compile/render                       | typed ports/seed/migration；R-015 仍 open                      | typed graph evaluator                       |
-| 2026-08-02 | 4        | Typed graph evaluator      | completed  | 本切片提交              | `check:all`；72 Rust/18 frontend；18/18 V3 typed graph render                | topo IR/spatial cache；R-015 closed                            | Catalog query + compatibility/perf gates    |
-| 2026-08-02 | 4        | Catalog + Stage close      | completed  | 本切片提交              | `check:all`；74 Rust/18 frontend；18/18 migration golden；0.540ms p95        | Stage 4 exits；R-015 closed；ADR-0005                          | Stage 5 ADR-0003 + integer MusicalTime      |
-| 2026-08-02 | 5        | MusicalTime + TempoMap     | completed  | 本切片提交              | strict Clippy；77 Rust tests/contracts；整数/分段 tempo roundtrip            | ADR-0003 accepted；Stage 5 in_progress                         | V4 arrangement contract + pure tick query   |
-| 2026-08-02 | 5        | V4 arrangement contract    | completed  | 本切片提交              | `check:all`；80 Rust tests/contracts；18 frontend；18/18 V4 templates        | typed keyframes；无损 layer/reject；R-006 部分缓解             | pure indexed tick evaluator                 |
-| 2026-08-02 | 5        | Pure tick evaluator        | completed  | 本切片提交              | `check:all`；85 Rust tests/contracts；100 Seek；1,000 clip index             | 删除 stateful executor；四类 overlap；LAB/Hermite              | DocumentCommand + history                   |
-| 2026-08-02 | 5        | DocumentCommand/history    | completed  | 本切片提交              | `check:all`；85 Rust/25 frontend；atomic transactions；Undo/Redo             | drag 单 entry；save/dirty；AI Apply 边界                       | timeline DOM/performance + Automation UI    |
-| 2026-08-02 | 5        | Timeline DOM/performance   | completed  | 本切片提交              | `check:all`；85 Rust/33 frontend；1,000 clip DOM=24；零帧级 React commit     | DOM preview；viewport culling；playhead isolation；无新风险    | Automation UI + typed inspector             |
-| 2026-08-02 | 5        | Typed lane creation        | completed  | 本切片提交              | `check:all`；85 Rust/38 frontend；typed target/default/revision/menu         | target 唯一；override 优先；无新风险                           | multi-keyframe row + inspector              |
-| 2026-08-02 | 5        | Multi-keyframe UI          | failed     | none                    | 首次 `check:all` 仅发现 inspector Prettier 漂移                              | 纯格式化；无行为或架构变化                                     | 格式化后复跑完整门禁                        |
-| 2026-08-02 | 5        | Multi-keyframe UI          | completed  | 本切片提交              | `check:all`；85 Rust/48 frontend；DOM drag/box/keyboard/typed inspector      | 派生时间显示；单位只在 UI 转换；无新风险                       | overlap preview + final UI gate             |
-| 2026-08-02 | 5        | Overlap preview test       | failed     | none                    | 52 项中 51 通过；测试缺少 Base UI Popover root context                       | 测试夹具问题；实现路径无异常                                   | 补根上下文并复跑                            |
-| 2026-08-02 | 5        | Overlap preview            | completed  | 本切片提交              | `check:all`；85 Rust/52 frontend；preview→confirm→Undo                       | 半开边界；纯 plan；单 transaction；无新风险                    | final native UI + Stage 5 audit             |
-| 2026-08-02 | 5        | Native UI + focus gate     | completed  | `1e0f880`               | Tauri IPC/V4/Timeline/typed labels；pointer→keyboard focus；完整 checks      | 屏幕捕获权限仅限制截图留档；未形成产品风险                     | Stage 4+5 scoped Goal 最终审计              |
-| 2026-08-02 | 4+5      | scoped Goal 收口           | completed  | 本切片提交              | 85 Rust/52 frontend；18/18 V4；100 Seek；1k DOM=24；p95 481.125µs            | 全局 DoD 通过；R-006 residual accepted；Stage 6 not_started    | 停止，不进入 Stage 6                        |
-| 2026-08-02 | 5 后置   | 拖拽回归首测               | failed     | none                    | 20 项中 19 项通过；旧夹具把已占用 tick 当作可用 quarter                      | 测试期望错误；实现与 document contract 无回归                  | 修正夹具后复跑聚焦矩阵                      |
-| 2026-08-02 | 5 后置   | DOM preview + shared snap  | completed  | 本切片提交              | panel 17 files/32 tests；`pnpm build`；原生窗口/AX 基线                      | R-016 closed；stacked 在 Stage 5 `6ffce7a`                     | 最大化/min-size + layout matrix             |
-| 2026-08-02 | 5 后置   | Window + layout matrix     | completed  | 本切片提交              | window/panel/canvas 20 files/37 tests；build；max/common/min native AX       | R-017 closed；Ready 后执行真实非全屏 Zoom                      | popover 编辑键事件边界                      |
-| 2026-08-02 | 5 后置   | Popover keyboard boundary  | completed  | 本切片提交              | focused 3 files/5 tests；build；native input Delete/Backspace                | R-018 closed；portal 编辑事件不再进入时间轴快捷键              | 完整统一门禁                                |
-| 2026-08-02 | 5 后置   | Native drag matrix         | completed  | 本切片提交              | clip move/cross/resize；keyframe snap/cancel/play；Undo/Redo；screens        | preview=commit tick；move duration/width 保持                  | 完整统一门禁                                |
-| 2026-08-02 | 5 后置   | scoped Goal final gate     | completed  | 本切片提交              | Node 22.20.0；`check:all`；61 frontend；85 Rust；全门禁                      | R-016/R-017/R-018 closed；Stage 6 not_started                  | 停止；等待显式 publish 指令                 |
-| 2026-08-02 | 6        | 原生 UI 与路径基线         | completed  | 本切片提交              | 6 native screenshots；max/common/min；DSL→Timeline→Play/Stop                 | `main@3a690c0`；R-005 open；Stage 6 in_progress                | Workspace Shell + revisions                 |
-| 2026-08-02 | 6        | Snapshot separation 首测   | failed     | none                    | Rust compile：`expect_err` 需要 `ShowSnapshot: Debug`                        | 测试写法约束；产品类型不增加无用 `Debug`                       | 改为显式匹配 `Result`                       |
-| 2026-08-02 | 6        | Snapshot strict gate       | failed     | none                    | 3 behavior tests 通过；Clippy 命中 `needless_borrow`                         | 纯 lint；不改变 publish/activate 语义                          | 修正借用并复跑全 Rust 门禁                  |
-| 2026-08-02 | 6        | Draft/Published/Live core  | completed  | 本切片提交              | 74 Rust + contracts；strict Clippy；typecheck；concurrent reload stress      | ADR-0006 accepted；R-005 后端边界完成                          | 紧凑 Workspace Shell + revision UI          |
-| 2026-08-02 | 6        | Workspace Shell 首测       | failed     | none                    | typecheck 仅发现 shadcn ScrollArea 与 WorkspaceLibrary 未使用 import         | 删除无用 import；不改变组件行为                                | 重跑 frontend 与真实 Tauri                  |
-| 2026-08-02 | 6        | 紧凑 Workspace Shell       | completed  | 本切片提交              | `check:all`；67 frontend；86 Rust；4 native screenshots；AX names            | npm official shadcn；Canvas/Timeline 主区；Advanced DSL        | Stage Setup 可视化编辑                      |
-| 2026-08-02 | 6        | revision 原生点击复核      | failed     | none                    | 截图后窗口被宿主关闭；重启时 macOS 仅暴露 `loginwindow`，无可访问窗口        | backend + frontend integration 均通过；不判定产品回归          | 完整原生用户路径时重跑 Publish/Take live    |
-| 2026-08-02 | 6        | Stage Setup 组件首测       | failed     | none                    | happy-dom 缺 `getAnimations`；ScrollArea cleanup failed                      | 测试 mock layout；产品仍用真实 ScrollArea                      | 重跑全 frontend                             |
-| 2026-08-02 | 6        | Stage Setup + preview      | completed  | 本切片提交              | `check:all`；76 frontend；87 Rust；max/min native + test light               | generated profiles；pure preview；atomic command               | Effect Lab                                  |
-| 2026-08-02 | 6        | revision 原生点击复核      | completed  | 本切片提交              | native AX/screens：`r2/r1 → r2/r2`                                           | R-005 closed；显式 Publish 与 Take live                        | 保持边界进入 Effect Lab                     |
-| 2026-08-02 | 6        | Effect Lab 原生留证        | failed     | none                    | clean Tauri ×2；CG window 存在；AX 0 windows；capture 黑 WebView             | 无效截图不提交；browser 仅做 design QA                         | Arrange/Live 后重跑完整 native path         |
-| 2026-08-02 | 6        | Effect Lab implementation  | completed  | 本切片提交              | `check:all`；84 frontend；88 Rust；1440×900 browser QA                       | atomic revision；one compile；rAF Canvas；A/B cache            | Arrange placement                           |
-| 2026-08-02 | 6        | Arrange visual workflow    | completed  | 本切片提交              | `check:all`；90 frontend；88 Rust；1440×900 + min browser QA                 | Draft revision 直入 Library；native drag；统一 snap            | Live Pad + safety hierarchy                 |
-| 2026-08-02 | 6        | Live/Rehearse controls     | completed  | 本切片提交              | `check:all`；96 frontend；92 Rust；max/min browser QA                        | quantize queue；Blackout latch；Live catalog                   | layout + accessibility                      |
-| 2026-08-02 | 6        | Layout + accessibility     | completed  | 本切片提交              | `check:all`；101 frontend；92 Rust；1440×900/min browser QA                  | visual layout params；keyboard resize 单 Undo；无嵌套控件      | Stage 6 原生路径 closure                    |
-| 2026-08-03 | 6        | 原生路径收口复核           | blocked    | none                    | debug `.app` 构建通过；CG window `1512×892`；AX `0 windows`；系统锁屏        | GUI 会话锁定；不以 browser 截图替代 Tauri 证据                 | 解锁后重跑无 DSL 完整路径                   |
-| 2026-08-03 | 6        | 原生验收发现 Seek 缺口     | failed     | none                    | 其余无 DSL 路径通过；Pause `17.3.187`；ruler click 不改变 cursor             | Arrange 没有 transport seek handler；Stage 6 不提前关闭        | 增加 pointer/keyboard ruler Seek            |
-| 2026-08-03 | 6        | 原生无 DSL 路径 closure    | completed  | `abd973a`               | `check:all` 102 frontend/92 Rust；32 beats；automation；r2；Pad；Seek/Stop   | ruler 直接复用 backend transport；DOM ref playhead 保持        | Stage 6 发布收口                            |
-| 2026-08-03 | 7        | V5 song/tempo experiment   | superseded | `4f7a07c`（已反向提交） | 85 Rust unit；102 frontend；历史 30min equivalent mapping test               | ADR-0007 Superseded；不是当前 schema/capability                | 无；旧方向取消                              |
-| 2026-08-03 | 7        | 默认 debug DMG bundle      | superseded | none                    | `.app` 曾生成；`bundle_dmg.sh` 在本机 post-build 失败                        | 音频原生验收取消；R-019 仅保留给 Stage 9 release               | 无；旧方向取消                              |
-| 2026-08-03 | 7        | Audio import experiment    | superseded | `23ec7cf`（已反向提交） | 历史 checks 与 2 张截图已随反向提交退出产品树                                | AudioAsset/relink/waveform 不再是当前能力                      | 无；旧方向取消                              |
-| 2026-08-03 | 7        | Manual TempoMap experiment | superseded | `950fce0`（已反向提交） | 历史 DOM-ref drag 与 correction matrix                                       | beat-grid/downbeat/override UI 不再是当前能力                  | 无；旧方向取消                              |
-| 2026-08-03 | 7        | TempoMap 原生留证          | cancelled  | none                    | 未完成证据未进入分支                                                         | 产品方向取消，不再等待该 gate                                  | 无                                          |
-| 2026-08-03 | 7        | Shared audio transport     | cancelled  | none；WIP stash         | 未提交实现已隔离，未作为产品或测试证据                                       | Rodio follower/offset/calibration 从未进入交付树               | 无；旧方向取消                              |
-| 2026-08-03 | Planning | Stage 7 产品方向重置       | completed  | 文档切片                | 审计 Stage/Lab/Song/Arrange；核对 Stage 7 commits 与未提交 audio runtime     | Audio/Song 方向 superseded；TempoMap + Cue + 多 Arrangement    | 新 Goal：ADR-0010 + 资产 contract           |
-| 2026-08-03 | 6        | 旧 Audio/Song 安全撤出     | completed  | `1f84fdc`               | 45 frontend files / 103 tests；source/dependency/command/type/evidence audit | 恢复 stash 保留；交付分支从 `abd973a` 建立干净提交边界         | 多段 tempo 回归与最终门禁                   |
-| 2026-08-03 | 6        | 多段 TempoMap 长时回归     | completed  | `27c2ebf`               | 120→60 BPM 两段、30 分钟等效 tick↔microseconds 往返误差 0                    | TempoMap 是 Arrangement 时钟，不等同于音频能力                 | 统一门禁与原生复核                          |
-| 2026-08-03 | 6        | Stage 6 发布最终门禁       | completed  | 本切片提交              | `check:all`；103 frontend；93 Rust；schema；strict Clippy；build；debug app  | 原生四工作区无 Song；4×4→Pulse→Arrange→automation→Live；无 DSL | push、PR、merge 后停止                      |
+| Date       | Stage    | Slice                       | Status     | Commit(s)               | Validation                                                                    | Decisions/Risks                                                | Next                                        |
+| ---------- | -------- | --------------------------- | ---------- | ----------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------- |
+| 2026-08-02 | Planning | 建立分阶段改造规格          | completed  | docs commit             | 基线审计：`pnpm build` 通过；`cargo test` 为 0 tests                          | 当前系统定位为 PoC；实时可信度优先于 AI 功能                   | Stage 0：建立 Rust/Frontend 测试与 baseline |
+| 2026-08-02 | 0        | Rust 行为基线               | failed     | none                    | 首次严格 Clippy 发现 13 个存量 lint                                           | 等价机械清理，不改变 scheduler 行为                            | 清理后复跑全部 Rust 门槛                    |
+| 2026-08-02 | 0        | Rust 行为基线               | completed  | 本切片提交              | `pnpm build`；fmt；Clippy；`cargo test` 10 passed                             | 新增 R-009；无 ADR                                             | 前端测试 runner + 18 模板 contract          |
+| 2026-08-02 | 0        | 前端 runner + 模板          | failed     | none                    | jsdom 30 在 Node 20 无法启动 Vitest worker                                    | 记录 R-010；改用 Vitest 官方 happy-dom                         | 复跑前端与 Rust template contract           |
+| 2026-08-02 | 0        | 前端 runner + 模板          | completed  | 本切片提交              | `pnpm test` 3 passed；`cargo test` 11 passed；build                           | R-010 closed；18/18 双侧 contract                              | release benchmark + 10 秒 drift baseline    |
+| 2026-08-02 | 0        | release 基线                | completed  | 本切片提交              | 4 档 fixture + 18 模板 + bundle + 10 秒 drift                                 | 新增 R-011；基线 source `f1cdbb0`                              | Transport/topology 回归夹具                 |
+| 2026-08-02 | 0        | Transport 回归夹具          | completed  | 本切片提交              | `cargo test` 16 passed；MockRuntime 生命周期可执行                            | 确认 R-001/R-009；新增 R-012                                   | toolchain + unified checks + CI             |
+| 2026-08-02 | 0        | toolchain + checks          | failed     | none                    | 4 个存量 Prettier 文件；sandbox 阻止 rustup temp                              | 纯格式化；记录 R-013                                           | 复跑统一前端/Rust 门槛                      |
+| 2026-08-02 | 0        | toolchain + checks          | completed  | 本切片提交              | `pnpm check`；同版本 stable `pnpm check:rust`                                 | R-013 closed；CI 调用同一命令                                  | Diagnostic contract + UI error              |
+| 2026-08-02 | 0        | Diagnostic contract         | failed     | none                    | serde 错误文本断言错误地假设固定措辞/列号                                     | 改为验证稳定 code、path、hint 与实际位置                       | 修正断言并复跑统一门槛                      |
+| 2026-08-02 | 0        | Diagnostic contract         | completed  | 本切片提交              | `pnpm check:all`；真实窗口 error/keyboard/ARIA 验证                           | R-014 closed；Stage 0 全部退出条件满足                         | Stage 1：ADR-0001 + ManualClock/Transport   |
+| 2026-08-02 | 1        | Clock + Transport           | failed     | none                    | Cargo 不接受两个位置测试过滤参数                                              | 改为执行完整 Rust test suite                                   | 全量验证 Clock/Transport 与存量契约         |
+| 2026-08-02 | 1        | Clock + Transport           | completed  | 本切片提交              | `cargo test` 24 passed；ManualClock 10 分钟零累计误差                         | ADR-0001 accepted；既有 Stage 1 风险仍 open                    | 纯 `render_at` + Seek/template contract     |
+| 2026-08-02 | 1        | 纯 render_at                | completed  | 本切片提交              | `pnpm check:all`；28 Rust tests/contracts；18/18 模板                         | Seek=顺序求值；automation/multiplier 时间重建                  | revision snapshot + Frame publisher         |
+| 2026-08-02 | 1        | Snapshot + Frame            | completed  | 本切片提交              | `pnpm check:all`；32 Rust/8 frontend tests                                    | R-009 closed；revision/sequence/full resync                    | 单 Tokio worker + Transport integration     |
+| 2026-08-02 | 1        | 单 worker integration       | failed     | none                    | paused Tokio timer 每两次 advance 才调度 worker                               | 测试调度假设错误；改用真实 30/60/120Hz 窗口                    | 复跑实际发布频率与完整 checks               |
+| 2026-08-02 | 1        | 单 worker integration       | completed  | 本切片提交              | `pnpm check:all`；33 Rust/8 frontend tests                                    | R-012 closed；R-001/R-011 待压力验证                           | concurrent stress + loaded drift artifact   |
+| 2026-08-02 | 1        | loaded runtime 验证         | failed     | none                    | 精确 toolchain 受 managed sandbox 的 rustup temp 阻止                         | 复用 R-013 缓解：以同版本 stable 执行                          | stable release harness                      |
+| 2026-08-02 | 1        | loaded runtime 验证         | failed     | none                    | 整数纳秒 tick 使零漂移断言产生 0.012ms 量化误差                               | 基线容差定为 0.1ms，保留量化误差可观测值                       | 复跑 release harness                        |
+| 2026-08-02 | 1        | 并发 + loaded runtime       | completed  | 本切片提交              | stress 通过；36k ticks/18m evaluations；0.012ms drift                         | R-001/R-011 closed；artifact source `c73a54a`                  | Preview raw Frame + 真实 Tauri 验收         |
+| 2026-08-02 | 1        | 并发 + loaded runtime       | failed     | none                    | Prettier 无 Rust parser，组合命令在 checks 前退出                             | Rust 改由 Cargo fmt；前端/文档仍用 Prettier                    | 分离格式化后复跑统一门禁                    |
+| 2026-08-02 | 1        | 并发 + loaded runtime       | failed     | none                    | 未覆盖环境的 Cargo fmt 再触发 rustup temp 权限错误                            | 所有本地 Rust 命令统一显式使用同版本 stable                    | stable fmt 后复跑统一门禁                   |
+| 2026-08-02 | 1        | 并发 + loaded runtime       | completed  | 本切片提交              | `pnpm check:all`；34 Rust/8 frontend tests                                    | 格式化/toolchain 执行问题均关闭                                | Preview raw Frame + 真实 Tauri 验收         |
+| 2026-08-02 | 1        | Preview raw Frame           | completed  | 本切片提交              | `pnpm check:all`；34 Rust/10 frontend tests                                   | R-004 closed；移除隐式 80ms 插值                               | 真实 Tauri 窗口验收                         |
+| 2026-08-02 | 1        | 真实 Tauri 窗口验收         | failed     | none                    | 窗口/IPC 正常；宿主前台为 loginwindow，输入不可投递                           | 属验证环境限制；不改变 runtime 架构                            | 自动化 UI command + shutdown 回归           |
+| 2026-08-02 | 1        | UI + app lifecycle          | completed  | 本切片提交              | native revision 1/Quit 0；35 Rust/12 frontend tests                           | 临时观测日志已移除；无新产品风险                               | 最终 Stage 0+1 验证与文档收口               |
+| 2026-08-02 | 0+1      | scoped Goal 收口            | completed  | 本切片提交              | 35 Rust/12 frontend；build；S0/S1 release baselines                           | 全局 DoD 通过；Stage 2 保持 not_started                        | 停止，不进入 Stage 2                        |
+| 2026-08-02 | 0+1      | 新 Goal 交接审计            | failed     | none                    | frontend 12 passed；pinned Rust 因 sandbox rustup temp 被阻止                 | 复用 R-013 同版本 stable 缓解，不视为产品回归                  | stable 工具链复跑门禁与 release harness     |
+| 2026-08-02 | 0+1      | 新 Goal 交接审计            | completed  | none                    | 35 Rust/12 frontend；S0/S1 release harness；0.012ms drift                     | Stage 0/1 全部退出条件确认；开始 Stage 2                       | ADR-0002 + versioned contract               |
+| 2026-08-02 | 2        | Versioned contract          | completed  | `0ce3cbb`               | schema check；38 Rust/14 frontend；18/18 V1 templates                         | ADR-0002 accepted；R-002 部分缓解仍 open                       | `ValidatedShow` + strict diagnostics        |
+| 2026-08-02 | 2        | Strict contract gate        | failed     | none                    | frontend/build 通过；strict Clippy 命中 `filter_map_bool_then`                | 等价迭代器写法修正；无行为或架构变化                           | 修正后重跑统一门禁                          |
+| 2026-08-02 | 2        | Strict contract gate        | completed  | `06e14e3`               | `check:all`；48 Rust/16 frontend；18/18 templates；0.012ms drift              | Stage 2 全部退出条件满足；R-002 closed                         | Stage 3 ADR-0004 + Fixture Profile          |
+| 2026-08-02 | 3        | Fixture Profile + V2        | failed     | none                    | Rust 52 项通过；frontend 2 项仍断言 schema V1                                 | 测试期望未随 V2 更新；实现/contract 无回归                     | 修正版本断言并复跑统一门禁                  |
+| 2026-08-02 | 3        | Fixture Profile + V2        | completed  | 本切片提交              | `check:all`；52 Rust/16 frontend；18/18 V2 templates                          | ADR-0004 accepted；R-003 仍 open                               | typed Attribute Frame + Canvas adapter      |
+| 2026-08-02 | 3        | Attribute Frame             | failed     | none                    | 新增 range contract 初跑受 `expect_err` 的 `Debug` bound 阻止                 | 测试写法问题；改为显式匹配 `Result`                            | 复跑 Rust 全目标测试                        |
+| 2026-08-02 | 3        | Attribute Frame gate        | failed     | none                    | 58 Rust/18 frontend 通过；Clippy 命中 `map_entry`                             | 等价改用 `entry().or_insert_with()`                            | 修正后复跑 strict Clippy 与完整门禁         |
+| 2026-08-02 | 3        | Attribute Frame             | completed  | 本切片提交              | build/fmt/Clippy/schema；58 Rust/18 frontend；0.012ms drift                   | 3.2/3.5 完成；R-003 仍 open                                    | attribute Mixer + conflict inspection       |
+| 2026-08-02 | 3        | Attribute Mixer             | failed     | none                    | 62/63 Rust 通过；LTP weight=1 的 LAB 路径把白色舍入为 254                     | 权重 0/1 必须精确保留端点                                      | 修正端点并复跑混合矩阵                      |
+| 2026-08-02 | 3        | Attribute Mixer             | completed  | 本切片提交              | 63 Rust/18 frontend；gates；0.012ms；81.44×                                   | R-003 closed；ADR-0004 补充稳定 layer stack                    | Null/Preview/Recording OutputSink           |
+| 2026-08-02 | 3        | OutputSink                  | failed     | none                    | Rust compile 指出 `mut` 修正误命中 play guard                                 | 精确恢复 transport mutable guard                               | 复跑 Rust/Clippy 与 sink matrix             |
+| 2026-08-02 | 3        | OutputSink + close          | completed  | 本切片提交              | 68 Rust/18 frontend；gates；0.012ms；73.93×                                   | Stage 3 exits；ADR-0004；无新风险                              | scoped Goal 最终审计                        |
+| 2026-08-02 | 2+3      | scoped Goal 收口            | completed  | 本切片提交              | clean full gate；18/18 V2；36k ticks/18m evals                                | 全局 DoD 通过；Stage 4 not_started                             | 停止，不进入 Stage 4                        |
+| 2026-08-02 | 4        | Effect core 验证            | failed     | none                    | Cargo 不接受多个位置测试过滤参数                                              | 测试命令调用错误；改为执行完整 Rust suite                      | 全量验证 typed parameter 与兼容 runtime     |
+| 2026-08-02 | 4        | Effect identity             | completed  | 本切片提交              | 70 Rust tests/contracts；既有 18/18 V2 模板保持确定性                         | ADR-0005 accepted；新增 R-015                                  | V3 Definition/Instance document contract    |
+| 2026-08-02 | 4        | V3 frontend gate            | failed     | none                    | AJV strict mode 拒绝未知 `uint64` format                                      | seed 改为精确 16 位 hex，避免 JS 精度损失                      | 重生成 V3 artifacts 并复跑前端              |
+| 2026-08-02 | 4        | V3 Rust gate                | failed     | none                    | 62/63 unit 通过；旧断言仍期望 Phaser target path                              | 更新为 V3 EffectInstance 诊断路径                              | 复跑完整 Rust suite                         |
+| 2026-08-02 | 4        | V3 effect contract          | completed  | 本切片提交              | 72 Rust/18 frontend；18/18 V3 templates compile/render                        | typed ports/seed/migration；R-015 仍 open                      | typed graph evaluator                       |
+| 2026-08-02 | 4        | Typed graph evaluator       | completed  | 本切片提交              | `check:all`；72 Rust/18 frontend；18/18 V3 typed graph render                 | topo IR/spatial cache；R-015 closed                            | Catalog query + compatibility/perf gates    |
+| 2026-08-02 | 4        | Catalog + Stage close       | completed  | 本切片提交              | `check:all`；74 Rust/18 frontend；18/18 migration golden；0.540ms p95         | Stage 4 exits；R-015 closed；ADR-0005                          | Stage 5 ADR-0003 + integer MusicalTime      |
+| 2026-08-02 | 5        | MusicalTime + TempoMap      | completed  | 本切片提交              | strict Clippy；77 Rust tests/contracts；整数/分段 tempo roundtrip             | ADR-0003 accepted；Stage 5 in_progress                         | V4 arrangement contract + pure tick query   |
+| 2026-08-02 | 5        | V4 arrangement contract     | completed  | 本切片提交              | `check:all`；80 Rust tests/contracts；18 frontend；18/18 V4 templates         | typed keyframes；无损 layer/reject；R-006 部分缓解             | pure indexed tick evaluator                 |
+| 2026-08-02 | 5        | Pure tick evaluator         | completed  | 本切片提交              | `check:all`；85 Rust tests/contracts；100 Seek；1,000 clip index              | 删除 stateful executor；四类 overlap；LAB/Hermite              | DocumentCommand + history                   |
+| 2026-08-02 | 5        | DocumentCommand/history     | completed  | 本切片提交              | `check:all`；85 Rust/25 frontend；atomic transactions；Undo/Redo              | drag 单 entry；save/dirty；AI Apply 边界                       | timeline DOM/performance + Automation UI    |
+| 2026-08-02 | 5        | Timeline DOM/performance    | completed  | 本切片提交              | `check:all`；85 Rust/33 frontend；1,000 clip DOM=24；零帧级 React commit      | DOM preview；viewport culling；playhead isolation；无新风险    | Automation UI + typed inspector             |
+| 2026-08-02 | 5        | Typed lane creation         | completed  | 本切片提交              | `check:all`；85 Rust/38 frontend；typed target/default/revision/menu          | target 唯一；override 优先；无新风险                           | multi-keyframe row + inspector              |
+| 2026-08-02 | 5        | Multi-keyframe UI           | failed     | none                    | 首次 `check:all` 仅发现 inspector Prettier 漂移                               | 纯格式化；无行为或架构变化                                     | 格式化后复跑完整门禁                        |
+| 2026-08-02 | 5        | Multi-keyframe UI           | completed  | 本切片提交              | `check:all`；85 Rust/48 frontend；DOM drag/box/keyboard/typed inspector       | 派生时间显示；单位只在 UI 转换；无新风险                       | overlap preview + final UI gate             |
+| 2026-08-02 | 5        | Overlap preview test        | failed     | none                    | 52 项中 51 通过；测试缺少 Base UI Popover root context                        | 测试夹具问题；实现路径无异常                                   | 补根上下文并复跑                            |
+| 2026-08-02 | 5        | Overlap preview             | completed  | 本切片提交              | `check:all`；85 Rust/52 frontend；preview→confirm→Undo                        | 半开边界；纯 plan；单 transaction；无新风险                    | final native UI + Stage 5 audit             |
+| 2026-08-02 | 5        | Native UI + focus gate      | completed  | `1e0f880`               | Tauri IPC/V4/Timeline/typed labels；pointer→keyboard focus；完整 checks       | 屏幕捕获权限仅限制截图留档；未形成产品风险                     | Stage 4+5 scoped Goal 最终审计              |
+| 2026-08-02 | 4+5      | scoped Goal 收口            | completed  | 本切片提交              | 85 Rust/52 frontend；18/18 V4；100 Seek；1k DOM=24；p95 481.125µs             | 全局 DoD 通过；R-006 residual accepted；Stage 6 not_started    | 停止，不进入 Stage 6                        |
+| 2026-08-02 | 5 后置   | 拖拽回归首测                | failed     | none                    | 20 项中 19 项通过；旧夹具把已占用 tick 当作可用 quarter                       | 测试期望错误；实现与 document contract 无回归                  | 修正夹具后复跑聚焦矩阵                      |
+| 2026-08-02 | 5 后置   | DOM preview + shared snap   | completed  | 本切片提交              | panel 17 files/32 tests；`pnpm build`；原生窗口/AX 基线                       | R-016 closed；stacked 在 Stage 5 `6ffce7a`                     | 最大化/min-size + layout matrix             |
+| 2026-08-02 | 5 后置   | Window + layout matrix      | completed  | 本切片提交              | window/panel/canvas 20 files/37 tests；build；max/common/min native AX        | R-017 closed；Ready 后执行真实非全屏 Zoom                      | popover 编辑键事件边界                      |
+| 2026-08-02 | 5 后置   | Popover keyboard boundary   | completed  | 本切片提交              | focused 3 files/5 tests；build；native input Delete/Backspace                 | R-018 closed；portal 编辑事件不再进入时间轴快捷键              | 完整统一门禁                                |
+| 2026-08-02 | 5 后置   | Native drag matrix          | completed  | 本切片提交              | clip move/cross/resize；keyframe snap/cancel/play；Undo/Redo；screens         | preview=commit tick；move duration/width 保持                  | 完整统一门禁                                |
+| 2026-08-02 | 5 后置   | scoped Goal final gate      | completed  | 本切片提交              | Node 22.20.0；`check:all`；61 frontend；85 Rust；全门禁                       | R-016/R-017/R-018 closed；Stage 6 not_started                  | 停止；等待显式 publish 指令                 |
+| 2026-08-02 | 6        | 原生 UI 与路径基线          | completed  | 本切片提交              | 6 native screenshots；max/common/min；DSL→Timeline→Play/Stop                  | `main@3a690c0`；R-005 open；Stage 6 in_progress                | Workspace Shell + revisions                 |
+| 2026-08-02 | 6        | Snapshot separation 首测    | failed     | none                    | Rust compile：`expect_err` 需要 `ShowSnapshot: Debug`                         | 测试写法约束；产品类型不增加无用 `Debug`                       | 改为显式匹配 `Result`                       |
+| 2026-08-02 | 6        | Snapshot strict gate        | failed     | none                    | 3 behavior tests 通过；Clippy 命中 `needless_borrow`                          | 纯 lint；不改变 publish/activate 语义                          | 修正借用并复跑全 Rust 门禁                  |
+| 2026-08-02 | 6        | Draft/Published/Live core   | completed  | 本切片提交              | 74 Rust + contracts；strict Clippy；typecheck；concurrent reload stress       | ADR-0006 accepted；R-005 后端边界完成                          | 紧凑 Workspace Shell + revision UI          |
+| 2026-08-02 | 6        | Workspace Shell 首测        | failed     | none                    | typecheck 仅发现 shadcn ScrollArea 与 WorkspaceLibrary 未使用 import          | 删除无用 import；不改变组件行为                                | 重跑 frontend 与真实 Tauri                  |
+| 2026-08-02 | 6        | 紧凑 Workspace Shell        | completed  | 本切片提交              | `check:all`；67 frontend；86 Rust；4 native screenshots；AX names             | npm official shadcn；Canvas/Timeline 主区；Advanced DSL        | Stage Setup 可视化编辑                      |
+| 2026-08-02 | 6        | revision 原生点击复核       | failed     | none                    | 截图后窗口被宿主关闭；重启时 macOS 仅暴露 `loginwindow`，无可访问窗口         | backend + frontend integration 均通过；不判定产品回归          | 完整原生用户路径时重跑 Publish/Take live    |
+| 2026-08-02 | 6        | Stage Setup 组件首测        | failed     | none                    | happy-dom 缺 `getAnimations`；ScrollArea cleanup failed                       | 测试 mock layout；产品仍用真实 ScrollArea                      | 重跑全 frontend                             |
+| 2026-08-02 | 6        | Stage Setup + preview       | completed  | 本切片提交              | `check:all`；76 frontend；87 Rust；max/min native + test light                | generated profiles；pure preview；atomic command               | Effect Lab                                  |
+| 2026-08-02 | 6        | revision 原生点击复核       | completed  | 本切片提交              | native AX/screens：`r2/r1 → r2/r2`                                            | R-005 closed；显式 Publish 与 Take live                        | 保持边界进入 Effect Lab                     |
+| 2026-08-02 | 6        | Effect Lab 原生留证         | failed     | none                    | clean Tauri ×2；CG window 存在；AX 0 windows；capture 黑 WebView              | 无效截图不提交；browser 仅做 design QA                         | Arrange/Live 后重跑完整 native path         |
+| 2026-08-02 | 6        | Effect Lab implementation   | completed  | 本切片提交              | `check:all`；84 frontend；88 Rust；1440×900 browser QA                        | atomic revision；one compile；rAF Canvas；A/B cache            | Arrange placement                           |
+| 2026-08-02 | 6        | Arrange visual workflow     | completed  | 本切片提交              | `check:all`；90 frontend；88 Rust；1440×900 + min browser QA                  | Draft revision 直入 Library；native drag；统一 snap            | Live Pad + safety hierarchy                 |
+| 2026-08-02 | 6        | Live/Rehearse controls      | completed  | 本切片提交              | `check:all`；96 frontend；92 Rust；max/min browser QA                         | quantize queue；Blackout latch；Live catalog                   | layout + accessibility                      |
+| 2026-08-02 | 6        | Layout + accessibility      | completed  | 本切片提交              | `check:all`；101 frontend；92 Rust；1440×900/min browser QA                   | visual layout params；keyboard resize 单 Undo；无嵌套控件      | Stage 6 原生路径 closure                    |
+| 2026-08-03 | 6        | 原生路径收口复核            | blocked    | none                    | debug `.app` 构建通过；CG window `1512×892`；AX `0 windows`；系统锁屏         | GUI 会话锁定；不以 browser 截图替代 Tauri 证据                 | 解锁后重跑无 DSL 完整路径                   |
+| 2026-08-03 | 6        | 原生验收发现 Seek 缺口      | failed     | none                    | 其余无 DSL 路径通过；Pause `17.3.187`；ruler click 不改变 cursor              | Arrange 没有 transport seek handler；Stage 6 不提前关闭        | 增加 pointer/keyboard ruler Seek            |
+| 2026-08-03 | 6        | 原生无 DSL 路径 closure     | completed  | `abd973a`               | `check:all` 102 frontend/92 Rust；32 beats；automation；r2；Pad；Seek/Stop    | ruler 直接复用 backend transport；DOM ref playhead 保持        | Stage 6 发布收口                            |
+| 2026-08-03 | 7        | V5 song/tempo experiment    | superseded | `4f7a07c`（已反向提交） | 85 Rust unit；102 frontend；历史 30min equivalent mapping test                | ADR-0007 Superseded；不是当前 schema/capability                | 无；旧方向取消                              |
+| 2026-08-03 | 7        | 默认 debug DMG bundle       | superseded | none                    | `.app` 曾生成；`bundle_dmg.sh` 在本机 post-build 失败                         | 音频原生验收取消；R-019 仅保留给 Stage 9 release               | 无；旧方向取消                              |
+| 2026-08-03 | 7        | Audio import experiment     | superseded | `23ec7cf`（已反向提交） | 历史 checks 与 2 张截图已随反向提交退出产品树                                 | AudioAsset/relink/waveform 不再是当前能力                      | 无；旧方向取消                              |
+| 2026-08-03 | 7        | Manual TempoMap experiment  | superseded | `950fce0`（已反向提交） | 历史 DOM-ref drag 与 correction matrix                                        | beat-grid/downbeat/override UI 不再是当前能力                  | 无；旧方向取消                              |
+| 2026-08-03 | 7        | TempoMap 原生留证           | cancelled  | none                    | 未完成证据未进入分支                                                          | 产品方向取消，不再等待该 gate                                  | 无                                          |
+| 2026-08-03 | 7        | Shared audio transport      | cancelled  | none；WIP stash         | 未提交实现已隔离，未作为产品或测试证据                                        | Rodio follower/offset/calibration 从未进入交付树               | 无；旧方向取消                              |
+| 2026-08-03 | Planning | Stage 7 产品方向重置        | completed  | 文档切片                | 审计 Stage/Lab/Song/Arrange；核对 Stage 7 commits 与未提交 audio runtime      | Audio/Song 方向 superseded；TempoMap + Cue + 多 Arrangement    | 新 Goal：ADR-0010 + 资产 contract           |
+| 2026-08-03 | 6        | 旧 Audio/Song 安全撤出      | completed  | `1f84fdc`               | 45 frontend files / 103 tests；source/dependency/command/type/evidence audit  | 恢复 stash 保留；交付分支从 `abd973a` 建立干净提交边界         | 多段 tempo 回归与最终门禁                   |
+| 2026-08-03 | 6        | 多段 TempoMap 长时回归      | completed  | `27c2ebf`               | 120→60 BPM 两段、30 分钟等效 tick↔microseconds 往返误差 0                     | TempoMap 是 Arrangement 时钟，不等同于音频能力                 | 统一门禁与原生复核                          |
+| 2026-08-03 | 6        | Stage 6 发布最终门禁        | completed  | 本切片提交              | `check:all`；103 frontend；93 Rust；schema；strict Clippy；build；debug app   | 原生四工作区无 Song；4×4→Pulse→Arrange→automation→Live；无 DSL | push、PR、merge 后停止                      |
+| 2026-08-03 | 7        | ADR + 原生预览边界基线      | completed  | `61c150b`               | `main/origin@aa14242`；源码/依赖/命令无音频审计；真实 Tauri 四工作区走查      | ADR-0010 accepted；新增 R-024                                  | 独立资产 schema + PreviewSession contract   |
+| 2026-08-03 | 7        | 独立资产 schema + refs      | completed  | `040e44b`               | 6 independent schemas；Rust 9 / frontend 3；schema check；typecheck；Clippy   | 缺失/stale/cycle/capability 结构化诊断；R-006 部分缓解         | Project compiler + TargetSet cache          |
+| 2026-08-03 | 7        | Cue compiler + TargetSet    | completed  | `9e67d53`               | 30×30 All/3×3 zones；revision pin；100 random Seek；60Hz 平均预算             | bitset/index/partition/weight cache；R-021/R-022 后端闭环      | PreviewSession + migration                  |
+| 2026-08-03 | 7        | Preview + revision boundary | completed  | `8087071`               | Draft/Rehearsal/Live 状态机；V1–V4 migration；多 Arrangement save/reopen      | compiler/evaluator 复用；snapshot 与 sink 分离；R-024 后端闭环 | Cue-first 工作区                            |
+| 2026-08-03 | 7        | Cue-first 用户路径          | completed  | `004fca4`               | Cues/Arrange/Live；PointerEvents 单 transaction；frontend 114 tests           | 普通路径放 Cue；Advanced 显式单层 Cue wrapper                  | 真实 Tauri 无 DSL 验收                      |
+| 2026-08-03 | 7        | 原生 30×30 路径首测         | failed     | none                    | 900 灯 Canvas 饥饿；播放时第二 Effect 重启 preview；Live 目录重复实例         | 新增 R-025/R-026/R-027；不以自动 Take Live 规避                | 修复并增加回归                              |
+| 2026-08-03 | 7        | 原生预览性能与隔离修复      | completed  | `9de1301`               | dirty Canvas；Effect 切换回归；Live catalog 只含 2 个 Arrangement 实例        | R-025/R-026/R-027 closed                                       | 完整重开、窗口与 snapshot gate              |
+| 2026-08-03 | 7        | Stage 7 最终收口            | completed  | 本切片提交              | `check:all`；116 frontend；113 Rust；schema/Clippy/build；真实 Tauri 窗口矩阵 | R-006/R-021/R-022/R-024 closed；Stage 7.5 未开始               | 停止，等待显式合并                          |
 
 ## 21. Open Risks
 
-| ID    | Risk                                                | Severity | Owner Stage | Mitigation                                                                          | Status |
-| ----- | --------------------------------------------------- | -------- | ----------- | ----------------------------------------------------------------------------------- | ------ |
-| R-001 | scheduler 重复线程或锁反转导致演出冻结              | critical | 1           | 单 worker、统一锁策略、压力测试                                                     | closed |
-| R-002 | schema 漂移导致用户/AI 字段静默丢失                 | critical | 2           | Rust 权威、strict semantic gate、generated schema/TS/capability、AJV contract       | closed |
-| R-003 | 所有属性使用 max 混合产生错误颜色/运动              | high     | 3           | 属性级 HTP/LTP/Add/Multiply/Mask、稳定 tie-break 与 conflict inspection             | closed |
-| R-004 | Preview 80ms 插值掩盖真实频闪输出                   | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                                                | closed |
-| R-005 | Raw DSL 热编译破坏 Live active show                 | critical | 6           | immutable revisions；Draft preview；显式 Publish 与 Take live；native AX 复核       | closed |
-| R-006 | 单体配置与不稳定资产引用导致 AI 编排不可复现        | high     | 7           | 独立 Stage/Effect/Cue/Arrangement revision；版本化 TempoMap；deterministic compiler | open   |
-| R-007 | AI 直接生成无效或不安全效果                         | critical | 8           | typed plan、capability、validator、safety budget                                    | open   |
-| R-008 | 硬件故障时无法自动 Blackout                         | critical | 9           | 独立 safety controller 和 fail-safe tests                                           | open   |
-| R-009 | 首帧或 fixture topology 变化被 zip diff 丢弃        | high     | 1           | revision/topology 强制 full frame，并按 fixture ID diff                             | closed |
-| R-010 | jsdom 30 无法在固定 Node 20 启动测试 worker         | medium   | 0           | 改用 Vitest 官方支持的 happy-dom                                                    | closed |
-| R-011 | timer-only 漂移基线未覆盖 Tauri/锁/render load      | medium   | 1           | ManualClock 确定性测试 + loaded runtime 压力测试                                    | closed |
-| R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失  | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command                                       | closed |
-| R-013 | managed sandbox 内精确 toolchain 恢复下载超时       | low      | 0           | 同版本 stable 完整验证；干净 CI 执行 pin                                            | closed |
-| R-014 | compile/bridge 异常只写 console，用户无法定位       | high     | 0           | 稳定 Diagnostic envelope、前端 normalizer 与错误 Alert                              | closed |
-| R-015 | legacy Phaser 与 EffectGraph 过渡期存在双重 IR      | high     | 4           | typed graph evaluator 已替代 CompiledPhaser；旧 evaluator/runtime field 删除        | closed |
-| R-016 | 高频拖拽预览、分裂 snap 与 width 清空导致时间轴漂移 | high     | 5 后置      | rAF DOM preview、共享 TimelineGeometry、源快照、单 transaction 与聚焦回归           | closed |
-| R-017 | 默认小窗口与布局约束不足压缩或裁切主编辑区          | medium   | 5 后置      | 默认最大化、合理 min-size、1440×900/最小窗口布局矩阵和真实 Tauri 验收               | closed |
-| R-018 | popover 输入编辑键冒泡后误删 clip/keyframe/lane     | high     | 5 后置      | 编辑目标识别；clip/keyframe/lane/history shortcuts guard；unit + native test        | closed |
-| R-019 | macOS 默认 debug DMG bundler 在 app 生成后失败      | medium   | 9           | app-only bundle 已通过；发布阶段统一诊断默认 DMG post-build                         | open   |
-| R-020 | 真实 CoreAudio 设备与常见 codec 播放尚缺原生留证    | medium   | 7           | 产品方向移除音频导入、播放和分析，不再需要该验收                                    | closed |
-| R-021 | Effect/Cue revision 更新静默改写既有 Arrangement    | critical | 7           | 所有引用固定 ID+revision；显式 upgrade/diff；Published Snapshot immutable           | open   |
-| R-022 | 播放中修改 Group membership 破坏 Seek/Replay 确定性 | high     | 7/7.5       | immutable TargetSet；compile bitset；连续变化使用 Spatial Mask/Weight               | open   |
-| R-023 | 已停止的 Stage 7 音频改动混入无音频新基线           | high     | 7           | 从 `abd973a` 形成干净交付分支；提交、依赖、命令、source 与 evidence 均已审计        | closed |
+| ID    | Risk                                                                               | Severity | Owner Stage | Mitigation                                                                                  | Status |
+| ----- | ---------------------------------------------------------------------------------- | -------- | ----------- | ------------------------------------------------------------------------------------------- | ------ |
+| R-001 | scheduler 重复线程或锁反转导致演出冻结                                             | critical | 1           | 单 worker、统一锁策略、压力测试                                                             | closed |
+| R-002 | schema 漂移导致用户/AI 字段静默丢失                                                | critical | 2           | Rust 权威、strict semantic gate、generated schema/TS/capability、AJV contract               | closed |
+| R-003 | 所有属性使用 max 混合产生错误颜色/运动                                             | high     | 3           | 属性级 HTP/LTP/Add/Multiply/Mask、稳定 tie-break 与 conflict inspection                     | closed |
+| R-004 | Preview 80ms 插值掩盖真实频闪输出                                                  | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                                                        | closed |
+| R-005 | Raw DSL 热编译破坏 Live active show                                                | critical | 6           | immutable revisions；Draft preview；显式 Publish 与 Take live；native AX 复核               | closed |
+| R-006 | 单体配置与不稳定资产引用导致 AI 编排不可复现                                       | high     | 7           | 独立 Stage/Effect/Cue/Arrangement revision；版本化 TempoMap；deterministic compiler         | closed |
+| R-007 | AI 直接生成无效或不安全效果                                                        | critical | 8           | typed plan、capability、validator、safety budget                                            | open   |
+| R-008 | 硬件故障时无法自动 Blackout                                                        | critical | 9           | 独立 safety controller 和 fail-safe tests                                                   | open   |
+| R-009 | 首帧或 fixture topology 变化被 zip diff 丢弃                                       | high     | 1           | revision/topology 强制 full frame，并按 fixture ID diff                                     | closed |
+| R-010 | jsdom 30 无法在固定 Node 20 启动测试 worker                                        | medium   | 0           | 改用 Vitest 官方支持的 happy-dom                                                            | closed |
+| R-011 | timer-only 漂移基线未覆盖 Tauri/锁/render load                                     | medium   | 1           | ManualClock 确定性测试 + loaded runtime 压力测试                                            | closed |
+| R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失                                 | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command                                               | closed |
+| R-013 | managed sandbox 内精确 toolchain 恢复下载超时                                      | low      | 0           | 同版本 stable 完整验证；干净 CI 执行 pin                                                    | closed |
+| R-014 | compile/bridge 异常只写 console，用户无法定位                                      | high     | 0           | 稳定 Diagnostic envelope、前端 normalizer 与错误 Alert                                      | closed |
+| R-015 | legacy Phaser 与 EffectGraph 过渡期存在双重 IR                                     | high     | 4           | typed graph evaluator 已替代 CompiledPhaser；旧 evaluator/runtime field 删除                | closed |
+| R-016 | 高频拖拽预览、分裂 snap 与 width 清空导致时间轴漂移                                | high     | 5 后置      | rAF DOM preview、共享 TimelineGeometry、源快照、单 transaction 与聚焦回归                   | closed |
+| R-017 | 默认小窗口与布局约束不足压缩或裁切主编辑区                                         | medium   | 5 后置      | 默认最大化、合理 min-size、1440×900/最小窗口布局矩阵和真实 Tauri 验收                       | closed |
+| R-018 | popover 输入编辑键冒泡后误删 clip/keyframe/lane                                    | high     | 5 后置      | 编辑目标识别；clip/keyframe/lane/history shortcuts guard；unit + native test                | closed |
+| R-019 | macOS 默认 debug DMG bundler 在 app 生成后失败                                     | medium   | 9           | app-only bundle 已通过；发布阶段统一诊断默认 DMG post-build                                 | open   |
+| R-020 | 真实 CoreAudio 设备与常见 codec 播放尚缺原生留证                                   | medium   | 7           | 产品方向移除音频导入、播放和分析，不再需要该验收                                            | closed |
+| R-021 | Effect/Cue revision 更新静默改写既有 Arrangement                                   | critical | 7           | 所有引用固定 ID+revision；显式 upgrade/diff；Published Snapshot immutable                   | closed |
+| R-022 | 播放中修改 Group membership 破坏 Seek/Replay 确定性                                | high     | 7/7.5       | immutable TargetSet；compile bitset；连续变化使用 Spatial Mask/Weight                       | closed |
+| R-023 | 已停止的 Stage 7 音频改动混入无音频新基线                                          | high     | 7           | 从 `abd973a` 形成干净交付分支；提交、依赖、命令、source 与 evidence 均已审计                | closed |
+| R-024 | 隐式 Canvas context 混用 Draft layout/Live frame，并在切换时重置 preview session   | critical | 7           | 独立 PreviewSession/RenderContext；layout+frame 原子绑定 snapshot identity；状态机/原生回归 | closed |
+| R-025 | 30×30 Canvas 无变化时持续重绘导致 WebView 主线程饥饿                               | high     | 7           | dirty-frame rendering；批量轮廓；大矩阵关闭 glow；Canvas 回归                               | closed |
+| R-026 | 播放 tick 进入 preview session effect 依赖，导致切换 Effect 时反复 cleanup/restart | high     | 7           | tick 使用 ref/独立 rAF；session 只在 context/snapshot identity 变化时重建                   | closed |
+| R-027 | Live 目录暴露内部 Cue authoring preview instance                                   | critical | 7           | Live catalog 过滤 `__effect_preview__` 与 `__cue__:`；原生与 Rust 回归                      | closed |
 
 ## 22. Deferred Backlog
 

@@ -301,7 +301,7 @@ struct ParameterContract {
     range: Option<(f64, f64)>,
 }
 
-type DefinitionParameters = HashMap<String, (u32, HashMap<String, ParameterContract>)>;
+type DefinitionParameters = HashMap<(String, u32), HashMap<String, ParameterContract>>;
 type InstanceParameters = HashMap<String, HashMap<String, ParameterContract>>;
 
 fn validate_effect_definitions(
@@ -311,15 +311,16 @@ fn validate_effect_definitions(
     let mut definitions = HashMap::new();
     for (index, definition) in document.effect_definitions.iter().enumerate() {
         let path = format!("effect_definitions[{index}]");
-        if definition.id.trim().is_empty() || definitions.contains_key(&definition.id) {
+        let identity = (definition.id.clone(), definition.revision);
+        if definition.id.trim().is_empty() || definitions.contains_key(&identity) {
             diagnostics.push(Diagnostic::error(
                 DOC_DUPLICATE_ID,
                 format!("{path}.id"),
                 format!(
-                    "Effect definition ID must be non-empty and unique: {:?}.",
-                    definition.id
+                    "Effect definition identity must be non-empty and unique: {:?} revision {}.",
+                    definition.id, definition.revision
                 ),
-                "Use a stable unique definition ID separate from its display name.",
+                "Use a stable definition ID and revision pair separate from its display name.",
             ));
         }
         if definition.revision == 0 {
@@ -351,7 +352,7 @@ fn validate_effect_definitions(
             format!("{path}.catalog.colorfulness"),
             diagnostics,
         );
-        definitions.insert(definition.id.clone(), (definition.revision, parameters));
+        definitions.insert(identity, parameters);
     }
     definitions
 }
@@ -468,26 +469,27 @@ fn validate_effect_instances(
                 "Define the target group or update the effect instance target.",
             ));
         }
-        let Some((revision, parameters)) = definitions.get(&instance.definition_id) else {
-            diagnostics.push(Diagnostic::error(
-                DOC_EFFECT_DEFINITION_NOT_FOUND,
-                format!("{path}.definition_id"),
-                format!("Effect definition not found: {}", instance.definition_id),
-                "Reference an effect definition contained in this document or catalog.",
-            ));
-            continue;
-        };
-        if instance.definition_revision != *revision {
+        let identity = (instance.definition_id.clone(), instance.definition_revision);
+        let Some(parameters) = definitions.get(&identity) else {
+            let available_revisions: Vec<_> = definitions
+                .keys()
+                .filter_map(|(id, revision)| (id == &instance.definition_id).then_some(*revision))
+                .collect();
             diagnostics.push(Diagnostic::error(
                 DOC_EFFECT_DEFINITION_NOT_FOUND,
                 format!("{path}.definition_revision"),
-                format!(
-                    "Effect definition revision {} is not available; document contains revision {revision}.",
-                    instance.definition_revision
-                ),
-                "Pin the available revision or explicitly update the instance.",
+                if available_revisions.is_empty() {
+                    format!("Effect definition not found: {}", instance.definition_id)
+                } else {
+                    format!(
+                        "Effect definition revision {} is not available; document contains revisions {available_revisions:?}.",
+                        instance.definition_revision
+                    )
+                },
+                "Reference an exact effect definition ID and revision contained in this document.",
             ));
-        }
+            continue;
+        };
         for (parameter_id, value) in &instance.parameter_overrides {
             let Some(value_type) = parameters.get(parameter_id) else {
                 diagnostics.push(Diagnostic::error(

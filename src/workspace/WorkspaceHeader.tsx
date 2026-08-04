@@ -14,11 +14,13 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { engineActions, engineSelectors, useEngineStore } from "@/stores/engine";
+import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/stores/workspace";
 
 export function WorkspaceHeader() {
-  const document = useEngineStore(engineSelectors.parsedDsl);
-  const isDirty = useEngineStore(engineSelectors.isDocumentDirty);
+  const bundle = useProjectStore(projectSelectors.bundle);
+  const arrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
+  const isDirty = useProjectStore(projectSelectors.isDirty);
   const compileStatus = useEngineStore(engineSelectors.compileStatus);
   const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
   const libraryVisible = useWorkspaceStore(workspaceSelectors.libraryVisible);
@@ -30,18 +32,19 @@ export function WorkspaceHeader() {
   const busy = publishStatus === "publishing" || publishStatus === "activating";
 
   const publishDraft = async () => {
-    if (!document || busy) return;
+    if (busy) return;
     workspaceActions.setPublishStatus("publishing", "Publishing validated revision…");
     engineActions.setCompileStatus("compiling");
     try {
-      const result = await engine.publishDSL(JSON.stringify(document));
-      engineActions.setCompileResult(result);
+      const result = await engine.publishProject(bundle, arrangementRef);
       engineActions.setCompileErrors(result.errors);
       engineActions.setCompileStatus(result.success ? "success" : "error");
       if (!result.success || result.show_revision === null) {
         workspaceActions.setPublishStatus("error", "Draft has errors. Fix them before publishing.");
         return;
       }
+      projectActions.markPublished();
+      projectActions.setPreviewSource("rehearsal_published", result.show_revision);
       workspaceActions.setPublishedRevision(result.show_revision);
       workspaceActions.setPublishStatus("idle", `Published revision ${result.show_revision}.`);
     } catch (error) {
@@ -81,15 +84,20 @@ export function WorkspaceHeader() {
           <RadioTower className="size-4" aria-hidden="true" />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{document?.meta.name ?? "Lumina"}</p>
-          <p className="text-muted-foreground truncate text-[10px]">DJ lighting workspace</p>
+          <p className="truncate text-sm font-semibold">{bundle.manifest.name}</p>
+          <p className="text-muted-foreground truncate text-[10px]">
+            Tempo-driven lighting workspace
+          </p>
         </div>
       </div>
 
       <Separator orientation="vertical" className="mx-1 h-6" />
 
       <div className="flex min-w-0 items-center gap-1.5" aria-label="Show revision state">
-        <Badge variant={isDirty ? "outline" : "secondary"}>Draft{isDirty ? " • edited" : ""}</Badge>
+        <Badge variant={isDirty ? "outline" : "secondary"}>
+          Draft Project r{bundle.manifest.revision}
+          {isDirty ? " • edited" : ""}
+        </Badge>
         <Badge variant="outline">Published {formatRevision(publishedRevision)}</Badge>
         <Badge variant={publishedRevision !== liveRevision ? "destructive" : "secondary"}>
           Live {formatRevision(liveRevision)}
@@ -105,7 +113,7 @@ export function WorkspaceHeader() {
         <Button
           variant="outline"
           size="sm"
-          disabled={!document || busy || compileStatus === "compiling"}
+          disabled={busy || compileStatus === "compiling"}
           onClick={() => void publishDraft()}
         >
           <Upload data-icon="inline-start" aria-hidden="true" />

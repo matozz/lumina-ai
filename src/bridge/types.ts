@@ -43,6 +43,39 @@ export type {
   TimelineV4DSL,
 } from "@/generated/show-document-v4";
 
+export type {
+  ArrangementAutomationLane,
+  ArrangementAutomationTarget,
+  ArrangementDocument,
+  ArrangementMarker,
+  AssetRef,
+  CheckerboardParity,
+  CueAutomationLane,
+  CueAutomationTarget,
+  CueCapabilitySummary,
+  CueClip,
+  CueDefinition,
+  CueLayer,
+  CueLayerOverride,
+  CueMixOverride,
+  CueQuantize,
+  CueRiskSummary,
+  CueTrack,
+  CueTriggerMode,
+  CueTriggerPolicy,
+  EffectDefinitionDocument,
+  GridZone,
+  MixPolicy,
+  ProjectBundle,
+  ProjectManifest,
+  StageDocument,
+  TargetSetDefinition,
+  TargetSetRef,
+  TargetSetSelector,
+  TargetSetWeight,
+  TimeSignaturePoint,
+} from "@/generated/project-contract-v1";
+
 export type FullDSL = ShowDocumentV4;
 export type TimelineDSL = TimelineV4DSL;
 export type FromTo = number | string;
@@ -164,6 +197,55 @@ export interface LiveEffectCatalog {
 
 export interface QueuedLivePad {
   target_beat: number;
+}
+
+export type PreviewSource =
+  | { type: "authoring_draft" }
+  | { type: "rehearsal_draft" }
+  | { type: "rehearsal_published"; revision: number };
+
+export type RenderContext =
+  | { type: "stage" }
+  | {
+      type: "effect";
+      effect_ref: import("@/generated/project-contract-v1").AssetRef;
+      target_set_id: string;
+    }
+  | { type: "cue"; cue_ref: import("@/generated/project-contract-v1").AssetRef }
+  | { type: "arrangement" };
+
+export interface ProjectPreviewFrame {
+  generation: number;
+  source: PreviewSource;
+  context: RenderContext;
+  project_ref: import("@/generated/project-contract-v1").AssetRef;
+  stage_ref: import("@/generated/project-contract-v1").AssetRef;
+  arrangement_ref: import("@/generated/project-contract-v1").AssetRef;
+  playhead_tick: number;
+  layout_coords: LayoutCoord[];
+  outputs: FixtureFramePayload[];
+}
+
+export interface ProjectCompileResult {
+  success: boolean;
+  show_revision: number | null;
+  project_ref: import("@/generated/project-contract-v1").AssetRef | null;
+  stage_ref: import("@/generated/project-contract-v1").AssetRef | null;
+  arrangement_ref: import("@/generated/project-contract-v1").AssetRef | null;
+  fixture_count: number;
+  layout_coords: LayoutCoord[];
+  errors: Diagnostic[];
+}
+
+export interface ProjectMigrationReport {
+  source_schema_version: number | null;
+  project_bundle_schema_version: number;
+  changes: MigrationChange[];
+}
+
+export interface MigratedProject {
+  bundle: import("@/generated/project-contract-v1").ProjectBundle;
+  migration_report: ProjectMigrationReport;
 }
 
 export type TransportState = "stopped" | "playing" | "paused" | "seeking" | "error";

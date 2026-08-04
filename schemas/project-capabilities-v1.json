@@ -1,0 +1,29 @@
+{
+  "asset_schemas": {
+    "arrangement": "arrangement-document-v1.schema.json",
+    "cue": "cue-definition-v1.schema.json",
+    "effect": "effect-definition-v1.schema.json",
+    "manifest": "project-manifest-v1.schema.json",
+    "stage": "stage-document-v1.schema.json"
+  },
+  "contract": {
+    "audio_capabilities": [],
+    "cue_layers": [
+      "effect_ref",
+      "target_set_ref",
+      "parameter_overrides",
+      "phase",
+      "seed",
+      "mix_overrides",
+      "trigger_policy"
+    ],
+    "musical_time": {
+      "storage": "integer_tick",
+      "tempo_map_owner": "arrangement"
+    },
+    "references": "stable_id_and_exact_revision",
+    "target_sets": ["all", "rows", "columns", "grid_zones", "checkerboard", "fixture_ids"]
+  },
+  "metadata_version": 1,
+  "project_bundle_schema": "project-bundle-v1.schema.json"
+}

@@ -1,6 +1,8 @@
 use super::attribute::AttributeHandle;
 use super::color::lerp_color_lab;
-use super::profile::{profile_by_handle, AttributeValue, AttributeValueType, FixtureProfileHandle};
+use super::profile::{
+    profile_by_handle, AttributeValue, AttributeValueType, FixtureProfileHandle, MixPolicy,
+};
 use std::collections::HashMap;
 
 pub const SPEED_PARAMETER_ID: &str = "speed";
@@ -425,7 +427,24 @@ pub struct EffectInstance {
     pub target_group_id: String,
     pub parameter_overrides: HashMap<ParameterHandle, ParameterValue>,
     pub seed: u64,
+    pub phase_offset: f64,
+    pub priority: i32,
+    pub mix_overrides: HashMap<FixtureProfileHandle, Vec<Option<MixPolicy>>>,
     pub spatial_offsets: HashMap<EffectNodeHandle, Vec<f64>>,
+}
+
+impl EffectInstance {
+    pub fn mix_policy_override(
+        &self,
+        profile: FixtureProfileHandle,
+        attribute: AttributeHandle,
+    ) -> Option<MixPolicy> {
+        self.mix_overrides
+            .get(&profile)
+            .and_then(|policies| policies.get(attribute.index()))
+            .copied()
+            .flatten()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -925,6 +944,9 @@ mod tests {
             target_group_id: "all".to_string(),
             parameter_overrides: HashMap::from([(speed, ParameterValue::Scalar(2.0))]),
             seed: EffectInstance::stable_seed("pulse-a"),
+            phase_offset: 0.0,
+            priority: 0,
+            mix_overrides: HashMap::new(),
             spatial_offsets: HashMap::new(),
         };
 
@@ -1036,6 +1058,9 @@ mod tests {
             target_group_id: "all".to_string(),
             parameter_overrides: HashMap::new(),
             seed: 42,
+            phase_offset: 0.0,
+            priority: 0,
+            mix_overrides: HashMap::new(),
             spatial_offsets: HashMap::from([(handles(1), vec![0.25])]),
         };
 
@@ -1121,6 +1146,9 @@ mod tests {
                 target_group_id: "all".to_string(),
                 parameter_overrides: HashMap::new(),
                 seed: 1,
+                phase_offset: 0.0,
+                priority: 0,
+                mix_overrides: HashMap::new(),
                 spatial_offsets: HashMap::new(),
             };
             let writes = evaluate_effect_graph(

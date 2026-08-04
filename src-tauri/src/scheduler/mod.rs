@@ -436,7 +436,7 @@ mod tests {
     use crate::engine::profile::{profile_handle_by_id, GENERIC_RGB_PROFILE_ID};
     use crate::engine::render::LivePhaser;
     use crate::engine::transport::{OutputRate, Transport, TransportState};
-    use crate::state::{EngineState, RuntimeState, SequencerMode, ShowStore};
+    use crate::state::{EngineState, PreviewStore, RuntimeState, SequencerMode, ShowStore};
     use std::sync::Arc;
     use std::time::Duration;
     use tokio::sync::RwLock;
@@ -447,6 +447,7 @@ mod tests {
             scheduler: Scheduler::with_output_rate(output_rate),
             clock: Arc::new(clock.clone()),
             shows: ShowStore::default(),
+            previews: PreviewStore::default(),
             runtime: Arc::new(RwLock::new(RuntimeState {
                 transport: Transport::new(120, clock.now()).expect("transport"),
                 live_phasers: Vec::new(),

@@ -1,9 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { engineActions, engineSelectors, useEngineStore } from "@/stores/engine";
-import { workspaceActions } from "@/stores/workspace";
-import { createStarterProject } from "../defaultProject";
-import { EffectCatalogLibrary } from "./EffectCatalogLibrary";
+import { exactAsset } from "@/document/projectModel";
+import { projectActions, useProjectStore } from "@/stores/project";
+import { WorkspaceLibrary } from "../WorkspaceLibrary";
 import { EffectLabInspector } from "./EffectLabInspector";
 
 vi.mock("@/components/ui/scroll-area", () => ({
@@ -11,52 +10,48 @@ vi.mock("@/components/ui/scroll-area", () => ({
 }));
 
 function EffectLabHarness() {
-  const document = useEngineStore(engineSelectors.parsedDsl);
-  return document ? (
+  return (
     <>
-      <EffectCatalogLibrary document={document} />
+      <WorkspaceLibrary workspace="effect-lab" />
       <EffectLabInspector />
     </>
-  ) : null;
+  );
 }
 
-describe("Effect Lab workspace", () => {
+describe("Effect Lab Project assets", () => {
   beforeEach(() => {
     localStorage.clear();
-    workspaceActions.reset();
-    engineActions.loadCurrentDslCode(JSON.stringify(createStarterProject()));
+    projectActions.reset();
   });
 
-  it("creates, favorites, duplicates, and deletes reusable effects", async () => {
+  it("creates reusable target-agnostic Pulse and Gradient assets", () => {
     render(<EffectLabHarness />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Create red pulse" }));
-    expect(useEngineStore.getState().parsedDsl?.effect_definitions).toHaveLength(1);
-    expect(screen.getByLabelText("Favorite Red Pulse")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Pulse" }));
+    fireEvent.click(screen.getByRole("button", { name: "Gradient" }));
 
-    fireEvent.click(screen.getByLabelText("Favorite Red Pulse"));
-    expect(screen.getByLabelText("Remove Red Pulse from favorites")).toBeTruthy();
-    fireEvent.click(screen.getByLabelText("Duplicate Red Pulse"));
-
-    await waitFor(() =>
-      expect(useEngineStore.getState().parsedDsl?.effect_definitions).toHaveLength(2),
-    );
-    expect(screen.getByText("Red Pulse Copy")).toBeTruthy();
-    fireEvent.click(screen.getByLabelText("Delete Red Pulse Copy"));
-    expect(useEngineStore.getState().parsedDsl?.effect_definitions).toHaveLength(1);
+    expect(useProjectStore.getState().bundle.effects.map((effect) => effect.name)).toEqual([
+      "Pulse",
+      "Gradient",
+    ]);
+    expect(screen.getByText("target-agnostic · r1")).toBeTruthy();
   });
 
-  it("renames an effect by saving a new definition revision", async () => {
+  it("renames an Effect Draft without adding a target reference", async () => {
+    const reference = projectActions.createEffect("Pulse")!;
     render(<EffectLabHarness />);
-    fireEvent.click(screen.getByRole("button", { name: "Create red pulse" }));
 
-    fireEvent.change(screen.getByLabelText("Effect name"), { target: { value: "Red Hit" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save revision r2" }));
+    fireEvent.change(screen.getByLabelText("Effect name"), { target: { value: "Pulse Hit" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save Draft revision" }));
 
     await waitFor(() => {
-      const definition = useEngineStore.getState().parsedDsl?.effect_definitions[0];
-      expect(definition).toMatchObject({ name: "Red Hit", revision: 2 });
+      const selected = useProjectStore.getState().selectedEffectRef;
+      expect(exactAsset(useProjectStore.getState().bundle.effects, selected)?.name).toBe(
+        "Pulse Hit",
+      );
     });
-    expect(useEngineStore.getState().parsedDsl?.effect_instances[0].definition_revision).toBe(2);
+    expect(
+      JSON.stringify(exactAsset(useProjectStore.getState().bundle.effects, reference)),
+    ).not.toContain("target_set");
   });
 });

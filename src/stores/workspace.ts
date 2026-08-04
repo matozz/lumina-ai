@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { ShowSnapshotState } from "@/bridge/types";
 
-export type WorkspaceId = "stage" | "effect-lab" | "arrange" | "live";
+export type WorkspaceId = "stage" | "effect-lab" | "cues" | "arrange" | "live";
 export type PublishStatus = "idle" | "publishing" | "activating" | "error";
 export type LivePadMode = "toggle" | "momentary" | "one_shot";
 export type LivePadQuantize = "off" | "beat" | "bar";

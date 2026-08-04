@@ -7,7 +7,7 @@ describe("workspace state", () => {
     workspaceActions.reset();
   });
 
-  it("keeps the four Stage 6 workspaces separate from Advanced Mode", () => {
+  it("keeps the five Stage 7 workspaces separate from Advanced Mode", () => {
     workspaceActions.setAdvancedMode(true);
     workspaceActions.setActiveWorkspace("effect-lab");
 
