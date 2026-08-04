@@ -232,7 +232,7 @@ flowchart TD
 | 5     | Timeline、Keyframe 与 Undo/Redo                                 | completed   | 4      | 多关键帧、seek/replay、无隐式数据破坏         |
 | 6     | 用户工作区与 Effect Lab                                         | completed   | 5      | Stage→Effect→Arrange→Live 主路径可用          |
 | 7     | TempoMap 资产边界、Cue 与多 Arrangement                         | completed   | 6      | 音频退出；Stage/Effect/Cue/Arrangement 解耦   |
-| 7.5   | Authoring Workflow、Production Layout、Catalog 与动态 Targeting | not_started | 7      | 完整布局/预览/Timeline 路径与生产目录通过验收 |
+| 7.5   | Authoring Workflow、Production Layout、Catalog 与动态 Targeting | in_progress | 7      | 完整布局/预览/Timeline 路径与生产目录通过验收 |
 | 8     | AI TempoMap 编排                                                | not_started | 7、7.5 | AI 计划可验证、可解释、可预览、可撤销         |
 | 9     | 舞台输出、安全与 Release                                        | not_started | 3、8   | Art-Net/sACN、故障保护和发布门槛完成          |
 
@@ -885,7 +885,7 @@ Stage 6 交付的一级工作区：
 - [ ] 将成熟 Timeline 的 zoom、snap、CueClip resize、键盘操作、selection inspector 和 typed automation lane/curve/keyframe 能力迁移到统一 `ArrangementTimeline`。
 - [ ] 高频 drag/resize 继续使用 PointerEvents + DOM ref preview，并以单次 Undo transaction 提交。
 - [ ] action-local Diagnostic 显示原因、影响和 recovery action；Header 只保留全局摘要，不作为唯一反馈面。
-- [ ] 完成 ADR-0011，固定 PreviewClock、Authoring Transport 与 CueClip Timeline 的状态和命令边界。
+- [x] 完成 ADR-0011，固定 PreviewClock、Authoring Transport 与 CueClip Timeline 的状态和命令边界。
 
 ### 7.5B LayoutPreset 与 Stage 工作流
 
@@ -1177,7 +1177,7 @@ flowchart LR
 | ADR-0008 | AI ArrangementPlan 与 provider 边界                       | 8     | pending                          |
 | ADR-0009 | OutputSink fail-safe 与 Blackout                          | 9     | pending                          |
 | ADR-0010 | TempoMap 与 Stage/Effect/Cue/Arrangement 资产边界         | 7     | accepted                         |
-| ADR-0011 | Authoring Preview Clock、Transport 与 CueClip Timeline    | 7.5   | pending                          |
+| ADR-0011 | Authoring Preview Clock、Transport 与 CueClip Timeline    | 7.5   | accepted                         |
 | ADR-0012 | LayoutPreset、Stage upgrade 与动态 TargetSet/Spatial Mask | 7.5   | pending                          |
 
 ## 20. Progress Ledger
@@ -1290,6 +1290,7 @@ flowchart LR
 | 2026-08-03 | 7        | 原生预览性能与隔离修复      | completed  | `9de1301`               | dirty Canvas；Effect 切换回归；Live catalog 只含 2 个 Arrangement 实例        | R-025/R-026/R-027 closed                                       | 完整重开、窗口与 snapshot gate              |
 | 2026-08-03 | 7        | Stage 7 最终收口            | completed  | 本切片提交              | `check:all`；116 frontend；113 Rust；schema/Clippy/build；真实 Tauri 窗口矩阵 | R-006/R-021/R-022/R-024 closed；Stage 7.5 未开始               | 停止，等待显式合并                          |
 | 2026-08-04 | 7→7.5    | 作者工作流复审              | completed  | docs audit              | 真实 Tauri Stage/Lab/Cues/Arrange/Live；源码调用与 contract 对照              | 新增 R-028–R-031；Stage 7 contract 保留，7.5 先补工作流基础    | ADR-0011 + 7.5A Authoring Workflow          |
+| 2026-08-04 | 7.5A     | ADR + Timeline parity       | completed  | 本切片提交              | 指定文档复核；Prettier；capability parity matrix                              | ADR-0011 accepted；R-029–R-031 open                            | musical time + Authoring Transport          |
 
 ## 21. Open Risks
 
