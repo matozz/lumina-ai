@@ -4,7 +4,7 @@
 > - 决策日期：2026-08-03
 > - 前置状态：Stage 6 已完成；原 Stage 7 音频方向已停止
 > - 推荐分支：`codex/tempo-cue-arrangement`
-> - 后续阶段：Stage 7.5 Production Layout / Effect Catalog / Dynamic Targeting
+> - 后续阶段：Stage 7.5 Authoring Workflow / Production Layout / Effect Catalog / Dynamic Targeting
 
 ## 1. 这次为什么重构
 
@@ -247,19 +247,24 @@ Stage | Effect Lab | Cues | Arrange | Live / Rehearse | Advanced
 
 ## 10. Stage 7.5 的剩余范围
 
-本重构完成后，Stage 7.5 继续负责：
+2026-08-04 对 Stage 7 最终实现的真实 Tauri 复审确认：资产/revision/compiler 边界已经成立，不应重新打开；但新 contract 接入时采用的 Stage、Lab/Cues 和 Arrange 临时面板没有达到 Stage 5/6 的作者工作流能力。详细证据与替换边界见 [`stage7-workflow-audit.md`](./stage7-workflow-audit.md)。
 
+Stage 7.5 必须按以下顺序继续：
+
+- 先完成共享 Authoring Transport/PreviewClock：Lab、Cues、Arrange 都能看见 Play/Pause/Stop、BPM、拍号、bar.beat.tick 和 loop。
+- 将 zoom、snap、CueClip move/resize、键盘替代和 typed automation 迁入 production `ArrangementTimeline`。
+- 建立 LayoutPreset Library；区分可表单编辑的 Basic layout 与带 editor capability 的 Generated/Advanced layout，并补齐 Save、Save As、Duplicate 和安全的 Stage upgrade/remap 流程。
 - 无缝矩阵、矩形灯条、灯条墙和灯框的完整几何编辑体验。
 - 30×30 及更大布局的可视化分区编辑器。
 - Production Effect Catalog、历史效果审计和无效配置清理。
 - 频闪、慢速氛围、空间扫描和 transition 等生产效果族。
 - 多布局 golden frame、1,000 fixtures 多层 benchmark 和真实 Tauri 视觉证据。
 
-Stage 7.5 不再负责发明 Cue/Arrangement 边界，只在稳定 contract 上补齐 production content 和工具。
+Stage 7.5 不再负责发明 Cue/Arrangement 边界，也不逐个修补将被替换的临时面板；它先恢复 production authoring parity，再在稳定 contract 上补齐 Layout、Targeting、Effect/Cue content 和工具。权威切片与退出条件见总路线的 7.5A–7.5E。
 
 ## 11. 新 Goal 启动指引
 
-可在新对话中使用：
+以下文本是已经完成的 Stage 7 历史启动指引，不再用于创建新 Goal：
 
 > 创建一个 Goal，按照 `docs/fixed-bpm-cue-arrangement-refactor.md` 重构 Lumina。Stage 6 已完成，原 Stage 7 音频方向已从产品树清理。基于最新 `main` 创建 `codex/tempo-cue-arrangement`，先建立 ADR-0010，复核无音频残留并明确保留 Stage 5 多段 TempoMap，再严格按 Slice A–F 推进：拆分 Stage、Effect、Cue、Arrangement 的版本化配置；实现 Cue、TargetSet 和多 Arrangement 用户路径；完成 schema migration、测试、真实 Tauri 验收及路线文档更新。每个切片自审并增量提交，满足退出门槛后停止，不进入 Production Catalog、AI 或真实硬件输出。
 
@@ -285,4 +290,4 @@ Stage 7 已在 `codex/tempo-cue-arrangement` 上按 Slice A–F 完成，严格�
 
 最终验证：`pnpm check:all`、`pnpm build`、debug Tauri app bundle、116 个前端测试、101 个 Rust unit 与 12 个 integration/contract 测试全部通过。真实 Tauri 已完成最大化、配置 1440×900 和最小 1100×720 路径；详细证据见 [`evidence/stage7-tempo-cue-arrangement/`](./evidence/stage7-tempo-cue-arrangement/README.md)。
 
-Stage 7.5 Production Catalog/动态可视化编辑、AI、音频与真实硬件输出未进入实现。
+Stage 7.5 Authoring Workflow、Production Catalog、动态可视化编辑、AI 与真实硬件输出未进入实现。后续执行应以 [`lumina-overhaul-plan.md`](./lumina-overhaul-plan.md) 的 7.5A–7.5E 和 [`stage7-workflow-audit.md`](./stage7-workflow-audit.md) 为准；本文件只保留 Stage 7 的已完成决策与验证记录。

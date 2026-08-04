@@ -60,28 +60,29 @@ Raw JSON DSL 保留为 Advanced Mode 和 AI/自动化接口，不应继续作为
 
 当前基线不具备生产可用性，关键已知问题包括：
 
-| 领域        | 当前问题                                                   | 首次处理 Stage |
-| ----------- | ---------------------------------------------------------- | -------------- |
-| 实时调度    | 120 BPM 时约 16Hz；固定 beat 增量会漂移                    | Stage 1        |
-| 并发        | `play()` 可重复启动线程；存在 show/runtime 锁顺序反转      | Stage 1        |
-| Transport   | Pause 清除 active phaser；Stop/Seek/Resume 语义不确定      | Stage 1        |
-| Frame diff  | 首帧或 fixture 数量变化可能产生空/不完整 diff              | Stage 1        |
-| DSL 安全    | mode 配置和颜色解析可 panic；未知字段可能被丢弃            | Stage 2        |
-| Schema 漂移 | TS/Zod 与 Rust 手写 schema 已不一致                        | Stage 2        |
-| 灯具属性    | 引擎只真正支持 color/dimmer                                | Stage 3        |
-| 混合        | 所有 RGB/dimmer 使用 `max`，没有属性级 HTP/LTP             | Stage 3        |
-| Effect      | `phaser.multiplier` 没有稳定进入运行时                     | Stage 4        |
-| Keyframe    | 只有 from/to clip，没有多关键帧和结构化 target             | Stage 5        |
-| Timeline    | overlap 会隐式裁剪；animation 子轨不计入宽度               | Stage 5        |
-| 交互性能    | drag/resize 的 pointer move 仍触发 React state 更新        | Stage 5/6      |
-| 用户路径    | 没有视觉 Effect Lab；默认窗口中央预览只有约 94px           | Stage 6        |
-| 配置边界    | Stage、Effect、EffectInstance 和 Timeline 仍耦合在单一文档 | Stage 7        |
-| Cue/多编排  | 没有“布局选区 + 多效果”的复用层，也不能保存多个 BPM 编排   | Stage 7        |
-| 音频实验    | 已产生未合并的 Audio/Song 代码，需退出产品与运行时边界     | Stage 7        |
-| 生产内容    | 历史布局/效果重复、视觉价值不明且缺少动态 TargetSet        | Stage 7.5      |
-| AI          | 没有结构化规划、验证、修复和可解释应用流程                 | Stage 8        |
-| 舞台输出    | 没有 Fixture Profile、Universe、Art-Net/sACN 和故障保护    | Stage 9        |
-| 测试        | Rust 当前为 0 个测试，前端没有测试命令                     | Stage 0        |
+| 领域        | 当前问题                                                     | 首次处理 Stage |
+| ----------- | ------------------------------------------------------------ | -------------- |
+| 实时调度    | 120 BPM 时约 16Hz；固定 beat 增量会漂移                      | Stage 1        |
+| 并发        | `play()` 可重复启动线程；存在 show/runtime 锁顺序反转        | Stage 1        |
+| Transport   | Pause 清除 active phaser；Stop/Seek/Resume 语义不确定        | Stage 1        |
+| Frame diff  | 首帧或 fixture 数量变化可能产生空/不完整 diff                | Stage 1        |
+| DSL 安全    | mode 配置和颜色解析可 panic；未知字段可能被丢弃              | Stage 2        |
+| Schema 漂移 | TS/Zod 与 Rust 手写 schema 已不一致                          | Stage 2        |
+| 灯具属性    | 引擎只真正支持 color/dimmer                                  | Stage 3        |
+| 混合        | 所有 RGB/dimmer 使用 `max`，没有属性级 HTP/LTP               | Stage 3        |
+| Effect      | `phaser.multiplier` 没有稳定进入运行时                       | Stage 4        |
+| Keyframe    | 只有 from/to clip，没有多关键帧和结构化 target               | Stage 5        |
+| Timeline    | overlap 会隐式裁剪；animation 子轨不计入宽度                 | Stage 5        |
+| 交互性能    | drag/resize 的 pointer move 仍触发 React state 更新          | Stage 5/6      |
+| 用户路径    | 没有视觉 Effect Lab；默认窗口中央预览只有约 94px             | Stage 6        |
+| 配置边界    | Stage、Effect、EffectInstance 和 Timeline 仍耦合在单一文档   | Stage 7        |
+| Cue/多编排  | 没有“布局选区 + 多效果”的复用层，也不能保存多个 BPM 编排     | Stage 7        |
+| 音频实验    | 已产生未合并的 Audio/Song 代码，需退出产品与运行时边界       | Stage 7        |
+| 生产内容    | 历史布局/效果重复、视觉价值不明且缺少动态 TargetSet          | Stage 7.5      |
+| 作者工作流  | Stage 7 新资产已接通，但布局、预览时钟和 Timeline 功能不完整 | Stage 7.5      |
+| AI          | 没有结构化规划、验证、修复和可解释应用流程                   | Stage 8        |
+| 舞台输出    | 没有 Fixture Profile、Universe、Art-Net/sACN 和故障保护      | Stage 9        |
+| 测试        | Rust 当前为 0 个测试，前端没有测试命令                       | Stage 0        |
 
 ## 4. 不可破坏的系统约束
 
@@ -215,25 +216,25 @@ flowchart TD
     S4 --> S5["Stage 5 · Timeline + Keyframes"]
     S5 --> S6["Stage 6 · Product Workflow UI"]
     S6 --> S7["Stage 7 · TempoMap Assets + Cue"]
-    S7 --> S75["Stage 7.5 · Production Catalog + Targeting"]
+    S7 --> S75["Stage 7.5 · Authoring Workflow + Production Catalog"]
     S75 --> S8["Stage 8 · AI Arrangement"]
     S3 --> S9["Stage 9 · Output + Release"]
     S8 --> S9
 ```
 
-| Stage | 名称                                        | 状态        | 依赖   | 核心退出信号                                |
-| ----- | ------------------------------------------- | ----------- | ------ | ------------------------------------------- |
-| 0     | Baseline 与质量护栏                         | completed   | 无     | 测试框架、基线和 CI 可用                    |
-| 1     | 实时内核与 Transport                        | completed   | 0      | Clock/Play/Pause/Stop/Seek 确定且无重复线程 |
-| 2     | Versioned Document 与统一 Schema            | completed   | 1      | 单一 schema 契约、migration、零 panic       |
-| 3     | Fixture Attribute、Mixer 与 Output 抽象     | completed   | 2      | 通用属性、HTP/LTP、Null/Preview Sink        |
-| 4     | 可扩展 Effect Engine                        | completed   | 3      | EffectGraph/参数/空间相位可确定性求值       |
-| 5     | Timeline、Keyframe 与 Undo/Redo             | completed   | 4      | 多关键帧、seek/replay、无隐式数据破坏       |
-| 6     | 用户工作区与 Effect Lab                     | completed   | 5      | Stage→Effect→Arrange→Live 主路径可用        |
-| 7     | TempoMap 资产边界、Cue 与多 Arrangement     | completed   | 6      | 音频退出；Stage/Effect/Cue/Arrangement 解耦 |
-| 7.5   | Production Layout、Catalog 与动态 Targeting | not_started | 7      | 30×30 分区与生产效果库通过视觉/性能验收     |
-| 8     | AI TempoMap 编排                            | not_started | 7、7.5 | AI 计划可验证、可解释、可预览、可撤销       |
-| 9     | 舞台输出、安全与 Release                    | not_started | 3、8   | Art-Net/sACN、故障保护和发布门槛完成        |
+| Stage | 名称                                                            | 状态        | 依赖   | 核心退出信号                                  |
+| ----- | --------------------------------------------------------------- | ----------- | ------ | --------------------------------------------- |
+| 0     | Baseline 与质量护栏                                             | completed   | 无     | 测试框架、基线和 CI 可用                      |
+| 1     | 实时内核与 Transport                                            | completed   | 0      | Clock/Play/Pause/Stop/Seek 确定且无重复线程   |
+| 2     | Versioned Document 与统一 Schema                                | completed   | 1      | 单一 schema 契约、migration、零 panic         |
+| 3     | Fixture Attribute、Mixer 与 Output 抽象                         | completed   | 2      | 通用属性、HTP/LTP、Null/Preview Sink          |
+| 4     | 可扩展 Effect Engine                                            | completed   | 3      | EffectGraph/参数/空间相位可确定性求值         |
+| 5     | Timeline、Keyframe 与 Undo/Redo                                 | completed   | 4      | 多关键帧、seek/replay、无隐式数据破坏         |
+| 6     | 用户工作区与 Effect Lab                                         | completed   | 5      | Stage→Effect→Arrange→Live 主路径可用          |
+| 7     | TempoMap 资产边界、Cue 与多 Arrangement                         | completed   | 6      | 音频退出；Stage/Effect/Cue/Arrangement 解耦   |
+| 7.5   | Authoring Workflow、Production Layout、Catalog 与动态 Targeting | not_started | 7      | 完整布局/预览/Timeline 路径与生产目录通过验收 |
+| 8     | AI TempoMap 编排                                                | not_started | 7、7.5 | AI 计划可验证、可解释、可预览、可撤销         |
+| 9     | 舞台输出、安全与 Release                                        | not_started | 3、8   | Art-Net/sACN、故障保护和发布门槛完成          |
 
 状态只允许：`not_started`、`in_progress`、`blocked`、`completed`。
 
@@ -868,25 +869,63 @@ Stage 6 交付的一级工作区：
 - 至少两个不同 BPM Arrangement 可保存、重开、切换、Seek、Loop、Undo/Redo 和 Publish/Take Live。
 - 30×30 全量 → 3×3 zones → 全量的最小 contract 可确定性求值并满足 60Hz gate。
 
-## 14.5. Stage 7.5：Production Layout、Effect Catalog 与动态 Targeting
+## 14.5. Stage 7.5：Authoring Workflow、Production Layout、Effect Catalog 与动态 Targeting
 
 ### 目标
 
-在 Stage 7 的资产和 Cue contract 上，建立面向大型点阵和矩形灯条的生产布局、动态分区工具及有实际视觉价值的 Effect/Cue Catalog；不再承担配置边界重构。
+在 Stage 7 已稳定的资产、revision、PreviewSession 和 Cue contract 上，先恢复生产级作者工作流，再建立面向大型点阵和矩形灯条的布局资产、动态分区工具及有实际视觉价值的 Effect/Cue Catalog。Stage 7.5 不重新发明 Project/Stage/Effect/Cue/Arrangement 边界，但允许通过新 ADR 增加 LayoutPreset 引用和共享 Authoring Transport。
 
-### 范围
+2026-08-04 的真实 Tauri 与源码审计确认：当前 Stage、Effect Lab、Cues 与 Arrange 都能接入新 contract，但 Stage Apply 缺少 revision upgrade 路径，Lab/Cue 缺少可理解的 BPM/拍号 transport，新的 `CueTimelinePanel` 也没有迁移 Stage 5/6 的 zoom、snap、resize 和 automation 编辑。完整证据和替换边界见 [`stage7-workflow-audit.md`](./stage7-workflow-audit.md)。
 
-- [ ] Layout Preset、Effect Definition、Cue 和 Demo Show 完全解耦。
+### 7.5A Authoring Workflow Foundation
+
+- [ ] 建立共享 Authoring Transport：Play/Pause/Stop/Seek/Loop、bar.beat.tick、当前 BPM、拍号和视觉 beat/bar meter。
+- [ ] Effect/Cue PreviewClock 支持 Local BPM/拍号/循环小节与 Follow Arrangement；Preview 设置只属于 session，不写入 Effect/Cue。
+- [ ] Arrange 使用完整 TempoMap/TimeSignatureMap，当前 BPM 和 ruler 随 playhead 变化；不得退化为只读取首个 tempo point 或固定 4/4。
+- [ ] 将成熟 Timeline 的 zoom、snap、CueClip resize、键盘操作、selection inspector 和 typed automation lane/curve/keyframe 能力迁移到统一 `ArrangementTimeline`。
+- [ ] 高频 drag/resize 继续使用 PointerEvents + DOM ref preview，并以单次 Undo transaction 提交。
+- [ ] action-local Diagnostic 显示原因、影响和 recovery action；Header 只保留全局摘要，不作为唯一反馈面。
+- [ ] 完成 ADR-0011，固定 PreviewClock、Authoring Transport 与 CueClip Timeline 的状态和命令边界。
+
+### 7.5B LayoutPreset 与 Stage 工作流
+
+- [ ] 新增独立、可版本化 LayoutPreset/Definition；Project manifest 保存 layout refs，Stage 显式引用选中的 layout revision。
+- [ ] Stage 左侧改为 Layout Library，按 Basic 与 Generated/Advanced 分区；Group/TargetSet 移到当前 Stage 的次级视图。
+- [ ] Basic 支持 matrix、circle、strip/bar、wall、frame；Generated/Advanced 支持 formula、SVG path、custom 和算法生成，并声明 `form`、`parameter_schema`、`advanced_only` 或 `read_only` editor capability。
+- [ ] 支持 Duplicate、Save Draft、Save As、Rename、Delete 和 Use on Stage；保存布局不应自动改写当前 Stage/Cue/Arrangement。
+- [ ] Use on Stage 在提交前显示 Cue/TargetSet 影响；兼容 topology 可显式升级，非兼容时提供 remap、保留旧 Stage revision 或创建新 Stage。
+- [ ] 移除当前“工程存在任意 Cue 就无反馈阻止 Apply”的临时流程；不得通过静默改写 Cue revision 规避引用校验。
 - [ ] 支持 n×n/rows×columns 无缝矩阵、矩形灯条、灯条墙和灯框；fixture size 与 gap/pitch 分离，gap 可以为 0。
-- [ ] 提供 30×30 的 R×C Zones、Rows、Columns、Checkerboard、Center/Edges 和 Per-bar 可视化 TargetSet 编辑。
+- [ ] 完成 ADR-0012，固定 LayoutPreset、Stage revision upgrade、动态 TargetSet 与 Spatial Mask 边界。
+
+### 7.5C Production Targeting
+
+- [ ] 提供 30×30 的 R×C Zones、Rows、Columns、Checkerboard、Center/Edges、Fixture IDs 和 Per-bar TargetingScene 可视化编辑。
 - [ ] 完成 hard switch、weighted transition、phase continuity 和 beat/bar snap。
-- [ ] 审计历史配置，将其分类为保留、重写、合并、隐藏或 legacy fixture。
-- [ ] 建立覆盖频闪/节奏、慢速氛围、空间扫描和 transition 的 Production Effect/Cue Catalog。
+- [ ] All → 多分区 → All 通过 immutable TargetSet/TargetingScene 编排，不在播放中修改 Fixture Group membership。
+- [ ] TargetSet 支持命名、复制、预览、引用影响检查，并继续使用 compiler bitset/index/cache 热路径。
+
+### 7.5D Production Effect/Cue Catalog
+
+- [ ] 用 Effect parameter schema 驱动完整编辑器，覆盖 waveform、speed、phase、width、transition、颜色、强度和 A/B revision preview。
+- [ ] Cue Builder 改为 layer list + selected-layer editor，并支持 reorder、mute/solo、duplicate 和受控 override。
+- [ ] 审计历史配置，将其分类为保留、重写、合并、隐藏或 legacy fixture；将被重写的旧界面不先行修补。
+- [ ] 建立覆盖频闪/节奏、慢速氛围、空间扫描、gradient 和 transition 的 Production Effect/Cue Catalog。
 - [ ] 每个效果提供有效参数、capability、energy/density/motion、适用布局和 strobe risk metadata。
+
+### 7.5E 验证与收口
+
 - [ ] 建立多布局、多 tick golden frame 和 1,000 fixtures 多层 release benchmark。
+- [ ] 真实 Tauri 验证 Layout → Effect → Cue → Arrangement → Rehearse/Live；全程不需要 Raw DSL，也不需要先进入 Live 才能预览或播放 Authoring Draft。
+- [ ] 覆盖最大化、1440×900、1100×720、键盘路径、保存重开、inline error recovery 和 Draft/Published/Live 隔离。
+- [ ] 迁移完成后删除无调用者的 V4-only Stage Setup/Timeline shell；删除前先迁移其中已有测试覆盖的 layout、snap、resize、automation 和 keyboard 行为。
 
 ### 退出条件
 
+- Stage 左侧存在可复制的 Basic/Generated Layout Library；右侧能 Save/Save As，并能在 Canvas 预览后安全应用到 Stage。
+- Stage topology 变化提供明确的 Cue/TargetSet impact 与 upgrade/remap 路径，不存在点击无响应或只在 Header 截断报错。
+- Effect Lab、Cues、Arrange 均有一致的 Play/Pause/Stop、BPM、拍号、bar.beat.tick 和 loop 语义；Live 仅承担 rehearsal/live safety boundary。
+- Arrangement Timeline 恢复 zoom、snap、CueClip move/resize、typed automation curve/keyframe、键盘替代和单 transaction Undo/Redo。
 - 无缝矩阵与矩形灯条能正确创建、分组、Target、预览和寻址。
 - 30×30 All → 多分区 → All 可任意 Seek/Replay，且多分区并行保持 60Hz frame budget。
 - Production Catalog 可被用户、Cue Builder 和 Stage 8 capability query 稳定引用。
@@ -1102,15 +1141,15 @@ flowchart LR
 
 ## Handoff
 
-- Current Stage: Stage 7 已满足全部退出条件；Stage 7.5 保持 `not_started`。
-- Slice completed: 完成独立 Project/Stage/Effect/Cue/Arrangement contract、PreviewSession/RenderContext、Cue/TargetSet compiler、多 Arrangement、V1–V4 migration 与 Cue-first 用户路径。
-- Commits: `61c150b`、`040e44b`、`9e67d53`、`8087071`、`004fca4`、`9de1301` 及本次文档收口提交。
-- Files changed: ADR-0010、独立 schema/generated types、Rust document/compiler/state/commands、Project/Preview stores、Stage/Effect/Cues/Arrange/Live 工作区、Canvas/Timeline 及验证证据。
-- Validation: `pnpm check:all`、`pnpm build`、debug Tauri app bundle 全通过；116 frontend tests；101 Rust unit + 12 contract/integration tests；30×30/随机 Seek/多段 TempoMap/迁移/revision pin 全通过。
-- ADRs added/updated: ADR-0010 Accepted 并补齐实现证据；ADR-0011 仍留给 Stage 7.5。
-- Risks opened/closed: R-006、R-021、R-022、R-024 因独立 revision、immutable TargetSet、snapshot context 与原生回归关闭；原生验收发现的 R-025–R-027 均在 `9de1301` 关闭。
-- Remaining exit criteria: Stage 7 无剩余退出项；只剩用户明确授权后的 push/PR/merge。Production Catalog、AI、音频和真实硬件输出均未开始。
-- Recommended next slice: 停止在 Stage 7，等待明确合并指令；不得自动进入 Stage 7.5。
+- Current Stage: Stage 7 的 contract/runtime 退出条件已满足；Stage 7.5 保持 `not_started`，但必须先完成 7.5A Authoring Workflow Foundation，不能直接开始 Production Catalog。
+- Slice completed: 完成独立 Project/Stage/Effect/Cue/Arrangement contract、PreviewSession/RenderContext、Cue/TargetSet compiler、多 Arrangement、V1–V4 migration 与 Cue-first 用户路径；2026-08-04 完成真实 Tauri 功能流程复审。
+- Commits: `61c150b`、`040e44b`、`9e67d53`、`8087071`、`004fca4`、`9de1301`、`646f336`；本次只更新审计和后续执行文档，未修改运行时代码。
+- Files changed: 新增 `stage7-workflow-audit.md` 与现场截图；调整 Stage 7.5 范围、退出条件、ADR 和风险清单。
+- Validation: Stage 7 原门禁仍为 `pnpm check:all`、`pnpm build`、116 frontend、113 Rust 和真实 Tauri 窗口矩阵；本次额外复现 Stage Apply 阻塞、Lab/Cue PreviewClock 缺口、Arrange transport/zoom/automation 回归和 Live 控制对照。
+- ADRs added/updated: ADR-0010 保持 Accepted；Stage 7.5 首切片建立 ADR-0011（Authoring Transport/Timeline），随后建立 ADR-0012（LayoutPreset/Stage upgrade/动态 TargetSet）。
+- Risks opened/closed: R-006、R-021、R-022、R-024–R-027 保持关闭；新增 R-028–R-031，分别覆盖 Stage upgrade、Authoring clock、Timeline parity 和 legacy 双实现漂移。
+- Remaining exit criteria: Stage 7 不重新打开资产重构；R-028–R-031 必须在 Stage 7.5 的生产内容工作开始前按替代方案处理。
+- Recommended next slice: Stage 7 合并后创建新的 Stage 7.5 Goal，先实施 7.5A shared Authoring Transport + production ArrangementTimeline，再进入 LayoutPreset、动态 Targeting 和 Catalog。
 
 ## 19. ADR 规范
 
@@ -1126,19 +1165,20 @@ flowchart LR
 
 预期 ADR：
 
-| ID       | 决策                                              | Stage | 状态                             |
-| -------- | ------------------------------------------------- | ----- | -------------------------------- |
-| ADR-0001 | Clock、Transport 与 render_at 边界                | 1     | accepted                         |
-| ADR-0002 | Schema 权威来源与代码生成链                       | 2     | accepted                         |
-| ADR-0003 | MusicalTime PPQ 与多段 TempoMap                   | 5     | accepted；音频方向撤销后继续保留 |
-| ADR-0004 | Fixture Attribute 与 mix policy                   | 3     | accepted                         |
-| ADR-0005 | EffectGraph 节点和 typed ports                    | 4     | accepted                         |
-| ADR-0006 | Draft 与 Live Snapshot 发布模型                   | 6     | accepted                         |
-| ADR-0007 | Audio analysis 与缓存策略                         | 7     | superseded                       |
-| ADR-0008 | AI ArrangementPlan 与 provider 边界               | 8     | pending                          |
-| ADR-0009 | OutputSink fail-safe 与 Blackout                  | 9     | pending                          |
-| ADR-0010 | TempoMap 与 Stage/Effect/Cue/Arrangement 资产边界 | 7     | accepted                         |
-| ADR-0011 | Immutable TargetSet、动态分区与 Spatial Mask      | 7.5   | pending                          |
+| ID       | 决策                                                      | Stage | 状态                             |
+| -------- | --------------------------------------------------------- | ----- | -------------------------------- |
+| ADR-0001 | Clock、Transport 与 render_at 边界                        | 1     | accepted                         |
+| ADR-0002 | Schema 权威来源与代码生成链                               | 2     | accepted                         |
+| ADR-0003 | MusicalTime PPQ 与多段 TempoMap                           | 5     | accepted；音频方向撤销后继续保留 |
+| ADR-0004 | Fixture Attribute 与 mix policy                           | 3     | accepted                         |
+| ADR-0005 | EffectGraph 节点和 typed ports                            | 4     | accepted                         |
+| ADR-0006 | Draft 与 Live Snapshot 发布模型                           | 6     | accepted                         |
+| ADR-0007 | Audio analysis 与缓存策略                                 | 7     | superseded                       |
+| ADR-0008 | AI ArrangementPlan 与 provider 边界                       | 8     | pending                          |
+| ADR-0009 | OutputSink fail-safe 与 Blackout                          | 9     | pending                          |
+| ADR-0010 | TempoMap 与 Stage/Effect/Cue/Arrangement 资产边界         | 7     | accepted                         |
+| ADR-0011 | Authoring Preview Clock、Transport 与 CueClip Timeline    | 7.5   | pending                          |
+| ADR-0012 | LayoutPreset、Stage upgrade 与动态 TargetSet/Spatial Mask | 7.5   | pending                          |
 
 ## 20. Progress Ledger
 
@@ -1249,38 +1289,43 @@ flowchart LR
 | 2026-08-03 | 7        | 原生 30×30 路径首测         | failed     | none                    | 900 灯 Canvas 饥饿；播放时第二 Effect 重启 preview；Live 目录重复实例         | 新增 R-025/R-026/R-027；不以自动 Take Live 规避                | 修复并增加回归                              |
 | 2026-08-03 | 7        | 原生预览性能与隔离修复      | completed  | `9de1301`               | dirty Canvas；Effect 切换回归；Live catalog 只含 2 个 Arrangement 实例        | R-025/R-026/R-027 closed                                       | 完整重开、窗口与 snapshot gate              |
 | 2026-08-03 | 7        | Stage 7 最终收口            | completed  | 本切片提交              | `check:all`；116 frontend；113 Rust；schema/Clippy/build；真实 Tauri 窗口矩阵 | R-006/R-021/R-022/R-024 closed；Stage 7.5 未开始               | 停止，等待显式合并                          |
+| 2026-08-04 | 7→7.5    | 作者工作流复审              | completed  | docs audit              | 真实 Tauri Stage/Lab/Cues/Arrange/Live；源码调用与 contract 对照              | 新增 R-028–R-031；Stage 7 contract 保留，7.5 先补工作流基础    | ADR-0011 + 7.5A Authoring Workflow          |
 
 ## 21. Open Risks
 
-| ID    | Risk                                                                               | Severity | Owner Stage | Mitigation                                                                                  | Status |
-| ----- | ---------------------------------------------------------------------------------- | -------- | ----------- | ------------------------------------------------------------------------------------------- | ------ |
-| R-001 | scheduler 重复线程或锁反转导致演出冻结                                             | critical | 1           | 单 worker、统一锁策略、压力测试                                                             | closed |
-| R-002 | schema 漂移导致用户/AI 字段静默丢失                                                | critical | 2           | Rust 权威、strict semantic gate、generated schema/TS/capability、AJV contract               | closed |
-| R-003 | 所有属性使用 max 混合产生错误颜色/运动                                             | high     | 3           | 属性级 HTP/LTP/Add/Multiply/Mask、稳定 tie-break 与 conflict inspection                     | closed |
-| R-004 | Preview 80ms 插值掩盖真实频闪输出                                                  | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                                                        | closed |
-| R-005 | Raw DSL 热编译破坏 Live active show                                                | critical | 6           | immutable revisions；Draft preview；显式 Publish 与 Take live；native AX 复核               | closed |
-| R-006 | 单体配置与不稳定资产引用导致 AI 编排不可复现                                       | high     | 7           | 独立 Stage/Effect/Cue/Arrangement revision；版本化 TempoMap；deterministic compiler         | closed |
-| R-007 | AI 直接生成无效或不安全效果                                                        | critical | 8           | typed plan、capability、validator、safety budget                                            | open   |
-| R-008 | 硬件故障时无法自动 Blackout                                                        | critical | 9           | 独立 safety controller 和 fail-safe tests                                                   | open   |
-| R-009 | 首帧或 fixture topology 变化被 zip diff 丢弃                                       | high     | 1           | revision/topology 强制 full frame，并按 fixture ID diff                                     | closed |
-| R-010 | jsdom 30 无法在固定 Node 20 启动测试 worker                                        | medium   | 0           | 改用 Vitest 官方支持的 happy-dom                                                            | closed |
-| R-011 | timer-only 漂移基线未覆盖 Tauri/锁/render load                                     | medium   | 1           | ManualClock 确定性测试 + loaded runtime 压力测试                                            | closed |
-| R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失                                 | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command                                               | closed |
-| R-013 | managed sandbox 内精确 toolchain 恢复下载超时                                      | low      | 0           | 同版本 stable 完整验证；干净 CI 执行 pin                                                    | closed |
-| R-014 | compile/bridge 异常只写 console，用户无法定位                                      | high     | 0           | 稳定 Diagnostic envelope、前端 normalizer 与错误 Alert                                      | closed |
-| R-015 | legacy Phaser 与 EffectGraph 过渡期存在双重 IR                                     | high     | 4           | typed graph evaluator 已替代 CompiledPhaser；旧 evaluator/runtime field 删除                | closed |
-| R-016 | 高频拖拽预览、分裂 snap 与 width 清空导致时间轴漂移                                | high     | 5 后置      | rAF DOM preview、共享 TimelineGeometry、源快照、单 transaction 与聚焦回归                   | closed |
-| R-017 | 默认小窗口与布局约束不足压缩或裁切主编辑区                                         | medium   | 5 后置      | 默认最大化、合理 min-size、1440×900/最小窗口布局矩阵和真实 Tauri 验收                       | closed |
-| R-018 | popover 输入编辑键冒泡后误删 clip/keyframe/lane                                    | high     | 5 后置      | 编辑目标识别；clip/keyframe/lane/history shortcuts guard；unit + native test                | closed |
-| R-019 | macOS 默认 debug DMG bundler 在 app 生成后失败                                     | medium   | 9           | app-only bundle 已通过；发布阶段统一诊断默认 DMG post-build                                 | open   |
-| R-020 | 真实 CoreAudio 设备与常见 codec 播放尚缺原生留证                                   | medium   | 7           | 产品方向移除音频导入、播放和分析，不再需要该验收                                            | closed |
-| R-021 | Effect/Cue revision 更新静默改写既有 Arrangement                                   | critical | 7           | 所有引用固定 ID+revision；显式 upgrade/diff；Published Snapshot immutable                   | closed |
-| R-022 | 播放中修改 Group membership 破坏 Seek/Replay 确定性                                | high     | 7/7.5       | immutable TargetSet；compile bitset；连续变化使用 Spatial Mask/Weight                       | closed |
-| R-023 | 已停止的 Stage 7 音频改动混入无音频新基线                                          | high     | 7           | 从 `abd973a` 形成干净交付分支；提交、依赖、命令、source 与 evidence 均已审计                | closed |
-| R-024 | 隐式 Canvas context 混用 Draft layout/Live frame，并在切换时重置 preview session   | critical | 7           | 独立 PreviewSession/RenderContext；layout+frame 原子绑定 snapshot identity；状态机/原生回归 | closed |
-| R-025 | 30×30 Canvas 无变化时持续重绘导致 WebView 主线程饥饿                               | high     | 7           | dirty-frame rendering；批量轮廓；大矩阵关闭 glow；Canvas 回归                               | closed |
-| R-026 | 播放 tick 进入 preview session effect 依赖，导致切换 Effect 时反复 cleanup/restart | high     | 7           | tick 使用 ref/独立 rAF；session 只在 context/snapshot identity 变化时重建                   | closed |
-| R-027 | Live 目录暴露内部 Cue authoring preview instance                                   | critical | 7           | Live catalog 过滤 `__effect_preview__` 与 `__cue__:`；原生与 Rust 回归                      | closed |
+| ID    | Risk                                                                                  | Severity | Owner Stage | Mitigation                                                                                  | Status |
+| ----- | ------------------------------------------------------------------------------------- | -------- | ----------- | ------------------------------------------------------------------------------------------- | ------ |
+| R-001 | scheduler 重复线程或锁反转导致演出冻结                                                | critical | 1           | 单 worker、统一锁策略、压力测试                                                             | closed |
+| R-002 | schema 漂移导致用户/AI 字段静默丢失                                                   | critical | 2           | Rust 权威、strict semantic gate、generated schema/TS/capability、AJV contract               | closed |
+| R-003 | 所有属性使用 max 混合产生错误颜色/运动                                                | high     | 3           | 属性级 HTP/LTP/Add/Multiply/Mask、稳定 tie-break 与 conflict inspection                     | closed |
+| R-004 | Preview 80ms 插值掩盖真实频闪输出                                                     | high     | 1/3         | 预览消费原始 Frame；平滑改为显式选项                                                        | closed |
+| R-005 | Raw DSL 热编译破坏 Live active show                                                   | critical | 6           | immutable revisions；Draft preview；显式 Publish 与 Take live；native AX 复核               | closed |
+| R-006 | 单体配置与不稳定资产引用导致 AI 编排不可复现                                          | high     | 7           | 独立 Stage/Effect/Cue/Arrangement revision；版本化 TempoMap；deterministic compiler         | closed |
+| R-007 | AI 直接生成无效或不安全效果                                                           | critical | 8           | typed plan、capability、validator、safety budget                                            | open   |
+| R-008 | 硬件故障时无法自动 Blackout                                                           | critical | 9           | 独立 safety controller 和 fail-safe tests                                                   | open   |
+| R-009 | 首帧或 fixture topology 变化被 zip diff 丢弃                                          | high     | 1           | revision/topology 强制 full frame，并按 fixture ID diff                                     | closed |
+| R-010 | jsdom 30 无法在固定 Node 20 启动测试 worker                                           | medium   | 0           | 改用 Vitest 官方支持的 happy-dom                                                            | closed |
+| R-011 | timer-only 漂移基线未覆盖 Tauri/锁/render load                                        | medium   | 1           | ManualClock 确定性测试 + loaded runtime 压力测试                                            | closed |
+| R-012 | Stop 被 UI 同时当作 Pause，导致 active phaser 丢失                                    | high     | 1           | 显式 Transport enum 与独立 Pause/Stop command                                               | closed |
+| R-013 | managed sandbox 内精确 toolchain 恢复下载超时                                         | low      | 0           | 同版本 stable 完整验证；干净 CI 执行 pin                                                    | closed |
+| R-014 | compile/bridge 异常只写 console，用户无法定位                                         | high     | 0           | 稳定 Diagnostic envelope、前端 normalizer 与错误 Alert                                      | closed |
+| R-015 | legacy Phaser 与 EffectGraph 过渡期存在双重 IR                                        | high     | 4           | typed graph evaluator 已替代 CompiledPhaser；旧 evaluator/runtime field 删除                | closed |
+| R-016 | 高频拖拽预览、分裂 snap 与 width 清空导致时间轴漂移                                   | high     | 5 后置      | rAF DOM preview、共享 TimelineGeometry、源快照、单 transaction 与聚焦回归                   | closed |
+| R-017 | 默认小窗口与布局约束不足压缩或裁切主编辑区                                            | medium   | 5 后置      | 默认最大化、合理 min-size、1440×900/最小窗口布局矩阵和真实 Tauri 验收                       | closed |
+| R-018 | popover 输入编辑键冒泡后误删 clip/keyframe/lane                                       | high     | 5 后置      | 编辑目标识别；clip/keyframe/lane/history shortcuts guard；unit + native test                | closed |
+| R-019 | macOS 默认 debug DMG bundler 在 app 生成后失败                                        | medium   | 9           | app-only bundle 已通过；发布阶段统一诊断默认 DMG post-build                                 | open   |
+| R-020 | 真实 CoreAudio 设备与常见 codec 播放尚缺原生留证                                      | medium   | 7           | 产品方向移除音频导入、播放和分析，不再需要该验收                                            | closed |
+| R-021 | Effect/Cue revision 更新静默改写既有 Arrangement                                      | critical | 7           | 所有引用固定 ID+revision；显式 upgrade/diff；Published Snapshot immutable                   | closed |
+| R-022 | 播放中修改 Group membership 破坏 Seek/Replay 确定性                                   | high     | 7/7.5       | immutable TargetSet；compile bitset；连续变化使用 Spatial Mask/Weight                       | closed |
+| R-023 | 已停止的 Stage 7 音频改动混入无音频新基线                                             | high     | 7           | 从 `abd973a` 形成干净交付分支；提交、依赖、命令、source 与 evidence 均已审计                | closed |
+| R-024 | 隐式 Canvas context 混用 Draft layout/Live frame，并在切换时重置 preview session      | critical | 7           | 独立 PreviewSession/RenderContext；layout+frame 原子绑定 snapshot identity；状态机/原生回归 | closed |
+| R-025 | 30×30 Canvas 无变化时持续重绘导致 WebView 主线程饥饿                                  | high     | 7           | dirty-frame rendering；批量轮廓；大矩阵关闭 glow；Canvas 回归                               | closed |
+| R-026 | 播放 tick 进入 preview session effect 依赖，导致切换 Effect 时反复 cleanup/restart    | high     | 7           | tick 使用 ref/独立 rAF；session 只在 context/snapshot identity 变化时重建                   | closed |
+| R-027 | Live 目录暴露内部 Cue authoring preview instance                                      | critical | 7           | Live catalog 过滤 `__effect_preview__` 与 `__cue__:`；原生与 Rust 回归                      | closed |
+| R-028 | Stage topology 修改被任意 Cue 硬阻塞，且没有 dependency impact、upgrade 或 remap 路径 | critical | 7.5         | LayoutPreset + Stage impact diff；显式 upgrade/remap/keep-old/create-new transaction        | open   |
+| R-029 | Lab/Cue/Arrange 的作者时钟隐藏且语义分裂，首 BPM、固定 PPQ/4/4 造成错误预览           | high     | 7.5         | 共享 AuthoringTransport/PreviewClock；读取完整 TempoMap/TimeSignatureMap                    | open   |
+| R-030 | 最小 CueTimelinePanel 丢失 zoom、snap、resize、键盘和 typed automation 编辑           | critical | 7.5         | 以 CueClip adapter 迁移成熟 Timeline kernel，并保留 DOM-ref PointerEvents 性能路径          | open   |
+| R-031 | 当前 Stage 7 面板与无调用者的 V4 Stage Setup/Timeline 双实现持续漂移                  | medium   | 7.5         | 先做 capability parity matrix，迁移已验证交互，再删除旧壳与临时面板                         | open   |
 
 ## 22. Deferred Backlog
 

@@ -231,3 +231,9 @@ Stage 7 保存格式不能无损降级回单体 V4；rollback 只能保留 V1–
 - V1–V4 显式迁移为默认 Stage/Effect/Cue/Arrangement；当前基线没有已发布 V5，因此未引入 Audio/Song loss runtime。
 - 最终 `pnpm check:all`、`pnpm build`、101 Rust unit、12 integration/contracts、116 frontend tests 与真实 Tauri 最大化/1440×900/1100×720 路径通过。
 - 原生验收证据：[`../evidence/stage7-tempo-cue-arrangement/`](../evidence/stage7-tempo-cue-arrangement/README.md)。
+
+## Post-implementation workflow audit
+
+2026-08-04 的真实 Tauri 复审确认本 ADR 的资产、revision、PreviewSession/RenderContext 与 Live 隔离决策继续有效；Stage 7 不重新打开。复审同时发现当前作者界面是最小接线版本：Stage 缺少 LayoutPreset 与 revision upgrade 路径，Effect/Cue preview 缺少显式音乐时钟，Arrange 未迁移 zoom、snap、resize 和 typed automation。
+
+这些问题记录为 Stage 7.5 的 R-028–R-031，由 ADR-0011（Authoring Preview Clock/Transport/Timeline）与 ADR-0012（LayoutPreset/Stage upgrade/动态 TargetSet）处理；不得通过自动 Publish/Take Live、隐式改写 revision 或恢复单体 ShowDocument 来修复。现场证据与推荐顺序见 [`../stage7-workflow-audit.md`](../stage7-workflow-audit.md)。
