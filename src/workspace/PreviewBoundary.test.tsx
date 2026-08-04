@@ -1,6 +1,12 @@
 import { act, render, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  authoringSessionKey,
+  authoringTransportActions,
+  useAuthoringTransportStore,
+} from "@/authoring/transport";
 import type { PreviewSource, RenderContext } from "@/bridge/types";
+import { assetKey } from "@/document/projectModel";
 import { projectActions, useProjectStore } from "@/stores/project";
 import type { WorkspaceId } from "@/stores/workspace";
 import { useProjectPreviewController } from "./useProjectPreviewController";
@@ -22,8 +28,6 @@ describe("PreviewSession boundary state machine", () => {
     vi.clearAllMocks();
     localStorage.clear();
     projectActions.reset();
-    projectActions.setEffectPreviewPlayback("paused");
-    projectActions.setCuePreviewPlayback("paused");
     commandMocks.previewProject.mockImplementation(
       (options: { source: PreviewSource; context: RenderContext; playheadTick: number }) =>
         Promise.resolve(frame(options.source, options.context, options.playheadTick)),
@@ -37,7 +41,13 @@ describe("PreviewSession boundary state machine", () => {
   it("preserves authoring state while isolating Draft, Published rehearsal, and Live", async () => {
     const effect = projectActions.createEffect("Pulse")!;
     const cue = projectActions.createCue([effect], "Pulse Cue")!;
-    projectActions.setEffectPreviewTick(1_234);
+    const effectSessionKey = authoringSessionKey("effect", assetKey(effect));
+    authoringTransportActions.ensureSession({
+      key: effectSessionKey,
+      scope: "effect",
+      durationTicks: 3_840,
+    });
+    authoringTransportActions.seek(effectSessionKey, 1_234);
 
     const view = render(<Harness workspace="effect-lab" />);
     await waitFor(() => expect(commandMocks.previewProject).toHaveBeenCalledOnce());
@@ -56,7 +66,7 @@ describe("PreviewSession boundary state machine", () => {
         0,
       ),
     );
-    expect(useProjectStore.getState().effectPreviewTick).toBe(1_234);
+    expect(useAuthoringTransportStore.getState().sessions[effectSessionKey].cursorTick).toBe(1_234);
     expect(useProjectStore.getState().selectedEffectRef).toEqual(effect);
 
     const previewCallsBeforeLive = commandMocks.previewProject.mock.calls.length;

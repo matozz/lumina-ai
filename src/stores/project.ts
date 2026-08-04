@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { authoringSessionKey, authoringTransportActions } from "@/authoring/transport";
 import type {
   ArrangementDocument,
   AssetRef,
@@ -21,14 +22,6 @@ import {
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
 
 export type PreviewSourceMode = "authoring_draft" | "rehearsal_draft" | "rehearsal_published";
-export type PreviewPlayback = "playing" | "paused";
-
-export interface ArrangementSessionState {
-  playheadTick: number;
-  loopEnabled: boolean;
-  loopStartTick: number;
-  loopEndTick: number;
-}
 
 interface ProjectHistoryEntry {
   label: string;
@@ -43,14 +36,9 @@ export interface ProjectState {
   selectedCueRef: AssetRef | null;
   selectedArrangementRef: AssetRef;
   selectedTargetSetId: string;
-  arrangementSessions: Record<string, ArrangementSessionState>;
   previewSource: PreviewSourceMode;
   liveViewMode: "live" | "rehearsal";
   rehearsalPublishedRevision: number | null;
-  effectPreviewTick: number;
-  cuePreviewTick: number;
-  effectPreviewPlayback: PreviewPlayback;
-  cuePreviewPlayback: PreviewPlayback;
   previewGeneration: number | null;
   previewError: string | null;
   history: ProjectHistoryEntry[];
@@ -67,14 +55,9 @@ const initialState: ProjectState = {
   selectedCueRef: null,
   selectedArrangementRef: activeArrangementRef(starter),
   selectedTargetSetId: "all",
-  arrangementSessions: {},
   previewSource: "authoring_draft",
   liveViewMode: "live",
   rehearsalPublishedRevision: null,
-  effectPreviewTick: 0,
-  cuePreviewTick: 0,
-  effectPreviewPlayback: "playing",
-  cuePreviewPlayback: "playing",
   previewGeneration: null,
   previewError: null,
   history: [],
@@ -92,17 +75,13 @@ export const useProjectStore = create<ProjectState>()(
       selectedCueRef: state.selectedCueRef,
       selectedArrangementRef: state.selectedArrangementRef,
       selectedTargetSetId: state.selectedTargetSetId,
-      arrangementSessions: state.arrangementSessions,
-      effectPreviewPlayback: state.effectPreviewPlayback,
-      cuePreviewPlayback: state.cuePreviewPlayback,
-      effectPreviewTick: state.effectPreviewTick,
-      cuePreviewTick: state.cuePreviewTick,
     }),
   }),
 );
 
 export const projectActions = {
   loadBundle: (bundle: ProjectBundle) => {
+    authoringTransportActions.reset();
     const selectedArrangementRef = activeArrangementRef(bundle);
     useProjectStore.setState({
       ...initialState,
@@ -127,42 +106,12 @@ export const projectActions = {
   selectArrangement: (selectedArrangementRef: AssetRef) => {
     useProjectStore.setState({ selectedArrangementRef });
   },
-  setArrangementPlayhead: (reference: AssetRef, playheadTick: number) =>
-    useProjectStore.setState((state) => ({
-      arrangementSessions: {
-        ...state.arrangementSessions,
-        [assetKey(reference)]: {
-          ...(state.arrangementSessions[assetKey(reference)] ?? defaultArrangementSession()),
-          playheadTick,
-        },
-      },
-    })),
-  setArrangementLoop: (
-    reference: AssetRef,
-    loop: Pick<ArrangementSessionState, "loopEnabled" | "loopStartTick" | "loopEndTick">,
-  ) =>
-    useProjectStore.setState((state) => ({
-      arrangementSessions: {
-        ...state.arrangementSessions,
-        [assetKey(reference)]: {
-          ...(state.arrangementSessions[assetKey(reference)] ?? defaultArrangementSession()),
-          ...loop,
-        },
-      },
-    })),
   setPreviewSource: (
     previewSource: PreviewSourceMode,
     rehearsalPublishedRevision: number | null = null,
   ) => useProjectStore.setState({ previewSource, rehearsalPublishedRevision }),
   setLiveViewMode: (liveViewMode: "live" | "rehearsal") =>
     useProjectStore.setState({ liveViewMode }),
-  setEffectPreviewTick: (effectPreviewTick: number) =>
-    useProjectStore.setState({ effectPreviewTick }),
-  setCuePreviewTick: (cuePreviewTick: number) => useProjectStore.setState({ cuePreviewTick }),
-  setEffectPreviewPlayback: (effectPreviewPlayback: PreviewPlayback) =>
-    useProjectStore.setState({ effectPreviewPlayback }),
-  setCuePreviewPlayback: (cuePreviewPlayback: PreviewPlayback) =>
-    useProjectStore.setState({ cuePreviewPlayback }),
   setPreviewResult: (previewGeneration: number) =>
     useProjectStore.setState({ previewGeneration, previewError: null }),
   setPreviewError: (previewError: string) => useProjectStore.setState({ previewError }),
@@ -399,7 +348,10 @@ export const projectActions = {
     });
     repairSelections();
   },
-  reset: () => useProjectStore.setState(structuredClone(initialState), true),
+  reset: () => {
+    authoringTransportActions.reset();
+    useProjectStore.setState(structuredClone(initialState), true);
+  },
 };
 
 export const projectSelectors = {
@@ -411,10 +363,6 @@ export const projectSelectors = {
   previewSource: (state: ProjectState) => state.previewSource,
   liveViewMode: (state: ProjectState) => state.liveViewMode,
   rehearsalPublishedRevision: (state: ProjectState) => state.rehearsalPublishedRevision,
-  effectPreviewPlayback: (state: ProjectState) => state.effectPreviewPlayback,
-  cuePreviewPlayback: (state: ProjectState) => state.cuePreviewPlayback,
-  effectPreviewTick: (state: ProjectState) => state.effectPreviewTick,
-  cuePreviewTick: (state: ProjectState) => state.cuePreviewTick,
   previewGeneration: (state: ProjectState) => state.previewGeneration,
   previewError: (state: ProjectState) => state.previewError,
   canUndo: (state: ProjectState) => state.historyCursor > 0,
@@ -457,7 +405,6 @@ function updateArrangement(
   label: string,
   update: (arrangement: ArrangementDocument) => void,
 ) {
-  const previousSession = useProjectStore.getState().arrangementSessions[assetKey(reference)];
   let selected = reference;
   transact(label, (bundle, published) => {
     selected = forkAssetRevision(bundle, published, "arrangement", reference);
@@ -467,16 +414,16 @@ function updateArrangement(
     bundle.manifest.active_arrangement_id = arrangement.id;
     bumpManifestRevision(bundle, published);
   });
-  useProjectStore.setState((state) => ({
-    selectedArrangementRef: selected,
-    arrangementSessions:
-      previousSession && assetKey(selected) !== assetKey(reference)
-        ? {
-            ...state.arrangementSessions,
-            [assetKey(selected)]: { ...previousSession },
-          }
-        : state.arrangementSessions,
-  }));
+  useProjectStore.setState({ selectedArrangementRef: selected });
+  if (assetKey(selected) !== assetKey(reference)) {
+    authoringTransportActions.copySession(authoringSessionKey("arrangement", assetKey(reference)), {
+      key: authoringSessionKey("arrangement", assetKey(selected)),
+      scope: "arrangement",
+      durationTicks:
+        exactAsset(useProjectStore.getState().bundle.arrangements, selected)?.length_ticks ?? 1,
+      clockSource: "arrangement",
+    });
+  }
 }
 
 function repairSelections() {
@@ -495,10 +442,6 @@ function repairSelections() {
         ? state.selectedArrangementRef
         : activeArrangementRef(state.bundle),
   });
-}
-
-function defaultArrangementSession(): ArrangementSessionState {
-  return { playheadTick: 0, loopEnabled: false, loopStartTick: 0, loopEndTick: 3_840 };
 }
 
 function stableSeed(value: string) {

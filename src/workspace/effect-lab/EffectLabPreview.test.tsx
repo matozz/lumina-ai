@@ -1,5 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { authoringSessionKey, authoringTransportActions } from "@/authoring/transport";
+import { assetKey } from "@/document/projectModel";
 import { projectActions, useProjectStore } from "@/stores/project";
 import { useProjectPreviewController } from "../useProjectPreviewController";
 import { EffectLabPreview } from "./EffectLabPreview";
@@ -22,7 +24,6 @@ describe("EffectLabPreview", () => {
     vi.clearAllMocks();
     localStorage.clear();
     projectActions.reset();
-    projectActions.setEffectPreviewPlayback("paused");
   });
 
   it("previews the selected Effect Draft through an isolated Authoring Preview session", async () => {
@@ -55,7 +56,13 @@ describe("EffectLabPreview", () => {
 
   it("switches to a newly created Effect while playing without a tick-driven restart loop", async () => {
     const pulse = projectActions.createEffect("Pulse")!;
-    projectActions.setEffectPreviewPlayback("playing");
+    const sessionKey = authoringSessionKey("effect", assetKey(pulse));
+    authoringTransportActions.ensureSession({
+      key: sessionKey,
+      scope: "effect",
+      durationTicks: 3_840,
+    });
+    authoringTransportActions.play(sessionKey);
     vi.stubGlobal("requestAnimationFrame", vi.fn().mockReturnValue(1));
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
     commandMocks.previewProject.mockImplementation(

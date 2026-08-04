@@ -1,4 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import {
+  authoringSessionKey,
+  authoringTransportActions,
+  useAuthoringTransportStore,
+} from "@/authoring/transport";
 import { assetKey, exactAsset } from "@/document/projectModel";
 import { projectActions, useProjectStore } from "./project";
 
@@ -7,23 +12,35 @@ describe("Stage 7 Project state", () => {
 
   it("keeps per-Arrangement playhead and loop state while switching", () => {
     const house = useProjectStore.getState().selectedArrangementRef;
-    projectActions.setArrangementPlayhead(house, 1_920);
-    projectActions.setArrangementLoop(house, {
-      loopEnabled: true,
-      loopStartTick: 960,
-      loopEndTick: 3_840,
+    const houseKey = authoringSessionKey("arrangement", assetKey(house));
+    authoringTransportActions.ensureSession({
+      key: houseKey,
+      scope: "arrangement",
+      durationTicks: 30_720,
+    });
+    authoringTransportActions.seek(houseKey, 1_920);
+    authoringTransportActions.setLoop(houseKey, {
+      enabled: true,
+      startTick: 960,
+      endTick: 3_840,
     });
     const journey = projectActions.duplicateArrangement(house, "Tempo Journey");
     expect(journey).not.toBeNull();
-    projectActions.setArrangementPlayhead(journey!, 7_680);
+    const journeyKey = authoringSessionKey("arrangement", assetKey(journey!));
+    authoringTransportActions.ensureSession({
+      key: journeyKey,
+      scope: "arrangement",
+      durationTicks: 30_720,
+    });
+    authoringTransportActions.seek(journeyKey, 7_680);
     projectActions.selectArrangement(house);
 
-    const sessions = useProjectStore.getState().arrangementSessions;
-    expect(sessions[assetKey(house)]).toMatchObject({
-      playheadTick: 1_920,
+    const sessions = useAuthoringTransportStore.getState().sessions;
+    expect(sessions[houseKey]).toMatchObject({
+      cursorTick: 1_920,
       loopEnabled: true,
     });
-    expect(sessions[assetKey(journey!)]?.playheadTick).toBe(7_680);
+    expect(sessions[journeyKey]?.cursorTick).toBe(7_680);
   });
 
   it("duplicates a multi-tempo Arrangement without moving clip or keyframe ticks", () => {
@@ -116,41 +133,57 @@ describe("Stage 7 Project state", () => {
   });
 
   it("keeps Draft and Published rehearsal modes explicit and independent", () => {
+    const effectKey = authoringSessionKey("effect", "pulse@1");
+    const cueKey = authoringSessionKey("cue", "pulse-cue@1");
+    authoringTransportActions.ensureSession({
+      key: effectKey,
+      scope: "effect",
+      durationTicks: 3_840,
+    });
+    authoringTransportActions.ensureSession({ key: cueKey, scope: "cue", durationTicks: 3_840 });
     projectActions.setPreviewSource("rehearsal_published", 7);
-    projectActions.setEffectPreviewPlayback("paused");
-    projectActions.setCuePreviewPlayback("playing");
+    authoringTransportActions.play(effectKey);
+    authoringTransportActions.play(cueKey);
+    authoringTransportActions.pause(effectKey);
     projectActions.setPreviewSource("authoring_draft");
 
     const state = useProjectStore.getState();
     expect(state.previewSource).toBe("authoring_draft");
     expect(state.rehearsalPublishedRevision).toBeNull();
-    expect(state.effectPreviewPlayback).toBe("paused");
-    expect(state.cuePreviewPlayback).toBe("playing");
+    expect(useAuthoringTransportStore.getState().sessions[effectKey].playback).toBe("paused");
+    expect(useAuthoringTransportStore.getState().sessions[cueKey].playback).toBe("playing");
   });
 
   it("preserves an Arrangement session when a Published asset forks to a new revision", () => {
     const reference = useProjectStore.getState().selectedArrangementRef;
-    projectActions.setArrangementPlayhead(reference, 5_760);
-    projectActions.setArrangementLoop(reference, {
-      loopEnabled: true,
-      loopStartTick: 960,
-      loopEndTick: 7_680,
+    const sourceKey = authoringSessionKey("arrangement", assetKey(reference));
+    authoringTransportActions.ensureSession({
+      key: sourceKey,
+      scope: "arrangement",
+      durationTicks: 30_720,
+    });
+    authoringTransportActions.seek(sourceKey, 5_760);
+    authoringTransportActions.setLoop(sourceKey, {
+      enabled: true,
+      startTick: 960,
+      endTick: 7_680,
     });
     projectActions.markPublished();
 
     projectActions.renameArrangement(reference, "House 128 Revised");
     const revised = useProjectStore.getState().selectedArrangementRef;
+    const revisedKey = authoringSessionKey("arrangement", assetKey(revised));
 
     expect(revised).toEqual({ id: reference.id, revision: reference.revision + 1 });
-    expect(useProjectStore.getState().arrangementSessions[assetKey(revised)]).toMatchObject({
-      playheadTick: 5_760,
+    expect(useAuthoringTransportStore.getState().sessions[revisedKey]).toMatchObject({
+      cursorTick: 5_760,
       loopEnabled: true,
       loopStartTick: 960,
       loopEndTick: 7_680,
     });
   });
 
-  it("persists multiple Arrangements and their independent authoring sessions for reopen", async () => {
+  it("persists multiple Arrangements without serializing session-only authoring state", async () => {
     const house = useProjectStore.getState().selectedArrangementRef;
     const journey = projectActions.duplicateArrangement(house, "Tempo Journey")!;
     const journeyId = useProjectStore.getState().selectedArrangementRef.id;
@@ -158,7 +191,13 @@ describe("Stage 7 Project state", () => {
       arrangement.tempo_map.points.push({ time_tick: 7_680, bpm: 96 });
     });
     const revisedJourney = useProjectStore.getState().selectedArrangementRef;
-    projectActions.setArrangementPlayhead(revisedJourney, 8_640);
+    const sessionKey = authoringSessionKey("arrangement", assetKey(revisedJourney));
+    authoringTransportActions.ensureSession({
+      key: sessionKey,
+      scope: "arrangement",
+      durationTicks: 30_720,
+    });
+    authoringTransportActions.seek(sessionKey, 8_640);
     const persisted = localStorage.getItem("lumina-project-v1");
     expect(persisted).not.toBeNull();
 
@@ -176,6 +215,7 @@ describe("Stage 7 Project state", () => {
     expect(
       exactAsset(reopened.bundle.arrangements, reopened.selectedArrangementRef)?.tempo_map.points,
     ).toHaveLength(2);
-    expect(reopened.arrangementSessions[assetKey(revisedJourney)]?.playheadTick).toBe(8_640);
+    expect(useAuthoringTransportStore.getState().sessions[sessionKey]).toBeUndefined();
+    expect(persisted).not.toContain("cursorTick");
   });
 });
