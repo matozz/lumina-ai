@@ -51,6 +51,11 @@ describe("AuthoringTransport session state", () => {
       denominator: 4,
       loopBars: 2,
     });
+    expect(useAuthoringTransportStore.getState().sessions[key]).toMatchObject({
+      durationTicks: 5_760,
+      loopStartTick: 0,
+      loopEndTick: 5_760,
+    });
   });
 
   it("rejects Local timing for Arrangement and invalid loop ranges", () => {

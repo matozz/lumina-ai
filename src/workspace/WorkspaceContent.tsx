@@ -1,4 +1,5 @@
 import { FlaskConical, Layers2, Layers3, Lightbulb, RadioTower } from "lucide-react";
+import { AuthoringTransportBar } from "@/authoring/AuthoringTransportBar";
 import { CanvasView } from "@/canvas/CanvasView";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { exactAsset } from "@/document/projectModel";
@@ -44,9 +45,16 @@ function WorkspaceSurface({ workspace }: { workspace: WorkspaceId }) {
         <span className="text-xs font-medium">{meta.title}</span>
         <span className="text-muted-foreground truncate text-[10px]">{meta.description}</span>
         <span className="text-muted-foreground ml-auto font-mono text-[10px] tabular-nums">
-          {arrangement?.tempo_map.points[0]?.bpm ?? 120} BPM start · TempoMap
+          {arrangement?.tempo_map.points.length ?? 0} tempo points · TimeSignatureMap
         </span>
       </div>
+      {workspace === "arrange" && arrangement && (
+        <AuthoringTransportBar
+          scope="arrangement"
+          reference={arrangementRef}
+          arrangement={arrangement}
+        />
+      )}
       <div className="relative min-h-0 flex-1">
         <CanvasView
           frameSource={workspace === "live" && liveViewMode === "live" ? "live" : "preview"}

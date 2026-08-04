@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { assetKey, exactAsset } from "@/document/projectModel";
+import { authoringSessionKey, useAuthoringTransportStore } from "@/authoring/transport";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import { workspaceActions } from "@/stores/workspace";
+import { ArrangementLoopEditor } from "./ArrangementLoopEditor";
 
 interface TempoDraftPoint {
   time_tick: number;
@@ -18,7 +20,6 @@ interface TempoDraftPoint {
 export function ArrangementInspector() {
   const bundle = useProjectStore(projectSelectors.bundle);
   const reference = useProjectStore(projectSelectors.selectedArrangementRef);
-  const sessions = useProjectStore((state) => state.arrangementSessions);
   const arrangement = exactAsset(bundle.arrangements, reference);
   const [name, setName] = useState(arrangement?.name ?? "");
   const [lengthTicks, setLengthTicks] = useState(arrangement?.length_ticks ?? 30_720);
@@ -38,12 +39,9 @@ export function ArrangementInspector() {
   }, [arrangement]);
 
   if (!arrangement) return null;
-  const session = sessions[assetKey(reference)] ?? {
-    playheadTick: 0,
-    loopEnabled: false,
-    loopStartTick: 0,
-    loopEndTick: Math.min(3_840, arrangement.length_ticks),
-  };
+  const sessionKey = authoringSessionKey("arrangement", assetKey(reference));
+  const currentPlayheadTick = () =>
+    useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick ?? 0;
   const masterLane = arrangement.tracks
     .flatMap((track) => track.automation_lanes ?? [])
     .find((lane) => lane.target.scope === "global" && lane.target.parameter_id === "master_dimmer");
@@ -94,7 +92,7 @@ export function ArrangementInspector() {
     const previous = tempoPoints[tempoPoints.length - 1];
     const timeTick = Math.min(
       lengthTicks - 1,
-      Math.max(previous.time_tick + arrangement.ppq * 4, session.playheadTick),
+      Math.max(previous.time_tick + arrangement.ppq * 4, currentPlayheadTick()),
     );
     if (timeTick <= previous.time_tick) return;
     setTempoPoints([...tempoPoints, { time_tick: timeTick, bpm: previous.bpm }]);
@@ -127,7 +125,8 @@ export function ArrangementInspector() {
 
   const addMarker = () => {
     projectActions.updateArrangement(reference, "Add Arrangement marker", (draft) => {
-      const base = `marker-${session.playheadTick}`;
+      const playheadTick = currentPlayheadTick();
+      const base = `marker-${playheadTick}`;
       let id = base;
       let suffix = 2;
       while (draft.markers?.some((marker) => marker.id === id)) id = `${base}-${suffix++}`;
@@ -135,7 +134,7 @@ export function ArrangementInspector() {
       draft.markers.push({
         id,
         name: `Marker ${draft.markers.length + 1}`,
-        time_tick: session.playheadTick,
+        time_tick: playheadTick,
       });
     });
   };
@@ -282,48 +281,7 @@ export function ArrangementInspector() {
               Marker at playhead
             </Button>
           </div>
-          <Field>
-            <FieldLabel>Authoring loop</FieldLabel>
-            <div className="grid grid-cols-2 gap-1.5">
-              <Input
-                aria-label="Loop start tick"
-                type="number"
-                min={0}
-                value={session.loopStartTick}
-                onChange={(event) =>
-                  projectActions.setArrangementLoop(reference, {
-                    ...session,
-                    loopStartTick: Number(event.target.value),
-                  })
-                }
-              />
-              <Input
-                aria-label="Loop end tick"
-                type="number"
-                min={1}
-                value={session.loopEndTick}
-                onChange={(event) =>
-                  projectActions.setArrangementLoop(reference, {
-                    ...session,
-                    loopEndTick: Number(event.target.value),
-                  })
-                }
-              />
-            </div>
-            <Button
-              size="xs"
-              variant={session.loopEnabled ? "secondary" : "outline"}
-              aria-pressed={session.loopEnabled}
-              onClick={() =>
-                projectActions.setArrangementLoop(reference, {
-                  ...session,
-                  loopEnabled: !session.loopEnabled,
-                })
-              }
-            >
-              Loop {session.loopEnabled ? "on" : "off"}
-            </Button>
-          </Field>
+          <ArrangementLoopEditor reference={reference} durationTicks={arrangement.length_ticks} />
         </div>
       </ScrollArea>
     </aside>

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { LocalPreviewTiming } from "./musicalTime";
+import { createLocalPreviewClock, type LocalPreviewTiming } from "./musicalTime";
 
 export type AuthoringScope = "effect" | "cue" | "arrangement";
 export type AuthoringPlayback = "stopped" | "playing" | "paused";
@@ -70,13 +70,14 @@ export const authoringTransportActions = {
     const nextDuration = positiveInteger(durationTicks);
     if (requiredSession(key).durationTicks === nextDuration) return;
     updateCommand(key, now, (session) => {
+      const loopCoveredDuration =
+        session.loopStartTick === 0 && session.loopEndTick === session.durationTicks;
       session.durationTicks = nextDuration;
       session.cursorTick = clampTick(session.cursorTick, session.durationTicks);
       session.loopStartTick = Math.min(session.loopStartTick, session.durationTicks - 1);
-      session.loopEndTick = Math.max(
-        session.loopStartTick + 1,
-        Math.min(session.loopEndTick, session.durationTicks),
-      );
+      session.loopEndTick = loopCoveredDuration
+        ? session.durationTicks
+        : Math.max(session.loopStartTick + 1, Math.min(session.loopEndTick, session.durationTicks));
     });
   },
   play(key: string, now = monotonicNow()) {
@@ -135,6 +136,13 @@ export const authoringTransportActions = {
         );
       }
       session.clockSource = clockSource;
+      if (clockSource === "local") {
+        const durationTicks = createLocalPreviewClock(session.localTiming).durationTicks;
+        session.durationTicks = durationTicks;
+        session.loopStartTick = 0;
+        session.loopEndTick = durationTicks;
+        session.cursorTick = clampTick(session.cursorTick, durationTicks);
+      }
     });
   },
   setLocalTiming(key: string, timing: LocalPreviewTiming, now = monotonicNow()) {
@@ -147,7 +155,15 @@ export const authoringTransportActions = {
           "Edit the Arrangement clock in its Inspector instead.",
         );
       }
+      const loopCoveredDuration =
+        session.loopStartTick === 0 && session.loopEndTick === session.durationTicks;
       session.localTiming = { ...timing };
+      if (session.clockSource === "local") {
+        const durationTicks = createLocalPreviewClock(timing).durationTicks;
+        session.durationTicks = durationTicks;
+        session.cursorTick = clampTick(session.cursorTick, durationTicks);
+        if (loopCoveredDuration) session.loopEndTick = durationTicks;
+      }
     });
   },
   publishCursor(key: string, cursorTick: number, ended = false) {

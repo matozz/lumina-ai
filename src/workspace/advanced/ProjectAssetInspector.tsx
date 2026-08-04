@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { authoringSessionKey, useAuthoringTransportStore } from "@/authoring/transport";
 import { Braces, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,6 @@ export function ProjectAssetInspector({ workspace }: { workspace: WorkspaceId })
   const bundle = useProjectStore(projectSelectors.bundle);
   const effectRef = useProjectStore(projectSelectors.selectedEffectRef);
   const arrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
-  const sessions = useProjectStore((state) => state.arrangementSessions);
   const [kind, setKind] = useState<AssetKind>("manifest");
   const value = useMemo(() => {
     if (kind === "manifest") return bundle.manifest;
@@ -44,7 +44,9 @@ export function ProjectAssetInspector({ workspace }: { workspace: WorkspaceId })
     const cueRef = useProjectStore.getState().selectedCueRef;
     const cue = exactAsset(useProjectStore.getState().bundle.cues, cueRef);
     if (!cueRef || !cue) return;
-    const playheadTick = sessions[assetKey(arrangementRef)]?.playheadTick ?? 0;
+    const sessionKey = authoringSessionKey("arrangement", assetKey(arrangementRef));
+    const playheadTick =
+      useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick ?? 0;
     projectActions.updateArrangement(
       arrangementRef,
       "Place single Effect as explicit Cue",

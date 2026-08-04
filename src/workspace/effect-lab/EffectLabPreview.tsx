@@ -1,19 +1,17 @@
-import { Pause, Play, RotateCw } from "lucide-react";
+import { RotateCw } from "lucide-react";
+import { AuthoringTransportBar } from "@/authoring/AuthoringTransportBar";
 import { CanvasView } from "@/canvas/CanvasView";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { exactAsset } from "@/document/projectModel";
-import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
+import { projectSelectors, useProjectStore } from "@/stores/project";
 
 export function EffectLabPreview() {
   const bundle = useProjectStore(projectSelectors.bundle);
   const selected = useProjectStore(projectSelectors.selectedEffectRef);
-  const playback = useProjectStore(projectSelectors.effectPreviewPlayback);
-  const tick = useProjectStore(projectSelectors.effectPreviewTick);
+  const arrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
   const error = useProjectStore(projectSelectors.previewError);
   const effect = exactAsset(bundle.effects, selected);
-  const playing = playback === "playing";
+  const arrangement = exactAsset(bundle.arrangements, arrangementRef);
 
   return (
     <section className="bg-background relative flex h-full min-h-0 flex-col">
@@ -24,32 +22,15 @@ export function EffectLabPreview() {
         <span className="text-muted-foreground ml-auto truncate text-[10px]">
           {effect ? `${effect.name} · r${effect.revision}` : "No Effect selected"}
         </span>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          aria-label={playing ? "Pause effect loop preview" : "Play effect loop preview"}
-          disabled={!effect}
-          onClick={() => projectActions.setEffectPreviewPlayback(playing ? "paused" : "playing")}
-        >
-          {playing ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
-        </Button>
       </div>
-      <div className="border-border flex h-7 shrink-0 items-center gap-2 border-b px-2.5">
-        <Slider
-          aria-label="Scrub Effect preview"
-          min={0}
-          max={3_839}
-          step={1}
-          value={[tick]}
+      {selected && arrangement && (
+        <AuthoringTransportBar
+          scope="effect"
+          reference={selected}
+          arrangement={arrangement}
           disabled={!effect}
-          onValueChange={(value) =>
-            projectActions.setEffectPreviewTick(Array.isArray(value) ? (value[0] ?? 0) : value)
-          }
         />
-        <span className="text-muted-foreground w-16 text-right font-mono text-[10px] tabular-nums">
-          {tick} t
-        </span>
-      </div>
+      )}
       <div className="relative min-h-0 flex-1">
         <CanvasView frameSource="preview" />
         {!effect && <PreviewMessage>Create or select an Effect to preview.</PreviewMessage>}

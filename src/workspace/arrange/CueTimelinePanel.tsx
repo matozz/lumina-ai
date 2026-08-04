@@ -1,5 +1,10 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Copy, Plus, Redo2, Undo2 } from "lucide-react";
+import {
+  authoringSessionKey,
+  authoringTransportActions,
+  useAuthoringTransportStore,
+} from "@/authoring/transport";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,7 +43,6 @@ export function CueTimelinePanel() {
   const selectedCueRef = useProjectStore(projectSelectors.selectedCueRef);
   const canUndo = useProjectStore(projectSelectors.canUndo);
   const canRedo = useProjectStore(projectSelectors.canRedo);
-  const arrangementSessions = useProjectStore((state) => state.arrangementSessions);
   const arrangement = exactAsset(bundle.arrangements, reference);
   const viewportRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -46,10 +50,18 @@ export function CueTimelinePanel() {
     () => createTimelineGeometry(arrangement?.ppq ?? 960, BEAT_WIDTH),
     [arrangement?.ppq],
   );
+  const sessionKey = authoringSessionKey("arrangement", assetKey(reference));
+  useEffect(() => {
+    if (!arrangement) return;
+    authoringTransportActions.ensureSession({
+      key: sessionKey,
+      scope: "arrangement",
+      durationTicks: arrangement.length_ticks,
+      clockSource: "arrangement",
+    });
+  }, [arrangement, sessionKey]);
   if (!arrangement) return null;
   const width = Math.max(900, ticksToPixels(arrangement.length_ticks, geometry));
-  const session = arrangementSessions[assetKey(reference)];
-  const playheadTick = session?.playheadTick ?? 0;
   const arrangementItems = latestRefsById(bundle.manifest.arrangement_refs).map((candidate) => ({
     value: assetKey(candidate),
     label:
@@ -60,6 +72,8 @@ export function CueTimelinePanel() {
     if (!selectedCueRef) return;
     const cue = exactAsset(bundle.cues, selectedCueRef);
     if (!cue) return;
+    const playheadTick =
+      useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick ?? 0;
     projectActions.updateArrangement(reference, `Place Cue ${cue.name}`, (document) => {
       const track = document.tracks[0];
       track.clips ??= [];
@@ -153,10 +167,7 @@ export function CueTimelinePanel() {
             onPointerDown={(event) => {
               const rect = event.currentTarget.getBoundingClientRect();
               const tick = snappedTickForPointerDelta(0, event.clientX - rect.left, geometry);
-              projectActions.setArrangementPlayhead(
-                reference,
-                Math.min(arrangement.length_ticks, tick),
-              );
+              authoringTransportActions.seek(sessionKey, Math.min(arrangement.length_ticks, tick));
             }}
           >
             {Array.from(
@@ -180,11 +191,7 @@ export function CueTimelinePanel() {
               backgroundSize: `${BEAT_WIDTH}px 100%`,
             }}
           />
-          <div
-            className="bg-primary pointer-events-none absolute top-0 bottom-0 w-px"
-            style={{ left: ticksToPixels(playheadTick, geometry) }}
-            aria-hidden="true"
-          />
+          <ArrangementPlayhead sessionKey={sessionKey} geometry={geometry} />
           <div className="relative flex min-h-full flex-col pt-1">
             {arrangement.tracks.map((track) => (
               <div key={track.id} className="border-border relative h-20 border-b">
@@ -296,5 +303,34 @@ export function CueTimelinePanel() {
         </div>
       </div>
     </section>
+  );
+}
+
+function ArrangementPlayhead({
+  sessionKey,
+  geometry,
+}: {
+  sessionKey: string;
+  geometry: ReturnType<typeof createTimelineGeometry>;
+}) {
+  const playheadRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const update = () => {
+      const tick = useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick ?? 0;
+      if (playheadRef.current) {
+        playheadRef.current.style.transform = `translateX(${ticksToPixels(tick, geometry)}px)`;
+      }
+    };
+    update();
+    return useAuthoringTransportStore.subscribe(update);
+  }, [geometry, sessionKey]);
+
+  return (
+    <div
+      ref={playheadRef}
+      className="bg-primary pointer-events-none absolute top-0 bottom-0 left-0 w-px will-change-transform"
+      aria-hidden="true"
+    />
   );
 }
