@@ -1,9 +1,12 @@
 use super::{
-    ArrangementAutomationTarget, ArrangementDocument, AssetRef, CueDefinition, CueLayer,
-    CueMixOverride, EffectDefinitionDocument, GeneratorDSL, ParameterValueDSL, ProjectBundle,
-    StageDocument, TargetSetDefinition, TargetSetSelector, ARRANGEMENT_DOCUMENT_SCHEMA_VERSION,
-    CUE_DEFINITION_SCHEMA_VERSION, EFFECT_DEFINITION_SCHEMA_VERSION, PROJECT_BUNDLE_SCHEMA_VERSION,
-    PROJECT_MANIFEST_SCHEMA_VERSION, STAGE_DOCUMENT_SCHEMA_VERSION,
+    layout_capacity, layout_grid_dimensions, migrate_project_bundle, validate_layout_geometry,
+    ArrangementAutomationTarget, ArrangementDocument, AssetRef, CenterEdgesRegion, CueDefinition,
+    CueLayer, CueMixOverride, EffectDefinitionDocument, LayoutDefinition, LayoutGeometry,
+    ParameterValueDSL, ProjectBundle, StageDocument, TargetSetDefinition, TargetSetSelector,
+    TargetingDuration, TargetingDurationUnit, TargetingTransition,
+    ARRANGEMENT_DOCUMENT_SCHEMA_VERSION, CUE_DEFINITION_SCHEMA_VERSION,
+    EFFECT_DEFINITION_SCHEMA_VERSION, LAYOUT_DEFINITION_SCHEMA_VERSION,
+    PROJECT_BUNDLE_SCHEMA_VERSION, PROJECT_MANIFEST_SCHEMA_VERSION, STAGE_DOCUMENT_SCHEMA_VERSION,
 };
 use crate::compiler::diagnostic::{
     Diagnostic, PROJECT_CAPABILITY_MISMATCH, PROJECT_DUPLICATE_ASSET, PROJECT_REFERENCE_CYCLE,
@@ -52,15 +55,9 @@ impl ValidatedProject {
 }
 
 pub fn load_project_bundle(source: &str) -> Result<ValidatedProject, Vec<Diagnostic>> {
-    let bundle = serde_json::from_str(source).map_err(|error| {
-        vec![Diagnostic::error(
-            PROJECT_SCHEMA_INVALID,
-            format!("line {}, column {}", error.line(), error.column()),
-            error.to_string(),
-            "Update the project bundle to match the generated Stage 7 schemas.",
-        )]
-    })?;
-    ValidatedProject::validate(bundle)
+    migrate_project_bundle(source).map(|migrated| ValidatedProject {
+        bundle: migrated.bundle,
+    })
 }
 
 fn validate_schema_versions(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
@@ -83,6 +80,14 @@ fn validate_schema_versions(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagno
             stage.schema_version,
             STAGE_DOCUMENT_SCHEMA_VERSION,
             format!("stages[{index}].schema_version"),
+            diagnostics,
+        );
+    }
+    for (index, layout) in bundle.layouts.iter().enumerate() {
+        validate_schema_version(
+            layout.schema_version,
+            LAYOUT_DEFINITION_SCHEMA_VERSION,
+            format!("layouts[{index}].schema_version"),
             diagnostics,
         );
     }
@@ -142,6 +147,12 @@ fn validate_manifest(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) 
         diagnostics,
     );
     validate_asset_collection(
+        &bundle.layouts,
+        |asset| (&asset.id, asset.revision),
+        "layouts",
+        diagnostics,
+    );
+    validate_asset_collection(
         &bundle.effects,
         |asset| (&asset.id, asset.revision),
         "effects",
@@ -165,6 +176,13 @@ fn validate_manifest(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) 
         &bundle.stages,
         |asset| (&asset.id, asset.revision),
         "manifest.stage_ref",
+        diagnostics,
+    );
+    validate_manifest_refs(
+        &bundle.manifest.layout_refs,
+        &bundle.layouts,
+        |asset| (&asset.id, asset.revision),
+        "manifest.layout_refs",
         diagnostics,
     );
     validate_manifest_refs(
@@ -208,6 +226,18 @@ fn validate_manifest(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) 
 }
 
 fn validate_stages(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
+    for (layout_index, layout) in bundle.layouts.iter().enumerate() {
+        let path = format!("layouts[{layout_index}]");
+        validate_identity(&layout.id, layout.revision, &path, diagnostics);
+        if let Err(message) = validate_layout_geometry(layout) {
+            diagnostics.push(Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                format!("{path}.geometry"),
+                message,
+                "Edit the Layout Draft metrics before using it on a Stage.",
+            ));
+        }
+    }
     for (stage_index, stage) in bundle.stages.iter().enumerate() {
         validate_identity(
             &stage.id,
@@ -215,7 +245,48 @@ fn validate_stages(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
             &format!("stages[{stage_index}]"),
             diagnostics,
         );
+        let Some(layout) = resolve_ref(
+            &stage.layout_ref,
+            &bundle.layouts,
+            |asset| (&asset.id, asset.revision),
+            &format!("stages[{stage_index}].layout_ref"),
+            diagnostics,
+        ) else {
+            continue;
+        };
+        if !bundle.manifest.layout_refs.contains(&stage.layout_ref) {
+            diagnostics.push(reference_not_found(
+                format!("stages[{stage_index}].layout_ref"),
+                "Stage Layout revision is not part of manifest.layout_refs.".to_string(),
+            ));
+        }
         let fixture_profiles = stage_fixture_profiles(stage, stage_index, diagnostics);
+        if layout_capacity(layout) < fixture_profiles.len() {
+            diagnostics.push(Diagnostic::error(
+                TARGET_SET_INVALID,
+                format!("stages[{stage_index}].layout_ref"),
+                format!(
+                    "Layout {} r{} can place {} fixtures, but this Stage patches {}.",
+                    layout.id,
+                    layout.revision,
+                    layout_capacity(layout),
+                    fixture_profiles.len()
+                ),
+                "Choose a Layout with enough fixture positions or explicitly remap the Stage topology.",
+            ));
+        }
+        if let LayoutGeometry::Custom { fixtures, .. } = &layout.geometry {
+            let expected: BTreeSet<_> = fixture_profiles.keys().copied().collect();
+            let actual: BTreeSet<_> = fixtures.iter().map(|fixture| fixture.id).collect();
+            if actual != expected || actual.len() != fixtures.len() {
+                diagnostics.push(Diagnostic::error(
+                    TARGET_SET_INVALID,
+                    format!("layouts[{}].geometry.fixtures", layout.id),
+                    "Custom Layout fixture IDs must match the Stage Patch exactly and remain unique.",
+                    "Remap the custom coordinates to every patched fixture ID before Use on Stage.",
+                ));
+            }
+        }
         let mut target_ids = BTreeSet::new();
         for (target_index, target) in stage.target_sets.iter().enumerate() {
             let path = format!("stages[{stage_index}].target_sets[{target_index}]");
@@ -227,8 +298,9 @@ fn validate_stages(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
                     "Use a stable, unique TargetSet ID within the Stage revision.",
                 ));
             }
-            validate_target_set(stage, target, &fixture_profiles, &path, diagnostics);
+            validate_target_set(stage, layout, target, &fixture_profiles, &path, diagnostics);
         }
+        validate_targeting_scenes(stage, layout, stage_index, diagnostics);
     }
 }
 
@@ -243,6 +315,11 @@ fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
             &format!("{cue_path}.compatible_stage_ref"),
             diagnostics,
         ) else {
+            continue;
+        };
+        let Some(layout) = exact_asset(&bundle.layouts, &stage.layout_ref, |asset| {
+            (&asset.id, asset.revision)
+        }) else {
             continue;
         };
         if cue.compatible_stage_ref != bundle.manifest.stage_ref {
@@ -272,7 +349,7 @@ fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
                     "Use a stable, unique layer ID within the Cue revision.",
                 ));
             }
-            validate_cue_layer(bundle, stage, layer, &path, diagnostics);
+            validate_cue_layer(bundle, stage, layout, layer, &path, diagnostics);
         }
         let mut lane_ids = BTreeSet::new();
         for (lane_index, lane) in cue.automation_lanes.iter().enumerate() {
@@ -327,6 +404,7 @@ fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
 fn validate_cue_layer(
     bundle: &ProjectBundle,
     stage: &StageDocument,
+    layout: &LayoutDefinition,
     layer: &CueLayer,
     path: &str,
     diagnostics: &mut Vec<Diagnostic>,
@@ -371,6 +449,28 @@ fn validate_cue_layer(
         ));
         return;
     };
+    if let Some(scene_ref) = &layer.targeting_scene_ref {
+        if scene_ref.stage_id != stage.id || scene_ref.stage_revision != stage.revision {
+            diagnostics.push(Diagnostic::error(
+                PROJECT_REVISION_MISMATCH,
+                format!("{path}.targeting_scene_ref"),
+                "Cue layer TargetingScene belongs to a different Stage revision.",
+                "Select a TargetingScene from the Cue compatible Stage revision.",
+            ));
+        } else if !stage
+            .targeting_scenes
+            .iter()
+            .any(|scene| scene.id == scene_ref.targeting_scene_id)
+        {
+            diagnostics.push(reference_not_found(
+                format!("{path}.targeting_scene_ref.targeting_scene_id"),
+                format!(
+                    "TargetingScene {:?} does not exist in Stage {} r{}.",
+                    scene_ref.targeting_scene_id, stage.id, stage.revision
+                ),
+            ));
+        }
+    }
     if !layer.phase.is_finite() {
         diagnostics.push(Diagnostic::error(
             PROJECT_SCHEMA_INVALID,
@@ -392,12 +492,13 @@ fn validate_cue_layer(
     }
     validate_mix_overrides(
         stage,
+        layout,
         target_set,
         &layer.mix_overrides,
         &format!("{path}.mix_overrides"),
         diagnostics,
     );
-    validate_effect_capability(stage, target_set, effect, path, diagnostics);
+    validate_effect_capability(stage, layout, target_set, effect, path, diagnostics);
 }
 
 fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
@@ -495,13 +596,18 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
                             (&asset.id, asset.revision)
                         })
                     {
-                        if let Some(target) = stage
-                            .target_sets
-                            .iter()
-                            .find(|target| target.id == layer.target_set_ref.target_set_id)
-                        {
+                        if let (Some(layout), Some(target)) = (
+                            exact_asset(&bundle.layouts, &stage.layout_ref, |asset| {
+                                (&asset.id, asset.revision)
+                            }),
+                            stage
+                                .target_sets
+                                .iter()
+                                .find(|target| target.id == layer.target_set_ref.target_set_id),
+                        ) {
                             validate_mix_overrides(
                                 stage,
+                                layout,
                                 target,
                                 &layer_override.mix_overrides,
                                 &format!("{override_path}.mix_overrides"),
@@ -661,13 +767,14 @@ fn validate_keyframes(
 
 fn validate_mix_overrides(
     stage: &StageDocument,
+    layout: &LayoutDefinition,
     target: &TargetSetDefinition,
     mix_overrides: &[CueMixOverride],
     path: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let profiles = stage_fixture_profile_map(stage);
-    let fixture_ids = target_fixture_ids(stage, target);
+    let fixture_ids = target_fixture_ids(stage, layout, target);
     let mut attribute_ids = BTreeSet::new();
     for (index, mix_override) in mix_overrides.iter().enumerate() {
         if mix_override.attribute_id.trim().is_empty()
@@ -712,15 +819,13 @@ fn validate_mix_overrides(
 
 fn validate_target_set(
     stage: &StageDocument,
+    layout: &LayoutDefinition,
     target: &TargetSetDefinition,
     fixture_profiles: &BTreeMap<u32, &str>,
     path: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let matrix = match stage.layout.generator {
-        GeneratorDSL::Matrix { rows, columns, .. } => Some((rows, columns)),
-        _ => None,
-    };
+    let matrix = layout_grid_dimensions(layout);
     match &target.selector {
         TargetSetSelector::All => {}
         TargetSetSelector::FixtureIds { fixture_ids } => {
@@ -800,9 +905,25 @@ fn validate_target_set(
                 diagnostics.push(matrix_target_diagnostic(path));
             }
         }
+        TargetSetSelector::CenterEdges { thickness, .. } => {
+            let Some((rows, columns)) = matrix else {
+                diagnostics.push(matrix_target_diagnostic(path));
+                return;
+            };
+            if *thickness == 0 || thickness.saturating_mul(2) > rows.min(columns) {
+                diagnostics.push(Diagnostic::error(
+                    TARGET_SET_INVALID,
+                    format!("{path}.selector.thickness"),
+                    "Center/Edges thickness must fit inside the Stage grid.",
+                    "Use a positive thickness no greater than half the shortest grid axis.",
+                ));
+            }
+        }
     }
     let mut weighted = BTreeSet::new();
-    let selected_fixture_ids: BTreeSet<_> = target_fixture_ids(stage, target).into_iter().collect();
+    let selected_fixture_ids: BTreeSet<_> = target_fixture_ids(stage, layout, target)
+        .into_iter()
+        .collect();
     for weight in &target.weights {
         if !fixture_profiles.contains_key(&weight.fixture_id)
             || !selected_fixture_ids.contains(&weight.fixture_id)
@@ -820,15 +941,127 @@ fn validate_target_set(
     }
 }
 
+fn validate_targeting_scenes(
+    stage: &StageDocument,
+    layout: &LayoutDefinition,
+    stage_index: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let mut scene_ids = BTreeSet::new();
+    for (scene_index, scene) in stage.targeting_scenes.iter().enumerate() {
+        let path = format!("stages[{stage_index}].targeting_scenes[{scene_index}]");
+        if scene.id.trim().is_empty() || !scene_ids.insert(scene.id.as_str()) {
+            diagnostics.push(Diagnostic::error(
+                PROJECT_DUPLICATE_ASSET,
+                format!("{path}.id"),
+                format!("TargetingScene ID {:?} is empty or duplicated.", scene.id),
+                "Use a stable, unique TargetingScene ID within the Stage revision.",
+            ));
+        }
+        if scene.steps.is_empty() {
+            diagnostics.push(Diagnostic::error(
+                TARGET_SET_INVALID,
+                format!("{path}.steps"),
+                "TargetingScene must contain at least one immutable selection step.",
+                "Add an All, TargetSet, or partition step before saving the scene.",
+            ));
+            continue;
+        }
+        let mut step_ids = BTreeSet::new();
+        for (step_index, step) in scene.steps.iter().enumerate() {
+            let step_path = format!("{path}.steps[{step_index}]");
+            if step.id.trim().is_empty() || !step_ids.insert(step.id.as_str()) {
+                diagnostics.push(Diagnostic::error(
+                    PROJECT_DUPLICATE_ASSET,
+                    format!("{step_path}.id"),
+                    format!(
+                        "TargetingScene step ID {:?} is empty or duplicated.",
+                        step.id
+                    ),
+                    "Use a stable, unique step ID within the scene.",
+                ));
+            }
+            let Some(target) = stage
+                .target_sets
+                .iter()
+                .find(|target| target.id == step.selection.target_set_id)
+            else {
+                diagnostics.push(reference_not_found(
+                    format!("{step_path}.selection.target_set_id"),
+                    format!(
+                        "TargetSet {:?} does not exist in Stage {} r{}.",
+                        step.selection.target_set_id, stage.id, stage.revision
+                    ),
+                ));
+                continue;
+            };
+            let resolved = resolve_target_set(stage, layout, target);
+            if let Some(partition_index) = step.selection.partition_index {
+                if partition_index as usize >= resolved.partitions.len() {
+                    diagnostics.push(Diagnostic::error(
+                        TARGET_SET_INVALID,
+                        format!("{step_path}.selection.partition_index"),
+                        format!(
+                            "Partition {partition_index} is outside TargetSet {:?} ({} partitions).",
+                            target.id,
+                            resolved.partitions.len()
+                        ),
+                        "Choose a compiled partition index from the referenced TargetSet.",
+                    ));
+                }
+            }
+            validate_targeting_duration(
+                &step.duration,
+                &format!("{step_path}.duration"),
+                diagnostics,
+            );
+            if let TargetingTransition::Weighted { duration } = step.transition {
+                validate_targeting_duration(
+                    &duration,
+                    &format!("{step_path}.transition.duration"),
+                    diagnostics,
+                );
+                if duration.unit == step.duration.unit && duration.value > step.duration.value {
+                    diagnostics.push(Diagnostic::error(
+                        TARGET_SET_INVALID,
+                        format!("{step_path}.transition.duration"),
+                        "Weighted transition cannot be longer than its TargetingScene step.",
+                        "Shorten the transition or extend the step duration.",
+                    ));
+                }
+            }
+        }
+    }
+}
+
+fn validate_targeting_duration(
+    duration: &TargetingDuration,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if duration.value == 0 {
+        diagnostics.push(Diagnostic::error(
+            TARGET_SET_INVALID,
+            path,
+            "Targeting duration must contain at least one beat or bar.",
+            "Use a positive beat/bar duration so step boundaries remain deterministic.",
+        ));
+    }
+    match duration.unit {
+        TargetingDurationUnit::Beat | TargetingDurationUnit::Bar => {}
+    }
+}
+
 fn validate_effect_capability(
     stage: &StageDocument,
+    layout: &LayoutDefinition,
     target: &TargetSetDefinition,
     effect: &EffectDefinitionDocument,
     path: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let fixture_profiles = stage_fixture_profile_map(stage);
-    let target_fixture_ids = target_fixture_ids(stage, target);
+    let target_fixture_ids = target_fixture_ids(stage, layout, target);
     for attribute_id in &effect.catalog.required_attributes {
         for fixture_id in &target_fixture_ids {
             let supported = fixture_profiles
@@ -935,6 +1168,13 @@ fn validate_bundle_graph(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
             .chain(
                 bundle
                     .manifest
+                    .layout_refs
+                    .iter()
+                    .map(|reference| asset_key("layout", reference)),
+            )
+            .chain(
+                bundle
+                    .manifest
                     .effect_refs
                     .iter()
                     .map(|reference| asset_key("effect", reference)),
@@ -955,6 +1195,12 @@ fn validate_bundle_graph(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
             )
             .collect(),
     );
+    for stage in &bundle.stages {
+        edges.insert(
+            format!("stage:{}@{}", stage.id, stage.revision),
+            vec![asset_key("layout", &stage.layout_ref)],
+        );
+    }
     for cue in &bundle.cues {
         let key = format!("cue:{}@{}", cue.id, cue.revision);
         let dependencies = std::iter::once(asset_key("stage", &cue.compatible_stage_ref))
@@ -1025,12 +1271,17 @@ fn dependency_cycle(edges: &BTreeMap<String, Vec<String>>) -> Option<Vec<String>
     None
 }
 
-fn target_fixture_ids(stage: &StageDocument, target: &TargetSetDefinition) -> Vec<u32> {
-    resolve_target_set(stage, target).fixture_ids
+fn target_fixture_ids(
+    stage: &StageDocument,
+    layout: &LayoutDefinition,
+    target: &TargetSetDefinition,
+) -> Vec<u32> {
+    resolve_target_set(stage, layout, target).fixture_ids
 }
 
 pub(crate) fn resolve_target_set(
     stage: &StageDocument,
+    layout: &LayoutDefinition,
     target: &TargetSetDefinition,
 ) -> ResolvedTargetSet {
     let fixture_ids: Vec<_> = stage_fixture_profile_map(stage).into_keys().collect();
@@ -1039,7 +1290,7 @@ pub(crate) fn resolve_target_set(
         .iter()
         .map(|weight| (weight.fixture_id, weight.weight))
         .collect();
-    let GeneratorDSL::Matrix { rows, columns, .. } = stage.layout.generator else {
+    let Some((rows, columns)) = layout_grid_dimensions(layout) else {
         let selected = match &target.selector {
             TargetSetSelector::All => fixture_ids,
             TargetSetSelector::FixtureIds { fixture_ids } => fixture_ids.clone(),
@@ -1100,6 +1351,20 @@ pub(crate) fn resolve_target_set(
             .filter_map(|(id, row, column)| {
                 let even = (row + column).is_multiple_of(2);
                 (even == matches!(parity, super::CheckerboardParity::Even)).then_some(*id)
+            })
+            .collect()],
+        TargetSetSelector::CenterEdges { region, thickness } => vec![cells
+            .iter()
+            .filter_map(|(id, row, column)| {
+                let edge = *row < *thickness
+                    || *column < *thickness
+                    || *row >= rows.saturating_sub(*thickness)
+                    || *column >= columns.saturating_sub(*thickness);
+                let selected = match region {
+                    CenterEdgesRegion::Center => !edge,
+                    CenterEdgesRegion::Edges => edge,
+                };
+                selected.then_some(*id)
             })
             .collect()],
     };
@@ -1325,7 +1590,7 @@ pub(crate) mod tests {
     use serde_json::{json, Value};
 
     pub(crate) fn valid_bundle() -> ProjectBundle {
-        serde_json::from_value(json!({
+        let legacy = json!({
             "schema_version": 1,
             "manifest": {
                 "schema_version": 1,
@@ -1415,8 +1680,10 @@ pub(crate) mod tests {
                     }]
                 }]
             }]
-        }))
-        .expect("valid project fixture")
+        });
+        migrate_project_bundle(&legacy.to_string())
+            .expect("valid project fixture migrates")
+            .bundle
     }
 
     #[test]

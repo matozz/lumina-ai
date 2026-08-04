@@ -1,18 +1,20 @@
 use super::{
-    load_document, ArrangementAutomationLane, ArrangementAutomationTarget, ArrangementDocument,
-    AssetRef, CueCapabilitySummary, CueClip, CueDefinition, CueLayer, CueQuantize, CueRiskSummary,
-    CueTrack, CueTriggerMode, CueTriggerPolicy, EffectDefinitionDocument, GroupFixturesDSL,
-    MigrationChange, ProjectBundle, ProjectManifest, ShowDocumentV4, StageDocument,
-    TargetSetDefinition, TargetSetRef, TargetSetSelector, TimeSignaturePoint,
-    ARRANGEMENT_DOCUMENT_SCHEMA_VERSION, CUE_DEFINITION_SCHEMA_VERSION,
-    EFFECT_DEFINITION_SCHEMA_VERSION, PROJECT_BUNDLE_SCHEMA_VERSION,
+    load_document, migrated_layout_definition, ArrangementAutomationLane,
+    ArrangementAutomationTarget, ArrangementDocument, AssetRef, CueCapabilitySummary, CueClip,
+    CueDefinition, CueLayer, CueQuantize, CueRiskSummary, CueTrack, CueTriggerMode,
+    CueTriggerPolicy, EffectDefinitionDocument, GroupFixturesDSL, MigrationChange, ProjectBundle,
+    ProjectManifest, ShowDocumentV4, StageDocument, TargetSetDefinition, TargetSetRef,
+    TargetSetSelector, TimeSignaturePoint, ARRANGEMENT_DOCUMENT_SCHEMA_VERSION,
+    CUE_DEFINITION_SCHEMA_VERSION, EFFECT_DEFINITION_SCHEMA_VERSION, PROJECT_BUNDLE_SCHEMA_VERSION,
     PROJECT_MANIFEST_SCHEMA_VERSION, STAGE_DOCUMENT_SCHEMA_VERSION,
 };
-use crate::compiler::diagnostic::Diagnostic;
+use crate::compiler::diagnostic::{Diagnostic, PROJECT_SCHEMA_INVALID};
+use serde_json::Value;
 use std::collections::BTreeMap;
 
 const MIGRATED_PROJECT_ID: &str = "project-default";
 const MIGRATED_STAGE_ID: &str = "stage-default";
+const MIGRATED_LAYOUT_ID: &str = "layout-default";
 const MIGRATED_ARRANGEMENT_ID: &str = "arrangement-default";
 const MIGRATED_LAYER_ID: &str = "effect-layer";
 const MIGRATED_ALL_TARGET_ID: &str = "all-fixtures";
@@ -28,6 +30,219 @@ pub struct ProjectMigrationReport {
 pub struct MigratedProject {
     pub bundle: ProjectBundle,
     pub migration_report: ProjectMigrationReport,
+}
+
+pub fn migrate_project_bundle(source: &str) -> Result<MigratedProject, Vec<Diagnostic>> {
+    let mut value: Value = serde_json::from_str(source).map_err(|error| {
+        vec![Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            format!("line {}, column {}", error.line(), error.column()),
+            error.to_string(),
+            "Open a valid Lumina Project bundle or run the supported migration path.",
+        )]
+    })?;
+    let source_schema_version = value
+        .get("schema_version")
+        .and_then(Value::as_u64)
+        .and_then(|version| u32::try_from(version).ok());
+    let mut changes = Vec::new();
+    match source_schema_version {
+        Some(PROJECT_BUNDLE_SCHEMA_VERSION) => {}
+        Some(1) => migrate_project_bundle_v1_value(&mut value, &mut changes)?,
+        Some(version) => {
+            return Err(vec![Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                "schema_version",
+                format!("Project bundle schema version {version} is not supported."),
+                "Migrate the bundle with a Lumina version that supports its schema.",
+            )]);
+        }
+        None => {
+            return Err(vec![Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                "schema_version",
+                "Project bundle schema_version is missing or invalid.",
+                "Use an integer Project bundle schema version.",
+            )]);
+        }
+    }
+    let bundle: ProjectBundle = serde_json::from_value(value).map_err(|error| {
+        vec![Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            "project_bundle",
+            error.to_string(),
+            "Repair the reported asset field before opening the Project.",
+        )]
+    })?;
+    super::ValidatedProject::validate(bundle.clone())?;
+    Ok(MigratedProject {
+        bundle,
+        migration_report: ProjectMigrationReport {
+            source_schema_version,
+            project_bundle_schema_version: PROJECT_BUNDLE_SCHEMA_VERSION,
+            changes,
+        },
+    })
+}
+
+fn migrate_project_bundle_v1_value(
+    value: &mut Value,
+    changes: &mut Vec<MigrationChange>,
+) -> Result<(), Vec<Diagnostic>> {
+    let object = value.as_object_mut().ok_or_else(|| {
+        vec![Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            "project_bundle",
+            "Project bundle root must be an object.",
+            "Open a valid Lumina Project bundle.",
+        )]
+    })?;
+    let stages = object
+        .get_mut("stages")
+        .and_then(Value::as_array_mut)
+        .ok_or_else(|| {
+            vec![Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                "stages",
+                "Project bundle v1 must contain a Stage asset array.",
+                "Restore the Stage assets before migration.",
+            )]
+        })?;
+    let mut layouts = Vec::with_capacity(stages.len());
+    let mut layout_refs = Vec::with_capacity(stages.len());
+    for (index, stage_value) in stages.iter_mut().enumerate() {
+        let stage = stage_value.as_object_mut().ok_or_else(|| {
+            vec![Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                format!("stages[{index}]"),
+                "Stage asset must be an object.",
+                "Repair the Stage before migration.",
+            )]
+        })?;
+        let stage_id = stage
+            .get("id")
+            .and_then(Value::as_str)
+            .filter(|id| !id.trim().is_empty())
+            .ok_or_else(|| {
+                vec![Diagnostic::error(
+                    PROJECT_SCHEMA_INVALID,
+                    format!("stages[{index}].id"),
+                    "Stage ID is missing or empty.",
+                    "Restore a stable Stage ID before migration.",
+                )]
+            })?
+            .to_string();
+        let stage_revision = stage
+            .get("revision")
+            .and_then(Value::as_u64)
+            .and_then(|revision| u32::try_from(revision).ok())
+            .unwrap_or(1);
+        let stage_name = stage
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or("Stage")
+            .to_string();
+        let patch: Vec<super::PatchDSL> = serde_json::from_value(
+            stage
+                .get("patch")
+                .cloned()
+                .unwrap_or_else(|| Value::Array(Vec::new())),
+        )
+        .map_err(|error| {
+            vec![Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                format!("stages[{index}].patch"),
+                error.to_string(),
+                "Repair the Stage Patch before migrating its Layout.",
+            )]
+        })?;
+        let fixture_ids: Vec<_> = patch
+            .iter()
+            .flat_map(|patch| patch.id_range.0..=patch.id_range.1)
+            .collect();
+        let legacy_layout: super::LayoutDSL =
+            serde_json::from_value(stage.remove("layout").ok_or_else(|| {
+                vec![Diagnostic::error(
+                    PROJECT_SCHEMA_INVALID,
+                    format!("stages[{index}].layout"),
+                    "Embedded Stage layout is missing.",
+                    "Restore the v1 layout before migration.",
+                )]
+            })?)
+            .map_err(|error| {
+                vec![Diagnostic::error(
+                    PROJECT_SCHEMA_INVALID,
+                    format!("stages[{index}].layout"),
+                    error.to_string(),
+                    "Repair the embedded Layout before migration.",
+                )]
+            })?;
+        let layout_id = format!("layout-{stage_id}");
+        let mut layout = migrated_layout_definition(
+            layout_id.clone(),
+            format!("{stage_name} Layout"),
+            legacy_layout,
+            &fixture_ids,
+        );
+        layout.revision = stage_revision;
+        let layout_ref = AssetRef {
+            id: layout_id,
+            revision: layout.revision,
+        };
+        stage.insert(
+            "schema_version".to_string(),
+            Value::from(STAGE_DOCUMENT_SCHEMA_VERSION),
+        );
+        stage.insert(
+            "layout_ref".to_string(),
+            serde_json::to_value(&layout_ref).expect("Layout ref serializes"),
+        );
+        stage.insert("targeting_scenes".to_string(), Value::Array(Vec::new()));
+        layouts.push(serde_json::to_value(&layout).expect("Layout serializes"));
+        layout_refs.push(serde_json::to_value(&layout_ref).expect("Layout ref serializes"));
+        changes.push(migration_change(
+            "MIGRATION_EXTRACT_LAYOUT_ASSET",
+            format!("stages[{index}].layout_ref"),
+            "Converted the embedded Stage layout into an exact LayoutDefinition revision; fixture IDs, coordinates, Groups, and TargetSets were preserved. Fixture size defaults to at most 12 units and gap/pitch were derived from legacy spacing.",
+        ));
+    }
+    let manifest = object
+        .get_mut("manifest")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| {
+            vec![Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                "manifest",
+                "Project manifest is missing or invalid.",
+                "Restore the v1 Project manifest before migration.",
+            )]
+        })?;
+    manifest.insert(
+        "schema_version".to_string(),
+        Value::from(PROJECT_MANIFEST_SCHEMA_VERSION),
+    );
+    manifest.insert("layout_refs".to_string(), Value::Array(layout_refs));
+    if let Some(cues) = object.get_mut("cues").and_then(Value::as_array_mut) {
+        for cue in cues {
+            if let Some(cue) = cue.as_object_mut() {
+                cue.insert(
+                    "schema_version".to_string(),
+                    Value::from(CUE_DEFINITION_SCHEMA_VERSION),
+                );
+            }
+        }
+    }
+    object.insert(
+        "schema_version".to_string(),
+        Value::from(PROJECT_BUNDLE_SCHEMA_VERSION),
+    );
+    object.insert("layouts".to_string(), Value::Array(layouts));
+    changes.push(migration_change(
+        "MIGRATION_PROJECT_LAYOUT_REFS",
+        "manifest.layout_refs",
+        "Added exact LayoutDefinition references without changing Stage, Cue, Arrangement, Published, or Live revision identities.",
+    ));
+    Ok(())
 }
 
 pub fn migrate_show_to_project(source: &str) -> Result<MigratedProject, Vec<Diagnostic>> {
@@ -50,6 +265,11 @@ fn split_v4_document(
     document: ShowDocumentV4,
     changes: &mut Vec<MigrationChange>,
 ) -> ProjectBundle {
+    let fixture_ids: Vec<_> = document
+        .patch
+        .iter()
+        .flat_map(|patch| patch.id_range.0..=patch.id_range.1)
+        .collect();
     let mut target_sets: Vec<_> = document
         .groups
         .iter()
@@ -74,15 +294,32 @@ fn split_v4_document(
         });
     }
 
+    let layout = migrated_layout_definition(
+        MIGRATED_LAYOUT_ID.to_string(),
+        format!("{} Layout", document.meta.name),
+        document.layout,
+        &fixture_ids,
+    );
+    let layout_ref = AssetRef {
+        id: layout.id.clone(),
+        revision: layout.revision,
+    };
+    changes.push(migration_change(
+        "MIGRATION_EXTRACT_LAYOUT_ASSET",
+        "layouts[0]",
+        "Created a versioned default LayoutDefinition and preserved the legacy coordinates, fixture order, and generator parameters.",
+    ));
+
     let stage = StageDocument {
         schema_version: STAGE_DOCUMENT_SCHEMA_VERSION,
         id: MIGRATED_STAGE_ID.to_string(),
         revision: 1,
         name: document.meta.name.clone(),
         patch: document.patch,
-        layout: document.layout,
+        layout_ref: layout_ref.clone(),
         groups: document.groups,
         target_sets,
+        targeting_scenes: Vec::new(),
     };
     changes.push(migration_change(
         "MIGRATION_SPLIT_STAGE_ASSET",
@@ -144,6 +381,7 @@ fn split_v4_document(
                         stage_revision: stage.revision,
                         target_set_id: instance.target_group_id.clone(),
                     },
+                    targeting_scene_ref: None,
                     parameter_overrides: instance.parameter_overrides.clone(),
                     phase: 0.0,
                     seed: instance.seed.clone(),
@@ -310,6 +548,7 @@ fn split_v4_document(
                 id: stage.id.clone(),
                 revision: stage.revision,
             },
+            layout_refs: vec![layout_ref],
             effect_refs,
             cue_refs,
             arrangement_refs: vec![AssetRef {
@@ -319,6 +558,7 @@ fn split_v4_document(
             active_arrangement_id: arrangement.id.clone(),
         },
         stages: vec![stage],
+        layouts: vec![layout],
         effects,
         cues,
         arrangements: vec![arrangement],
@@ -423,6 +663,11 @@ mod tests {
         let migrated = migrate_show_to_project(source).expect("V4 migration");
 
         assert_eq!(migrated.bundle.stages.len(), 1);
+        assert_eq!(migrated.bundle.layouts.len(), 1);
+        assert_eq!(
+            migrated.bundle.stages[0].layout_ref,
+            migrated.bundle.manifest.layout_refs[0]
+        );
         assert_eq!(migrated.bundle.effects[0].revision, 3);
         assert_eq!(migrated.bundle.cues[0].layers[0].effect_ref.revision, 3);
         assert_eq!(migrated.bundle.arrangements[0].tempo_map.points.len(), 2);
@@ -464,5 +709,57 @@ mod tests {
             .changes
             .iter()
             .any(|change| change.code == "MIGRATION_SCHEMA_V3_TO_V4"));
+    }
+
+    #[test]
+    fn migrates_project_v1_embedded_layout_with_an_explicit_report() {
+        let current = crate::document::valid_bundle();
+        let legacy_layout =
+            crate::document::layout_to_legacy(&current.layouts[0], &(1..=4).collect::<Vec<_>>());
+        let mut value = serde_json::to_value(&current).expect("current bundle serializes");
+        value["schema_version"] = serde_json::json!(1);
+        value["manifest"]["schema_version"] = serde_json::json!(1);
+        value["manifest"]
+            .as_object_mut()
+            .expect("manifest object")
+            .remove("layout_refs");
+        value["stages"][0]["schema_version"] = serde_json::json!(1);
+        value["stages"][0]["layout"] =
+            serde_json::to_value(legacy_layout).expect("legacy layout serializes");
+        value["stages"][0]
+            .as_object_mut()
+            .expect("stage object")
+            .remove("layout_ref");
+        value["stages"][0]
+            .as_object_mut()
+            .expect("stage object")
+            .remove("targeting_scenes");
+        value["cues"][0]["schema_version"] = serde_json::json!(1);
+        value
+            .as_object_mut()
+            .expect("bundle object")
+            .remove("layouts");
+
+        let migrated = migrate_project_bundle(&value.to_string()).expect("Project v1 migration");
+
+        assert_eq!(migrated.migration_report.source_schema_version, Some(1));
+        assert_eq!(migrated.bundle.schema_version, 2);
+        assert_eq!(
+            migrated.bundle.stages[0].patch[0].id_range,
+            current.stages[0].patch[0].id_range
+        );
+        assert_eq!(
+            migrated.bundle.stages[0].groups.len(),
+            current.stages[0].groups.len()
+        );
+        assert_eq!(
+            migrated.bundle.stages[0].target_sets.len(),
+            current.stages[0].target_sets.len()
+        );
+        assert!(migrated
+            .migration_report
+            .changes
+            .iter()
+            .any(|change| change.code == "MIGRATION_EXTRACT_LAYOUT_ASSET"));
     }
 }

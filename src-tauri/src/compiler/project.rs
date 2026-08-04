@@ -3,12 +3,13 @@ use crate::compiler::diagnostic::{
     Diagnostic, PROJECT_REFERENCE_NOT_FOUND, PROJECT_REVISION_MISMATCH,
 };
 use crate::document::{
-    resolve_target_set, ArrangementAutomationTarget, ArrangementDocument, ArrangementMarker,
-    AssetRef, AutomationLaneDSL, AutomationTargetV3DSL, ClipPlaybackDSL, CueAutomationLane,
-    CueCapabilitySummary, CueDefinition, CueLayer, CueMixOverride, CueRiskSummary,
-    CueTriggerPolicy, EffectClipDSL, EffectDefinitionDSL, EffectInstanceDSL, GroupDSL,
-    GroupFixturesDSL, MetaDSL, MixPolicy as CueMixPolicy, ProjectBundle, ShowDocumentV4,
-    StageDocument, TimeSignaturePoint, TimelineTrackDSL, TimelineV4DSL, ValidatedProject,
+    layout_to_legacy, resolve_target_set, ArrangementAutomationTarget, ArrangementDocument,
+    ArrangementMarker, AssetRef, AutomationLaneDSL, AutomationTargetV3DSL, ClipPlaybackDSL,
+    CueAutomationLane, CueCapabilitySummary, CueDefinition, CueLayer, CueMixOverride,
+    CueRiskSummary, CueTriggerPolicy, EffectClipDSL, EffectDefinitionDSL, EffectInstanceDSL,
+    GroupDSL, GroupFixturesDSL, LayoutDefinition, MetaDSL, MixPolicy as CueMixPolicy,
+    ProjectBundle, ShowDocumentV4, StageDocument, TimeSignaturePoint, TimelineTrackDSL,
+    TimelineV4DSL, ValidatedProject,
 };
 use crate::engine::effect::EffectInstance;
 use crate::engine::profile::{profile_by_handle, profile_by_id, MixPolicy};
@@ -86,12 +87,15 @@ impl Compiler {
         let stage = exact_stage(&bundle, &bundle.manifest.stage_ref)
             .expect("validated Project Stage reference")
             .clone();
+        let layout = exact_layout(&bundle, &stage.layout_ref)
+            .expect("validated Stage Layout reference")
+            .clone();
 
         let mut groups = stage.groups.clone();
         let mut target_cache = HashMap::new();
         for target in &stage.target_sets {
             let group_id = target_group_id(&stage, &target.id);
-            let resolved = resolve_target_set(&stage, target);
+            let resolved = resolve_target_set(&stage, &layout, target);
             groups.push(GroupDSL {
                 id: group_id.clone(),
                 name: format!("TargetSet · {}", target.name),
@@ -138,7 +142,7 @@ impl Compiler {
             for target in stage
                 .target_sets
                 .iter()
-                .filter(|target| target_supports_effect(&stage, target, effect))
+                .filter(|target| target_supports_effect(&stage, &layout, target, effect))
             {
                 let instance_id =
                     effect_preview_instance_id(&effect.id, effect.revision, &target.id);
@@ -340,7 +344,7 @@ impl Compiler {
                 name: format!("{} · {}", bundle.manifest.name, arrangement.name),
             },
             patch: stage.patch.clone(),
-            layout: stage.layout.clone(),
+            layout: layout_to_legacy(&layout, &stage_fixture_ids(&stage)),
             groups,
             effect_definitions: effects,
             effect_instances: instances,
@@ -465,6 +469,16 @@ fn exact_stage<'a>(bundle: &'a ProjectBundle, reference: &AssetRef) -> Option<&'
         .find(|stage| stage.id == reference.id && stage.revision == reference.revision)
 }
 
+fn exact_layout<'a>(
+    bundle: &'a ProjectBundle,
+    reference: &AssetRef,
+) -> Option<&'a LayoutDefinition> {
+    bundle
+        .layouts
+        .iter()
+        .find(|layout| layout.id == reference.id && layout.revision == reference.revision)
+}
+
 fn exact_effect<'a>(
     bundle: &'a ProjectBundle,
     reference: &AssetRef,
@@ -526,10 +540,11 @@ fn effect_preview_instance_id(effect_id: &str, revision: u32, target_set_id: &st
 
 fn target_supports_effect(
     stage: &StageDocument,
+    layout: &LayoutDefinition,
     target: &crate::document::TargetSetDefinition,
     effect: &crate::document::EffectDefinitionDocument,
 ) -> bool {
-    let resolved = resolve_target_set(stage, target);
+    let resolved = resolve_target_set(stage, layout, target);
     resolved.fixture_ids.iter().all(|fixture_id| {
         let profile_id = stage.patch.iter().find_map(|patch| {
             (patch.id_range.0..=patch.id_range.1)
@@ -545,6 +560,14 @@ fn target_supports_effect(
             })
         })
     })
+}
+
+fn stage_fixture_ids(stage: &StageDocument) -> Vec<u32> {
+    stage
+        .patch
+        .iter()
+        .flat_map(|patch| patch.id_range.0..=patch.id_range.1)
+        .collect()
 }
 
 fn cue_clip_instance_id(
@@ -707,14 +730,14 @@ mod tests {
     fn matrix_project() -> ProjectBundle {
         let mut bundle = valid_bundle();
         bundle.stages[0].patch[0].id_range = (1, 900);
-        bundle.stages[0].layout = serde_json::from_value(serde_json::json!({
-            "type": "generator",
-            "generator": {
-                "shape": "matrix",
-                "rows": 30,
-                "columns": 30,
-                "spacing": 1.0
-            }
+        bundle.layouts[0].geometry = serde_json::from_value(serde_json::json!({
+            "shape": "matrix",
+            "rows": 30,
+            "columns": 30,
+            "fixture_size": { "width": 1.0, "height": 1.0 },
+            "gap": { "x": 0.0, "y": 0.0 },
+            "pitch": { "x": 1.0, "y": 1.0 },
+            "origin": { "x": 0.0, "y": 0.0 }
         }))
         .expect("30x30 layout");
         bundle.stages[0].groups[0].fixtures = GroupFixturesDSL::List((1..=900).collect());

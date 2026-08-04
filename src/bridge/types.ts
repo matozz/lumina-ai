@@ -49,6 +49,7 @@ export type {
   ArrangementDocument,
   ArrangementMarker,
   AssetRef,
+  CenterEdgesRegion,
   CheckerboardParity,
   CueAutomationLane,
   CueAutomationTarget,
@@ -65,6 +66,18 @@ export type {
   CueTriggerPolicy,
   EffectDefinitionDocument,
   GridZone,
+  LayoutAlgorithm,
+  LayoutCategory,
+  LayoutDefinition,
+  LayoutEditorCapability,
+  LayoutGap,
+  LayoutGeometry,
+  LayoutOrientation,
+  LayoutParameterDefinition,
+  LayoutParameterValueType,
+  LayoutPitch,
+  LayoutPoint,
+  LayoutSize,
   MixPolicy,
   ProjectBundle,
   ProjectManifest,
@@ -73,8 +86,15 @@ export type {
   TargetSetRef,
   TargetSetSelector,
   TargetSetWeight,
+  TargetingDuration,
+  TargetingDurationUnit,
+  TargetingSceneDefinition,
+  TargetingSceneRef,
+  TargetingSceneStep,
+  TargetingSelection,
+  TargetingTransition,
   TimeSignaturePoint,
-} from "@/generated/project-contract-v1";
+} from "@/generated/project-contract-v2";
 
 export type FullDSL = ShowDocumentV4;
 export type TimelineDSL = TimelineV4DSL;
@@ -244,7 +264,7 @@ export interface ProjectMigrationReport {
 }
 
 export interface MigratedProject {
-  bundle: import("@/generated/project-contract-v1").ProjectBundle;
+  bundle: import("@/generated/project-contract-v2").ProjectBundle;
   migration_report: ProjectMigrationReport;
 }
 

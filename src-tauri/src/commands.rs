@@ -1,7 +1,8 @@
 use crate::compiler::diagnostic::{Diagnostic, PROJECT_REFERENCE_NOT_FOUND};
 use crate::compiler::{CompiledProjectSnapshot, Compiler, LayoutCoord};
 use crate::document::{
-    load_document, load_project_bundle, AssetRef, MigrationReport, ProjectBundle, ShowDocumentV4,
+    load_document, load_project_bundle, migrate_project_bundle, AssetRef, MigrationReport,
+    ShowDocumentV4,
 };
 use crate::engine::attribute::FixtureFramePayload;
 use crate::engine::effect::{EffectCatalog, EffectCatalogQuery, EffectSource, SPEED_PARAMETER_ID};
@@ -271,19 +272,17 @@ pub async fn save_project(path: String, project_json: String) -> Result<(), Stri
 }
 
 #[tauri::command]
-pub async fn load_project(path: String) -> Result<ProjectBundle, String> {
+pub async fn load_project(path: String) -> Result<crate::document::MigratedProject, String> {
     let content = tokio::fs::read_to_string(&path)
         .await
         .map_err(|error| format!("Project read error: {error}"))?;
-    load_project_bundle(&content)
-        .map(|validated| validated.into_bundle())
-        .map_err(|diagnostics| {
-            diagnostics
-                .into_iter()
-                .map(|diagnostic| diagnostic.to_string())
-                .collect::<Vec<_>>()
-                .join("\n")
-        })
+    migrate_project_bundle(&content).map_err(|diagnostics| {
+        diagnostics
+            .into_iter()
+            .map(|diagnostic| diagnostic.to_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+    })
 }
 
 #[tauri::command]
@@ -964,11 +963,14 @@ mod tests {
             .await
             .expect("reopen Project");
 
-        assert_eq!(reopened.arrangements.len(), 2);
-        assert_eq!(reopened.manifest.active_arrangement_id, "tempo-journey");
-        assert_eq!(reopened.arrangements[1].tempo_map.points.len(), 2);
+        assert_eq!(reopened.bundle.arrangements.len(), 2);
         assert_eq!(
-            reopened.arrangements[1].tracks[0].clips[0].start_tick,
+            reopened.bundle.manifest.active_arrangement_id,
+            "tempo-journey"
+        );
+        assert_eq!(reopened.bundle.arrangements[1].tempo_map.points.len(), 2);
+        assert_eq!(
+            reopened.bundle.arrangements[1].tracks[0].clips[0].start_tick,
             expected_clip_tick
         );
         tokio::fs::remove_dir_all(directory)

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 mod effect;
 mod project;
+mod project_layout;
 mod project_migration;
 mod project_validation;
 mod timeline;
@@ -14,6 +15,7 @@ mod validation;
 
 pub use effect::*;
 pub use project::*;
+pub use project_layout::*;
 pub use project_migration::*;
 #[cfg(test)]
 pub(crate) use project_validation::tests::valid_bundle;

@@ -1299,6 +1299,7 @@ flowchart LR
 | 2026-08-04 | 7.5A     | Production ArrangementTimeline | completed  | `e8b2bdd`               | zoom/snap；CueClip move/resize/keyboard/inspector；typed automation；141 tests | R-030 closed；Pointer move 为 rAF DOM preview + 单 transaction | native app + save/reopen gate               |
 | 2026-08-04 | 7.5A     | Scoped final gate              | completed  | 本次交接提交            | build/format；strict Rust；debug app；真实 Lab→Cue→Arrange→Rehearse/reopen     | R-031 Arrangement half closed；Stage shell residual 保持 open  | 停止；等待显式 7.5B Goal                    |
 | 2026-08-05 | 7.5B/C   | ADR + contract/impact mapping  | completed  | 本切片提交              | 最新 `main@a725ee6`；指定文档与旧 Stage Setup/compiler/test mapping            | ADR-0012 accepted；R-028/R-031 保持 open                       | Layout asset schema + explicit migration    |
+| 2026-08-05 | 7.5B/C   | Layout contract + migration    | completed  | 本切片提交              | schema check；144 frontend；113 Rust；v1 embedded layout migration/save-reopen | exact Layout ref；size/gap/pitch；TargetingScene contract      | Layout Draft editor + Canvas preview        |
 
 ## 21. Open Risks
 

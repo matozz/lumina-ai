@@ -1,6 +1,6 @@
 use lumina_ai_lib::document::{
-    ArrangementDocument, CueDefinition, EffectDefinitionDocument, ProjectBundle, ProjectManifest,
-    ShowDocumentV1, ShowDocumentV2, ShowDocumentV3, ShowDocumentV4, StageDocument,
+    ArrangementDocument, CueDefinition, EffectDefinitionDocument, LayoutDefinition, ProjectBundle,
+    ProjectManifest, ShowDocumentV1, ShowDocumentV2, ShowDocumentV3, ShowDocumentV4, StageDocument,
     CURRENT_SCHEMA_VERSION,
 };
 use lumina_ai_lib::engine::profile::builtin_profiles;
@@ -18,52 +18,57 @@ fn main() {
     let schema_v2_path = repository_root.join("schemas/show-document-v2.schema.json");
     let schema_v3_path = repository_root.join("schemas/show-document-v3.schema.json");
     let schema_v4_path = repository_root.join("schemas/show-document-v4.schema.json");
-    let project_manifest_v1_path = repository_root.join("schemas/project-manifest-v1.schema.json");
-    let stage_document_v1_path = repository_root.join("schemas/stage-document-v1.schema.json");
+    let project_manifest_v2_path = repository_root.join("schemas/project-manifest-v2.schema.json");
+    let stage_document_v2_path = repository_root.join("schemas/stage-document-v2.schema.json");
+    let layout_definition_v1_path =
+        repository_root.join("schemas/layout-definition-v1.schema.json");
     let effect_definition_v1_path =
         repository_root.join("schemas/effect-definition-v1.schema.json");
-    let cue_definition_v1_path = repository_root.join("schemas/cue-definition-v1.schema.json");
+    let cue_definition_v2_path = repository_root.join("schemas/cue-definition-v2.schema.json");
     let arrangement_document_v1_path =
         repository_root.join("schemas/arrangement-document-v1.schema.json");
-    let project_bundle_v1_path = repository_root.join("schemas/project-bundle-v1.schema.json");
+    let project_bundle_v2_path = repository_root.join("schemas/project-bundle-v2.schema.json");
     let capabilities_v1_path = repository_root.join("schemas/show-capabilities-v1.json");
     let capabilities_v2_path = repository_root.join("schemas/show-capabilities-v2.json");
     let capabilities_v3_path = repository_root.join("schemas/show-capabilities-v3.json");
     let capabilities_v4_path = repository_root.join("schemas/show-capabilities-v4.json");
-    let project_capabilities_v1_path = repository_root.join("schemas/project-capabilities-v1.json");
+    let project_capabilities_v2_path = repository_root.join("schemas/project-capabilities-v2.json");
     let profiles_path = repository_root.join("schemas/fixture-profiles-v1.json");
     let typescript_v1_path = repository_root.join("src/generated/show-document-v1.ts");
     let typescript_v2_path = repository_root.join("src/generated/show-document-v2.ts");
     let typescript_v3_path = repository_root.join("src/generated/show-document-v3.ts");
     let typescript_v4_path = repository_root.join("src/generated/show-document-v4.ts");
-    let project_typescript_v1_path = repository_root.join("src/generated/project-contract-v1.ts");
+    let project_typescript_v2_path = repository_root.join("src/generated/project-contract-v2.ts");
 
     let schema_v1 = schemars::schema_for!(ShowDocumentV1);
     let schema_v2 = schemars::schema_for!(ShowDocumentV2);
     let schema_v3 = schemars::schema_for!(ShowDocumentV3);
     let schema_v4 = schemars::schema_for!(ShowDocumentV4);
-    let project_manifest_v1 = schemars::schema_for!(ProjectManifest);
-    let stage_document_v1 = schemars::schema_for!(StageDocument);
+    let project_manifest_v2 = schemars::schema_for!(ProjectManifest);
+    let stage_document_v2 = schemars::schema_for!(StageDocument);
+    let layout_definition_v1 = schemars::schema_for!(LayoutDefinition);
     let effect_definition_v1 = schemars::schema_for!(EffectDefinitionDocument);
-    let cue_definition_v1 = schemars::schema_for!(CueDefinition);
+    let cue_definition_v2 = schemars::schema_for!(CueDefinition);
     let arrangement_document_v1 = schemars::schema_for!(ArrangementDocument);
-    let project_bundle_v1 = schemars::schema_for!(ProjectBundle);
+    let project_bundle_v2 = schemars::schema_for!(ProjectBundle);
     let schema_v1_value = serde_json::to_value(&schema_v1).expect("V1 schema converts to JSON");
     let schema_v2_value = serde_json::to_value(&schema_v2).expect("V2 schema converts to JSON");
     let schema_v3_value = serde_json::to_value(&schema_v3).expect("V3 schema converts to JSON");
     let schema_v4_value = serde_json::to_value(&schema_v4).expect("V4 schema converts to JSON");
-    let project_manifest_v1_value = serde_json::to_value(&project_manifest_v1)
+    let project_manifest_v2_value = serde_json::to_value(&project_manifest_v2)
         .expect("project manifest schema converts to JSON");
-    let stage_document_v1_value =
-        serde_json::to_value(&stage_document_v1).expect("stage schema converts to JSON");
+    let stage_document_v2_value =
+        serde_json::to_value(&stage_document_v2).expect("stage schema converts to JSON");
+    let layout_definition_v1_value = serde_json::to_value(&layout_definition_v1)
+        .expect("layout definition schema converts to JSON");
     let effect_definition_v1_value = serde_json::to_value(&effect_definition_v1)
         .expect("effect definition schema converts to JSON");
-    let cue_definition_v1_value =
-        serde_json::to_value(&cue_definition_v1).expect("cue schema converts to JSON");
+    let cue_definition_v2_value =
+        serde_json::to_value(&cue_definition_v2).expect("cue schema converts to JSON");
     let arrangement_document_v1_value = serde_json::to_value(&arrangement_document_v1)
         .expect("arrangement schema converts to JSON");
-    let project_bundle_v1_value =
-        serde_json::to_value(&project_bundle_v1).expect("project bundle schema converts to JSON");
+    let project_bundle_v2_value =
+        serde_json::to_value(&project_bundle_v2).expect("project bundle schema converts to JSON");
     let capabilities_v1_value = json!({
         "metadata_version": 1,
         "document_schema_version": 1,
@@ -132,20 +137,25 @@ fn main() {
             }
         }
     });
-    let project_capabilities_v1_value = json!({
-        "metadata_version": 1,
-        "project_bundle_schema": "project-bundle-v1.schema.json",
+    let project_capabilities_v2_value = json!({
+        "metadata_version": 2,
+        "project_bundle_schema": "project-bundle-v2.schema.json",
         "asset_schemas": {
-            "manifest": "project-manifest-v1.schema.json",
-            "stage": "stage-document-v1.schema.json",
+            "manifest": "project-manifest-v2.schema.json",
+            "stage": "stage-document-v2.schema.json",
+            "layout": "layout-definition-v1.schema.json",
             "effect": "effect-definition-v1.schema.json",
-            "cue": "cue-definition-v1.schema.json",
+            "cue": "cue-definition-v2.schema.json",
             "arrangement": "arrangement-document-v1.schema.json"
         },
         "contract": {
             "references": "stable_id_and_exact_revision",
-            "target_sets": ["all", "rows", "columns", "grid_zones", "checkerboard", "fixture_ids"],
-            "cue_layers": ["effect_ref", "target_set_ref", "parameter_overrides", "phase", "seed", "mix_overrides", "trigger_policy"],
+            "layout_categories": ["basic", "generated_advanced"],
+            "layout_shapes": ["matrix", "circle", "strip", "wall", "frame", "formula", "svg_path", "custom", "algorithm"],
+            "layout_editor_capabilities": ["form", "parameter_schema", "advanced_only", "read_only"],
+            "target_sets": ["all", "rows", "columns", "grid_zones", "checkerboard", "center_edges", "fixture_ids"],
+            "targeting_scene": ["hard", "weighted", "beat", "bar", "partition", "phase_continuity"],
+            "cue_layers": ["effect_ref", "target_set_ref", "targeting_scene_ref", "parameter_overrides", "phase", "seed", "mix_overrides", "trigger_policy"],
             "musical_time": { "storage": "integer_tick", "tempo_map_owner": "arrangement" },
             "audio_capabilities": []
         }
@@ -160,22 +170,23 @@ fn main() {
         (&schema_v2_path, &schema_v2_value),
         (&schema_v3_path, &schema_v3_value),
         (&schema_v4_path, &schema_v4_value),
-        (&project_manifest_v1_path, &project_manifest_v1_value),
-        (&stage_document_v1_path, &stage_document_v1_value),
+        (&project_manifest_v2_path, &project_manifest_v2_value),
+        (&stage_document_v2_path, &stage_document_v2_value),
+        (&layout_definition_v1_path, &layout_definition_v1_value),
         (&effect_definition_v1_path, &effect_definition_v1_value),
-        (&cue_definition_v1_path, &cue_definition_v1_value),
+        (&cue_definition_v2_path, &cue_definition_v2_value),
         (
             &arrangement_document_v1_path,
             &arrangement_document_v1_value,
         ),
-        (&project_bundle_v1_path, &project_bundle_v1_value),
+        (&project_bundle_v2_path, &project_bundle_v2_value),
         (&capabilities_v1_path, &capabilities_v1_value),
         (&capabilities_v2_path, &capabilities_v2_value),
         (&capabilities_v3_path, &capabilities_v3_value),
         (&capabilities_v4_path, &capabilities_v4_value),
         (
-            &project_capabilities_v1_path,
-            &project_capabilities_v1_value,
+            &project_capabilities_v2_path,
+            &project_capabilities_v2_value,
         ),
         (&profiles_path, &profiles_value),
     ];
@@ -183,13 +194,13 @@ fn main() {
     let typescript_v2 = render_typescript(&schema_v2_value, "ShowDocumentV2");
     let typescript_v3 = render_typescript(&schema_v3_value, "ShowDocumentV3");
     let typescript_v4 = render_typescript(&schema_v4_value, "ShowDocumentV4");
-    let project_typescript_v1 = render_typescript(&project_bundle_v1_value, "ProjectBundle");
+    let project_typescript_v2 = render_typescript(&project_bundle_v2_value, "ProjectBundle");
     let text_artifacts = [
         (&typescript_v1_path, typescript_v1.as_str()),
         (&typescript_v2_path, typescript_v2.as_str()),
         (&typescript_v3_path, typescript_v3.as_str()),
         (&typescript_v4_path, typescript_v4.as_str()),
-        (&project_typescript_v1_path, project_typescript_v1.as_str()),
+        (&project_typescript_v2_path, project_typescript_v2.as_str()),
     ];
 
     if std::env::args().any(|argument| argument == "--check") {
@@ -216,18 +227,19 @@ fn main() {
         (&schema_v2_path, &schema_v2),
         (&schema_v3_path, &schema_v3),
         (&schema_v4_path, &schema_v4),
-        (&project_manifest_v1_path, &project_manifest_v1),
-        (&stage_document_v1_path, &stage_document_v1),
+        (&project_manifest_v2_path, &project_manifest_v2),
+        (&stage_document_v2_path, &stage_document_v2),
+        (&layout_definition_v1_path, &layout_definition_v1),
         (&effect_definition_v1_path, &effect_definition_v1),
-        (&cue_definition_v1_path, &cue_definition_v1),
+        (&cue_definition_v2_path, &cue_definition_v2),
         (&arrangement_document_v1_path, &arrangement_document_v1),
-        (&project_bundle_v1_path, &project_bundle_v1),
+        (&project_bundle_v2_path, &project_bundle_v2),
     ] {
         let mut contents = serde_json::to_string_pretty(schema).expect("schema serializes");
         contents.push('\n');
         fs::write(path, contents).expect("schema artifact is writable");
     }
-    for (path, value) in json_artifacts.into_iter().skip(10) {
+    for (path, value) in json_artifacts.into_iter().skip(11) {
         let mut contents = serde_json::to_string_pretty(value).expect("JSON artifact serializes");
         contents.push('\n');
         fs::write(path, contents).expect("JSON artifact is writable");

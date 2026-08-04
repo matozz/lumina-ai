@@ -1,6 +1,7 @@
-import { Boxes, Layers2, Layers3, Lightbulb, Plus, RadioTower, Star } from "lucide-react";
+import { Boxes, Copy, Layers2, Layers3, Lightbulb, Plus, RadioTower, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { AssetRef, ProjectBundle } from "@/bridge/types";
 import {
   Empty,
   EmptyDescription,
@@ -9,7 +10,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { activeStage, assetKey, exactAsset, latestRefsById } from "@/document/projectModel";
+import { assetKey, exactAsset, latestRefsById } from "@/document/projectModel";
 import { engineSelectors, useEngineStore } from "@/stores/engine";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import {
@@ -22,11 +23,11 @@ import {
 export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   const bundle = useProjectStore(projectSelectors.bundle);
   const selectedEffectRef = useProjectStore(projectSelectors.selectedEffectRef);
+  const selectedLayoutRef = useProjectStore(projectSelectors.selectedLayoutRef);
   const selectedCueRef = useProjectStore(projectSelectors.selectedCueRef);
   const liveEffects = useEngineStore(engineSelectors.liveEffects);
   const selectedLiveEffectId = useWorkspaceStore(workspaceSelectors.selectedLiveEffectId);
   const favorites = useWorkspaceStore(workspaceSelectors.favoriteEffectIds);
-  const stage = activeStage(bundle);
 
   return (
     <aside className="bg-card flex h-full min-h-0 flex-col" aria-label={`${workspace} library`}>
@@ -42,6 +43,17 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
             onClick={() => projectActions.createEffect("Pulse")}
           >
             <Plus aria-hidden="true" />
+          </Button>
+        )}
+        {workspace === "stage" && (
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            className="ml-auto"
+            aria-label="Duplicate selected Layout"
+            onClick={() => projectActions.duplicateLayout(selectedLayoutRef)}
+          >
+            <Copy aria-hidden="true" />
           </Button>
         )}
         {workspace === "cues" && (
@@ -61,12 +73,23 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
         <div className="flex flex-col gap-1.5 p-2">
           {workspace === "stage" && (
             <>
-              {stage.groups.map((group) => (
-                <LibraryRow key={group.id} label={group.name} meta={fixtureCount(group.fixtures)} />
-              ))}
-              {stage.target_sets.map((target) => (
-                <LibraryRow key={target.id} label={target.name} meta={target.selector.type} />
-              ))}
+              <LayoutLibrarySection
+                title="Basic"
+                refs={latestRefsById(bundle.manifest.layout_refs).filter(
+                  (reference) => exactAsset(bundle.layouts, reference)?.category === "basic",
+                )}
+                bundle={bundle}
+                selected={selectedLayoutRef}
+              />
+              <LayoutLibrarySection
+                title="Generated / Advanced"
+                refs={latestRefsById(bundle.manifest.layout_refs).filter(
+                  (reference) =>
+                    exactAsset(bundle.layouts, reference)?.category === "generated_advanced",
+                )}
+                bundle={bundle}
+                selected={selectedLayoutRef}
+              />
             </>
           )}
 
@@ -179,11 +202,48 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   );
 }
 
-function LibraryRow({ label, meta }: { label: string; meta: string }) {
+function LayoutLibrarySection({
+  title,
+  refs,
+  bundle,
+  selected,
+}: {
+  title: string;
+  refs: AssetRef[];
+  bundle: ProjectBundle;
+  selected: AssetRef;
+}) {
   return (
-    <div className="border-border flex min-w-0 items-center gap-2 rounded-md border px-2 py-1.5">
-      <span className="min-w-0 flex-1 truncate text-xs">{label}</span>
-      <span className="text-muted-foreground shrink-0 text-[10px]">{meta}</span>
+    <div className="flex flex-col gap-1">
+      <p className="text-muted-foreground px-1 pt-1 text-[9px] font-medium tracking-wide uppercase">
+        {title}
+      </p>
+      {refs.map((reference) => {
+        const layout = exactAsset(bundle.layouts, reference);
+        if (!layout) return null;
+        return (
+          <div key={assetKey(reference)} className="flex min-w-0 items-center gap-1">
+            <Button
+              variant={assetKey(selected) === assetKey(reference) ? "secondary" : "ghost"}
+              size="sm"
+              className="h-auto min-w-0 flex-1 justify-start py-1.5"
+              onClick={() => projectActions.setSelectedLayoutRef(reference)}
+            >
+              <span className="min-w-0 flex-1 truncate text-left">{layout.name}</span>
+              <span className="text-muted-foreground text-[9px]">{layout.geometry.shape}</span>
+              <Badge variant="outline">r{layout.revision}</Badge>
+            </Button>
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              aria-label={`Duplicate ${layout.name}`}
+              onClick={() => projectActions.duplicateLayout(reference)}
+            >
+              <Copy aria-hidden="true" />
+            </Button>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -223,16 +283,10 @@ function LibraryIcon({ workspace }: { workspace: WorkspaceId }) {
 
 function libraryTitle(workspace: WorkspaceId) {
   return {
-    stage: "Stage groups & targets",
+    stage: "Layout Library",
     "effect-lab": "Effect assets",
     cues: "Cue assets",
     arrange: "Cue Library",
     live: "Live effects",
   }[workspace];
-}
-
-function fixtureCount(fixtures: number[] | { range: [number, number] }) {
-  return Array.isArray(fixtures)
-    ? `${fixtures.length} fixtures`
-    : `${fixtures.range[1] - fixtures.range[0] + 1} fixtures`;
 }

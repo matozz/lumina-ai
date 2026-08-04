@@ -4,13 +4,14 @@ import type {
   CueDefinition,
   CueLayer,
   EffectDefinitionDocument,
+  LayoutDefinition,
   ProjectBundle,
   StageDocument,
 } from "@/bridge/types";
 import { buildCommonParameters, buildEffectGraph } from "@/workspace/effect-lab/effectGraph";
 import type { EffectFormValues } from "@/workspace/effect-lab/effectFactory";
 
-export type ProjectAssetKind = "stage" | "effect" | "cue" | "arrangement";
+export type ProjectAssetKind = "stage" | "layout" | "effect" | "cue" | "arrangement";
 
 export function assetKey(reference: AssetRef) {
   return `${reference.id}@${reference.revision}`;
@@ -46,6 +47,13 @@ export function activeStage(bundle: ProjectBundle): StageDocument {
   const stage = exactAsset(bundle.stages, bundle.manifest.stage_ref);
   if (!stage) throw new Error("Project Stage reference is missing");
   return stage;
+}
+
+export function activeLayout(bundle: ProjectBundle): LayoutDefinition {
+  const stage = activeStage(bundle);
+  const layout = exactAsset(bundle.layouts, stage.layout_ref);
+  if (!layout) throw new Error("Stage Layout reference is missing");
+  return layout;
 }
 
 export function createEffectAsset(bundle: ProjectBundle, requestedName = "Pulse") {
@@ -143,7 +151,7 @@ export function createCueAsset(
     }
   }
   const cue: CueDefinition = {
-    schema_version: 1,
+    schema_version: 2,
     id,
     revision: 1,
     name,
@@ -201,11 +209,13 @@ export function forkAssetRevision(
   const nextRef =
     kind === "stage"
       ? cloneNextRevision(bundle.stages, reference)
-      : kind === "effect"
-        ? cloneNextRevision(bundle.effects, reference)
-        : kind === "cue"
-          ? cloneNextRevision(bundle.cues, reference)
-          : cloneNextRevision(bundle.arrangements, reference);
+      : kind === "layout"
+        ? cloneNextRevision(bundle.layouts, reference)
+        : kind === "effect"
+          ? cloneNextRevision(bundle.effects, reference)
+          : kind === "cue"
+            ? cloneNextRevision(bundle.cues, reference)
+            : cloneNextRevision(bundle.arrangements, reference);
   if (kind === "stage") bundle.manifest.stage_ref = nextRef;
   else appendExactRef(manifestRefs(bundle, kind), nextRef);
   bumpManifestRevision(bundle, published);
@@ -236,6 +246,7 @@ function cloneNextRevision<T extends { id: string; revision: number }>(
 }
 
 function manifestRefs(bundle: ProjectBundle, kind: Exclude<ProjectAssetKind, "stage">) {
+  if (kind === "layout") return bundle.manifest.layout_refs;
   if (kind === "effect") return bundle.manifest.effect_refs;
   if (kind === "cue") return bundle.manifest.cue_refs;
   return bundle.manifest.arrangement_refs;

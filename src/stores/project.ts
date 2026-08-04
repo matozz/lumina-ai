@@ -6,6 +6,7 @@ import type {
   AssetRef,
   CueDefinition,
   CueLayer,
+  LayoutDefinition,
   ProjectBundle,
 } from "@/bridge/types";
 import {
@@ -18,7 +19,9 @@ import {
   duplicateArrangementAsset,
   exactAsset,
   forkAssetRevision,
+  uniqueId,
 } from "@/document/projectModel";
+import { migrateProjectBundle } from "@/document/projectMigration";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
 
 export type PreviewSourceMode = "authoring_draft" | "rehearsal_draft" | "rehearsal_published";
@@ -33,6 +36,7 @@ export interface ProjectState {
   bundle: ProjectBundle;
   publishedBundle: ProjectBundle | null;
   selectedEffectRef: AssetRef | null;
+  selectedLayoutRef: AssetRef;
   selectedCueRef: AssetRef | null;
   selectedArrangementRef: AssetRef;
   selectedTargetSetId: string;
@@ -52,6 +56,7 @@ const initialState: ProjectState = {
   bundle: starter,
   publishedBundle: null,
   selectedEffectRef: null,
+  selectedLayoutRef: starter.manifest.layout_refs[0],
   selectedCueRef: null,
   selectedArrangementRef: activeArrangementRef(starter),
   selectedTargetSetId: "all",
@@ -68,9 +73,20 @@ const initialState: ProjectState = {
 export const useProjectStore = create<ProjectState>()(
   persist(() => initialState, {
     name: "lumina-project-v1",
-    version: 1,
+    version: 2,
+    migrate: (persistedState) => {
+      const state = persistedState as Partial<ProjectState>;
+      const bundle = migrateProjectBundle(state.bundle ?? starter).bundle;
+      return {
+        ...initialState,
+        ...state,
+        bundle,
+        selectedLayoutRef: state.selectedLayoutRef ?? bundle.manifest.layout_refs[0],
+      } satisfies ProjectState;
+    },
     partialize: (state) => ({
       bundle: state.bundle,
+      selectedLayoutRef: state.selectedLayoutRef,
       selectedEffectRef: state.selectedEffectRef,
       selectedCueRef: state.selectedCueRef,
       selectedArrangementRef: state.selectedArrangementRef,
@@ -87,6 +103,7 @@ export const projectActions = {
       ...initialState,
       bundle: structuredClone(bundle),
       selectedArrangementRef,
+      selectedLayoutRef: bundle.manifest.layout_refs[0],
       selectedEffectRef:
         bundle.manifest.effect_refs[bundle.manifest.effect_refs.length - 1] ?? null,
       selectedCueRef: bundle.manifest.cue_refs[bundle.manifest.cue_refs.length - 1] ?? null,
@@ -99,6 +116,92 @@ export const projectActions = {
     })),
   setSelectedEffectRef: (selectedEffectRef: AssetRef | null) =>
     useProjectStore.setState({ selectedEffectRef }),
+  setSelectedLayoutRef: (selectedLayoutRef: AssetRef) =>
+    useProjectStore.setState({ selectedLayoutRef }),
+  duplicateLayout: (reference: AssetRef) => {
+    let created = reference;
+    transact("Duplicate Layout", (bundle, published) => {
+      const source = exactAsset(bundle.layouts, reference);
+      if (!source) throw new Error("Layout revision is missing");
+      bumpManifestRevision(bundle, published);
+      const name = uniqueLayoutName(
+        `${source.name} Copy`,
+        bundle.layouts.map((layout) => layout.name),
+      );
+      const copy = structuredClone(source);
+      copy.id = uniqueId(
+        slugLayoutName(name),
+        bundle.layouts.map((layout) => layout.id),
+      );
+      copy.revision = 1;
+      copy.name = name;
+      bundle.layouts.push(copy);
+      created = { id: copy.id, revision: copy.revision };
+      appendExactRef(bundle.manifest.layout_refs, created);
+    });
+    useProjectStore.setState({ selectedLayoutRef: created });
+    return created;
+  },
+  saveLayoutDraft: (reference: AssetRef, draft: LayoutDefinition) => {
+    let selected = reference;
+    transact("Save Layout Draft", (bundle, published) => {
+      selected = forkAssetRevision(bundle, published, "layout", reference);
+      const layout = exactAsset(bundle.layouts, selected);
+      if (!layout) throw new Error("Layout revision is missing");
+      layout.name = draft.name.trim();
+      layout.category = draft.category;
+      layout.editor = structuredClone(draft.editor);
+      layout.geometry = structuredClone(draft.geometry);
+      bumpManifestRevision(bundle, published);
+    });
+    useProjectStore.setState({ selectedLayoutRef: selected });
+    return selected;
+  },
+  saveLayoutAs: (draft: LayoutDefinition, requestedName: string) => {
+    let created: AssetRef | null = null;
+    transact("Save Layout As", (bundle, published) => {
+      bumpManifestRevision(bundle, published);
+      const name = uniqueLayoutName(
+        requestedName.trim() || `${draft.name} Copy`,
+        bundle.layouts.map((layout) => layout.name),
+      );
+      const copy = structuredClone(draft);
+      copy.id = uniqueId(
+        slugLayoutName(name),
+        bundle.layouts.map((layout) => layout.id),
+      );
+      copy.revision = 1;
+      copy.name = name;
+      bundle.layouts.push(copy);
+      created = { id: copy.id, revision: copy.revision };
+      appendExactRef(bundle.manifest.layout_refs, created);
+    });
+    if (!created) throw new Error("Layout could not be saved");
+    useProjectStore.setState({ selectedLayoutRef: created });
+    return created;
+  },
+  renameLayout: (reference: AssetRef, name: string) => {
+    const layout = exactAsset(useProjectStore.getState().bundle.layouts, reference);
+    if (!layout) throw new Error("Layout revision is missing");
+    return projectActions.saveLayoutDraft(reference, { ...structuredClone(layout), name });
+  },
+  deleteLayout: (reference: AssetRef) => {
+    const state = useProjectStore.getState();
+    if (state.bundle.stages.some((stage) => assetKey(stage.layout_ref) === assetKey(reference))) {
+      throw new Error("Layout revision is referenced by a Stage");
+    }
+    transact("Delete Layout", (bundle, published) => {
+      bumpManifestRevision(bundle, published);
+      bundle.manifest.layout_refs = bundle.manifest.layout_refs.filter(
+        (candidate) => assetKey(candidate) !== assetKey(reference),
+      );
+      bundle.layouts = bundle.layouts.filter((layout) => assetKey(layout) !== assetKey(reference));
+    });
+    const bundle = useProjectStore.getState().bundle;
+    const selectedLayoutRef = bundle.manifest.layout_refs[0];
+    if (!selectedLayoutRef) throw new Error("Project requires at least one Layout");
+    useProjectStore.setState({ selectedLayoutRef });
+  },
   setSelectedCueRef: (selectedCueRef: AssetRef | null) =>
     useProjectStore.setState({ selectedCueRef }),
   setSelectedTargetSetId: (selectedTargetSetId: string) =>
@@ -357,6 +460,7 @@ export const projectActions = {
 export const projectSelectors = {
   bundle: (state: ProjectState) => state.bundle,
   selectedEffectRef: (state: ProjectState) => state.selectedEffectRef,
+  selectedLayoutRef: (state: ProjectState) => state.selectedLayoutRef,
   selectedCueRef: (state: ProjectState) => state.selectedCueRef,
   selectedArrangementRef: (state: ProjectState) => state.selectedArrangementRef,
   selectedTargetSetId: (state: ProjectState) => state.selectedTargetSetId,
@@ -433,6 +537,10 @@ function repairSelections() {
       exactAsset(state.bundle.effects, state.selectedEffectRef)?.id !== undefined
         ? state.selectedEffectRef
         : (state.bundle.manifest.effect_refs[state.bundle.manifest.effect_refs.length - 1] ?? null),
+    selectedLayoutRef:
+      exactAsset(state.bundle.layouts, state.selectedLayoutRef)?.id !== undefined
+        ? state.selectedLayoutRef
+        : (state.bundle.manifest.layout_refs[0] ?? state.bundle.stages[0].layout_ref),
     selectedCueRef:
       exactAsset(state.bundle.cues, state.selectedCueRef)?.id !== undefined
         ? state.selectedCueRef
@@ -451,4 +559,24 @@ function stableSeed(value: string) {
     hash = BigInt.asUintN(64, hash * 0x100000001b3n);
   }
   return hash.toString(16).padStart(16, "0");
+}
+
+function uniqueLayoutName(base: string, existing: string[]) {
+  let candidate = base;
+  let suffix = 2;
+  while (existing.includes(candidate)) {
+    candidate = `${base} ${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
+function slugLayoutName(value: string) {
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "layout"
+  );
 }

@@ -1,17 +1,17 @@
 use super::{
     ClipPlaybackDSL, EffectCatalogDSL, EffectGraphDSL, EffectSourceDSL, GlobalParameterDSL,
-    GroupDSL, KeyframeDSL, LayoutDSL, ParameterDefinitionDSL, ParameterValueDSL, PatchDSL,
-    TempoMapDSL,
+    GroupDSL, KeyframeDSL, ParameterDefinitionDSL, ParameterValueDSL, PatchDSL, TempoMapDSL,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-pub const PROJECT_BUNDLE_SCHEMA_VERSION: u32 = 1;
-pub const PROJECT_MANIFEST_SCHEMA_VERSION: u32 = 1;
-pub const STAGE_DOCUMENT_SCHEMA_VERSION: u32 = 1;
+pub const PROJECT_BUNDLE_SCHEMA_VERSION: u32 = 2;
+pub const PROJECT_MANIFEST_SCHEMA_VERSION: u32 = 2;
+pub const STAGE_DOCUMENT_SCHEMA_VERSION: u32 = 2;
+pub const LAYOUT_DEFINITION_SCHEMA_VERSION: u32 = 1;
 pub const EFFECT_DEFINITION_SCHEMA_VERSION: u32 = 1;
-pub const CUE_DEFINITION_SCHEMA_VERSION: u32 = 1;
+pub const CUE_DEFINITION_SCHEMA_VERSION: u32 = 2;
 pub const ARRANGEMENT_DOCUMENT_SCHEMA_VERSION: u32 = 1;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, Hash)]
@@ -25,13 +25,14 @@ pub struct AssetRef {
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ProjectManifest {
-    #[schemars(range(min = 1, max = 1))]
+    #[schemars(range(min = 2, max = 2))]
     pub schema_version: u32,
     pub project_id: String,
     #[schemars(range(min = 1))]
     pub revision: u32,
     pub name: String,
     pub stage_ref: AssetRef,
+    pub layout_refs: Vec<AssetRef>,
     pub effect_refs: Vec<AssetRef>,
     pub cue_refs: Vec<AssetRef>,
     pub arrangement_refs: Vec<AssetRef>,
@@ -41,16 +42,198 @@ pub struct ProjectManifest {
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct StageDocument {
-    #[schemars(range(min = 1, max = 1))]
+    #[schemars(range(min = 2, max = 2))]
     pub schema_version: u32,
     pub id: String,
     #[schemars(range(min = 1))]
     pub revision: u32,
     pub name: String,
     pub patch: Vec<PatchDSL>,
-    pub layout: LayoutDSL,
+    pub layout_ref: AssetRef,
     pub groups: Vec<GroupDSL>,
     pub target_sets: Vec<TargetSetDefinition>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub targeting_scenes: Vec<TargetingSceneDefinition>,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct LayoutDefinition {
+    #[schemars(range(min = 1, max = 1))]
+    pub schema_version: u32,
+    pub id: String,
+    #[schemars(range(min = 1))]
+    pub revision: u32,
+    pub name: String,
+    pub category: LayoutCategory,
+    pub editor: LayoutEditorCapability,
+    pub geometry: LayoutGeometry,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum LayoutCategory {
+    Basic,
+    GeneratedAdvanced,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(tag = "mode", rename_all = "snake_case", deny_unknown_fields)]
+pub enum LayoutEditorCapability {
+    Form,
+    ParameterSchema {
+        parameters: Vec<LayoutParameterDefinition>,
+    },
+    AdvancedOnly,
+    ReadOnly {
+        reason: String,
+    },
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct LayoutParameterDefinition {
+    pub id: String,
+    pub label: String,
+    pub value_type: LayoutParameterValueType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minimum: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub maximum: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub step: Option<f64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum LayoutParameterValueType {
+    Number,
+    Integer,
+    Text,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(tag = "shape", rename_all = "snake_case", deny_unknown_fields)]
+pub enum LayoutGeometry {
+    Matrix {
+        #[schemars(range(min = 1))]
+        rows: u32,
+        #[schemars(range(min = 1))]
+        columns: u32,
+        fixture_size: LayoutSize,
+        gap: LayoutGap,
+        pitch: LayoutPitch,
+        origin: LayoutPoint,
+    },
+    Circle {
+        #[schemars(range(min = 1))]
+        rings: u32,
+        #[schemars(range(min = 1))]
+        increment: u32,
+        fixture_size: LayoutSize,
+        #[schemars(range(min = 0.0))]
+        ring_gap: f64,
+        #[schemars(range(min = 0.000_001))]
+        ring_pitch: f64,
+        center: LayoutPoint,
+    },
+    Strip {
+        #[schemars(range(min = 1))]
+        count: u32,
+        orientation: LayoutOrientation,
+        fixture_size: LayoutSize,
+        gap: LayoutGap,
+        pitch: LayoutPitch,
+        origin: LayoutPoint,
+    },
+    Wall {
+        #[schemars(range(min = 1))]
+        rows: u32,
+        #[schemars(range(min = 1))]
+        columns: u32,
+        fixture_size: LayoutSize,
+        gap: LayoutGap,
+        pitch: LayoutPitch,
+        origin: LayoutPoint,
+    },
+    Frame {
+        #[schemars(range(min = 2))]
+        rows: u32,
+        #[schemars(range(min = 2))]
+        columns: u32,
+        fixture_size: LayoutSize,
+        gap: LayoutGap,
+        pitch: LayoutPitch,
+        origin: LayoutPoint,
+    },
+    Formula {
+        formula: super::FormulaDef,
+        fixture_size: LayoutSize,
+    },
+    SvgPath {
+        svg_path: super::SvgPathDef,
+        fixture_size: LayoutSize,
+    },
+    Custom {
+        fixtures: Vec<super::CustomFixturePos>,
+        fixture_size: LayoutSize,
+    },
+    Algorithm {
+        algorithm: LayoutAlgorithm,
+        #[schemars(range(min = 1, max = 1_000_000))]
+        count: u32,
+        fixture_size: LayoutSize,
+        origin: LayoutPoint,
+        parameters: BTreeMap<String, f64>,
+    },
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum LayoutOrientation {
+    Horizontal,
+    Vertical,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum LayoutAlgorithm {
+    Lissajous,
+    Spiral,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[serde(deny_unknown_fields)]
+pub struct LayoutSize {
+    #[schemars(range(min = 0.000_001))]
+    pub width: f64,
+    #[schemars(range(min = 0.000_001))]
+    pub height: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[serde(deny_unknown_fields)]
+pub struct LayoutGap {
+    #[schemars(range(min = 0.0))]
+    pub x: f64,
+    #[schemars(range(min = 0.0))]
+    pub y: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[serde(deny_unknown_fields)]
+pub struct LayoutPitch {
+    #[schemars(range(min = 0.000_001))]
+    pub x: f64,
+    #[schemars(range(min = 0.000_001))]
+    pub y: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[serde(deny_unknown_fields)]
+pub struct LayoutPoint {
+    pub x: f64,
+    pub y: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
@@ -83,6 +266,11 @@ pub enum TargetSetSelector {
     Checkerboard {
         parity: CheckerboardParity,
     },
+    CenterEdges {
+        region: CenterEdgesRegion,
+        #[schemars(range(min = 1))]
+        thickness: u32,
+    },
     FixtureIds {
         fixture_ids: Vec<u32>,
     },
@@ -102,12 +290,83 @@ pub enum CheckerboardParity {
     Odd,
 }
 
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CenterEdgesRegion {
+    Center,
+    Edges,
+}
+
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
 #[serde(deny_unknown_fields)]
 pub struct TargetSetWeight {
     pub fixture_id: u32,
     #[schemars(range(min = 0.0, max = 1.0))]
     pub weight: f32,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct TargetingSceneDefinition {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub looped: bool,
+    #[serde(default = "default_phase_continuity")]
+    pub phase_continuity: bool,
+    pub steps: Vec<TargetingSceneStep>,
+}
+
+const fn default_phase_continuity() -> bool {
+    true
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct TargetingSceneStep {
+    pub id: String,
+    pub selection: TargetingSelection,
+    pub duration: TargetingDuration,
+    pub transition: TargetingTransition,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct TargetingSelection {
+    pub target_set_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub partition_index: Option<u32>,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[serde(deny_unknown_fields)]
+pub struct TargetingDuration {
+    #[schemars(range(min = 1))]
+    pub value: u32,
+    pub unit: TargetingDurationUnit,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum TargetingDurationUnit {
+    Beat,
+    Bar,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
+pub enum TargetingTransition {
+    Hard,
+    Weighted { duration: TargetingDuration },
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, Hash)]
+#[serde(deny_unknown_fields)]
+pub struct TargetingSceneRef {
+    pub stage_id: String,
+    #[schemars(range(min = 1))]
+    pub stage_revision: u32,
+    pub targeting_scene_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
@@ -137,7 +396,7 @@ pub struct TargetSetRef {
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct CueDefinition {
-    #[schemars(range(min = 1, max = 1))]
+    #[schemars(range(min = 2, max = 2))]
     pub schema_version: u32,
     pub id: String,
     #[schemars(range(min = 1))]
@@ -160,6 +419,8 @@ pub struct CueLayer {
     pub id: String,
     pub effect_ref: AssetRef,
     pub target_set_ref: TargetSetRef,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub targeting_scene_ref: Option<TargetingSceneRef>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub parameter_overrides: BTreeMap<String, ParameterValueDSL>,
     pub phase: f64,
@@ -350,10 +611,11 @@ pub struct ArrangementMarker {
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ProjectBundle {
-    #[schemars(range(min = 1, max = 1))]
+    #[schemars(range(min = 2, max = 2))]
     pub schema_version: u32,
     pub manifest: ProjectManifest,
     pub stages: Vec<StageDocument>,
+    pub layouts: Vec<LayoutDefinition>,
     pub effects: Vec<EffectDefinitionDocument>,
     pub cues: Vec<CueDefinition>,
     pub arrangements: Vec<ArrangementDocument>,
@@ -428,11 +690,12 @@ mod tests {
 
     #[test]
     fn schema_versions_are_independent_and_start_at_one() {
-        assert_eq!(PROJECT_BUNDLE_SCHEMA_VERSION, 1);
-        assert_eq!(PROJECT_MANIFEST_SCHEMA_VERSION, 1);
-        assert_eq!(STAGE_DOCUMENT_SCHEMA_VERSION, 1);
+        assert_eq!(PROJECT_BUNDLE_SCHEMA_VERSION, 2);
+        assert_eq!(PROJECT_MANIFEST_SCHEMA_VERSION, 2);
+        assert_eq!(STAGE_DOCUMENT_SCHEMA_VERSION, 2);
+        assert_eq!(LAYOUT_DEFINITION_SCHEMA_VERSION, 1);
         assert_eq!(EFFECT_DEFINITION_SCHEMA_VERSION, 1);
-        assert_eq!(CUE_DEFINITION_SCHEMA_VERSION, 1);
+        assert_eq!(CUE_DEFINITION_SCHEMA_VERSION, 2);
         assert_eq!(ARRANGEMENT_DOCUMENT_SCHEMA_VERSION, 1);
     }
 }

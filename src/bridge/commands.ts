@@ -104,7 +104,7 @@ export const engine = {
   saveProject: (path: string, project: ProjectBundle) =>
     invoke("save_project", { path, projectJson: JSON.stringify(project) }),
 
-  loadProject: (path: string) => invoke<ProjectBundle>("load_project", { path }),
+  loadProject: (path: string) => invoke<MigratedProject>("load_project", { path }),
 
   migrateShowProject: (json: string) =>
     invoke<MigratedProject>("migrate_show_project", { dslJson: json }),

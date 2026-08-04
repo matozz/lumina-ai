@@ -237,6 +237,12 @@ fn project_asset_fingerprints(bundle: &ProjectBundle) -> BTreeMap<String, String
             serde_json::to_string(stage).expect("StageDocument serializes"),
         );
     }
+    for layout in &bundle.layouts {
+        fingerprints.insert(
+            format!("layout:{}@{}", layout.id, layout.revision),
+            serde_json::to_string(layout).expect("LayoutDefinition serializes"),
+        );
+    }
     for effect in &bundle.effects {
         fingerprints.insert(
             format!("effect:{}@{}", effect.id, effect.revision),
