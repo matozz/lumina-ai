@@ -2,6 +2,9 @@
 
 > 基线：`main@411656f`。本矩阵只服务 Stage 7.5A；不包含 LayoutPreset、动态 Targeting 或 Production Catalog。
 
+> 完成状态（2026-08-04）：表内 Stage 7.5A 目标已由 `e8b2bdd` 迁移并通过自动化与真实 Tauri
+> 验收；详见 [`stage7-5a-acceptance.md`](./stage7-5a-acceptance.md)。
+
 | Capability          | Stage 5/6 已验证实现                            | Stage 7 临时实现                           | Stage 7.5A 迁移目标                                   | 所有权/性能约束                               |
 | ------------------- | ----------------------------------------------- | ------------------------------------------ | ----------------------------------------------------- | --------------------------------------------- |
 | Zoom                | `TimelinePanel.handleZoom` + `TimelineGeometry` | 固定 48px/beat                             | viewport center anchored zoom                         | session UI state；不改 tick                   |

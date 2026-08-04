@@ -145,4 +145,7 @@ Publish/Take Live、首 BPM/fixed 4/4 或 React pointer-move state path 的理�
 ## Related commits
 
 - Stage 7 baseline and audit: `646f336`、`411656f`
-- ADR and capability parity: 本切片提交
+- ADR and capability parity: `18f864c`
+- Authoring clock and transport: `cd90388`、`c5223c5`
+- Production ArrangementTimeline: `e8b2bdd`
+- Native acceptance: [`stage7-5a-acceptance.md`](../stage7-5a-acceptance.md)
