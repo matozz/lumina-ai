@@ -1187,6 +1187,7 @@ flowchart LR
 | ADR-0010 | TempoMap 与 Stage/Effect/Cue/Arrangement 资产边界         | 7     | accepted                         |
 | ADR-0011 | Authoring Preview Clock、Transport 与 CueClip Timeline    | 7.5   | accepted                         |
 | ADR-0012 | LayoutPreset、Stage upgrade 与动态 TargetSet/Spatial Mask | 7.5   | accepted                         |
+| ADR-0013 | Production catalog、safe authoring 与 validation          | 7.5   | accepted                         |
 
 ## 20. Progress Ledger
 
@@ -1309,6 +1310,7 @@ flowchart LR
 | 2026-08-05 | 7.5B/C   | Scoped final gate              | completed  | 本次交接提交            | `check:all`；150 frontend；119 Rust；debug app；native remap/reopen/keyboard   | R-031 closed；7.5D/7.5E 未开始                                 | 停止；等待显式 7.5D Goal                    |
 | 2026-08-05 | 7.5B/C   | Layout workflow feedback       | completed  | 本次补充提交            | `check:all`；157 frontend；121 Rust；native 10×10/integer/Draft/speed menu     | 容量差异归 Use on Stage；共用 controls；beat-sync speed only   | 停止；不进入 7.5D                           |
 | 2026-08-05 | 7.5B/C   | Patch + large-grid feedback    | completed  | `c8fb70c`               | `check:all`；163 frontend；124 Rust；native 21×45/patch/speed/dialog           | Layout capacity ≠ Patch；显式 Stage revision；大网格独立编辑   | 停止；不进入 7.5D                           |
+| 2026-08-05 | 7.5D     | Catalog audit + ADR            | started    | 本切片提交              | 18 templates；43 legacy Effects；schema/consumer audit                         | ADR-0013；R-032–R-034 open                                     | contract + unified validator                |
 
 ## 21. Open Risks
 
@@ -1345,6 +1347,9 @@ flowchart LR
 | R-029 | Lab/Cue/Arrange 的作者时钟隐藏且语义分裂，首 BPM、固定 PPQ/4/4 造成错误预览           | high     | 7.5         | 共享 AuthoringTransport/PreviewClock；读取完整 TempoMap/TimeSignatureMap；原生回归          | closed |
 | R-030 | 最小 CueTimelinePanel 丢失 zoom、snap、resize、键盘和 typed automation 编辑           | critical | 7.5         | production ArrangementTimeline + CueClip adapter；rAF DOM preview；单 transaction           | closed |
 | R-031 | 无调用者的 V4 Stage Setup/Timeline reference shell 可能与当前资产工作区继续漂移       | medium   | 7.5         | Timeline 与 Stage Setup 能力完成迁移和回归后删除旧 shell                                    | closed |
+| R-032 | 非法 Effect/Cue input 污染 Project/history                                            | critical | 7.5D        | working draft + validated Save + last-known-good                                            | open   |
+| R-033 | built-in 修订被静默修改，破坏 Cue/Arrangement 重放                                    | critical | 7.5D        | read-only exact revision；Customize fork；explicit upgrade                                  | open   |
+| R-034 | Cue recipe 绑定 fixture ID/name，换 Stage 后失效                                      | high     | 7.5D        | capability/type selector resolver + stable diagnostics                                      | open   |
 
 ## 22. Deferred Backlog
 
