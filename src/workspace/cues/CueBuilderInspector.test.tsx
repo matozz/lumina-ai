@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   CueDefinition,
@@ -87,6 +87,45 @@ describe("Cue Builder safe authoring", () => {
     expect(project.bundle.effects.some((effect) => effect.id === catalog.effects[0].id)).toBe(true);
     expect(project.historyCursor).toBe(1);
   });
+
+  it("requires confirmation before adding a high-risk strobe layer", async () => {
+    render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*2L.*r1/ }));
+    await waitFor(() => expect(screen.getByLabelText("Cue name")).toBeTruthy());
+
+    const strobe = catalog.effects.find((effect) => effect.catalog.strobe_risk === "high")!;
+    act(() => projectActions.setSelectedEffectRef({ id: strobe.id, revision: strobe.revision }));
+    const add = screen.getByRole("button", { name: "Add selected" });
+    await waitFor(() => expect(add.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(add);
+
+    expect(screen.getByRole("dialog", { name: "Confirm high strobe risk" })).toBeTruthy();
+    expect(useAuthoringDraftStore.getState().cue?.working.layers).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "Add high-risk layer" }));
+    expect(useAuthoringDraftStore.getState().cue?.working.layers).toHaveLength(3);
+  });
+
+  it("duplicates automation with unique IDs and keeps layer ordering deterministic", async () => {
+    render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*2L.*r1/ }));
+    await waitFor(() => expect(screen.getByLabelText("Cue name")).toBeTruthy());
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Add automation" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Duplicate selected layer" }));
+
+    const duplicated = useAuthoringDraftStore.getState().cue?.working;
+    expect(duplicated?.layers).toHaveLength(3);
+    expect(new Set(duplicated?.layers.map((layer) => layer.id)).size).toBe(3);
+    expect(duplicated?.automation_lanes).toHaveLength(2);
+    expect(new Set(duplicated?.automation_lanes?.map((lane) => lane.id)).size).toBe(2);
+    expect(duplicated?.layers.map((layer) => layer.layer)).toEqual([0, 1, 2]);
+
+    const duplicateId = useAuthoringDraftStore.getState().cue?.selectedLayerId;
+    fireEvent.click(screen.getByRole("button", { name: "Move selected layer up" }));
+    const reordered = useAuthoringDraftStore.getState().cue?.working;
+    expect(reordered?.layers[0].id).toBe(duplicateId);
+    expect(reordered?.layers.map((layer) => layer.layer)).toEqual([0, 1, 2]);
+  });
 });
 
 function cueFixture() {
@@ -108,6 +147,13 @@ function cueFixture() {
     advanced: false,
   }));
   scratch.effects.push(effect);
+  const strobe = structuredClone(effect);
+  strobe.id = "builtin.strobe.safe-pulse";
+  strobe.name = "Safe Strobe Pulse";
+  strobe.catalog.family = "strobe";
+  strobe.catalog.category = "Strobe";
+  strobe.catalog.strobe_risk = "high";
+  scratch.effects.push(strobe);
   const reference = { id: effect.id, revision: effect.revision };
   const cue = createCueAsset(scratch, [reference, reference], "Four on Floor");
   cue.id = "cue-four-on-floor";
@@ -115,7 +161,7 @@ function cueFixture() {
   cue.layers[1].id = "kick-b";
   const catalog: ProductionCatalog = {
     schema_version: 1,
-    effects: [effect satisfies EffectDefinitionDocument],
+    effects: [effect satisfies EffectDefinitionDocument, strobe satisfies EffectDefinitionDocument],
     cue_recipes: [
       {
         schema_version: 1,

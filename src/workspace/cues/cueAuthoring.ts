@@ -76,6 +76,48 @@ export function removeCueLayer(cue: CueDefinition, layerId: string) {
   );
 }
 
+export function moveCueLayer(cue: CueDefinition, layerId: string, direction: -1 | 1) {
+  const index = cue.layers.findIndex((layer) => layer.id === layerId);
+  const nextIndex = index + direction;
+  if (index < 0 || nextIndex < 0 || nextIndex >= cue.layers.length) return;
+  const [layer] = cue.layers.splice(index, 1);
+  cue.layers.splice(nextIndex, 0, layer);
+  cue.layers.forEach((candidate, order) => {
+    candidate.layer = order;
+  });
+}
+
+export function duplicateCueLayer(cue: CueDefinition, layerId: string) {
+  const index = cue.layers.findIndex((layer) => layer.id === layerId);
+  if (index < 0) return null;
+  const source = cue.layers[index];
+  const copy = structuredClone(source);
+  copy.id = uniqueId(
+    `${source.id}-copy`,
+    cue.layers.map((layer) => layer.id),
+  );
+  copy.seed = stableSeed(`${cue.id}:${copy.id}`);
+  cue.layers.splice(index + 1, 0, copy);
+  cue.layers.forEach((candidate, order) => {
+    candidate.layer = order;
+  });
+  const occupiedLaneIds = (cue.automation_lanes ?? []).map((lane) => lane.id);
+  const copiedLanes = (cue.automation_lanes ?? [])
+    .filter((lane) => lane.target.layer_id === source.id)
+    .map((lane) => {
+      const copiedLane = structuredClone(lane);
+      copiedLane.id = uniqueId(
+        `${copy.id}-${lane.target.parameter_id}-automation`,
+        occupiedLaneIds,
+      );
+      occupiedLaneIds.push(copiedLane.id);
+      copiedLane.target = { ...copiedLane.target, layer_id: copy.id };
+      return copiedLane;
+    });
+  cue.automation_lanes = [...(cue.automation_lanes ?? []), ...copiedLanes];
+  return copy.id;
+}
+
 export function cueDiagnosticsFrom(error: unknown, path = "cue"): Diagnostic[] {
   if (Array.isArray(error)) return error as Diagnostic[];
   return [cueDiagnostic(path, error instanceof Error ? error.message : String(error))];

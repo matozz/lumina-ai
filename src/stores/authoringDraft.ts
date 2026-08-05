@@ -132,6 +132,19 @@ export const authoringDraftActions = {
       comparison: "working",
     });
   },
+  revertEffectToLastKnownGood: () => {
+    const current = useAuthoringDraftStore.getState().effect;
+    if (!current) return;
+    useAuthoringDraftStore.setState({
+      effect: {
+        ...current,
+        working: structuredClone(current.lastKnownGood),
+        diagnostics: [],
+        status: "valid",
+        generation: current.generation + 1,
+      },
+    });
+  },
   commitEffect: (saved: EffectDefinitionDocument) =>
     useAuthoringDraftStore.setState({
       effect: createEffectSession(saved, "edit"),
@@ -194,6 +207,19 @@ export const authoringDraftActions = {
     useAuthoringDraftStore.setState({
       cue: createCueSession(current.pinned, current.mode),
       comparison: "working",
+    });
+  },
+  revertCueToLastKnownGood: () => {
+    const current = useAuthoringDraftStore.getState().cue;
+    if (!current) return;
+    useAuthoringDraftStore.setState({
+      cue: {
+        ...current,
+        working: structuredClone(current.lastKnownGood),
+        diagnostics: [],
+        status: "valid",
+        generation: current.generation + 1,
+      },
     });
   },
   commitCue: (saved: CueDefinition) =>

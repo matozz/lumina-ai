@@ -1,4 +1,4 @@
-import { Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, Trash2 } from "lucide-react";
 import type {
   CueDefinition,
   CueLayer,
@@ -31,6 +31,8 @@ export function CueLayerEditor({
   stage,
   onUpdate,
   onRemove,
+  onMove,
+  onDuplicate,
 }: {
   cue: CueDefinition;
   layer: CueLayer;
@@ -39,6 +41,8 @@ export function CueLayerEditor({
   stage: StageDocument;
   onUpdate: (update: CueLayerUpdate) => void;
   onRemove: () => void;
+  onMove: (direction: -1 | 1) => void;
+  onDuplicate: () => void;
 }) {
   const effectItems = effects.map((candidate) => ({
     value: assetKey(candidate),
@@ -53,6 +57,30 @@ export function CueLayerEditor({
     <div className="border-border grid gap-3 rounded-md border p-2.5">
       <div className="flex items-center gap-1.5">
         <span className="min-w-0 flex-1 truncate text-xs font-medium">Selected layer</span>
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          aria-label="Move selected layer up"
+          onClick={() => onMove(-1)}
+        >
+          <ArrowUp aria-hidden="true" />
+        </Button>
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          aria-label="Move selected layer down"
+          onClick={() => onMove(1)}
+        >
+          <ArrowDown aria-hidden="true" />
+        </Button>
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          aria-label="Duplicate selected layer"
+          onClick={onDuplicate}
+        >
+          <Copy aria-hidden="true" />
+        </Button>
         <Button
           size="icon-xs"
           variant="ghost"
@@ -168,6 +196,24 @@ export function CueLayerEditor({
           }
         />
       </div>
+
+      <Field>
+        <FieldLabel htmlFor={`${layer.id}-seed`}>Deterministic seed</FieldLabel>
+        <Input
+          id={`${layer.id}-seed`}
+          className="font-mono"
+          value={layer.seed}
+          maxLength={16}
+          onChange={(event) =>
+            onUpdate((draftLayer) => {
+              draftLayer.seed = event.currentTarget.value;
+            })
+          }
+        />
+        <FieldDescription>
+          Exactly 16 hexadecimal characters; invalid text remains local.
+        </FieldDescription>
+      </Field>
 
       <div className="grid grid-cols-2 gap-2">
         <SelectField

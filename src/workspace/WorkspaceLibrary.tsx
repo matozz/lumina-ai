@@ -1,7 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Boxes, Copy, Layers2, Layers3, Lightbulb, Plus, RadioTower, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { engine } from "@/bridge/commands";
 import type { AssetRef, ProjectBundle } from "@/bridge/types";
 import {
@@ -46,6 +55,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   const productionCatalog = useProductionCatalogStore(productionCatalogSelectors.catalog);
   const productionCatalogStatus = useProductionCatalogStore(productionCatalogSelectors.status);
   const productionCatalogError = useProductionCatalogStore(productionCatalogSelectors.error);
+  const [confirmHighRiskCreate, setConfirmHighRiskCreate] = useState(false);
 
   useEffect(() => {
     if (workspace === "effect-lab" || workspace === "cues") {
@@ -60,7 +70,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
     }
   }, [productionCatalog, selectedEffectRef, workspace]);
 
-  const startCueDraft = () => {
+  const createCueDraft = () => {
     if (!selectedEffectRef) return;
     const scratch = structuredClone(bundle);
     const productionEffect = exactAsset(productionCatalog?.effects ?? [], selectedEffectRef);
@@ -70,6 +80,17 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
     const cue = createCueAsset(scratch, [selectedEffectRef]);
     authoringDraftActions.beginNewCue(cue);
     projectActions.setSelectedCueRef({ id: cue.id, revision: cue.revision });
+  };
+  const startCueDraft = () => {
+    if (!selectedEffectRef) return;
+    const effect =
+      exactAsset(productionCatalog?.effects ?? [], selectedEffectRef) ??
+      exactAsset(bundle.effects, selectedEffectRef);
+    if (effect?.catalog.strobe_risk === "high") {
+      setConfirmHighRiskCreate(true);
+      return;
+    }
+    createCueDraft();
   };
 
   const startRecipeDraft = async (recipeId: string, revision: number, name: string) => {
@@ -298,6 +319,29 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
           )}
         </div>
       </ScrollArea>
+      <Dialog open={confirmHighRiskCreate} onOpenChange={setConfirmHighRiskCreate}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm high strobe risk</DialogTitle>
+            <DialogDescription>
+              The selected Effect can produce high-frequency intensity changes. Verify the target,
+              audience safety policy, and safe defaults before creating this Cue layer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                createCueDraft();
+                setConfirmHighRiskCreate(false);
+              }}
+            >
+              Create with high-risk layer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </aside>
   );
 }

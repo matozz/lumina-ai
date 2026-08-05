@@ -3,12 +3,12 @@ use super::validation::{validate_effect_definition_document, validate_parameter_
 use super::{
     AssetRef, CenterEdgesRegion, CueCapabilitySummary, CueDefinition, CueLayer, CueQuantize,
     CueRiskSummary, CueTriggerMode, CueTriggerPolicy, DirectionDSL, EffectDefinitionDSL,
-    EffectDefinitionDocument, EffectInstanceDSL, GeneratorDSL, GroupDSL, GroupFixturesDSL,
-    GroupRangeDSL, LayoutCapabilityDSL, LayoutDSL, LayoutDefinition, LayoutGeometry, LayoutType,
-    MetaDSL, OscillatorWaveformDSL, ParameterOverridePolicyDSL, ParameterValueDSL, PatchDSL,
-    ProjectBundle, ShowDocumentV4, StageDocument, StrobeRiskDSL, TargetSetDefinition, TargetSetRef,
-    TargetSetSelector, TargetingSceneDefinition, TargetingSceneRef, TargetingTransition,
-    CUE_DEFINITION_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION,
+    EffectDefinitionDocument, EffectFamilyDSL, EffectInstanceDSL, GeneratorDSL, GroupDSL,
+    GroupFixturesDSL, GroupRangeDSL, LayoutCapabilityDSL, LayoutDSL, LayoutDefinition,
+    LayoutGeometry, LayoutType, MetaDSL, OscillatorWaveformDSL, ParameterOverridePolicyDSL,
+    ParameterValueDSL, PatchDSL, ProjectBundle, ShowDocumentV4, StageDocument, StrobeRiskDSL,
+    TargetSetDefinition, TargetSetRef, TargetSetSelector, TargetingSceneDefinition,
+    TargetingSceneRef, TargetingTransition, CUE_DEFINITION_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION,
 };
 use crate::compiler::diagnostic::{
     Diagnostic, CATALOG_METADATA_INVALID, CATALOG_OUTPUT_INVALID, CATALOG_PARAMETER_INVALID,
@@ -24,6 +24,10 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub const PRODUCTION_CATALOG_SCHEMA_VERSION: u32 = 1;
 pub const CUE_RECIPE_SCHEMA_VERSION: u32 = 1;
+pub const PRODUCTION_CATALOG_GOLDEN_SCHEMA_VERSION: u32 = 1;
+pub const PRODUCTION_COMPATIBILITY_SCHEMA_VERSION: u32 = 1;
+const GOLDEN_PPQ: u32 = 960;
+const GOLDEN_TICKS: [u32; 6] = [0, 120, 480, 960, 1_440, 2_880];
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(deny_unknown_fields)]
@@ -242,6 +246,40 @@ pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<D
                 "Connect time or spatial phase to a visible writer.",
             ));
         }
+        if matches!(effect.catalog.family, Some(EffectFamilyDSL::Strobe)) {
+            match sampled_maximum_strobe_risk(effect) {
+                Ok(observed) if strobe_rank(effect.catalog.strobe_risk) < strobe_rank(observed) => {
+                    diagnostics.push(
+                        Diagnostic::error(
+                            CATALOG_METADATA_INVALID,
+                            "catalog.strobe_risk",
+                            format!(
+                                "Declared strobe risk {:?} understates sampled maximum {:?}.",
+                                effect.catalog.strobe_risk, observed
+                            ),
+                            "Raise the declared risk or reduce the maximum flash rate.",
+                        )
+                        .with_asset(
+                            "effect",
+                            effect.id.clone(),
+                            effect.revision,
+                        ),
+                    );
+                }
+                Ok(_) => {}
+                Err(mut errors) => {
+                    for diagnostic in &mut errors {
+                        diagnostic.asset =
+                            Some(Box::new(crate::compiler::diagnostic::DiagnosticAsset {
+                                kind: "effect".to_string(),
+                                id: effect.id.clone(),
+                                revision: effect.revision,
+                            }));
+                    }
+                    diagnostics.extend(errors);
+                }
+            }
+        }
         let signature = serde_json::to_string(
             &samples
                 .iter()
@@ -316,6 +354,146 @@ pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<D
             ))
     });
     diagnostics
+}
+
+pub fn production_catalog_golden(
+    catalog: &ProductionCatalog,
+) -> Result<serde_json::Value, Vec<Diagnostic>> {
+    let mut effects = Vec::with_capacity(catalog.effects.len());
+    let mut diagnostics = Vec::new();
+    for effect in &catalog.effects {
+        let document = effect_sample_document(effect, BTreeMap::new());
+        let show = match Compiler::compile_document(document) {
+            Ok(show) => show,
+            Err(mut errors) => {
+                for diagnostic in &mut errors {
+                    diagnostic.asset =
+                        Some(Box::new(crate::compiler::diagnostic::DiagnosticAsset {
+                            kind: "effect".to_string(),
+                            id: effect.id.clone(),
+                            revision: effect.revision,
+                        }));
+                }
+                diagnostics.extend(errors);
+                continue;
+            }
+        };
+        let active = effect_sample_live(&show);
+        let samples = GOLDEN_TICKS
+            .iter()
+            .map(|tick| {
+                let frames = render_at(
+                    &show,
+                    RenderTime {
+                        beat: f64::from(*tick) / f64::from(GOLDEN_PPQ),
+                    },
+                    RenderSource::Live(&active),
+                )
+                .iter()
+                .map(golden_fixture_row)
+                .collect::<Vec<_>>();
+                serde_json::json!({ "tick": tick, "frames": frames })
+            })
+            .collect::<Vec<_>>();
+        effects.push(serde_json::json!({
+            "effect_ref": { "id": effect.id, "revision": effect.revision },
+            "name": effect.name,
+            "samples": samples,
+        }));
+    }
+    if diagnostics.is_empty() {
+        let fixture_profile = profile_by_id("generic-moving-head")
+            .expect("checked-in generic moving-head profile exists");
+        Ok(serde_json::json!({
+            "schema_version": PRODUCTION_CATALOG_GOLDEN_SCHEMA_VERSION,
+            "ppq": GOLDEN_PPQ,
+            "ticks": GOLDEN_TICKS,
+            "fixture_count": 16,
+            "fixture_profile": fixture_profile.id.as_str(),
+            "frame_encoding": "[fixture_id, attribute values in attribute_order]",
+            "attribute_order": fixture_profile.attributes.iter().map(|attribute| attribute.id.as_str()).collect::<Vec<_>>(),
+            "effects": effects,
+        }))
+    } else {
+        diagnostics.sort_by(|left, right| {
+            (
+                left.asset.as_ref().map(|asset| asset.id.as_str()),
+                left.path.as_str(),
+            )
+                .cmp(&(
+                    right.asset.as_ref().map(|asset| asset.id.as_str()),
+                    right.path.as_str(),
+                ))
+        });
+        Err(diagnostics)
+    }
+}
+
+fn golden_fixture_row(frame: &crate::engine::attribute::FixtureFrame) -> serde_json::Value {
+    let mut row = Vec::with_capacity(frame.values().len() + 1);
+    row.push(serde_json::json!(frame.id));
+    row.extend(frame.values().iter().map(|value| match value {
+        AttributeValue::Scalar(value) | AttributeValue::Angle(value) => {
+            serde_json::json!(f64::from(*value))
+        }
+        AttributeValue::Color(value) => serde_json::json!(value),
+        AttributeValue::Enum(value) => serde_json::json!(value),
+        AttributeValue::Boolean(value) => serde_json::json!(value),
+    }));
+    serde_json::Value::Array(row)
+}
+
+pub fn production_catalog_compatibility(catalog: &ProductionCatalog) -> serde_json::Value {
+    const LAYOUTS: [(&str, &str, LayoutCapabilityDSL); 4] = [
+        ("matrix", "Matrix", LayoutCapabilityDSL::Matrix),
+        ("strip_bar", "Strip / Bar", LayoutCapabilityDSL::Linear),
+        ("circle", "Circle", LayoutCapabilityDSL::Radial),
+        ("frame", "Frame", LayoutCapabilityDSL::Matrix),
+    ];
+    let layouts = LAYOUTS
+        .iter()
+        .map(|(id, label, native)| {
+            serde_json::json!({
+                "id": id,
+                "label": label,
+                "native_capability": native,
+                "coordinate_fallback": true,
+            })
+        })
+        .collect::<Vec<_>>();
+    let effects = catalog
+        .effects
+        .iter()
+        .map(|effect| {
+            let layout_status = LAYOUTS
+                .iter()
+                .map(|(id, _, native)| {
+                    let (status, matched) =
+                        compatibility_status(&effect.catalog.layout_capabilities, *native);
+                    (
+                        (*id).to_string(),
+                        serde_json::json!({
+                            "supported": status != "incompatible",
+                            "status": status,
+                            "matched_capability": matched,
+                        }),
+                    )
+                })
+                .collect::<BTreeMap<_, _>>();
+            serde_json::json!({
+                "effect_ref": { "id": effect.id, "revision": effect.revision },
+                "name": effect.name,
+                "declared_capabilities": effect.catalog.layout_capabilities,
+                "layouts": layout_status,
+            })
+        })
+        .collect::<Vec<_>>();
+    serde_json::json!({
+        "schema_version": PRODUCTION_COMPATIBILITY_SCHEMA_VERSION,
+        "policy": "native capability first, then universal or coordinate fallback",
+        "layouts": layouts,
+        "effects": effects,
+    })
 }
 
 pub fn validate_effect_draft(
@@ -522,6 +700,79 @@ fn alternate_parameter_value(
             .cloned()
             .map(ParameterValueDSL::Enum),
         _ => None,
+    }
+}
+
+fn sampled_maximum_strobe_risk(
+    effect: &EffectDefinitionDocument,
+) -> Result<StrobeRiskDSL, Vec<Diagnostic>> {
+    const SAMPLE_BEATS: u32 = 4;
+    const SAMPLES_PER_BEAT: u32 = 64;
+    let maximum_speed = effect
+        .parameters
+        .iter()
+        .find(|parameter| parameter.id == "speed")
+        .and_then(|parameter| parameter.range.map(|(_, maximum)| maximum));
+    let overrides = maximum_speed.map_or_else(BTreeMap::new, |maximum| {
+        BTreeMap::from([("speed".to_string(), ParameterValueDSL::Scalar(maximum))])
+    });
+    let show = Compiler::compile_document(effect_sample_document(effect, overrides))?;
+    let active = effect_sample_live(&show);
+    let states = (0..=SAMPLE_BEATS * SAMPLES_PER_BEAT)
+        .map(|sample| {
+            let frames = render_at(
+                &show,
+                RenderTime {
+                    beat: f64::from(sample) / f64::from(SAMPLES_PER_BEAT),
+                },
+                RenderSource::Live(&active),
+            );
+            frames
+                .first()
+                .and_then(frame_intensity)
+                .is_some_and(|value| value > 0.1)
+        })
+        .collect::<Vec<_>>();
+    let crossings = states.windows(2).filter(|pair| pair[0] != pair[1]).count();
+    let flashes_per_second = crossings as f64 / 2.0 / f64::from(SAMPLE_BEATS) * 2.0;
+    Ok(if flashes_per_second <= f64::EPSILON {
+        StrobeRiskDSL::None
+    } else if flashes_per_second < 3.0 {
+        StrobeRiskDSL::Low
+    } else if flashes_per_second < 8.0 {
+        StrobeRiskDSL::Medium
+    } else {
+        StrobeRiskDSL::High
+    })
+}
+
+fn frame_intensity(frame: &crate::engine::attribute::FixtureFrame) -> Option<f64> {
+    frame
+        .to_payload()
+        .attributes
+        .into_iter()
+        .find(|attribute| attribute.id == "intensity")
+        .and_then(|attribute| match attribute.value {
+            AttributeValue::Scalar(value) => Some(f64::from(value)),
+            _ => None,
+        })
+}
+
+fn compatibility_status(
+    declared: &[LayoutCapabilityDSL],
+    native: LayoutCapabilityDSL,
+) -> (&'static str, Option<LayoutCapabilityDSL>) {
+    if declared.is_empty() || declared.contains(&LayoutCapabilityDSL::Any) {
+        ("universal", Some(LayoutCapabilityDSL::Any))
+    } else if declared.contains(&native) {
+        ("native", Some(native))
+    } else if declared.contains(&LayoutCapabilityDSL::Coordinates) {
+        (
+            "coordinate_fallback",
+            Some(LayoutCapabilityDSL::Coordinates),
+        )
+    } else {
+        ("incompatible", None)
     }
 }
 

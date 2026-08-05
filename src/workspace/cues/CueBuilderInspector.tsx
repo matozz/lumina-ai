@@ -1,12 +1,21 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Layers2, Plus, Save, ShieldCheck, Trash2, Undo2 } from "lucide-react";
-import type { CueDefinition } from "@/bridge/types";
+import type { CueDefinition, EffectDefinitionDocument } from "@/bridge/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { assetKey, exactAsset } from "@/document/projectModel";
 import {
   authoringDraftActions,
@@ -20,6 +29,8 @@ import { AuthoringSignalSpine } from "../AuthoringSignalSpine";
 import {
   appendCueLayer,
   collectCueEffects,
+  duplicateCueLayer,
+  moveCueLayer,
   recomputeCueSummary,
   removeCueLayer,
   type CueLayerUpdate,
@@ -35,6 +46,8 @@ export function CueBuilderInspector() {
   const catalog = useProductionCatalogStore(productionCatalogSelectors.catalog);
   const session = useAuthoringDraftStore(authoringDraftSelectors.cue);
   const comparison = useAuthoringDraftStore(authoringDraftSelectors.comparison);
+  const [pendingHighRiskEffect, setPendingHighRiskEffect] =
+    useState<EffectDefinitionDocument | null>(null);
   const persistedCue = exactAsset(bundle.cues, reference);
   const sessionMatches = Boolean(
     reference && session && assetKey(session.pinned) === assetKey(reference),
@@ -70,16 +83,23 @@ export function CueBuilderInspector() {
       if (layer) update(layer, draft);
     });
   };
-  const addSelectedEffect = () => {
-    const effect = effects.find(
-      (candidate) => selectedEffectRef && assetKey(candidate) === assetKey(selectedEffectRef),
-    );
-    if (!effect) return;
+  const appendEffect = (effect: EffectDefinitionDocument) => {
     let layerId = "";
     updateCue((draft) => {
       layerId = appendCueLayer(draft, effect, stage);
     });
     authoringDraftActions.selectCueLayer(layerId);
+  };
+  const addSelectedEffect = () => {
+    const effect = effects.find(
+      (candidate) => selectedEffectRef && assetKey(candidate) === assetKey(selectedEffectRef),
+    );
+    if (!effect) return;
+    if (effect.catalog.strobe_risk === "high") {
+      setPendingHighRiskEffect(effect);
+      return;
+    }
+    appendEffect(effect);
   };
   const removeSelected = () => {
     if (!selectedLayer || cue.layers.length <= 1) return;
@@ -109,87 +129,152 @@ export function CueBuilderInspector() {
       );
     }
   };
+  const saveAsNewDraft = () => {
+    if (session.status !== "valid") return;
+    const fork = structuredClone(session.lastKnownGood);
+    fork.id = `cue-${crypto.randomUUID()}`;
+    fork.revision = 1;
+    fork.name = `${fork.name} Copy`;
+    const productionEffects = catalog?.effects.filter((effect) =>
+      fork.layers.some((layer) => assetKey(layer.effect_ref) === assetKey(effect)),
+    );
+    const saved = projectActions.saveCueWorkingDraft(fork, productionEffects ?? []);
+    authoringDraftActions.commitCue(saved);
+    workspaceActions.setPublishStatus("idle", `${saved.name} saved as a new Cue Draft.`);
+  };
 
   return (
-    <aside className="bg-card flex h-full min-h-0 flex-col" aria-label="Cue Builder">
-      <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
-        <Layers2 className="text-primary" aria-hidden="true" />
-        <span className="text-xs font-medium">Cue Builder</span>
-        <Badge variant="outline" className="ml-auto">
-          {session.mode} · r{cue.revision}
-        </Badge>
-      </div>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-3 p-3">
-          <AuthoringSignalSpine
-            revision={session.pinned.revision}
-            status={session.status}
-            comparison={comparison}
-            onComparisonChange={authoringDraftActions.setComparison}
-          />
-          <CueCoreFields cue={cue} onUpdate={updateCue} />
-          <Separator />
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium">Layers</span>
-            <Badge variant="secondary">{cue.layers.length}</Badge>
-            <Button
-              size="xs"
-              variant="outline"
-              className="ml-auto"
-              disabled={!selectedEffectRef}
-              onClick={addSelectedEffect}
-            >
-              <Plus data-icon="inline-start" aria-hidden="true" />
-              Add selected
-            </Button>
-          </div>
-          <CueLayerList
-            cue={cue}
-            effects={effects}
-            session={session}
-            onSelect={authoringDraftActions.selectCueLayer}
-            onToggleMute={authoringDraftActions.toggleCueLayerMute}
-            onToggleSolo={authoringDraftActions.toggleCueLayerSolo}
-          />
-          {selectedLayer && selectedEffect && (
-            <CueLayerEditor
-              cue={cue}
-              layer={selectedLayer}
-              effect={selectedEffect}
-              effects={effects}
-              stage={stage}
-              onUpdate={updateLayer}
-              onRemove={removeSelected}
-            />
-          )}
-          <CueSummary cue={cue} />
-          <CueDiagnostics
-            diagnostics={session.diagnostics}
-            onRecompute={() => updateCue(() => undefined)}
-          />
-          <div className="grid grid-cols-2 gap-1.5">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={session.status === "validating"}
-              onClick={() => validate(structuredClone(session.working), session.generation)}
-            >
-              <ShieldCheck data-icon="inline-start" aria-hidden="true" />
-              Validate
-            </Button>
-            <Button size="sm" disabled={session.status !== "valid"} onClick={save}>
-              <Save data-icon="inline-start" aria-hidden="true" />
-              Save new revision
-            </Button>
-          </div>
-          <Button size="xs" variant="ghost" onClick={authoringDraftActions.discardCue}>
-            <Undo2 data-icon="inline-start" aria-hidden="true" />
-            Discard working draft
-          </Button>
-          {session.mode === "edit" && <DeleteCueButton reference={reference} />}
+    <>
+      <aside className="bg-card flex h-full min-h-0 flex-col" aria-label="Cue Builder">
+        <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
+          <Layers2 className="text-primary" aria-hidden="true" />
+          <span className="text-xs font-medium">Cue Builder</span>
+          <Badge variant="outline" className="ml-auto">
+            {session.mode} · r{cue.revision}
+          </Badge>
         </div>
-      </ScrollArea>
-    </aside>
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="flex flex-col gap-3 p-3">
+            <AuthoringSignalSpine
+              revision={session.pinned.revision}
+              status={session.status}
+              comparison={comparison}
+              onComparisonChange={authoringDraftActions.setComparison}
+            />
+            <CueCoreFields cue={cue} onUpdate={updateCue} />
+            <Separator />
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium">Layers</span>
+              <Badge variant="secondary">{cue.layers.length}</Badge>
+              <Button
+                size="xs"
+                variant="outline"
+                className="ml-auto"
+                disabled={!selectedEffectRef}
+                onClick={addSelectedEffect}
+              >
+                <Plus data-icon="inline-start" aria-hidden="true" />
+                Add selected
+              </Button>
+            </div>
+            <CueLayerList
+              cue={cue}
+              effects={effects}
+              session={session}
+              onSelect={authoringDraftActions.selectCueLayer}
+              onToggleMute={authoringDraftActions.toggleCueLayerMute}
+              onToggleSolo={authoringDraftActions.toggleCueLayerSolo}
+            />
+            {selectedLayer && selectedEffect && (
+              <CueLayerEditor
+                cue={cue}
+                layer={selectedLayer}
+                effect={selectedEffect}
+                effects={effects}
+                stage={stage}
+                onUpdate={updateLayer}
+                onRemove={removeSelected}
+                onMove={(direction) =>
+                  updateCue((draft) => moveCueLayer(draft, selectedLayer.id, direction))
+                }
+                onDuplicate={() => {
+                  let duplicateId: string | null = null;
+                  updateCue((draft) => {
+                    duplicateId = duplicateCueLayer(draft, selectedLayer.id);
+                  });
+                  if (duplicateId) authoringDraftActions.selectCueLayer(duplicateId);
+                }}
+              />
+            )}
+            <CueSummary cue={cue} />
+            <CueDiagnostics
+              diagnostics={session.diagnostics}
+              onRecompute={() => updateCue(() => undefined)}
+              onRemoveOverride={(path) =>
+                updateCue((draft) => removeIncompatibleOverride(draft, path))
+              }
+              onRevert={authoringDraftActions.revertCueToLastKnownGood}
+            />
+            <div className="grid grid-cols-2 gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={session.status === "validating"}
+                onClick={() => validate(structuredClone(session.working), session.generation)}
+              >
+                <ShieldCheck data-icon="inline-start" aria-hidden="true" />
+                Validate
+              </Button>
+              <Button size="sm" disabled={session.status !== "valid"} onClick={save}>
+                <Save data-icon="inline-start" aria-hidden="true" />
+                Save new revision
+              </Button>
+            </div>
+            <Button size="xs" variant="ghost" onClick={authoringDraftActions.discardCue}>
+              <Undo2 data-icon="inline-start" aria-hidden="true" />
+              Discard working draft
+            </Button>
+            {session.mode === "edit" && (
+              <Button
+                size="xs"
+                variant="ghost"
+                disabled={session.status !== "valid"}
+                onClick={saveAsNewDraft}
+              >
+                Save As new Draft
+              </Button>
+            )}
+            {session.mode === "edit" && <DeleteCueButton reference={reference} />}
+          </div>
+        </ScrollArea>
+      </aside>
+      <Dialog
+        open={Boolean(pendingHighRiskEffect)}
+        onOpenChange={(open) => !open && setPendingHighRiskEffect(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm high strobe risk</DialogTitle>
+            <DialogDescription>
+              {pendingHighRiskEffect?.name} can produce high-frequency intensity changes. Verify the
+              target, audience safety policy, and safe defaults before adding this layer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingHighRiskEffect) appendEffect(pendingHighRiskEffect);
+                setPendingHighRiskEffect(null);
+              }}
+            >
+              Add high-risk layer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -257,9 +342,13 @@ function CueSummary({ cue }: { cue: CueDefinition }) {
 function CueDiagnostics({
   diagnostics,
   onRecompute,
+  onRemoveOverride,
+  onRevert,
 }: {
   diagnostics: CueDraftDiagnostic[];
   onRecompute: () => void;
+  onRemoveOverride: (path: string) => void;
+  onRevert: () => void;
 }) {
   return diagnostics.map((item) => (
     <div
@@ -275,8 +364,30 @@ function CueDiagnostics({
           {item.recovery.label}
         </Button>
       )}
+      {item.recovery?.action === "remove_incompatible_override" && (
+        <Button size="xs" variant="outline" onClick={() => onRemoveOverride(item.path)}>
+          {item.recovery.label}
+        </Button>
+      )}
+      <Button size="xs" variant="ghost" onClick={onRevert}>
+        Revert to Last Known Good
+      </Button>
     </div>
   ));
+}
+
+function removeIncompatibleOverride(cue: CueDefinition, path: string) {
+  const match = /layers\[(\d+)]\.parameter_overrides\.([^.]+)/.exec(path);
+  if (!match) return;
+  const layer = cue.layers[Number(match[1])];
+  const parameterId = match[2];
+  if (!layer || !parameterId) return;
+  const overrides = { ...(layer.parameter_overrides ?? {}) };
+  delete overrides[parameterId];
+  layer.parameter_overrides = overrides;
+  cue.automation_lanes = (cue.automation_lanes ?? []).filter(
+    (lane) => lane.target.layer_id !== layer.id || lane.target.parameter_id !== parameterId,
+  );
 }
 
 type CueDraftDiagnostic = NonNullable<

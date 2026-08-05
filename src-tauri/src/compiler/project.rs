@@ -919,7 +919,8 @@ fn cue_keyframes_for_clip(
 mod tests {
     use super::*;
     use crate::document::{
-        valid_bundle, AssetRef, GridZone, TargetSetDefinition, TargetSetRef, TargetSetSelector,
+        builtin_production_catalog, resolve_cue_recipe, valid_bundle, AssetRef, CueRecipeRef,
+        GridZone, TargetSetDefinition, TargetSetRef, TargetSetSelector,
     };
     use crate::engine::profile::{AttributeValue, INTENSITY_ATTRIBUTE};
     use crate::engine::render::{render_at, RenderSource, RenderTime};
@@ -1054,6 +1055,161 @@ mod tests {
             .expect("TargetingScene ref"),
         );
         bundle
+    }
+
+    fn production_catalog_project() -> ProjectBundle {
+        let mut bundle = targeting_project(900, 30, 30);
+        bundle.stages[0].target_sets.push(TargetSetDefinition {
+            id: "all-columns".to_string(),
+            name: "All Columns".to_string(),
+            selector: TargetSetSelector::Columns {
+                indices: (0..30).collect(),
+            },
+            weights: Vec::new(),
+        });
+        let catalog = builtin_production_catalog().expect("Production Catalog");
+        let stage_ref = bundle.manifest.stage_ref.clone();
+        let mut cue = resolve_cue_recipe(
+            &catalog,
+            &bundle,
+            &CueRecipeRef {
+                id: "recipe.layered-peak".to_string(),
+                revision: 1,
+            },
+            &stage_ref,
+            "production-five-layer".to_string(),
+            1,
+            "Production Five Layer".to_string(),
+        )
+        .expect("three-layer peak resolves");
+        let transition = resolve_cue_recipe(
+            &catalog,
+            &bundle,
+            &CueRecipeRef {
+                id: "recipe.build-transition".to_string(),
+                revision: 1,
+            },
+            &stage_ref,
+            "production-transition".to_string(),
+            1,
+            "Production Transition".to_string(),
+        )
+        .expect("two-layer transition resolves");
+        let layer_offset = cue.layers.len();
+        for (index, mut layer) in transition.layers.into_iter().enumerate() {
+            layer.layer = i32::try_from(layer_offset + index).expect("five layers fit i32");
+            layer.priority = layer.layer;
+            cue.layers.push(layer);
+        }
+        cue.capability_summary.required_attributes =
+            vec!["color.rgb".to_string(), INTENSITY_ATTRIBUTE.to_string()];
+        cue.nominal_length_ticks = 15_360;
+
+        let effect_refs = cue
+            .layers
+            .iter()
+            .map(|layer| (layer.effect_ref.id.clone(), layer.effect_ref.revision))
+            .collect::<BTreeSet<_>>();
+        bundle.effects = catalog
+            .effects
+            .iter()
+            .filter(|effect| effect_refs.contains(&(effect.id.clone(), effect.revision)))
+            .cloned()
+            .collect();
+        bundle.manifest.effect_refs = effect_refs
+            .into_iter()
+            .map(|(id, revision)| AssetRef { id, revision })
+            .collect();
+        bundle.manifest.cue_refs = vec![AssetRef {
+            id: cue.id.clone(),
+            revision: cue.revision,
+        }];
+        bundle.cues = vec![cue];
+
+        let arrangement = &mut bundle.arrangements[0];
+        arrangement.tempo_map = serde_json::from_value(serde_json::json!({
+            "points": [
+                { "time_tick": 0, "bpm": 128.0 },
+                { "time_tick": 15_360, "bpm": 96.0 },
+                { "time_tick": 30_720, "bpm": 140.0 }
+            ]
+        }))
+        .expect("tempo map");
+        arrangement.time_signatures = vec![
+            TimeSignaturePoint {
+                time_tick: 0,
+                numerator: 4,
+                denominator: 4,
+            },
+            TimeSignaturePoint {
+                time_tick: 15_360,
+                numerator: 7,
+                denominator: 8,
+            },
+            TimeSignaturePoint {
+                time_tick: 30_720,
+                numerator: 3,
+                denominator: 4,
+            },
+        ];
+        arrangement.length_ticks = 61_440;
+        let clip = &mut arrangement.tracks[0].clips[0];
+        clip.cue_ref = bundle.manifest.cue_refs[0].clone();
+        clip.start_tick = 0;
+        clip.duration_tick = arrangement.length_ticks;
+        clip.source_offset_tick = 0;
+        clip.playback = crate::document::ClipPlaybackDSL::Loop;
+        clip.layer_overrides.clear();
+        bundle
+    }
+
+    fn measured_render_signatures(
+        snapshot: &CompiledProjectSnapshot,
+        beats: &[f64],
+    ) -> (std::time::Duration, Vec<u64>) {
+        let _warm = render_at(
+            &snapshot.show,
+            RenderTime { beat: 0.0 },
+            RenderSource::Timeline,
+        );
+        let started = Instant::now();
+        let rendered = beats
+            .iter()
+            .map(|beat| {
+                render_at(
+                    &snapshot.show,
+                    RenderTime { beat: *beat },
+                    RenderSource::Timeline,
+                )
+            })
+            .collect::<Vec<_>>();
+        let elapsed = started.elapsed();
+        let signatures = rendered
+            .iter()
+            .zip(beats)
+            .map(|(frames, beat)| {
+                assert_eq!(frames.len(), 900);
+                assert_eq!(
+                    *frames,
+                    render_at(
+                        &snapshot.show,
+                        RenderTime { beat: *beat },
+                        RenderSource::Timeline,
+                    )
+                );
+                let payload = frames
+                    .iter()
+                    .map(|frame| frame.to_payload())
+                    .collect::<Vec<_>>();
+                let mut hash = 0xcbf2_9ce4_8422_2325_u64;
+                for byte in serde_json::to_vec(&payload).expect("frame payload serializes") {
+                    hash ^= u64::from(byte);
+                    hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+                }
+                hash
+            })
+            .collect();
+        (elapsed, signatures)
     }
 
     #[test]
@@ -1419,6 +1575,49 @@ mod tests {
             elapsed,
             beats.len()
         );
+    }
+
+    #[test]
+    fn production_five_layer_ab_seek_and_replay_fit_the_30_by_30_60hz_budget() {
+        let pinned_bundle = production_catalog_project();
+        assert_eq!(pinned_bundle.cues[0].layers.len(), 5);
+        let mut working_bundle = pinned_bundle.clone();
+        working_bundle.cues[0].layers[1].phase += 0.25;
+
+        let pinned = Compiler::compile_active_project(
+            ValidatedProject::validate(pinned_bundle).expect("pinned Production Project validates"),
+        )
+        .expect("pinned Production Project compiles");
+        let working = Compiler::compile_active_project(
+            ValidatedProject::validate(working_bundle)
+                .expect("working Production Project validates"),
+        )
+        .expect("working Production Project compiles");
+        assert_eq!(
+            pinned.cues.values().next().map(|cue| cue.layers.len()),
+            Some(5)
+        );
+        let beats = (0..180)
+            .map(|index| f64::from((index * 997) % 61_440) / 960.0)
+            .collect::<Vec<_>>();
+
+        let (pinned_elapsed, pinned_signatures) = measured_render_signatures(&pinned, &beats);
+        let (working_elapsed, working_signatures) = measured_render_signatures(&working, &beats);
+        eprintln!(
+            "Stage 7.5D 30×30/5L: pinned {:.3} ms/frame, working/LKG {:.3} ms/frame",
+            pinned_elapsed.as_secs_f64() * 1_000.0 / beats.len() as f64,
+            working_elapsed.as_secs_f64() * 1_000.0 / beats.len() as f64
+        );
+        assert_ne!(
+            pinned_signatures, working_signatures,
+            "A/B candidates must remain observably distinct"
+        );
+        for (label, elapsed) in [("pinned", pinned_elapsed), ("working/LKG", working_elapsed)] {
+            assert!(
+                elapsed.as_secs_f64() / beats.len() as f64 <= 1.0 / 60.0,
+                "{label} 30×30 five-layer average exceeded 60Hz: {elapsed:?}"
+            );
+        }
     }
 
     #[test]

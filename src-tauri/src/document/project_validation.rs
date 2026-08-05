@@ -482,6 +482,46 @@ fn validate_effects(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
     }
 }
 
+pub(super) fn validate_effect_asset(effect: &EffectDefinitionDocument) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    validate_effect_definition_document(effect, "effect", &mut diagnostics);
+    for (parameter_index, parameter) in effect.parameters.iter().enumerate() {
+        validate_beat_sync_speed_override(
+            &parameter.id,
+            &parameter.default_value,
+            &format!("effect.parameters[{parameter_index}].default_value"),
+            &mut diagnostics,
+        );
+    }
+    for diagnostic in &mut diagnostics {
+        if diagnostic.asset.is_none() {
+            diagnostic.asset = Some(Box::new(crate::compiler::diagnostic::DiagnosticAsset {
+                kind: "effect".to_string(),
+                id: effect.id.clone(),
+                revision: effect.revision,
+            }));
+        }
+    }
+    diagnostics
+}
+
+pub(super) fn validate_cue_asset(bundle: &ProjectBundle, cue: &CueDefinition) -> Vec<Diagnostic> {
+    let mut scoped = bundle.clone();
+    scoped.cues = vec![cue.clone()];
+    let mut diagnostics = Vec::new();
+    validate_cues(&scoped, &mut diagnostics);
+    for diagnostic in &mut diagnostics {
+        if diagnostic.asset.is_none() {
+            diagnostic.asset = Some(Box::new(crate::compiler::diagnostic::DiagnosticAsset {
+                kind: "cue".to_string(),
+                id: cue.id.clone(),
+                revision: cue.revision,
+            }));
+        }
+    }
+    diagnostics
+}
+
 fn validate_cue_layer(
     bundle: &ProjectBundle,
     stage: &StageDocument,

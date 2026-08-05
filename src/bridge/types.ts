@@ -293,6 +293,15 @@ export interface ProjectMigrationReport {
 export interface MigratedProject {
   bundle: import("@/generated/project-contract-v2").ProjectBundle;
   migration_report: ProjectMigrationReport;
+  quarantined_assets?: QuarantinedProjectAsset[];
+}
+
+export interface QuarantinedProjectAsset {
+  kind: "effect" | "cue";
+  id: string | null;
+  revision: number | null;
+  source: unknown;
+  diagnostics: Diagnostic[];
 }
 
 export type TransportState = "stopped" | "playing" | "paused" | "seeking" | "error";

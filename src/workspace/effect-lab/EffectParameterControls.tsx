@@ -9,20 +9,23 @@ export function EffectParameterControls({
   parameters,
   diagnostics,
   readOnly,
+  parameterIndices,
   onChange,
   onRestoreFallback,
 }: {
   parameters: ParameterDefinitionDSL[];
   diagnostics: Diagnostic[];
   readOnly: boolean;
+  parameterIndices?: Record<string, number>;
   onChange: (parameterId: string, value: ParameterValueDSL) => void;
   onRestoreFallback: (parameterId: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-3">
       {parameters.map((parameter, index) => {
+        const sourceIndex = parameterIndices?.[parameter.id] ?? index;
         const parameterDiagnostics = diagnostics.filter((diagnostic) =>
-          diagnostic.path.includes(`parameters[${index}]`),
+          diagnostic.path.includes(`parameters[${sourceIndex}]`),
         );
         return (
           <Field

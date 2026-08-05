@@ -4,7 +4,7 @@ use crate::compiler::diagnostic::{
 use crate::compiler::{CompiledProjectSnapshot, Compiler, LayoutCoord};
 use crate::document::{
     builtin_production_catalog, layout_capacity, layout_fixture_size_for_fixture, layout_to_legacy,
-    load_document, load_project_bundle, migrate_project_bundle, resolve_cue_recipe,
+    load_document, load_project_bundle, recover_project_bundle, resolve_cue_recipe,
     validate_effect_draft, validate_layout_geometry, validate_production_catalog, AssetRef,
     CueDefinition, CueRecipeRef, EffectDefinitionDocument, LayoutDefinition, MetaDSL,
     MigrationReport, PatchDSL, ProductionCatalog, ShowDocumentV4, StageDocument,
@@ -331,7 +331,7 @@ pub async fn load_project(path: String) -> Result<crate::document::MigratedProje
     let content = tokio::fs::read_to_string(&path)
         .await
         .map_err(|error| format!("Project read error: {error}"))?;
-    migrate_project_bundle(&content).map_err(|diagnostics| {
+    recover_project_bundle(&content).map_err(|diagnostics| {
         diagnostics
             .into_iter()
             .map(|diagnostic| diagnostic.to_string())

@@ -100,6 +100,9 @@ export function EffectLabInspector() {
   const readOnly = effect.source === "built_in" && session.mode === "edit";
   const commonParameters = effect.parameters.filter((parameter) => !parameter.advanced);
   const advancedParameters = effect.parameters.filter((parameter) => parameter.advanced);
+  const parameterIndices = Object.fromEntries(
+    effect.parameters.map((parameter, index) => [parameter.id, index]),
+  );
   const targetItems = stage.target_sets.map((target) => ({ value: target.id, label: target.name }));
   const generalDiagnostics = session.diagnostics.filter(
     (diagnostic) => !diagnostic.path.includes("parameters["),
@@ -140,6 +143,21 @@ export function EffectLabInspector() {
         error instanceof Error ? error.message : "Effect revision could not be saved.",
       );
     }
+  };
+
+  const saveAsNewDraft = () => {
+    if (!canSave) return;
+    const fork = structuredClone(session.lastKnownGood);
+    fork.id = uniqueId(
+      `custom-${fork.id.replace(/[^a-z0-9-]+/g, "-")}`,
+      bundle.effects.map((candidate) => candidate.id),
+    );
+    fork.revision = 1;
+    fork.name = `${fork.name} Copy`;
+    fork.source = "project_local";
+    const saved = projectActions.saveEffectWorkingDraft(fork);
+    authoringDraftActions.commitEffect(saved);
+    workspaceActions.setPublishStatus("idle", `${saved.name} saved as a new Project Draft.`);
   };
 
   return (
@@ -235,6 +253,7 @@ export function EffectLabInspector() {
             parameters={commonParameters}
             diagnostics={session.diagnostics}
             readOnly={readOnly}
+            parameterIndices={parameterIndices}
             onChange={updateParameter}
             onRestoreFallback={authoringDraftActions.restoreEffectFallback}
           />
@@ -260,6 +279,7 @@ export function EffectLabInspector() {
                   parameters={advancedParameters}
                   diagnostics={session.diagnostics}
                   readOnly={readOnly}
+                  parameterIndices={parameterIndices}
                   onChange={updateParameter}
                   onRestoreFallback={authoringDraftActions.restoreEffectFallback}
                 />
@@ -276,6 +296,11 @@ export function EffectLabInspector() {
             <p className="text-muted-foreground text-[10px]">
               Structural edits materialize through typed bindings before validation and save.
             </p>
+            {!readOnly && (
+              <Button size="xs" variant="ghost" disabled={!canSave} onClick={saveAsNewDraft}>
+                Save As new Draft
+              </Button>
+            )}
           </div>
 
           {generalDiagnostics.map((diagnostic) => (
@@ -289,6 +314,13 @@ export function EffectLabInspector() {
               {diagnostic.hint && (
                 <p className="text-muted-foreground text-[10px]">{diagnostic.hint}</p>
               )}
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={authoringDraftActions.revertEffectToLastKnownGood}
+              >
+                Revert to Last Known Good
+              </Button>
             </div>
           ))}
 

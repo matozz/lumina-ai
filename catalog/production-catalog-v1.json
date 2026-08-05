@@ -248,7 +248,7 @@
     {
       "schema_version": 1,
       "id": "builtin.intensity.chase",
-      "name": "Chase",
+      "name": "Alternating Grid Chase",
       "revision": 1,
       "source": "built_in",
       "parameters": [
@@ -345,7 +345,7 @@
     {
       "schema_version": 1,
       "id": "builtin.intensity.wave",
-      "name": "Position Wave",
+      "name": "Strip / Bar Traveler",
       "revision": 1,
       "source": "built_in",
       "parameters": [
@@ -444,7 +444,7 @@
     {
       "schema_version": 1,
       "id": "builtin.color.rainbow",
-      "name": "Rainbow Flow",
+      "name": "Slow Color Shimmer",
       "revision": 1,
       "source": "built_in",
       "parameters": [
@@ -572,7 +572,7 @@
     {
       "schema_version": 1,
       "id": "builtin.color.dual-sweep",
-      "name": "Dual Color Sweep",
+      "name": "Gradient Drift",
       "revision": 1,
       "source": "built_in",
       "parameters": [
@@ -696,7 +696,7 @@
     {
       "schema_version": 1,
       "id": "builtin.color.pulse",
-      "name": "Color Pulse",
+      "name": "Short Color Burst",
       "revision": 1,
       "source": "built_in",
       "parameters": [
@@ -800,7 +800,7 @@
     {
       "schema_version": 1,
       "id": "builtin.spatial.radial-bloom",
-      "name": "Radial Bloom",
+      "name": "Center-out / Edge-in Bloom",
       "revision": 1,
       "source": "built_in",
       "parameters": [
@@ -897,7 +897,7 @@
     {
       "schema_version": 1,
       "id": "builtin.spatial.angular-orbit",
-      "name": "Angular Orbit",
+      "name": "Diagonal / Radial Wave",
       "revision": 1,
       "source": "built_in",
       "parameters": [
@@ -1249,10 +1249,384 @@
         "density": 0.4,
         "motion": "pulse",
         "colorfulness": 0.0,
-        "strobe_risk": "medium",
+        "strobe_risk": "high",
         "required_attributes": ["intensity"],
         "layout_capabilities": ["any"],
         "parameter_summary": ["speed", "intensity"],
+        "deprecated": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.transition.fade-crossfade",
+      "name": "Fade / Crossfade",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.5 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Beat-synced fade cycle.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 1.0 },
+          "range": [0.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Peak crossfade intensity.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "oscillator",
+            "id": "fade-cycle",
+            "waveform": "triangle",
+            "phase": { "node_id": "time", "port": "scalar" }
+          },
+          {
+            "type": "map",
+            "id": "safe-level",
+            "input": { "node_id": "fade-cycle", "port": "scalar" },
+            "input_range": [0.0, 1.0],
+            "output_range": [0.15, 0.9]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "safe-level", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "utility",
+        "category": "Transition",
+        "visibility": "standard",
+        "mood": ["smooth", "controlled"],
+        "energy": 0.3,
+        "density": 1.0,
+        "motion": "organic",
+        "colorfulness": 0.0,
+        "strobe_risk": "none",
+        "required_attributes": ["intensity"],
+        "layout_capabilities": ["any"],
+        "parameter_summary": ["speed", "intensity"],
+        "deprecated": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.transition.wipe",
+      "name": "Spatial Wipe",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 1.0 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Beat-synced wipe travel speed.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "phase",
+          "name": "Phase",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.0 },
+          "range": [-1.0, 1.0],
+          "step": 0.01,
+          "required": true,
+          "help": "Spatial wipe offset in cycles.",
+          "safe_fallback": { "type": "scalar", "value": 0.0 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "cycles",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 1.0 },
+          "range": [0.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Peak wipe intensity.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "spatial_phase",
+            "id": "wipe-position",
+            "input": { "node_id": "time", "port": "scalar" },
+            "basis": "x",
+            "from": -0.75,
+            "to": 0.75,
+            "wrap": true,
+            "custom_order": []
+          },
+          {
+            "type": "oscillator",
+            "id": "wipe-edge",
+            "waveform": "saw",
+            "phase": { "node_id": "wipe-position", "port": "scalar" }
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "wipe-edge", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "spatial",
+        "category": "Transition",
+        "visibility": "standard",
+        "mood": ["directional", "clean"],
+        "energy": 0.55,
+        "density": 0.55,
+        "motion": "sweep",
+        "colorfulness": 0.0,
+        "strobe_risk": "none",
+        "required_attributes": ["intensity"],
+        "layout_capabilities": ["linear", "matrix", "coordinates"],
+        "parameter_summary": ["speed", "phase", "intensity"],
+        "deprecated": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.transition.dissolve",
+      "name": "Seeded Dissolve",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 1.0 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Beat-synced seeded dissolve cadence.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.8 },
+          "range": [0.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Peak dissolve intensity.",
+          "safe_fallback": { "type": "scalar", "value": 0.4 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "random", "id": "seeded-noise" },
+          {
+            "type": "map",
+            "id": "dissolve-level",
+            "input": { "node_id": "seeded-noise", "port": "scalar" },
+            "input_range": [0.0, 1.0],
+            "output_range": [0.08, 0.95]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "dissolve-level", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "utility",
+        "category": "Transition",
+        "visibility": "standard",
+        "mood": ["textured", "cinematic"],
+        "energy": 0.45,
+        "density": 0.7,
+        "motion": "organic",
+        "colorfulness": 0.0,
+        "strobe_risk": "low",
+        "required_attributes": ["intensity"],
+        "layout_capabilities": ["any"],
+        "parameter_summary": ["speed", "intensity"],
+        "deprecated": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.transition.blackout-safe",
+      "name": "Blackout-safe Transition",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.25 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Slow beat-synced transition speed.",
+          "safe_fallback": { "type": "scalar", "value": 0.25 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.7 },
+          "range": [0.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Safe capped transition intensity.",
+          "safe_fallback": { "type": "scalar", "value": 0.0 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "attack",
+          "name": "Attack",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.35 },
+          "range": [0.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Fade-in envelope fraction.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "effect_only",
+          "advanced": true,
+          "graph_binding": { "node_id": "safe-envelope", "property": "attack" },
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "disabled"
+        },
+        {
+          "id": "release",
+          "name": "Release",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.65 },
+          "range": [0.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Fade-out envelope fraction.",
+          "safe_fallback": { "type": "scalar", "value": 0.75 },
+          "override_policy": "effect_only",
+          "advanced": true,
+          "graph_binding": { "node_id": "safe-envelope", "property": "release" },
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "disabled"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "oscillator",
+            "id": "safe-cycle",
+            "waveform": "sine",
+            "phase": { "node_id": "time", "port": "scalar" }
+          },
+          {
+            "type": "envelope",
+            "id": "safe-envelope",
+            "input": { "node_id": "safe-cycle", "port": "scalar" },
+            "attack": 0.35,
+            "release": 0.65
+          },
+          {
+            "type": "map",
+            "id": "safe-cap",
+            "input": { "node_id": "safe-envelope", "port": "scalar" },
+            "input_range": [0.0, 1.0],
+            "output_range": [0.0, 0.7]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "safe-cap", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "utility",
+        "category": "Transition",
+        "visibility": "standard",
+        "mood": ["safe", "controlled"],
+        "energy": 0.15,
+        "density": 1.0,
+        "motion": "organic",
+        "colorfulness": 0.0,
+        "strobe_risk": "none",
+        "required_attributes": ["intensity"],
+        "layout_capabilities": ["any"],
+        "parameter_summary": ["speed", "intensity", "attack", "release"],
         "deprecated": false
       }
     }
@@ -1262,7 +1636,7 @@
       "schema_version": 1,
       "id": "recipe.four-on-floor",
       "revision": 1,
-      "name": "Four on the Floor",
+      "name": "Full-stage Drop Pulse",
       "description": "A steady intensity pulse across the active Stage.",
       "nominal_length_ticks": 15360,
       "layers": [
@@ -1286,7 +1660,7 @@
       "schema_version": 1,
       "id": "recipe.row-chase",
       "revision": 1,
-      "name": "Row Chase",
+      "name": "Matrix Spatial Chase",
       "description": "A directional chase resolved to a row-capable TargetSet.",
       "nominal_length_ticks": 15360,
       "layers": [
@@ -1310,7 +1684,7 @@
       "schema_version": 1,
       "id": "recipe.rainbow-wash",
       "revision": 1,
-      "name": "Rainbow Wash",
+      "name": "Slow Atmospheric Look",
       "description": "A full-stage color flow with a pinned Production palette.",
       "nominal_length_ticks": 30720,
       "layers": [
@@ -1331,14 +1705,15 @@
       "schema_version": 1,
       "id": "recipe.radial-bloom",
       "revision": 1,
-      "name": "Radial Bloom",
-      "description": "A coordinate-driven bloom resolved to any compatible TargetSet.",
+      "name": "3×3 Zone Burst",
+      "description": "A coordinate-driven burst resolved to a grid-zone TargetSet and compatible scene.",
       "nominal_length_ticks": 15360,
       "layers": [
         {
           "id": "bloom",
           "effect_ref": { "id": "builtin.spatial.radial-bloom", "revision": 1 },
-          "target": { "type": "any_compatible" },
+          "target": { "type": "grid_zones" },
+          "scene": { "minimum_steps": 3, "requires_weighted_transition": true },
           "parameter_overrides": {
             "speed": { "type": "scalar", "value": 0.5 },
             "intensity": { "type": "scalar", "value": 0.85 }
@@ -1389,7 +1764,7 @@
       "schema_version": 1,
       "id": "recipe.layered-peak",
       "revision": 1,
-      "name": "Layered Peak",
+      "name": "Layered Peak Build",
       "description": "Three capability-resolved layers for a structured peak section.",
       "nominal_length_ticks": 15360,
       "layers": [
@@ -1432,6 +1807,69 @@
           "seed": "6000000000000008",
           "layer": 2,
           "priority": 2
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "bar" }
+    },
+    {
+      "schema_version": 1,
+      "id": "recipe.strip-traveler",
+      "revision": 1,
+      "name": "Strip / Bar Traveler",
+      "description": "A target-agnostic traveler resolved to the active Stage's compatible strip or bar target.",
+      "nominal_length_ticks": 15360,
+      "layers": [
+        {
+          "id": "traveler",
+          "effect_ref": { "id": "builtin.intensity.wave", "revision": 1 },
+          "target": { "type": "any_compatible" },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1.0 },
+            "phase": { "type": "scalar", "value": 0.0 },
+            "intensity": { "type": "scalar", "value": 0.85 }
+          },
+          "phase": 0.0,
+          "seed": "7000000000000007",
+          "layer": 0,
+          "priority": 0
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "bar" }
+    },
+    {
+      "schema_version": 1,
+      "id": "recipe.build-transition",
+      "revision": 1,
+      "name": "Build / Transition",
+      "description": "A safe full-stage fade layered with a capability-resolved spatial wipe.",
+      "nominal_length_ticks": 15360,
+      "layers": [
+        {
+          "id": "fade",
+          "effect_ref": { "id": "builtin.transition.fade-crossfade", "revision": 1 },
+          "target": { "type": "all" },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 0.5 },
+            "intensity": { "type": "scalar", "value": 0.7 }
+          },
+          "phase": 0.0,
+          "seed": "8000000000000008",
+          "layer": 0,
+          "priority": 0
+        },
+        {
+          "id": "wipe",
+          "effect_ref": { "id": "builtin.transition.wipe", "revision": 1 },
+          "target": { "type": "any_compatible" },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1.0 },
+            "phase": { "type": "scalar", "value": 0.25 },
+            "intensity": { "type": "scalar", "value": 0.8 }
+          },
+          "phase": 0.0,
+          "seed": "8000000000000009",
+          "layer": 1,
+          "priority": 1
         }
       ],
       "trigger_policy": { "mode": "timeline", "quantize": "bar" }
