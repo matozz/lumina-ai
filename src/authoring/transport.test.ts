@@ -58,6 +58,19 @@ describe("AuthoringTransport session state", () => {
     });
   });
 
+  it("pauses every running authoring session before the user changes context", () => {
+    const cueKey = authoringSessionKey("cue", "drop@1");
+    authoringTransportActions.ensureSession({ key, scope: "effect", durationTicks: 3_840 });
+    authoringTransportActions.ensureSession({ key: cueKey, scope: "cue", durationTicks: 3_840 });
+    authoringTransportActions.play(key, 10);
+    authoringTransportActions.play(cueKey, 10);
+
+    authoringTransportActions.pauseAll(20);
+
+    expect(useAuthoringTransportStore.getState().sessions[key].playback).toBe("paused");
+    expect(useAuthoringTransportStore.getState().sessions[cueKey].playback).toBe("paused");
+  });
+
   it("rejects Local timing for Arrangement and invalid loop ranges", () => {
     const arrangementKey = authoringSessionKey("arrangement", "house@1");
     authoringTransportActions.ensureSession({
@@ -92,6 +105,7 @@ describe("AuthoringTransport session state", () => {
       { enabled: true, startTick: 960, endTick: 7_680 },
       20,
     );
+    authoringTransportActions.play(sourceKey, 30);
     authoringTransportActions.copySession(sourceKey, {
       key: targetKey,
       scope: "arrangement",
@@ -99,6 +113,7 @@ describe("AuthoringTransport session state", () => {
     });
 
     expect(useAuthoringTransportStore.getState().sessions[targetKey]).toMatchObject({
+      playback: "paused",
       cursorTick: 5_760,
       loopEnabled: true,
       loopStartTick: 960,

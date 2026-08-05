@@ -148,8 +148,16 @@ export const projectActions = {
       publishedBundle: structuredClone(state.bundle),
       savedHistoryCursor: state.historyCursor,
     })),
-  setSelectedEffectRef: (selectedEffectRef: AssetRef | null) =>
-    useProjectStore.setState({ selectedEffectRef }),
+  setSelectedEffectRef: (selectedEffectRef: AssetRef | null) => {
+    const current = useProjectStore.getState().selectedEffectRef;
+    if (
+      current?.id !== selectedEffectRef?.id ||
+      current?.revision !== selectedEffectRef?.revision
+    ) {
+      authoringTransportActions.pauseAll();
+    }
+    useProjectStore.setState({ selectedEffectRef });
+  },
   setSelectedLayoutRef: (selectedLayoutRef: AssetRef) =>
     useProjectStore.setState({ selectedLayoutRef }),
   duplicateLayout: (reference: AssetRef) => {
@@ -422,8 +430,13 @@ export const projectActions = {
     useProjectStore.setState(updates);
     return { stageRef: nextStageRef, cueUpgrades, arrangementUpgrades };
   },
-  setSelectedCueRef: (selectedCueRef: AssetRef | null) =>
-    useProjectStore.setState({ selectedCueRef }),
+  setSelectedCueRef: (selectedCueRef: AssetRef | null) => {
+    const current = useProjectStore.getState().selectedCueRef;
+    if (current?.id !== selectedCueRef?.id || current?.revision !== selectedCueRef?.revision) {
+      authoringTransportActions.pauseAll();
+    }
+    useProjectStore.setState({ selectedCueRef });
+  },
   setSelectedTargetSetId: (selectedTargetSetId: string) =>
     useProjectStore.setState({ selectedTargetSetId }),
   duplicateTargetSet: (targetSetId: string) => {
@@ -688,6 +701,10 @@ export const projectActions = {
     });
   },
   selectArrangement: (selectedArrangementRef: AssetRef) => {
+    const current = useProjectStore.getState().selectedArrangementRef;
+    if (assetKey(current) !== assetKey(selectedArrangementRef)) {
+      authoringTransportActions.pauseAll();
+    }
     useProjectStore.setState({ selectedArrangementRef });
   },
   setPreviewSource: (

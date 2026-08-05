@@ -115,7 +115,6 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
     if (!scope || !reference) return;
     const key = authoringSessionKey(scope, assetKey(reference));
     authoringTransportActions.ensureSession({ key, scope, durationTicks: 3_840 });
-    authoringTransportActions.play(key);
   }, [
     selectedCueRef?.id,
     selectedCueRef?.revision,

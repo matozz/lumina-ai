@@ -69,7 +69,7 @@ describe("Cue Builder safe authoring", () => {
         useAuthoringTransportStore.getState().sessions[
           authoringSessionKey("cue", assetKey(selected))
         ]?.playback,
-      ).toBe("playing"),
+      ).toBe("stopped"),
     );
   });
 

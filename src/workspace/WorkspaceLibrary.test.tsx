@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { authoringSessionKey, useAuthoringTransportStore } from "@/authoring/transport";
 import type { ProductionCatalog } from "@/bridge/types";
-import { createEffectAsset } from "@/document/projectModel";
+import { assetKey, createEffectAsset } from "@/document/projectModel";
 import { engineActions, useEngineStore } from "@/stores/engine";
 import { productionCatalogActions } from "@/stores/productionCatalog";
 import { workspaceActions } from "@/stores/workspace";
@@ -52,6 +53,15 @@ describe("Live workspace library", () => {
     expect(screen.getByRole("button", { name: /Matrix 4×4/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Duplicate Matrix 4×4/ })).toBeNull();
     expect(screen.queryByText("Generated / Advanced")).toBeNull();
+  });
+
+  it("opens an Effect preview stopped until the user presses Play", () => {
+    const reference = projectActions.createEffect("Manual preview")!;
+
+    render(<WorkspaceLibrary workspace="effect-lab" />);
+
+    const key = authoringSessionKey("effect", assetKey(reference));
+    expect(useAuthoringTransportStore.getState().sessions[key].playback).toBe("stopped");
   });
 
   it("explains missing recipe areas and opens the shared area editor", () => {

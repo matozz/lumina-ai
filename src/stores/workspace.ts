@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { authoringTransportActions } from "@/authoring/transport";
 import type { ShowSnapshotState } from "@/bridge/types";
 
 export type WorkspaceId = "stage" | "effect-lab" | "cues" | "arrange" | "live";
@@ -78,8 +79,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 );
 
 export const workspaceActions = {
-  setActiveWorkspace: (activeWorkspace: WorkspaceId) =>
-    useWorkspaceStore.setState({ activeWorkspace, advancedMode: false, statusMessage: null }),
+  setActiveWorkspace: (activeWorkspace: WorkspaceId) => {
+    if (useWorkspaceStore.getState().activeWorkspace !== activeWorkspace) {
+      authoringTransportActions.pauseAll();
+    }
+    useWorkspaceStore.setState({ activeWorkspace, advancedMode: false, statusMessage: null });
+  },
   setAdvancedMode: (advancedMode: boolean) => useWorkspaceStore.setState({ advancedMode }),
   setLibraryVisible: (libraryVisible: boolean) => useWorkspaceStore.setState({ libraryVisible }),
   setInspectorVisible: (inspectorVisible: boolean) =>

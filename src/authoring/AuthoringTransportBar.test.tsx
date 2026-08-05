@@ -52,6 +52,7 @@ describe("AuthoringTransportBar", () => {
     );
 
     expect(screen.getByText("Bar 1 · Beat 1")).toBeTruthy();
+    expect(screen.getByLabelText("Musical position").textContent).toBe("1.1.000");
     expect(screen.queryByLabelText("Local BPM")).toBeNull();
     expect(screen.queryByText("Follow Arrangement")).toBeNull();
   });
@@ -124,7 +125,22 @@ describe("AuthoringTransportBar", () => {
 
     expect(screen.getByText("96 BPM")).toBeTruthy();
     expect(screen.getByText("3/4")).toBeTruthy();
-    expect(screen.getByText("3.2.0")).toBeTruthy();
+    expect(screen.getByText("3.2.000")).toBeTruthy();
+  });
+
+  it("keeps the live timing readouts at fixed widths", () => {
+    const reference = projectActions.createEffect("Pulse")!;
+    const state = useProjectStore.getState();
+    const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
+
+    render(
+      <AuthoringTransportBar scope="effect" reference={reference} arrangement={arrangement} />,
+    );
+
+    expect(screen.getByText("120 BPM").className).toContain("w-[5.25rem]");
+    expect(screen.getByText("4/4").className).toContain("w-12");
+    expect(screen.getByLabelText("Musical position").className).toContain("w-[5.25rem]");
+    expect(screen.getByLabelText("Beat 1 of 4").className).toContain("w-[4.5rem]");
   });
 });
 

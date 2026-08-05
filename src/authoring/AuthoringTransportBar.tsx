@@ -162,31 +162,41 @@ export function AuthoringTransportBar({
           <Repeat2 aria-hidden="true" />
         </Button>
 
-        <Badge variant="outline" className="font-mono tabular-nums">
+        <Badge variant="outline" className="w-[5.25rem] justify-center font-mono tabular-nums">
           {bpm.toFixed(bpm % 1 === 0 ? 0 : 2)} BPM
         </Badge>
-        <Badge variant="outline">
+        <Badge variant="outline" className="w-12 justify-center font-mono tabular-nums">
           {position.numerator}/{position.denominator}
         </Badge>
-        <Badge variant="secondary" className="font-mono tabular-nums">
-          {formatMusicalPosition(position)}
+        <Badge
+          variant="secondary"
+          className="w-[5.25rem] justify-center font-mono tabular-nums"
+          aria-label="Musical position"
+        >
+          {formatMusicalPosition(position, clock.ppq)}
         </Badge>
 
         <div
-          className="border-border bg-muted/40 flex items-center gap-1 rounded-md border px-1.5 py-1"
+          className="border-border bg-muted/40 flex h-5 w-[4.5rem] shrink-0 items-center justify-center gap-1 rounded-4xl border px-1.5"
           aria-label={`Beat ${position.beat} of ${position.numerator}`}
         >
-          {Array.from({ length: position.numerator }, (_, index) => (
-            <span
-              key={index}
-              className={cn(
-                "bg-muted-foreground/30 size-1.5 rounded-full",
-                index + 1 === position.beat && "bg-primary",
-                index === 0 && "ring-border ring-1",
-              )}
-              aria-hidden="true"
-            />
-          ))}
+          {position.numerator <= 8 ? (
+            Array.from({ length: position.numerator }, (_, index) => (
+              <span
+                key={index}
+                className={cn(
+                  "bg-muted-foreground/30 size-1.5 rounded-full",
+                  index + 1 === position.beat && "bg-primary",
+                  index === 0 && "ring-border ring-1",
+                )}
+                aria-hidden="true"
+              />
+            ))
+          ) : (
+            <span className="text-muted-foreground font-mono text-[10px] tabular-nums">
+              {position.beat}/{position.numerator}
+            </span>
+          )}
         </div>
 
         {advancedMode && scope !== "arrangement" && (

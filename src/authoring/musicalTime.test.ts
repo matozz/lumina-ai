@@ -39,9 +39,13 @@ describe("authoring musical time", () => {
       { time_tick: 5_760, numerator: 4, denominator: 4 },
     ];
 
-    expect(formatMusicalPosition(musicalPositionAtTick(0, PPQ, signatures))).toBe("1.1.0");
-    expect(formatMusicalPosition(musicalPositionAtTick(2_880, PPQ, signatures))).toBe("2.1.0");
-    expect(formatMusicalPosition(musicalPositionAtTick(5_760, PPQ, signatures))).toBe("3.1.0");
+    expect(formatMusicalPosition(musicalPositionAtTick(0, PPQ, signatures), PPQ)).toBe("1.1.000");
+    expect(formatMusicalPosition(musicalPositionAtTick(2_880, PPQ, signatures), PPQ)).toBe(
+      "2.1.000",
+    );
+    expect(formatMusicalPosition(musicalPositionAtTick(5_760, PPQ, signatures), PPQ)).toBe(
+      "3.1.000",
+    );
     expect(musicalPositionAtTick(6_720, PPQ, signatures)).toMatchObject({
       bar: 3,
       beat: 2,

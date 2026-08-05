@@ -70,6 +70,19 @@ describe("Stage 7 Project state", () => {
     });
   });
 
+  it("pauses the current preview before selecting another Effect", () => {
+    const first = projectActions.createEffect("First")!;
+    const second = projectActions.createEffect("Second")!;
+    const key = authoringSessionKey("effect", assetKey(first));
+    projectActions.setSelectedEffectRef(first);
+    authoringTransportActions.ensureSession({ key, scope: "effect", durationTicks: 3_840 });
+    authoringTransportActions.play(key);
+
+    projectActions.setSelectedEffectRef(second);
+
+    expect(useAuthoringTransportStore.getState().sessions[key].playback).toBe("paused");
+  });
+
   it("duplicates a multi-tempo Arrangement without moving clip or keyframe ticks", () => {
     const house = useProjectStore.getState().selectedArrangementRef;
     projectActions.updateArrangement(house, "Build House arrangement", (arrangement) => {

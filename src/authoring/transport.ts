@@ -94,6 +94,12 @@ export const authoringTransportActions = {
       draft.playback = "paused";
     });
   },
+  pauseAll(now = monotonicNow()) {
+    const playingKeys = Object.values(useAuthoringTransportStore.getState().sessions)
+      .filter((session) => session.playback === "playing")
+      .map((session) => session.key);
+    for (const key of playingKeys) authoringTransportActions.pause(key, now);
+  },
   stop(key: string, now = monotonicNow()) {
     updateCommand(key, now, (session) => {
       session.playback = "stopped";
@@ -186,6 +192,7 @@ export const authoringTransportActions = {
       ...source,
       key: target.key,
       scope: target.scope,
+      playback: source.playback === "playing" ? "paused" : source.playback,
       durationTicks,
       cursorTick: Math.min(source.cursorTick, durationTicks),
       anchorTick: Math.min(source.cursorTick, durationTicks),
