@@ -34,6 +34,15 @@ describe("authoring preview materialization", () => {
 
     expect(result.effect?.name).toBe("Safe custom pulse");
     expect(exactAsset(result.bundle.effects, lkg)).toBeDefined();
+    expect(result.bundle.manifest.effect_refs).toContainEqual({
+      id: lkg.id,
+      revision: lkg.revision,
+    });
+    expect(
+      Object.keys(
+        result.bundle.manifest.effect_refs[result.bundle.manifest.effect_refs.length - 1],
+      ),
+    ).toEqual(["id", "revision"]);
     expect(bundle.effects).toHaveLength(0);
   });
 
@@ -41,7 +50,7 @@ describe("authoring preview materialization", () => {
     const bundle = createStarterProjectBundle();
     const effect = createEffectAsset(bundle, "Pulse");
     bundle.effects.push(effect);
-    bundle.manifest.effect_refs.push(effect);
+    bundle.manifest.effect_refs.push({ id: effect.id, revision: effect.revision });
     const cue = createCueAsset(bundle, [effect, effect], "Layered Cue");
 
     const result = materializeAuthoringPreview(
@@ -62,6 +71,9 @@ describe("authoring preview materialization", () => {
     );
 
     expect(result.cue?.layers.map((layer) => layer.id)).toEqual([cue.layers[1].id]);
+    expect(
+      Object.keys(result.bundle.manifest.cue_refs[result.bundle.manifest.cue_refs.length - 1]),
+    ).toEqual(["id", "revision"]);
     expect(cue.layers).toHaveLength(2);
   });
 });

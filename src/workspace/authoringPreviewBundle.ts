@@ -73,7 +73,7 @@ export function materializeAuthoringPreview(
     );
     if (cueIndex >= 0) next.cues[cueIndex] = cue;
     else next.cues.push(cue);
-    appendExactRef(next.manifest.cue_refs, cue);
+    appendExactRef(next.manifest.cue_refs, { id: cue.id, revision: cue.revision });
   }
 
   return {
@@ -100,7 +100,7 @@ export function materializeCueDraftBundle(
   );
   if (index >= 0) next.cues[index] = structuredClone(cue);
   else next.cues.push(structuredClone(cue));
-  appendExactRef(next.manifest.cue_refs, cue);
+  appendExactRef(next.manifest.cue_refs, { id: cue.id, revision: cue.revision });
   return next;
 }
 
@@ -110,5 +110,5 @@ function upsertEffect(bundle: ProjectBundle, effect: EffectDefinitionDocument) {
   );
   if (index >= 0) bundle.effects[index] = structuredClone(effect);
   else bundle.effects.push(structuredClone(effect));
-  appendExactRef(bundle.manifest.effect_refs, effect);
+  appendExactRef(bundle.manifest.effect_refs, { id: effect.id, revision: effect.revision });
 }
