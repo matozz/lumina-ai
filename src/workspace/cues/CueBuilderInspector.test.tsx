@@ -6,7 +6,8 @@ import type {
   ProductionCatalog,
   ProjectBundle,
 } from "@/bridge/types";
-import { createCueAsset, createEffectAsset } from "@/document/projectModel";
+import { authoringSessionKey, useAuthoringTransportStore } from "@/authoring/transport";
+import { assetKey, createCueAsset, createEffectAsset } from "@/document/projectModel";
 import { authoringDraftActions, useAuthoringDraftStore } from "@/stores/authoringDraft";
 import { productionCatalogActions } from "@/stores/productionCatalog";
 import { projectActions, useProjectStore } from "@/stores/project";
@@ -62,6 +63,14 @@ describe("Cue Builder safe authoring", () => {
     expect(useProjectStore.getState().bundle.cues).toHaveLength(0);
     expect(useAuthoringDraftStore.getState().cue?.mode).toBe("new");
     expect(screen.getByText("Production Recipes")).toBeTruthy();
+    const selected = useProjectStore.getState().selectedCueRef!;
+    await waitFor(() =>
+      expect(
+        useAuthoringTransportStore.getState().sessions[
+          authoringSessionKey("cue", assetKey(selected))
+        ]?.playback,
+      ).toBe("playing"),
+    );
   });
 
   it("shows bars and hides internal layer controls by default", async () => {

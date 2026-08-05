@@ -197,7 +197,7 @@ export function ProjectStageInspector() {
               Groups
             </ToggleGroupItem>
             <ToggleGroupItem value="targets" className="min-w-0 flex-1">
-              TargetSets
+              Areas
             </ToggleGroupItem>
             <ToggleGroupItem value="scenes" className="min-w-0 flex-1">
               Scenes
@@ -290,12 +290,14 @@ export function ProjectStageInspector() {
             size="xs"
             disabled={dirty || blockingDiagnostics.length > 0}
             onClick={() => {
-              if (usedOnStage) workspaceActions.setActiveWorkspace("effect-lab");
-              else setImpactOpen(true);
+              if (usedOnStage) {
+                projectActions.setSelectedTargetSetId("all");
+                workspaceActions.setActiveWorkspace("effect-lab");
+              } else setImpactOpen(true);
             }}
           >
             <Sparkles data-icon="inline-start" aria-hidden="true" />
-            {usedOnStage ? "Choose an Effect" : "Use on Stage"}
+            {usedOnStage ? "Preview Effects" : "Use on Stage"}
           </Button>
         </div>
         <div className="text-muted-foreground flex items-center gap-1.5 text-[9px]">
@@ -375,7 +377,7 @@ export function ProjectStageInspector() {
                 runAction("stage.layout_upgrade", () => {
                   projectActions.useLayoutOnStage(request);
                   setImpactOpen(false);
-                  if (!advancedMode) workspaceActions.setActiveWorkspace("effect-lab");
+                  workspaceActions.setActiveWorkspace("effect-lab");
                 })
               }
             />

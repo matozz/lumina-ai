@@ -10,6 +10,7 @@ import type {
   GroupDSL,
   LayoutDefinition,
   ProjectBundle,
+  ProjectPreviewFrame,
   TargetSetDefinition,
   TargetingSceneDefinition,
 } from "@/bridge/types";
@@ -61,6 +62,7 @@ export interface ProjectState {
   rehearsalPublishedRevision: number | null;
   previewGeneration: number | null;
   previewError: string | null;
+  previewSummary: { fixtureCount: number; litFixtureCount: number } | null;
   history: ProjectHistoryEntry[];
   historyCursor: number;
   savedHistoryCursor: number;
@@ -81,6 +83,7 @@ const initialState: ProjectState = {
   rehearsalPublishedRevision: null,
   previewGeneration: null,
   previewError: null,
+  previewSummary: null,
   history: [],
   historyCursor: 0,
   savedHistoryCursor: 0,
@@ -393,7 +396,14 @@ export const projectActions = {
       }
       bumpManifestRevision(bundle, published);
     });
-    const updates: Partial<ProjectState> = { selectedLayoutRef: request.layoutRef };
+    const nextStage = activeStage(useProjectStore.getState().bundle);
+    const updates: Partial<ProjectState> = {
+      selectedLayoutRef: request.layoutRef,
+      selectedTargetSetId:
+        nextStage.target_sets.find((target) => target.id === "all")?.id ??
+        nextStage.target_sets[0]?.id ??
+        "all",
+    };
     const selectedCueRef = current.selectedCueRef
       ? cueUpgrades.get(assetKey(current.selectedCueRef))
       : null;
@@ -587,6 +597,13 @@ export const projectActions = {
         weights: (target.weights ?? []).filter((weight) => validFixtureIds.has(weight.fixture_id)),
       }));
     });
+    const nextStage = activeStage(useProjectStore.getState().bundle);
+    useProjectStore.setState({
+      selectedTargetSetId:
+        nextStage.target_sets.find((target) => target.id === "all")?.id ??
+        nextStage.target_sets[0]?.id ??
+        "all",
+    });
   },
   duplicateTargetingScene: (sceneId: string) => {
     const state = useProjectStore.getState();
@@ -673,9 +690,24 @@ export const projectActions = {
   ) => useProjectStore.setState({ previewSource, rehearsalPublishedRevision }),
   setLiveViewMode: (liveViewMode: "live" | "rehearsal") =>
     useProjectStore.setState({ liveViewMode }),
-  setPreviewResult: (previewGeneration: number) =>
-    useProjectStore.setState({ previewGeneration, previewError: null }),
-  setPreviewError: (previewError: string) => useProjectStore.setState({ previewError }),
+  setPreviewResult: (frame: ProjectPreviewFrame) =>
+    useProjectStore.setState({
+      previewGeneration: frame.generation,
+      previewError: null,
+      previewSummary: {
+        fixtureCount: frame.outputs.length,
+        litFixtureCount: frame.outputs.filter((output) =>
+          output.attributes.some(
+            (attribute) =>
+              attribute.id === "intensity" &&
+              attribute.value.type === "scalar" &&
+              attribute.value.value > 0.01,
+          ),
+        ).length,
+      },
+    }),
+  setPreviewError: (previewError: string) =>
+    useProjectStore.setState({ previewError, previewSummary: null }),
   createEffect: (name = "Pulse") => {
     let created: AssetRef | null = null;
     transact(`Create Effect ${name}`, (bundle, published) => {
@@ -962,6 +994,7 @@ export const projectSelectors = {
   rehearsalPublishedRevision: (state: ProjectState) => state.rehearsalPublishedRevision,
   previewGeneration: (state: ProjectState) => state.previewGeneration,
   previewError: (state: ProjectState) => state.previewError,
+  previewSummary: (state: ProjectState) => state.previewSummary,
   canUndo: (state: ProjectState) => state.historyCursor > 0,
   canRedo: (state: ProjectState) => state.historyCursor < state.history.length,
   isDirty: (state: ProjectState) => state.savedHistoryCursor !== state.historyCursor,

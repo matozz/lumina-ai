@@ -7,7 +7,7 @@ use crate::document::{
     load_document, load_project_bundle, recover_project_bundle, resolve_cue_recipe,
     validate_effect_draft, validate_layout_geometry, validate_production_catalog, AssetRef,
     CueDefinition, CueRecipeRef, EffectDefinitionDocument, LayoutDefinition, MetaDSL,
-    MigrationReport, PatchDSL, ProductionCatalog, ShowDocumentV4, StageDocument,
+    MigrationReport, PatchDSL, ProductionCatalog, ProjectBundle, ShowDocumentV4, StageDocument,
 };
 use crate::engine::attribute::FixtureFramePayload;
 use crate::engine::effect::{
@@ -176,7 +176,14 @@ pub fn resolve_production_cue_recipe(
     cue_revision: u32,
     cue_name: String,
 ) -> Result<CueDefinition, Vec<Diagnostic>> {
-    let project = load_project_bundle(&project_json)?.into_bundle();
+    let project = serde_json::from_str::<ProjectBundle>(&project_json).map_err(|error| {
+        vec![Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            "project_bundle",
+            error.to_string(),
+            "Repair the active Stage or Layout data before opening this recipe.",
+        )]
+    })?;
     let catalog = get_production_catalog()?;
     resolve_cue_recipe(
         &catalog,
@@ -1023,11 +1030,12 @@ async fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), String> {
 mod tests {
     use super::{
         atomic_write, compile_dsl, is_live_catalog_instance, live_effect_catalog, load_project,
-        preview_dsl, preview_effect_loop, preview_layout, save_project, SAVE_SEQUENCE,
+        preview_dsl, preview_effect_loop, preview_layout, resolve_production_cue_recipe,
+        save_project, SAVE_SEQUENCE,
     };
     use crate::document::{
-        valid_bundle, AssetRef, LayoutFixtureSizeOverride, LayoutGeometry, LayoutSize,
-        TempoPointDSL,
+        load_project_bundle, valid_bundle, AssetRef, CueRecipeRef, LayoutFixtureSizeOverride,
+        LayoutGeometry, LayoutSize, TempoPointDSL,
     };
     use crate::state::ShowSnapshot;
     use std::sync::atomic::Ordering;
@@ -1142,6 +1150,34 @@ mod tests {
         assert!(is_live_catalog_instance("__arr__:house-128:clip-1:layer-1"));
         assert!(!is_live_catalog_instance("__effect_preview__:pulse-r1:all"));
         assert!(!is_live_catalog_instance("__cue__:pulse-gradient:layer-1"));
+    }
+
+    #[test]
+    fn recipe_resolution_ignores_unrelated_invalid_cues() {
+        let mut bundle = valid_bundle();
+        let mut conflicting_layer = bundle.cues[0].layers[0].clone();
+        conflicting_layer.id = "unrelated-conflict".to_string();
+        bundle.cues[0].layers.push(conflicting_layer);
+        let source = serde_json::to_string(&bundle).expect("serialize Project");
+        assert!(load_project_bundle(&source).is_err());
+
+        let stage_ref = bundle.manifest.stage_ref.clone();
+        let cue = resolve_production_cue_recipe(
+            source,
+            CueRecipeRef {
+                id: "recipe.four-on-floor".to_string(),
+                revision: 1,
+            },
+            stage_ref.clone(),
+            "resolved-pulse".to_string(),
+            1,
+            "Resolved Pulse".to_string(),
+        )
+        .expect("unrelated Cue diagnostics must not block a new recipe draft");
+
+        assert_eq!(cue.compatible_stage_ref, stage_ref);
+        assert_eq!(cue.layers.len(), 1);
+        assert_eq!(cue.layers[0].target_set_ref.target_set_id, "all");
     }
 
     #[test]

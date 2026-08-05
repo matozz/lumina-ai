@@ -153,16 +153,20 @@ describe("Stage 7 Project state", () => {
         .target_sets.filter((target) => target.id !== "all")
         .map((target) => [target.id, "all"]),
     );
+    projectActions.setSelectedTargetSetId("columns");
     projectActions.useLayoutOnStage({
       layoutRef: largerLayoutRef,
       mode: "remap",
       targetMappings,
       upgradeDependents: true,
     });
+    expect(useProjectStore.getState().selectedTargetSetId).toBe("all");
     projectActions.markPublished();
 
+    projectActions.setSelectedTargetSetId("rows");
     projectActions.resizeActiveStagePatch(20);
     const next = useProjectStore.getState();
+    expect(next.selectedTargetSetId).toBe("all");
     expect(activeStage(next.bundle).patch).toEqual([
       { profile_id: "generic-rgb", id_range: [1, 20] },
     ]);

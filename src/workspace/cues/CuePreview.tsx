@@ -14,6 +14,7 @@ export function CuePreview() {
   const selectedEffect = useProjectStore(projectSelectors.selectedEffectRef);
   const arrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
   const error = useProjectStore(projectSelectors.previewError);
+  const previewSummary = useProjectStore(projectSelectors.previewSummary);
   const effectDraft = useAuthoringDraftStore(authoringDraftSelectors.effect);
   const cueDraft = useAuthoringDraftStore(authoringDraftSelectors.cue);
   const comparison = useAuthoringDraftStore(authoringDraftSelectors.comparison);
@@ -28,6 +29,9 @@ export function CuePreview() {
   );
   const cue = materialized.cue;
   const arrangement = exactAsset(bundle.arrangements, arrangementRef);
+  const showIntensityWithoutColor = Boolean(
+    cue && !(cue.capability_summary.required_attributes ?? []).includes("color.rgb"),
+  );
 
   return (
     <section className="bg-background relative flex h-full min-h-0 flex-col">
@@ -35,6 +39,7 @@ export function CuePreview() {
         <Layers2 className="text-primary" aria-hidden="true" />
         <span className="text-xs font-medium">Cue loop preview</span>
         <Badge variant="outline">Authoring Preview</Badge>
+        {showIntensityWithoutColor && <Badge variant="outline">Intensity visualization</Badge>}
         {cueDraft?.status === "invalid" && <Badge variant="destructive">Held at LKG</Badge>}
         {cueDraft && (cueDraft.soloLayerId || cueDraft.mutedLayerIds.length > 0) && (
           <Badge variant="secondary">Audition filter</Badge>
@@ -52,9 +57,12 @@ export function CuePreview() {
         />
       )}
       <div className="relative min-h-0 flex-1">
-        <CanvasView frameSource="preview" />
+        <CanvasView frameSource="preview" showIntensityWithoutColor={showIntensityWithoutColor} />
         {!cue && <PreviewMessage>Create or select a Cue to preview.</PreviewMessage>}
         {cue && error && <PreviewMessage>{error}</PreviewMessage>}
+        {cue && !error && previewSummary?.litFixtureCount === 0 && (
+          <PreviewMessage>This frame is dark. Press Play or move the playhead.</PreviewMessage>
+        )}
       </div>
     </section>
   );

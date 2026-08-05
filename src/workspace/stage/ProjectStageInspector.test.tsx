@@ -72,6 +72,7 @@ describe("ProjectStageInspector Layout workflow", () => {
       exactAsset(useProjectStore.getState().bundle.stages, originalStageRef)?.layout_ref,
     ).toEqual(originalLayoutRef);
     expect(useProjectStore.getState().publishedBundle).toBeNull();
+    expect(useWorkspaceStore.getState().activeWorkspace).toBe("effect-lab");
   });
 
   it("continues from the active Stage to Effect selection in the simple workflow", async () => {
@@ -80,7 +81,7 @@ describe("ProjectStageInspector Layout workflow", () => {
     await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
 
     expect(screen.queryByRole("button", { name: "Groups" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Choose an Effect" }));
+    fireEvent.click(screen.getByRole("button", { name: "Preview Effects" }));
     expect(useWorkspaceStore.getState().activeWorkspace).toBe("effect-lab");
   });
 
@@ -104,7 +105,7 @@ describe("ProjectStageInspector Layout workflow", () => {
     expect(screen.getByText("Unsaved")).toBeTruthy();
   });
 
-  it("opens Groups and TargetSets in expanded responsive dialogs", async () => {
+  it("opens Groups and fixture areas in expanded responsive dialogs", async () => {
     render(<ProjectStageInspector />);
     await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
 
@@ -114,8 +115,8 @@ describe("ProjectStageInspector Layout workflow", () => {
     expect(screen.getByRole("grid", { name: "Fixture Group membership" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "TargetSets" }));
-    expect(screen.getByText("TargetSet editor")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Areas" }));
+    expect(screen.getByText("Fixture area editor")).toBeTruthy();
     expect(screen.getByRole("grid", { name: "TargetSet fixture preview" })).toBeTruthy();
   });
 

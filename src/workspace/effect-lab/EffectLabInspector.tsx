@@ -5,12 +5,15 @@ import {
   FlaskConical,
   GitFork,
   Layers2,
+  Lightbulb,
   Save,
+  ScanSearch,
   ShieldCheck,
   Undo2,
 } from "lucide-react";
 import { engine } from "@/bridge/commands";
 import type { Diagnostic, EffectDefinitionDocument, ParameterValueDSL } from "@/bridge/types";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -34,7 +37,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { activeStage, exactAsset, uniqueId } from "@/document/projectModel";
+import { fixtureIdsForStage } from "@/document/layoutDefinition";
+import { effectTargetCompatibility, friendlyEffectAttribute } from "@/document/effectCompatibility";
+import { activeLayout, activeStage, exactAsset, uniqueId } from "@/document/projectModel";
+import { resolveTargetSet } from "@/document/stageTopology";
 import {
   authoringDraftActions,
   authoringDraftSelectors,
@@ -49,6 +55,7 @@ import { projectActions, projectSelectors, useProjectStore } from "@/stores/proj
 import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/stores/workspace";
 import { AuthoringSignalSpine } from "../AuthoringSignalSpine";
 import { createCueDraftFromEffect } from "../cues/cueAuthoring";
+import { StageCollectionEditorDialog } from "../stage/StageCollectionEditorDialog";
 import { EffectParameterControls } from "./EffectParameterControls";
 
 export function EffectLabInspector() {
@@ -63,9 +70,22 @@ export function EffectLabInspector() {
   const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
   const [advancedVisible, setAdvancedVisible] = useState(false);
   const [confirmHighRiskUse, setConfirmHighRiskUse] = useState(false);
+  const [targetEditorOpen, setTargetEditorOpen] = useState(false);
   const selectedEffect =
     exactAsset(bundle.effects, reference) ?? exactAsset(catalog?.effects ?? [], reference);
   const stage = activeStage(bundle);
+  const layout = activeLayout(bundle);
+  const fixtureCount = fixtureIdsForStage(stage).length;
+  const selectedTarget =
+    stage.target_sets.find((target) => target.id === targetSetId) ??
+    stage.target_sets.find((target) => target.id === "all") ??
+    stage.target_sets[0];
+
+  useEffect(() => {
+    if (selectedTarget && selectedTarget.id !== targetSetId) {
+      projectActions.setSelectedTargetSetId(selectedTarget.id);
+    }
+  }, [selectedTarget, targetSetId]);
 
   useEffect(() => {
     void productionCatalogActions.ensureLoaded();
@@ -116,7 +136,19 @@ export function EffectLabInspector() {
   const parameterIndices = Object.fromEntries(
     effect.parameters.map((parameter, index) => [parameter.id, index]),
   );
-  const targetItems = stage.target_sets.map((target) => ({ value: target.id, label: target.name }));
+  const targetItems = stage.target_sets.map((target) => {
+    const count = resolveTargetSet(stage, layout, target)?.fixtureIds.length ?? 0;
+    return {
+      value: target.id,
+      label:
+        target.id === "all"
+          ? `All fixtures · ${count}`
+          : `${target.name} · ${count} of ${fixtureCount}`,
+    };
+  });
+  const compatibility = selectedTarget
+    ? effectTargetCompatibility(stage, layout, selectedTarget, effect)
+    : null;
   const generalDiagnostics = session.diagnostics.filter(
     (diagnostic) => !diagnostic.path.includes("parameters["),
   );
@@ -220,6 +252,15 @@ export function EffectLabInspector() {
               />
             )}
 
+            <Alert>
+              <Lightbulb aria-hidden="true" />
+              <AlertTitle>Previewing {stage.name}</AlertTitle>
+              <AlertDescription>
+                {layout.name} · {fixtureCount} patched fixtures. Effect Lab always uses the active
+                Stage automatically.
+              </AlertDescription>
+            </Alert>
+
             {readOnly && (
               <div className="border-primary/30 bg-primary/5 grid gap-2 rounded-md border p-2.5">
                 <div className="flex items-center gap-1.5 text-xs font-medium">
@@ -251,10 +292,22 @@ export function EffectLabInspector() {
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="effect-preview-target">Preview fixtures</FieldLabel>
+                <div className="flex items-center gap-2">
+                  <FieldLabel htmlFor="effect-preview-target">Preview area</FieldLabel>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="ghost"
+                    className="ml-auto"
+                    onClick={() => setTargetEditorOpen(true)}
+                  >
+                    <ScanSearch data-icon="inline-start" aria-hidden="true" />
+                    Edit areas
+                  </Button>
+                </div>
                 <Select
                   items={targetItems}
-                  value={targetSetId}
+                  value={selectedTarget?.id ?? ""}
                   onValueChange={(value) => value && projectActions.setSelectedTargetSetId(value)}
                 >
                   <SelectTrigger id="effect-preview-target" size="sm" className="w-full">
@@ -270,9 +323,24 @@ export function EffectLabInspector() {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <FieldDescription>Choose which fixtures light up in this preview.</FieldDescription>
+                <FieldDescription>
+                  {compatibility?.fixtureCount ?? 0} of {fixtureCount} Stage fixtures are included.
+                </FieldDescription>
               </Field>
             </FieldGroup>
+
+            {compatibility && !compatibility.compatible && (
+              <Alert variant="destructive">
+                <AlertTitle>This Effect cannot run on the selected area</AlertTitle>
+                <AlertDescription>
+                  {compatibility.fixtureCount === 0
+                    ? "This area contains no patched fixtures."
+                    : `Its fixtures are missing ${compatibility.missingAttributes
+                        .map(friendlyEffectAttribute)
+                        .join(", ")}. Choose another area or update the Stage patch.`}
+                </AlertDescription>
+              </Alert>
+            )}
 
             <div className="flex flex-wrap gap-1.5">
               {effect.catalog.family && <Badge variant="secondary">{effect.catalog.family}</Badge>}
@@ -389,7 +457,10 @@ export function EffectLabInspector() {
             )}
             <Button
               size="sm"
-              disabled={!readOnly && session.status !== "valid" && session.status !== "pristine"}
+              disabled={
+                !compatibility?.compatible ||
+                (!readOnly && session.status !== "valid" && session.status !== "pristine")
+              }
               onClick={requestUseEffectInCue}
             >
               <Layers2 data-icon="inline-start" aria-hidden="true" />
@@ -432,6 +503,11 @@ export function EffectLabInspector() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <StageCollectionEditorDialog
+        kind="targets"
+        open={targetEditorOpen}
+        onOpenChange={setTargetEditorOpen}
+      />
     </>
   );
 }

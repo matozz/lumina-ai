@@ -1,7 +1,19 @@
 import { useEffect, useState } from "react";
-import { Boxes, Copy, Layers2, Layers3, Lightbulb, Plus, RadioTower, Star } from "lucide-react";
+import {
+  Boxes,
+  Copy,
+  Layers2,
+  Layers3,
+  Lightbulb,
+  Plus,
+  RadioTower,
+  ScanSearch,
+  Star,
+} from "lucide-react";
+import { authoringSessionKey, authoringTransportActions } from "@/authoring/transport";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogClose,
@@ -12,7 +24,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { engine } from "@/bridge/commands";
-import type { AssetRef, ProjectBundle } from "@/bridge/types";
+import type {
+  AssetRef,
+  CueRecipeTargetDSL,
+  ProjectBundle,
+  TargetSetSelector,
+} from "@/bridge/types";
 import {
   Empty,
   EmptyDescription,
@@ -23,11 +40,13 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   activeStage,
+  activeLayout,
   assetKey,
   exactAsset,
   latestRefsById,
   uniqueId,
 } from "@/document/projectModel";
+import { effectTargetCompatibility, friendlyEffectAttribute } from "@/document/effectCompatibility";
 import { authoringDraftActions } from "@/stores/authoringDraft";
 import { engineSelectors, useEngineStore } from "@/stores/engine";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
@@ -43,6 +62,7 @@ import {
   workspaceSelectors,
 } from "@/stores/workspace";
 import { createCueDraftFromEffect } from "./cues/cueAuthoring";
+import { StageCollectionEditorDialog } from "./stage/StageCollectionEditorDialog";
 
 export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   const bundle = useProjectStore(projectSelectors.bundle);
@@ -57,6 +77,23 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   const productionCatalogError = useProductionCatalogStore(productionCatalogSelectors.error);
   const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
   const [confirmHighRiskCreate, setConfirmHighRiskCreate] = useState(false);
+  const [resolvingRecipeId, setResolvingRecipeId] = useState<string | null>(null);
+  const [recipeError, setRecipeError] = useState<string | null>(null);
+  const [targetEditorOpen, setTargetEditorOpen] = useState(false);
+  const stage = activeStage(bundle);
+  const layout = activeLayout(bundle);
+  const selectedTargetSetId = useProjectStore(projectSelectors.selectedTargetSetId);
+  const selectedTarget =
+    stage.target_sets.find((target) => target.id === selectedTargetSetId) ??
+    stage.target_sets.find((target) => target.id === "all") ??
+    stage.target_sets[0];
+  const allTarget = stage.target_sets.find((target) => target.id === "all") ?? stage.target_sets[0];
+
+  useEffect(() => {
+    if (workspace === "effect-lab" && allTarget && selectedTargetSetId !== allTarget.id) {
+      projectActions.setSelectedTargetSetId(allTarget.id);
+    }
+  }, [workspace]);
 
   useEffect(() => {
     if (workspace === "effect-lab" || workspace === "cues") {
@@ -70,6 +107,22 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
       projectActions.setSelectedEffectRef({ id: effect.id, revision: effect.revision });
     }
   }, [productionCatalog, selectedEffectRef, workspace]);
+
+  useEffect(() => {
+    const scope = workspace === "effect-lab" ? "effect" : workspace === "cues" ? "cue" : null;
+    const reference =
+      scope === "effect" ? selectedEffectRef : scope === "cue" ? selectedCueRef : null;
+    if (!scope || !reference) return;
+    const key = authoringSessionKey(scope, assetKey(reference));
+    authoringTransportActions.ensureSession({ key, scope, durationTicks: 3_840 });
+    authoringTransportActions.play(key);
+  }, [
+    selectedCueRef?.id,
+    selectedCueRef?.revision,
+    selectedEffectRef?.id,
+    selectedEffectRef?.revision,
+    workspace,
+  ]);
 
   const createCueDraft = () => {
     if (!selectedEffectRef) return;
@@ -90,7 +143,8 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   };
 
   const startRecipeDraft = async (recipeId: string, revision: number, name: string) => {
-    const stage = activeStage(bundle);
+    setResolvingRecipeId(recipeId);
+    setRecipeError(null);
     const cueId = uniqueId(
       recipeId.replace(/^recipe\./, "cue-").replace(/[^a-z0-9-]+/g, "-"),
       bundle.cues.map((cue) => cue.id),
@@ -113,7 +167,10 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
         : error instanceof Error
           ? error.message
           : String(error);
+      setRecipeError(message);
       workspaceActions.setPublishStatus("error", message);
+    } finally {
+      setResolvingRecipeId(null);
     }
   };
 
@@ -192,6 +249,9 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                 .filter((effect) => effect.catalog.visibility !== "hidden")
                 .map((effect) => {
                   const reference = { id: effect.id, revision: effect.revision };
+                  const compatibility = selectedTarget
+                    ? effectTargetCompatibility(stage, layout, selectedTarget, effect)
+                    : null;
                   return (
                     <EffectLibraryButton
                       key={assetKey(reference)}
@@ -200,6 +260,14 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                       family={effect.catalog.family ?? "effect"}
                       source="production"
                       selected={selectedEffectRef}
+                      disabled={compatibility ? !compatibility.compatible : true}
+                      disabledReason={
+                        compatibility && compatibility.missingAttributes.length > 0
+                          ? `Needs ${compatibility.missingAttributes.map(friendlyEffectAttribute).join(", ")}`
+                          : compatibility?.fixtureCount === 0
+                            ? "No fixtures in this area"
+                            : undefined
+                      }
                     />
                   );
                 })}
@@ -214,6 +282,9 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
               {latestRefsById(bundle.manifest.effect_refs).map((reference) => {
                 const effect = exactAsset(bundle.effects, reference);
                 if (!effect || effect.source === "built_in") return null;
+                const compatibility = selectedTarget
+                  ? effectTargetCompatibility(stage, layout, selectedTarget, effect)
+                  : null;
                 return (
                   <EffectLibraryButton
                     key={assetKey(reference)}
@@ -222,6 +293,14 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                     family={effect.catalog.family ?? "local"}
                     source="project"
                     selected={selectedEffectRef}
+                    disabled={compatibility ? !compatibility.compatible : true}
+                    disabledReason={
+                      compatibility && compatibility.missingAttributes.length > 0
+                        ? `Needs ${compatibility.missingAttributes.map(friendlyEffectAttribute).join(", ")}`
+                        : compatibility?.fixtureCount === 0
+                          ? "No fixtures in this area"
+                          : undefined
+                    }
                   />
                 );
               })}
@@ -238,21 +317,88 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
               {workspace === "cues" && (
                 <>
                   <LibrarySectionLabel>Production Recipes</LibrarySectionLabel>
-                  {productionCatalog?.cue_recipes.map((recipe) => (
-                    <Button
-                      key={`${recipe.id}@${recipe.revision}`}
-                      size="sm"
-                      variant="ghost"
-                      className="h-auto w-full justify-start py-1.5"
-                      title={recipe.description}
-                      onClick={() => void startRecipeDraft(recipe.id, recipe.revision, recipe.name)}
-                    >
-                      <span className="min-w-0 flex-1 truncate text-left">{recipe.name}</span>
-                      <span className="text-muted-foreground text-[9px]">
-                        {recipe.layers.length} {recipe.layers.length === 1 ? "effect" : "effects"}
-                      </span>
-                    </Button>
-                  ))}
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    className="mx-1 justify-start"
+                    onClick={() => setTargetEditorOpen(true)}
+                  >
+                    <ScanSearch data-icon="inline-start" aria-hidden="true" />
+                    Edit fixture areas
+                  </Button>
+                  {productionCatalog?.cue_recipes.map((recipe) => {
+                    const missingAttributes = new Set<string>();
+                    const missingAreas = new Set<string>();
+                    let missingPlaybackPattern = false;
+                    for (const layer of recipe.layers) {
+                      const effect = exactAsset(productionCatalog.effects, layer.effect_ref);
+                      if (!effect) continue;
+                      const targets = stage.target_sets.filter((target) =>
+                        recipeTargetMatches(target.selector, layer.target),
+                      );
+                      if (targets.length === 0) {
+                        missingAreas.add(friendlyRecipeTarget(layer.target));
+                        continue;
+                      }
+                      const compatibility = targets.map((target) =>
+                        effectTargetCompatibility(stage, layout, target, effect),
+                      );
+                      if (!compatibility.some((result) => result.compatible)) {
+                        for (const result of compatibility) {
+                          for (const attribute of result.missingAttributes) {
+                            missingAttributes.add(attribute);
+                          }
+                        }
+                      }
+                      if (
+                        layer.scene &&
+                        !(stage.targeting_scenes ?? []).some(
+                          (scene) =>
+                            scene.steps.length >= layer.scene!.minimum_steps &&
+                            (!layer.scene!.requires_weighted_transition ||
+                              scene.steps.some((step) => step.transition.type === "weighted")),
+                        )
+                      ) {
+                        missingPlaybackPattern = true;
+                      }
+                    }
+                    const disabledReason =
+                      missingAreas.size > 0
+                        ? `Needs ${[...missingAreas].join(" or ")} area`
+                        : missingAttributes.size > 0
+                          ? `Needs ${[...missingAttributes].map(friendlyEffectAttribute).join(", ")}`
+                          : missingPlaybackPattern
+                            ? "Needs a compatible playback pattern"
+                            : undefined;
+                    const resolving = resolvingRecipeId === recipe.id;
+                    return (
+                      <Button
+                        key={`${recipe.id}@${recipe.revision}`}
+                        size="sm"
+                        variant="ghost"
+                        className="h-auto w-full justify-start py-1.5"
+                        title={disabledReason ?? recipe.description}
+                        disabled={Boolean(disabledReason) || resolvingRecipeId !== null}
+                        onClick={() =>
+                          void startRecipeDraft(recipe.id, recipe.revision, recipe.name)
+                        }
+                      >
+                        <span className="min-w-0 flex-1 truncate text-left">
+                          {resolving ? "Opening…" : recipe.name}
+                        </span>
+                        <span className="text-muted-foreground text-[9px]">
+                          {disabledReason ??
+                            `${recipe.layers.length} ${recipe.layers.length === 1 ? "effect" : "effects"}`}
+                        </span>
+                      </Button>
+                    );
+                  })}
+                  {recipeError && (
+                    <Alert variant="destructive">
+                      <AlertTitle>Recipe unavailable</AlertTitle>
+                      <AlertDescription>{recipeError}</AlertDescription>
+                    </Alert>
+                  )}
                   <LibrarySectionLabel>Project Cues</LibrarySectionLabel>
                 </>
               )}
@@ -339,7 +485,35 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <StageCollectionEditorDialog
+        kind="targets"
+        open={targetEditorOpen}
+        onOpenChange={setTargetEditorOpen}
+      />
     </aside>
+  );
+}
+
+function recipeTargetMatches(selector: TargetSetSelector, target: CueRecipeTargetDSL) {
+  if (target.type === "any_compatible") return true;
+  if (target.type === "center" || target.type === "edges") {
+    return selector.type === "center_edges" && selector.region === target.type;
+  }
+  return selector.type === target.type;
+}
+
+function friendlyRecipeTarget(target: CueRecipeTargetDSL) {
+  return (
+    {
+      any_compatible: "compatible",
+      all: "All fixtures",
+      rows: "Rows",
+      columns: "Columns",
+      grid_zones: "3×3 Zones",
+      checkerboard: "Checkerboard",
+      center: "Center",
+      edges: "Edges",
+    }[target.type] ?? target.type
   );
 }
 
@@ -428,22 +602,30 @@ function EffectLibraryButton({
   family,
   source,
   selected,
+  disabled = false,
+  disabledReason,
 }: {
   reference: AssetRef;
   name: string;
   family: string;
   source: "production" | "project";
   selected: AssetRef | null;
+  disabled?: boolean;
+  disabledReason?: string;
 }) {
   return (
     <Button
       variant={selected && assetKey(selected) === assetKey(reference) ? "secondary" : "ghost"}
       size="sm"
       className="h-auto w-full justify-start py-1.5"
+      disabled={disabled}
+      title={disabledReason}
       onClick={() => projectActions.setSelectedEffectRef(reference)}
     >
       <span className="min-w-0 flex-1 truncate text-left">{name}</span>
-      <span className="text-muted-foreground text-[9px]">{family}</span>
+      <span className="text-muted-foreground max-w-28 shrink-0 truncate text-[9px]">
+        {disabledReason ?? family}
+      </span>
       {source === "project" && <Badge variant="outline">Custom</Badge>}
     </Button>
   );

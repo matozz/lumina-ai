@@ -25,12 +25,14 @@ import { activeLayout, activeStage, assetKey } from "@/document/projectModel";
 import { resolveTargetSet } from "@/document/stageTopology";
 import { cn } from "@/lib/utils";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
+import { useWorkspaceStore, workspaceSelectors } from "@/stores/workspace";
 
 type SelectorMode = TargetSetSelector["type"] | "center" | "edges";
 
 export function TargetSetEditor() {
   const bundle = useProjectStore(projectSelectors.bundle);
   const selectedTargetSetId = useProjectStore(projectSelectors.selectedTargetSetId);
+  const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
   const stage = activeStage(bundle);
   const layout = activeLayout(bundle);
   const selected =
@@ -60,9 +62,10 @@ export function TargetSetEditor() {
     <div className="flex flex-col gap-3 p-3">
       <div className="flex items-center gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold">Stage TargetSets</p>
+          <p className="text-xs font-semibold">Fixture areas</p>
           <p className="text-muted-foreground text-[9px]">
-            Immutable spatial selections · Stage {stage.id}@{stage.revision}
+            Reusable fixture selections for Effect Lab and Cues
+            {advancedMode ? ` · Stage ${stage.id}@${stage.revision}` : ""}
           </p>
         </div>
         <Button
@@ -109,7 +112,13 @@ export function TargetSetEditor() {
           />
         </Field>
 
-        <TargetSetSelectorEditor target={draft} stage={stage} layout={layout} onChange={setDraft} />
+        <TargetSetSelectorEditor
+          target={draft}
+          stage={stage}
+          layout={layout}
+          advanced={advancedMode}
+          onChange={setDraft}
+        />
 
         <TargetGridPreview stage={stage} layout={layout} target={draft} onChange={setDraft} />
 
@@ -142,7 +151,7 @@ export function TargetSetEditor() {
             }
           >
             <Save data-icon="inline-start" aria-hidden="true" />
-            Save revision
+            Save area
           </Button>
           <Button
             size="sm"
@@ -178,9 +187,9 @@ export function TargetSetEditor() {
           </Button>
         </div>
         <FieldDescription>
-          Save creates a new Stage revision and explicitly upgrades pinned draft Cue/Arrangement
-          revisions. Published and Live references remain unchanged. Delete is protected by{" "}
-          {references.cues} Cue and {references.scenes} scene references.
+          {advancedMode
+            ? `Saving creates a new Stage revision and upgrades draft dependents. Delete is protected by ${references.cues} Cue and ${references.scenes} scene references.`
+            : "Saved areas immediately appear in Effect Lab and can be assigned to Cue effects."}
         </FieldDescription>
       </section>
     </div>
@@ -191,11 +200,13 @@ function TargetSetSelectorEditor({
   target,
   stage,
   layout,
+  advanced,
   onChange,
 }: {
   target: TargetSetDefinition;
   stage: StageDocument;
   layout: LayoutDefinition;
+  advanced: boolean;
   onChange: (target: TargetSetDefinition) => void;
 }) {
   const dimensions = layoutGridDimensions(layout);
@@ -243,7 +254,7 @@ function TargetSetSelectorEditor({
         </Select>
       </Field>
 
-      {(selector.type === "rows" || selector.type === "columns") && (
+      {advanced && (selector.type === "rows" || selector.type === "columns") && (
         <Field>
           <FieldLabel htmlFor="target-indices">Zero-based indices</FieldLabel>
           <Input
@@ -366,20 +377,22 @@ function TargetSetSelectorEditor({
           />
         </Field>
       )}
-      <Field>
-        <FieldLabel htmlFor="target-weights">Fixture weights</FieldLabel>
-        <Input
-          id="target-weights"
-          placeholder="1:1, 2:0.5"
-          value={(target.weights ?? [])
-            .map((weight) => `${weight.fixture_id}:${weight.weight}`)
-            .join(", ")}
-          onChange={(event) => onChange({ ...target, weights: parseWeights(event.target.value) })}
-        />
-        <FieldDescription>
-          Optional immutable 0–1 fixture weights, compiled into the spatial cache.
-        </FieldDescription>
-      </Field>
+      {advanced && (
+        <Field>
+          <FieldLabel htmlFor="target-weights">Fixture weights</FieldLabel>
+          <Input
+            id="target-weights"
+            placeholder="1:1, 2:0.5"
+            value={(target.weights ?? [])
+              .map((weight) => `${weight.fixture_id}:${weight.weight}`)
+              .join(", ")}
+            onChange={(event) => onChange({ ...target, weights: parseWeights(event.target.value) })}
+          />
+          <FieldDescription>
+            Optional immutable 0–1 fixture weights, compiled into the spatial cache.
+          </FieldDescription>
+        </Field>
+      )}
     </>
   );
 }

@@ -152,7 +152,6 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
         if (request !== requestRef.current) return;
         compiledKeyRef.current = compileKey;
         dispatchPreviewFrame(frame);
-        projectActions.setPreviewResult(frame.generation);
       })
       .catch((error) => {
         if (request !== requestRef.current) return;
@@ -249,6 +248,7 @@ function authoringDescriptor(
 
 function dispatchPreviewFrame(frame: ProjectPreviewFrame) {
   window.dispatchEvent(new CustomEvent("engine:project-preview-frame", { detail: frame }));
+  projectActions.setPreviewResult(frame);
 }
 
 export function formatPreviewError(error: unknown) {

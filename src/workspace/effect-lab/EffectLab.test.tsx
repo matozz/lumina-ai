@@ -64,6 +64,38 @@ describe("Effect Lab safe authoring", () => {
     expect(useProjectStore.getState().selectedCueRef).toBeTruthy();
   });
 
+  it("starts on all Stage fixtures and opens the reusable fixture-area editor", async () => {
+    workspaceActions.setAdvancedMode(false);
+    projectActions.setSelectedTargetSetId("columns");
+    render(<EffectLabHarness />);
+
+    await waitFor(() => expect(useProjectStore.getState().selectedTargetSetId).toBe("all"));
+    expect(screen.getByText("Previewing Main Stage")).toBeTruthy();
+    expect(screen.getByText("All fixtures · 16")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit areas" }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByText("Fixture area editor")).toBeTruthy();
+    expect(screen.getByRole("grid", { name: "TargetSet fixture preview" })).toBeTruthy();
+  });
+
+  it("disables Effects that the selected Stage fixtures cannot render", async () => {
+    const catalog = productionCatalog();
+    const pan = structuredClone(catalog.effects[0]);
+    pan.id = "builtin.movement.pan-sweep";
+    pan.name = "Pan Sweep";
+    pan.catalog.family = "movement";
+    pan.catalog.required_attributes = ["position.pan", "intensity"];
+    productionCatalogActions.setCatalog({ ...catalog, effects: [...catalog.effects, pan] });
+
+    render(<EffectLabHarness />);
+
+    const unavailable = await screen.findByRole("button", {
+      name: /Pan Sweep.*Needs pan movement/,
+    });
+    expect(unavailable.hasAttribute("disabled")).toBe(true);
+  });
+
   it("customizes a built-in without mutating or persisting its pinned identity", async () => {
     render(<EffectLabHarness />);
 

@@ -28,9 +28,13 @@ export class CanvasRenderer {
     this.dirty = true;
   }
 
-  applyFrame(outputs: FixtureFramePayload[], _full: boolean): void {
+  applyFrame(
+    outputs: FixtureFramePayload[],
+    _full: boolean,
+    intensityPreviewColor?: [number, number, number],
+  ): void {
     for (const frame of outputs) {
-      const out = toPreviewOutput(frame);
+      const out = toPreviewOutput(frame, intensityPreviewColor);
       const visual = this.fixtures.get(out.id);
       if (visual) {
         visual.applyOutput(out.r, out.g, out.b, out.dimmer);
