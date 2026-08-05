@@ -955,7 +955,7 @@ fn render_preview_session(
                 id: instance.as_str().to_string(),
                 start_beat: 0.0,
                 phase_offset: 0.0,
-                multiplier: 1.0,
+                multiplier: preview_instance_speed(show, instance.as_str()),
             });
             RenderSource::Live(&live_phasers)
         }
@@ -973,7 +973,7 @@ fn render_preview_session(
                 id: layer.instance.as_str().to_string(),
                 start_beat: 0.0,
                 phase_offset: 0.0,
-                multiplier: 1.0,
+                multiplier: preview_instance_speed(show, layer.instance.as_str()),
             }));
             RenderSource::Live(&live_phasers)
         }
@@ -993,6 +993,19 @@ fn render_preview_session(
         layout_coords: show.coords.clone(),
         outputs,
     })
+}
+
+fn preview_instance_speed(show: &crate::compiler::CompiledShow, instance_id: &str) -> f64 {
+    show.effect_instances
+        .get(instance_id)
+        .and_then(|instance| {
+            let definition = show.effect_definitions.get(instance.definition.index())?;
+            let handle = definition.parameter_handle(SPEED_PARAMETER_ID)?;
+            instance
+                .resolve_parameter(definition, handle)
+                .and_then(|value| value.as_scalar())
+        })
+        .unwrap_or(1.0)
 }
 
 fn project_diagnostic(path: impl Into<String>, message: impl Into<String>) -> Diagnostic {
@@ -1030,8 +1043,8 @@ async fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), String> {
 mod tests {
     use super::{
         atomic_write, compile_dsl, is_live_catalog_instance, live_effect_catalog, load_project,
-        preview_dsl, preview_effect_loop, preview_layout, resolve_production_cue_recipe,
-        save_project, SAVE_SEQUENCE,
+        preview_dsl, preview_effect_loop, preview_instance_speed, preview_layout,
+        resolve_production_cue_recipe, save_project, SAVE_SEQUENCE,
     };
     use crate::document::{
         load_project_bundle, valid_bundle, AssetRef, CueRecipeRef, LayoutFixtureSizeOverride,
@@ -1178,6 +1191,45 @@ mod tests {
         assert_eq!(cue.compatible_stage_ref, stage_ref);
         assert_eq!(cue.layers.len(), 1);
         assert_eq!(cue.layers[0].target_set_ref.target_set_id, "all");
+    }
+
+    #[test]
+    fn authoring_preview_uses_the_cue_speed_override() {
+        let mut bundle = valid_bundle();
+        let catalog = crate::document::builtin_production_catalog().expect("catalog");
+        let traveler = catalog
+            .effects
+            .iter()
+            .find(|effect| effect.id == "builtin.intensity.wave")
+            .expect("traveler")
+            .clone();
+        let reference = AssetRef {
+            id: traveler.id.clone(),
+            revision: traveler.revision,
+        };
+        bundle.effects = vec![traveler];
+        bundle.manifest.effect_refs = vec![reference.clone()];
+        bundle.cues[0].layers[0].effect_ref = reference;
+        bundle.cues[0].risk_summary =
+            serde_json::from_value(serde_json::json!({ "strobe_risk": "none" }))
+                .expect("traveler risk summary");
+        bundle.cues[0].layers[0].parameter_overrides.insert(
+            "speed".to_string(),
+            serde_json::from_value(serde_json::json!({ "type": "scalar", "value": 2.0 }))
+                .expect("speed override"),
+        );
+        let source = serde_json::to_string(&bundle).expect("serialize Project");
+        let snapshot = crate::compiler::Compiler::compile_active_project(
+            load_project_bundle(&source).expect("Project validates"),
+        )
+        .expect("Project compiles");
+        let cue = snapshot
+            .cues
+            .get(&bundle.manifest.cue_refs[0])
+            .expect("compiled Cue");
+        let instance_id = cue.layers[0].instance.as_str();
+
+        assert_eq!(preview_instance_speed(&snapshot.show, instance_id), 2.0);
     }
 
     #[test]

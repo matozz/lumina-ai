@@ -1,11 +1,17 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import type { ProjectPreviewFrame } from "@/bridge/types";
 import {
   authoringSessionKey,
   authoringTransportActions,
   useAuthoringTransportStore,
 } from "@/authoring/transport";
 import { activeStage, assetKey, exactAsset } from "@/document/projectModel";
-import { projectActions, simplifyLegacyCueNames, useProjectStore } from "./project";
+import {
+  PREVIEW_DARK_FRAME_NOTICE_THRESHOLD,
+  projectActions,
+  simplifyLegacyCueNames,
+  useProjectStore,
+} from "./project";
 
 describe("Stage 7 Project state", () => {
   beforeEach(() => projectActions.reset());
@@ -41,6 +47,27 @@ describe("Stage 7 Project state", () => {
       loopEnabled: true,
     });
     expect(sessions[journeyKey]?.cursorTick).toBe(7_680);
+  });
+
+  it("tracks sustained dark preview frames and resets after visible output", () => {
+    const frame = previewFrame(0);
+    for (let index = 1; index < PREVIEW_DARK_FRAME_NOTICE_THRESHOLD; index += 1) {
+      projectActions.setPreviewResult(frame);
+    }
+    expect(useProjectStore.getState().previewSummary?.consecutiveDarkFrames).toBe(
+      PREVIEW_DARK_FRAME_NOTICE_THRESHOLD - 1,
+    );
+
+    projectActions.setPreviewResult(frame);
+    expect(useProjectStore.getState().previewSummary?.consecutiveDarkFrames).toBe(
+      PREVIEW_DARK_FRAME_NOTICE_THRESHOLD,
+    );
+
+    projectActions.setPreviewResult(previewFrame(0.8));
+    expect(useProjectStore.getState().previewSummary).toMatchObject({
+      litFixtureCount: 1,
+      consecutiveDarkFrames: 0,
+    });
   });
 
   it("duplicates a multi-tempo Arrangement without moving clip or keyframe ticks", () => {
@@ -489,3 +516,23 @@ describe("Stage 7 Project state", () => {
     expect(exactAsset(bundle.cues, cueRef)?.name).toBe("Pulse Cue");
   });
 });
+
+function previewFrame(intensity: number): ProjectPreviewFrame {
+  return {
+    generation: 1,
+    source: { type: "authoring_draft" },
+    context: { type: "stage" },
+    project_ref: { id: "project", revision: 1 },
+    stage_ref: { id: "stage", revision: 1 },
+    arrangement_ref: { id: "arrangement", revision: 1 },
+    playhead_tick: 0,
+    layout_coords: [],
+    outputs: [
+      {
+        id: 1,
+        profile_id: "generic-rgb",
+        attributes: [{ id: "intensity", value: { type: "scalar", value: intensity } }],
+      },
+    ],
+  };
+}

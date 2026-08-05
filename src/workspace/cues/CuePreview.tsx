@@ -5,7 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { exactAsset } from "@/document/projectModel";
 import { authoringDraftSelectors, useAuthoringDraftStore } from "@/stores/authoringDraft";
 import { productionCatalogSelectors, useProductionCatalogStore } from "@/stores/productionCatalog";
-import { projectSelectors, useProjectStore } from "@/stores/project";
+import {
+  PREVIEW_DARK_FRAME_NOTICE_THRESHOLD,
+  projectSelectors,
+  useProjectStore,
+} from "@/stores/project";
 import { materializeAuthoringPreview } from "../authoringPreviewBundle";
 
 export function CuePreview() {
@@ -32,6 +36,8 @@ export function CuePreview() {
   const showIntensityWithoutColor = Boolean(
     cue && !(cue.capability_summary.required_attributes ?? []).includes("color.rgb"),
   );
+  const noVisibleOutput =
+    (previewSummary?.consecutiveDarkFrames ?? 0) >= PREVIEW_DARK_FRAME_NOTICE_THRESHOLD;
 
   return (
     <section className="bg-background relative flex h-full min-h-0 flex-col">
@@ -40,6 +46,7 @@ export function CuePreview() {
         <span className="text-xs font-medium">Cue loop preview</span>
         <Badge variant="outline">Authoring Preview</Badge>
         {showIntensityWithoutColor && <Badge variant="outline">Intensity visualization</Badge>}
+        {noVisibleOutput && <Badge variant="secondary">No visible output</Badge>}
         {cueDraft?.status === "invalid" && <Badge variant="destructive">Held at LKG</Badge>}
         {cueDraft && (cueDraft.soloLayerId || cueDraft.mutedLayerIds.length > 0) && (
           <Badge variant="secondary">Audition filter</Badge>
@@ -60,9 +67,6 @@ export function CuePreview() {
         <CanvasView frameSource="preview" showIntensityWithoutColor={showIntensityWithoutColor} />
         {!cue && <PreviewMessage>Create or select a Cue to preview.</PreviewMessage>}
         {cue && error && <PreviewMessage>{error}</PreviewMessage>}
-        {cue && !error && previewSummary?.litFixtureCount === 0 && (
-          <PreviewMessage>This frame is dark. Press Play or move the playhead.</PreviewMessage>
-        )}
       </div>
     </section>
   );

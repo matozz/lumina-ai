@@ -1302,6 +1302,42 @@ mod tests {
     }
 
     #[test]
+    fn cue_intensity_override_scales_spatial_output_without_flattening_it() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        let traveler = catalog
+            .effects
+            .iter()
+            .find(|effect| effect.id == "builtin.intensity.wave")
+            .expect("traveler effect");
+        let document = effect_sample_document(
+            traveler,
+            BTreeMap::from([(
+                crate::engine::effect::INTENSITY_PARAMETER_ID.to_string(),
+                ParameterValueDSL::Scalar(0.5),
+            )]),
+        );
+        let show = Compiler::compile_document(document).expect("traveler compiles");
+        let active = effect_sample_live(&show);
+        let frames = render_at(
+            &show,
+            RenderTime { beat: 0.25 },
+            RenderSource::Live(&active),
+        );
+        let intensities = frames
+            .iter()
+            .filter_map(frame_intensity)
+            .collect::<Vec<_>>();
+        let minimum = intensities.iter().copied().fold(f64::INFINITY, f64::min);
+        let maximum = intensities
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max);
+
+        assert!(minimum < maximum, "traveler must retain spatial variation");
+        assert!(maximum <= 0.5 + f64::EPSILON, "override is a maximum");
+    }
+
+    #[test]
     fn production_recipes_reject_implicit_shared_attribute_writers() {
         let mut catalog = builtin_production_catalog().expect("catalog");
         let mut overlapping = catalog.cue_recipes[2].layers[0].clone();

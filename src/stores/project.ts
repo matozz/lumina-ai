@@ -34,6 +34,8 @@ import { layoutCapacity } from "@/document/layoutDefinition";
 import { analyzeStageTopology, resolveTargetSet } from "@/document/stageTopology";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
 
+export const PREVIEW_DARK_FRAME_NOTICE_THRESHOLD = 45;
+
 export type PreviewSourceMode = "authoring_draft" | "rehearsal_draft" | "rehearsal_published";
 
 export interface StageLayoutUpgradeRequest {
@@ -62,7 +64,11 @@ export interface ProjectState {
   rehearsalPublishedRevision: number | null;
   previewGeneration: number | null;
   previewError: string | null;
-  previewSummary: { fixtureCount: number; litFixtureCount: number } | null;
+  previewSummary: {
+    fixtureCount: number;
+    litFixtureCount: number;
+    consecutiveDarkFrames: number;
+  } | null;
   history: ProjectHistoryEntry[];
   historyCursor: number;
   savedHistoryCursor: number;
@@ -691,20 +697,30 @@ export const projectActions = {
   setLiveViewMode: (liveViewMode: "live" | "rehearsal") =>
     useProjectStore.setState({ liveViewMode }),
   setPreviewResult: (frame: ProjectPreviewFrame) =>
-    useProjectStore.setState({
-      previewGeneration: frame.generation,
-      previewError: null,
-      previewSummary: {
-        fixtureCount: frame.outputs.length,
-        litFixtureCount: frame.outputs.filter((output) =>
-          output.attributes.some(
-            (attribute) =>
-              attribute.id === "intensity" &&
-              attribute.value.type === "scalar" &&
-              attribute.value.value > 0.01,
-          ),
-        ).length,
-      },
+    useProjectStore.setState((state) => {
+      const litFixtureCount = frame.outputs.filter((output) =>
+        output.attributes.some(
+          (attribute) =>
+            attribute.id === "intensity" &&
+            attribute.value.type === "scalar" &&
+            attribute.value.value > 0.01,
+        ),
+      ).length;
+      const samePreview = state.previewGeneration === frame.generation;
+      return {
+        previewGeneration: frame.generation,
+        previewError: null,
+        previewSummary: {
+          fixtureCount: frame.outputs.length,
+          litFixtureCount,
+          consecutiveDarkFrames:
+            litFixtureCount === 0
+              ? samePreview
+                ? (state.previewSummary?.consecutiveDarkFrames ?? 0) + 1
+                : 1
+              : 0,
+        },
+      };
     }),
   setPreviewError: (previewError: string) =>
     useProjectStore.setState({ previewError, previewSummary: null }),

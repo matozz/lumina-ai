@@ -5,7 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { activeStage, exactAsset } from "@/document/projectModel";
 import { authoringDraftSelectors, useAuthoringDraftStore } from "@/stores/authoringDraft";
 import { productionCatalogSelectors, useProductionCatalogStore } from "@/stores/productionCatalog";
-import { projectSelectors, useProjectStore } from "@/stores/project";
+import {
+  PREVIEW_DARK_FRAME_NOTICE_THRESHOLD,
+  projectSelectors,
+  useProjectStore,
+} from "@/stores/project";
 import { materializeAuthoringPreview } from "../authoringPreviewBundle";
 
 export function EffectLabPreview() {
@@ -33,6 +37,8 @@ export function EffectLabPreview() {
   const showIntensityWithoutColor = Boolean(
     effect && !(effect.catalog.required_attributes ?? []).includes("color.rgb"),
   );
+  const noVisibleOutput =
+    (previewSummary?.consecutiveDarkFrames ?? 0) >= PREVIEW_DARK_FRAME_NOTICE_THRESHOLD;
 
   return (
     <section className="bg-background relative flex h-full min-h-0 flex-col">
@@ -41,6 +47,7 @@ export function EffectLabPreview() {
         <span className="text-xs font-medium">Effect loop preview</span>
         <Badge variant="outline">Authoring Preview</Badge>
         {showIntensityWithoutColor && <Badge variant="outline">Intensity visualization</Badge>}
+        {noVisibleOutput && <Badge variant="secondary">No visible output</Badge>}
         {effectDraft?.status === "invalid" && <Badge variant="destructive">Held at LKG</Badge>}
         <span className="text-muted-foreground ml-auto truncate text-[10px]">
           {effect ? `${effect.name} · ${stage.name}` : "No Effect selected"}
@@ -58,9 +65,6 @@ export function EffectLabPreview() {
         <CanvasView frameSource="preview" showIntensityWithoutColor={showIntensityWithoutColor} />
         {!effect && <PreviewMessage>Create or select an Effect to preview.</PreviewMessage>}
         {effect && error && <PreviewMessage>{error}</PreviewMessage>}
-        {effect && !error && previewSummary?.litFixtureCount === 0 && (
-          <PreviewMessage>This frame is dark. Press Play or move the playhead.</PreviewMessage>
-        )}
       </div>
     </section>
   );
