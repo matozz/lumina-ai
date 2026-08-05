@@ -54,7 +54,7 @@ describe("Cue Builder safe authoring", () => {
   it("resolves a Production recipe into a session-only draft before save", async () => {
     render(<Harness />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*2L.*r1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1L.*r1/ }));
 
     await waitFor(() => expect(screen.getByLabelText("Cue name")).toBeTruthy());
     expect(useProjectStore.getState().bundle.cues).toHaveLength(0);
@@ -64,7 +64,7 @@ describe("Cue Builder safe authoring", () => {
 
   it("keeps mute, solo, overrides, and automation local until one immutable save", async () => {
     render(<Harness />);
-    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*2L.*r1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1L.*r1/ }));
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Mute layer 2" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Mute layer 2" }));
@@ -90,7 +90,7 @@ describe("Cue Builder safe authoring", () => {
 
   it("requires confirmation before adding a high-risk strobe layer", async () => {
     render(<Harness />);
-    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*2L.*r1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1L.*r1/ }));
     await waitFor(() => expect(screen.getByLabelText("Cue name")).toBeTruthy());
 
     const strobe = catalog.effects.find((effect) => effect.catalog.strobe_risk === "high")!;
@@ -107,7 +107,7 @@ describe("Cue Builder safe authoring", () => {
 
   it("duplicates automation with unique IDs and keeps layer ordering deterministic", async () => {
     render(<Harness />);
-    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*2L.*r1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1L.*r1/ }));
     await waitFor(() => expect(screen.getByLabelText("Cue name")).toBeTruthy());
 
     fireEvent.click(screen.getAllByRole("button", { name: "Add automation" })[0]);
@@ -132,7 +132,7 @@ describe("Cue Builder safe authoring", () => {
     productionCatalogActions.setCatalog(catalog);
     render(<Harness />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*2L.*r1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1L.*r1/ }));
     await waitFor(() => expect(screen.getByText("Selected layer")).toBeTruthy());
 
     const editor = screen
@@ -181,6 +181,7 @@ function cueFixture() {
   cue.id = "cue-four-on-floor";
   cue.layers[0].id = "kick-a";
   cue.layers[1].id = "kick-b";
+  cue.layers[1].mix_overrides = [{ attribute_id: "intensity", policy: "htp" }];
   const catalog: ProductionCatalog = {
     schema_version: 1,
     effects: [effect satisfies EffectDefinitionDocument, strobe satisfies EffectDefinitionDocument],
@@ -190,10 +191,10 @@ function cueFixture() {
         id: "recipe.four-on-floor",
         revision: 1,
         name: "Four on Floor",
-        description: "Alternating rhythmic layers.",
+        description: "A single coherent rhythmic layer.",
         nominal_length_ticks: 3_840,
         trigger_policy: { mode: "timeline", quantize: "beat" },
-        layers: cue.layers.map((layer) => ({
+        layers: cue.layers.slice(0, 1).map((layer) => ({
           id: layer.id,
           effect_ref: layer.effect_ref,
           target: { type: "all" },

@@ -3,8 +3,8 @@ use super::validation::{validate_effect_definition_document, validate_parameter_
 use super::{
     AssetRef, CenterEdgesRegion, CueCapabilitySummary, CueDefinition, CueLayer, CueQuantize,
     CueRiskSummary, CueTriggerMode, CueTriggerPolicy, DirectionDSL, EffectDefinitionDSL,
-    EffectDefinitionDocument, EffectFamilyDSL, EffectInstanceDSL, GeneratorDSL, GroupDSL,
-    GroupFixturesDSL, GroupRangeDSL, LayoutCapabilityDSL, LayoutDSL, LayoutDefinition,
+    EffectDefinitionDocument, EffectFamilyDSL, EffectInstanceDSL, EffectNodeDSL, GeneratorDSL,
+    GroupDSL, GroupFixturesDSL, GroupRangeDSL, LayoutCapabilityDSL, LayoutDSL, LayoutDefinition,
     LayoutGeometry, LayoutType, MetaDSL, OscillatorWaveformDSL, ParameterOverridePolicyDSL,
     ParameterValueDSL, PatchDSL, ProjectBundle, ShowDocumentV4, StageDocument, StrobeRiskDSL,
     TargetSetDefinition, TargetSetRef, TargetSetSelector, TargetingSceneDefinition,
@@ -12,7 +12,7 @@ use super::{
 };
 use crate::compiler::diagnostic::{
     Diagnostic, CATALOG_METADATA_INVALID, CATALOG_OUTPUT_INVALID, CATALOG_PARAMETER_INVALID,
-    CUE_RECIPE_INVALID, CUE_RECIPE_UNRESOLVED,
+    CUE_LAYER_ATTRIBUTE_CONFLICT, CUE_RECIPE_INVALID, CUE_RECIPE_UNRESOLVED,
 };
 use crate::compiler::Compiler;
 use crate::engine::profile::profile_by_id;
@@ -911,6 +911,70 @@ fn validate_cue_recipe<'a>(
             );
         }
     }
+    validate_recipe_layer_composition(catalog, recipe, &path, diagnostics);
+}
+
+fn validate_recipe_layer_composition(
+    catalog: &ProductionCatalog,
+    recipe: &CueRecipeDefinition,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for (left_index, left) in recipe.layers.iter().enumerate() {
+        let Some(left_effect) = catalog.effects.iter().find(|effect| {
+            effect.id == left.effect_ref.id && effect.revision == left.effect_ref.revision
+        }) else {
+            continue;
+        };
+        let left_attributes = effect_writer_attributes(left_effect);
+        for (right_index, right) in recipe.layers.iter().enumerate().skip(left_index + 1) {
+            let Some(right_effect) = catalog.effects.iter().find(|effect| {
+                effect.id == right.effect_ref.id && effect.revision == right.effect_ref.revision
+            }) else {
+                continue;
+            };
+            let right_attributes = effect_writer_attributes(right_effect);
+            let conflicts = left_attributes
+                .intersection(&right_attributes)
+                .cloned()
+                .collect::<Vec<_>>();
+            if conflicts.is_empty() {
+                continue;
+            }
+            diagnostics.push(
+                Diagnostic::error(
+                    CUE_LAYER_ATTRIBUTE_CONFLICT,
+                    format!("{path}.layers[{right_index}].effect_ref"),
+                    format!(
+                        "Production recipe layers {:?} and {:?} both write {}.",
+                        left.id,
+                        right.id,
+                        conflicts.join(", ")
+                    ),
+                    "Use one coherent Effect per default recipe, or compose orthogonal attributes in a dedicated typed Effect.",
+                )
+                .with_asset("cue_recipe", recipe.id.clone(), recipe.revision),
+            );
+        }
+    }
+}
+
+fn effect_writer_attributes(effect: &EffectDefinitionDocument) -> BTreeSet<String> {
+    let mut attributes = BTreeSet::new();
+    let mut has_attribute_set_writer = false;
+    for node in &effect.graph.nodes {
+        if let EffectNodeDSL::AttributeWriter { attribute_id, .. } = node {
+            if let Some(attribute_id) = attribute_id {
+                attributes.insert(attribute_id.clone());
+            } else {
+                has_attribute_set_writer = true;
+            }
+        }
+    }
+    if has_attribute_set_writer || attributes.is_empty() {
+        attributes.extend(effect.catalog.required_attributes.iter().cloned());
+    }
+    attributes
 }
 
 pub fn resolve_cue_recipe(
@@ -1238,6 +1302,21 @@ mod tests {
     }
 
     #[test]
+    fn production_recipes_reject_implicit_shared_attribute_writers() {
+        let mut catalog = builtin_production_catalog().expect("catalog");
+        let mut overlapping = catalog.cue_recipes[2].layers[0].clone();
+        overlapping.id = "implicit-gradient".to_string();
+        catalog.cue_recipes[0].layers.push(overlapping);
+
+        let diagnostics = validate_production_catalog(&catalog);
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == CUE_LAYER_ATTRIBUTE_CONFLICT
+                && diagnostic.path == "cue_recipes[0].layers[1].effect_ref"
+                && diagnostic.message.contains("intensity")
+        }));
+    }
+
+    #[test]
     fn recipe_resolution_is_stage_bound_and_deterministic() {
         let catalog = builtin_production_catalog().expect("catalog");
         let bundle = valid_bundle();
@@ -1281,7 +1360,7 @@ mod tests {
             &bundle,
             &CueRecipeRef {
                 id: "recipe.moving-sweep".to_string(),
-                revision: 1,
+                revision: 2,
             },
             &bundle.manifest.stage_ref,
             "moving".to_string(),

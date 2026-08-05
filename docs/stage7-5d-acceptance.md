@@ -35,20 +35,24 @@ Catalog authority 为 [`production-catalog-v1.json`](../catalog/production-catal
 colorfulness、required attributes、layout capabilities、strobe risk、参数摘要和完整 schema authoring metadata。
 `Safe Strobe Pulse` 使用安全默认值、声明 `high` risk，不是默认选中项；加入 Cue 前必须显式确认。
 
-| Recipe                | Layers | Resolution intent                        |
-| --------------------- | -----: | ---------------------------------------- |
-| Full-stage Drop Pulse |      1 | active Stage 的全场 compatible TargetSet |
-| Matrix Spatial Chase  |      1 | matrix/row-capable target                |
-| Slow Atmospheric Look |      1 | coordinate-capable full-stage look       |
-| 3×3 Zone Burst        |      1 | partition + compatible TargetingScene    |
-| Moving Sweep          |      2 | pan/tilt fixture attributes              |
-| Layered Peak Build    |      3 | capability-resolved peak layers          |
-| Strip / Bar Traveler  |      1 | linear/coordinate target                 |
-| Build / Transition    |      2 | full-stage fade + spatial wipe           |
+| Recipe                           | Layers | Resolution intent                        |
+| -------------------------------- | -----: | ---------------------------------------- |
+| Full-stage Drop Pulse            |      1 | active Stage 的全场 compatible TargetSet |
+| Matrix Spatial Chase             |      1 | matrix/row-capable target                |
+| Slow Atmospheric Look            |      1 | coordinate-capable full-stage look       |
+| 3×3 Zone Burst                   |      1 | partition + compatible TargetingScene    |
+| Moving Sweep                     |      1 | pan fixture attribute                    |
+| Peak Zone Chase                  |      1 | scene-driven zone chase                  |
+| Strip / Bar Traveler             |      1 | linear/coordinate target                 |
+| Blackout-safe Build / Transition |      1 | full-stage blackout-safe transition      |
 
 共 8 个 Production Cue recipe，超过 scoped 最低 6 个。resolver 只按 Stage capability、selector/partition role 和
 scene capability 匹配；不硬编码 starter Stage、`all`、`zones-3x3` 等示例 identity。能力不足时返回稳定
 Diagnostic 和 `choose_target` recovery，不创建半有效 Cue。
+
+所有默认 recipe 都只表达一个视觉意图，不隐式叠加多个写入同一 attribute 的 Effect。Project Cue 若让两个 layer
+覆盖相同 fixture 且写入相同 attribute，后加入的 layer 必须为该 attribute 显式选择 mix policy；否则
+`CUE_LAYER_ATTRIBUTE_CONFLICT` 会阻止 preview/save。Pulse + Gradient 这类隐式强度叠加因此不会进入有效 Cue。
 
 ## Safe Authoring 与 UI 主路径
 
@@ -104,6 +108,7 @@ error、零未允许 warning。
 | strobe metadata 低报                                             | 在最高允许 speed 采样，`runtime_validation_rejects_underdeclared_strobe_risk` 拒绝 |
 | missing/stale exact revision                                     | 区分 missing 与 stale；compile/save fail closed；recoverable open 隔离坏 Cue       |
 | incompatible Stage/TargetSet/TargetingScene/fixture attribute    | recipe Add 或 Cue Save 前阻止并返回 `choose_target`/remap recovery                 |
+| overlapping layers write the same fixture attribute              | `CUE_LAYER_ATTRIBUTE_CONFLICT`；后加入层必须显式选择 mix 或更换 target/effect      |
 | Cue capability/risk summary drift                                | Rust 按实际 layers 重算并拒绝不一致；preview mute/solo 先重算临时 summary          |
 | 单一旧/坏资产                                                    | quarantine；Project 其余部分可打开，Published/Live 不变                            |
 
@@ -116,7 +121,7 @@ Publish 和 Take Live 继续在 Rust 命令入口重新验证选中的完整 dep
 - Compatibility：[`production-compatibility-v1.json`](../catalog/production-compatibility-v1.json) 覆盖 matrix、
   strip/bar、circle、frame；输出明确区分 `native`、`universal` 和 `coordinate_fallback`，16 个 Effect 均有结果。
 - Determinism：多 BPM、3/4、4/4、不同 loop 长度、180 random seeks，Seek/Replay 字节级一致。
-- Performance：30×30 / 900 fixtures、5 Production layers、180 random seeks；pinned A 平均
+- Performance：30×30 / 900 fixtures、5 个显式 HTP composition 的 Production effects、180 random seeks；pinned A 平均
   **2.615 ms/frame**，working/LKG B 平均 **2.434 ms/frame**，均低于 60Hz 的 16.67 ms frame budget。
 - A/B：相同 Stage/target/tick/seed/clock，仅 Effect/Cue exact revision 不同；不 Publish、不 Take Live、不写 transport。
 

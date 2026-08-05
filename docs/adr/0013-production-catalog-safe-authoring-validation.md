@@ -65,6 +65,10 @@ CueDefinition 继续固定一个 compatible Stage revision。Production Cue reci
 
 recipe 和生成后的 Cue 都不得硬编码 `main-stage`、`all`、`zones-3x3` 等 starter identity。
 
+默认 Production recipe 必须只有一个连贯视觉意图；不同 layer 不得写入相同 attribute。Project Cue 可以进行有意的
+多层 composition，但当 layer 覆盖同一 fixture 且写入相同 attribute 时，后加入的 layer 必须逐项声明显式 mix
+policy。未声明时 Rust authority 返回稳定冲突 Diagnostic，并阻止 preview、Save、Publish 与 Take Live。
+
 ### 3. Schema-driven parameter authoring
 
 Effect 参数编辑器只读取 pinned Effect revision 的 parameter schema，不按 Effect ID/name 分支。Production

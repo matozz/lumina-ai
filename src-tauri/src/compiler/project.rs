@@ -971,32 +971,32 @@ mod tests {
         .expect("constant effect graph");
         bundle.effects[0].name = "Pulse".to_string();
         bundle.effects[0].graph = constant_graph;
-        let mut gradient = bundle.effects[0].clone();
-        gradient.id = "gradient".to_string();
-        gradient.name = "Gradient".to_string();
-        bundle.effects.push(gradient);
+        let mut secondary = bundle.effects[0].clone();
+        secondary.id = "secondary-intensity".to_string();
+        secondary.name = "Secondary Intensity".to_string();
+        bundle.effects.push(secondary);
         bundle.manifest.effect_refs.push(AssetRef {
-            id: "gradient".to_string(),
+            id: "secondary-intensity".to_string(),
             revision: 1,
         });
 
         bundle.cues[0].layers[0].parameter_overrides.clear();
-        let mut gradient_layer = bundle.cues[0].layers[0].clone();
-        gradient_layer.id = "gradient-layer".to_string();
-        gradient_layer.effect_ref.id = "gradient".to_string();
-        gradient_layer.target_set_ref = TargetSetRef {
+        let mut secondary_layer = bundle.cues[0].layers[0].clone();
+        secondary_layer.id = "secondary-intensity-layer".to_string();
+        secondary_layer.effect_ref.id = "secondary-intensity".to_string();
+        secondary_layer.target_set_ref = TargetSetRef {
             stage_id: "stage-1".to_string(),
             stage_revision: 1,
             target_set_id: "zones-3x3".to_string(),
         };
-        gradient_layer.phase = 0.25;
-        gradient_layer.priority = 2;
-        gradient_layer.mix_overrides = vec![CueMixOverride {
+        secondary_layer.phase = 0.25;
+        secondary_layer.priority = 2;
+        secondary_layer.mix_overrides = vec![CueMixOverride {
             attribute_id: INTENSITY_ATTRIBUTE.to_string(),
             policy: CueMixPolicy::Add,
         }];
-        bundle.cues[0].name = "Pulse + Gradient".to_string();
-        bundle.cues[0].layers.push(gradient_layer);
+        bundle.cues[0].name = "Explicit Add Mix".to_string();
+        bundle.cues[0].layers.push(secondary_layer);
         bundle
     }
 
@@ -1059,46 +1059,49 @@ mod tests {
 
     fn production_catalog_project() -> ProjectBundle {
         let mut bundle = targeting_project(900, 30, 30);
-        bundle.stages[0].target_sets.push(TargetSetDefinition {
-            id: "all-columns".to_string(),
-            name: "All Columns".to_string(),
-            selector: TargetSetSelector::Columns {
-                indices: (0..30).collect(),
-            },
-            weights: Vec::new(),
-        });
         let catalog = builtin_production_catalog().expect("Production Catalog");
         let stage_ref = bundle.manifest.stage_ref.clone();
-        let mut cue = resolve_cue_recipe(
-            &catalog,
-            &bundle,
-            &CueRecipeRef {
-                id: "recipe.layered-peak".to_string(),
-                revision: 1,
-            },
-            &stage_ref,
-            "production-five-layer".to_string(),
-            1,
-            "Production Five Layer".to_string(),
-        )
-        .expect("three-layer peak resolves");
-        let transition = resolve_cue_recipe(
-            &catalog,
-            &bundle,
-            &CueRecipeRef {
-                id: "recipe.build-transition".to_string(),
-                revision: 1,
-            },
-            &stage_ref,
-            "production-transition".to_string(),
-            1,
-            "Production Transition".to_string(),
-        )
-        .expect("two-layer transition resolves");
-        let layer_offset = cue.layers.len();
-        for (index, mut layer) in transition.layers.into_iter().enumerate() {
-            layer.layer = i32::try_from(layer_offset + index).expect("five layers fit i32");
+        let recipe_refs = [
+            ("recipe.four-on-floor", 1),
+            ("recipe.rainbow-wash", 1),
+            ("recipe.radial-bloom", 1),
+            ("recipe.strip-traveler", 1),
+            ("recipe.build-transition", 2),
+        ];
+        let mut resolved = recipe_refs
+            .iter()
+            .enumerate()
+            .map(|(index, (id, revision))| {
+                resolve_cue_recipe(
+                    &catalog,
+                    &bundle,
+                    &CueRecipeRef {
+                        id: (*id).to_string(),
+                        revision: *revision,
+                    },
+                    &stage_ref,
+                    format!("production-layer-{index}"),
+                    1,
+                    format!("Production Layer {index}"),
+                )
+                .unwrap_or_else(|diagnostics| panic!("{id} resolves: {diagnostics:#?}"))
+            })
+            .collect::<Vec<_>>();
+        let mut cue = resolved.remove(0);
+        cue.id = "production-five-layer".to_string();
+        cue.name = "Explicit Five-layer Stress".to_string();
+        for (index, resolved_cue) in resolved.into_iter().enumerate() {
+            let mut layer = resolved_cue
+                .layers
+                .into_iter()
+                .next()
+                .expect("Production recipe has one coherent layer");
+            layer.layer = i32::try_from(index + 1).expect("five layers fit i32");
             layer.priority = layer.layer;
+            layer.mix_overrides.push(CueMixOverride {
+                attribute_id: INTENSITY_ATTRIBUTE.to_string(),
+                policy: CueMixPolicy::Htp,
+            });
             cue.layers.push(layer);
         }
         cue.capability_summary.required_attributes =

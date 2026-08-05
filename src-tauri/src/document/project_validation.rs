@@ -2,17 +2,17 @@ use super::validation::{validate_effect_definition_document, validate_parameter_
 use super::{
     layout_capacity, layout_grid_dimensions, migrate_project_bundle, validate_layout_geometry,
     ArrangementAutomationTarget, ArrangementDocument, AssetRef, CenterEdgesRegion, CueDefinition,
-    CueLayer, CueMixOverride, EffectDefinitionDocument, LayoutDefinition, LayoutGeometry,
-    ParameterOverridePolicyDSL, ParameterValueDSL, ProjectBundle, StageDocument,
+    CueLayer, CueMixOverride, EffectDefinitionDocument, EffectNodeDSL, LayoutDefinition,
+    LayoutGeometry, ParameterOverridePolicyDSL, ParameterValueDSL, ProjectBundle, StageDocument,
     TargetSetDefinition, TargetSetSelector, TargetingDuration, TargetingDurationUnit,
     TargetingTransition, ARRANGEMENT_DOCUMENT_SCHEMA_VERSION, CUE_DEFINITION_SCHEMA_VERSION,
     EFFECT_DEFINITION_SCHEMA_VERSION, LAYOUT_DEFINITION_SCHEMA_VERSION,
     PROJECT_BUNDLE_SCHEMA_VERSION, PROJECT_MANIFEST_SCHEMA_VERSION, STAGE_DOCUMENT_SCHEMA_VERSION,
 };
 use crate::compiler::diagnostic::{
-    Diagnostic, PROJECT_CAPABILITY_MISMATCH, PROJECT_DUPLICATE_ASSET, PROJECT_REFERENCE_CYCLE,
-    PROJECT_REFERENCE_NOT_FOUND, PROJECT_REVISION_MISMATCH, PROJECT_SCHEMA_INVALID,
-    TARGET_SET_INVALID,
+    Diagnostic, CUE_LAYER_ATTRIBUTE_CONFLICT, PROJECT_CAPABILITY_MISMATCH, PROJECT_DUPLICATE_ASSET,
+    PROJECT_REFERENCE_CYCLE, PROJECT_REFERENCE_NOT_FOUND, PROJECT_REVISION_MISMATCH,
+    PROJECT_SCHEMA_INVALID, TARGET_SET_INVALID,
 };
 use crate::engine::effect::is_beat_sync_speed_multiplier;
 use crate::engine::profile::profile_by_id;
@@ -346,6 +346,7 @@ fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
             }
             validate_cue_layer(bundle, stage, layout, layer, &path, diagnostics);
         }
+        validate_cue_layer_composition(bundle, stage, layout, cue, &cue_path, diagnostics);
         validate_cue_summary(bundle, cue, &cue_path, diagnostics);
         let mut lane_ids = BTreeSet::new();
         for (lane_index, lane) in cue.automation_lanes.iter().enumerate() {
@@ -401,6 +402,131 @@ fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
             }
         }
     }
+}
+
+fn validate_cue_layer_composition(
+    bundle: &ProjectBundle,
+    stage: &StageDocument,
+    layout: &LayoutDefinition,
+    cue: &CueDefinition,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for (left_index, left) in cue.layers.iter().enumerate() {
+        let Some(left_effect) = exact_asset(&bundle.effects, &left.effect_ref, |asset| {
+            (&asset.id, asset.revision)
+        }) else {
+            continue;
+        };
+        let left_fixtures = cue_layer_fixture_ids(stage, layout, left);
+        let left_attributes = effect_writer_attributes(left_effect);
+        for (right_index, right) in cue.layers.iter().enumerate().skip(left_index + 1) {
+            let Some(right_effect) = exact_asset(&bundle.effects, &right.effect_ref, |asset| {
+                (&asset.id, asset.revision)
+            }) else {
+                continue;
+            };
+            let right_fixtures = cue_layer_fixture_ids(stage, layout, right);
+            if left_fixtures.is_disjoint(&right_fixtures) {
+                continue;
+            }
+            let right_attributes = effect_writer_attributes(right_effect);
+            let conflicts = left_attributes
+                .intersection(&right_attributes)
+                .filter(|attribute| !has_explicit_mix_policy(right, attribute))
+                .cloned()
+                .collect::<Vec<_>>();
+            if conflicts.is_empty() {
+                continue;
+            }
+            diagnostics.push(
+                Diagnostic::error(
+                    CUE_LAYER_ATTRIBUTE_CONFLICT,
+                    format!("{path}.layers[{right_index}].mix_overrides"),
+                    format!(
+                        "Cue layers {:?} and {:?} overlap fixtures and both write {}; the later layer has no explicit mix policy.",
+                        left.id,
+                        right.id,
+                        conflicts.join(", ")
+                    ),
+                    "Keep one visual intent, choose non-overlapping TargetSets, or explicitly select a mix policy for every shared attribute.",
+                )
+                .with_recovery(
+                    "choose_mix_policy",
+                    "Choose explicit mix policy",
+                    Some(format!("{path}.layers[{right_index}].mix_overrides")),
+                ),
+            );
+        }
+    }
+}
+
+fn effect_writer_attributes(effect: &EffectDefinitionDocument) -> BTreeSet<String> {
+    let mut attributes = BTreeSet::new();
+    let mut has_attribute_set_writer = false;
+    for node in &effect.graph.nodes {
+        if let EffectNodeDSL::AttributeWriter { attribute_id, .. } = node {
+            if let Some(attribute_id) = attribute_id {
+                attributes.insert(attribute_id.clone());
+            } else {
+                has_attribute_set_writer = true;
+            }
+        }
+    }
+    if has_attribute_set_writer || attributes.is_empty() {
+        attributes.extend(effect.catalog.required_attributes.iter().cloned());
+    }
+    attributes
+}
+
+fn has_explicit_mix_policy(layer: &CueLayer, attribute_id: &str) -> bool {
+    layer
+        .mix_overrides
+        .iter()
+        .any(|mix_override| mix_override.attribute_id == attribute_id)
+}
+
+fn cue_layer_fixture_ids(
+    stage: &StageDocument,
+    layout: &LayoutDefinition,
+    layer: &CueLayer,
+) -> BTreeSet<u32> {
+    if let Some(scene_ref) = &layer.targeting_scene_ref {
+        if let Some(scene) = stage
+            .targeting_scenes
+            .iter()
+            .find(|scene| scene.id == scene_ref.targeting_scene_id)
+        {
+            return scene
+                .steps
+                .iter()
+                .filter_map(|step| {
+                    let target = stage
+                        .target_sets
+                        .iter()
+                        .find(|target| target.id == step.selection.target_set_id)?;
+                    let resolved = resolve_target_set(stage, layout, target);
+                    Some(
+                        step.selection
+                            .partition_index
+                            .and_then(|index| resolved.partitions.get(index as usize).cloned())
+                            .unwrap_or(resolved.fixture_ids),
+                    )
+                })
+                .flatten()
+                .collect();
+        }
+    }
+    stage
+        .target_sets
+        .iter()
+        .find(|target| target.id == layer.target_set_ref.target_set_id)
+        .map(|target| {
+            target_fixture_ids(stage, layout, target)
+                .into_iter()
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn validate_cue_summary(
@@ -1909,6 +2035,54 @@ pub(crate) mod tests {
         assert!(diagnostics
             .iter()
             .any(|diagnostic| diagnostic.code == PROJECT_CAPABILITY_MISMATCH));
+    }
+
+    #[test]
+    fn rejects_implicit_overlapping_effect_writers_and_accepts_an_explicit_mix() {
+        let mut implicit = valid_bundle();
+        let mut second_layer = implicit.cues[0].layers[0].clone();
+        second_layer.id = "second-intensity".to_string();
+        second_layer.layer = 1;
+        second_layer.priority = 1;
+        implicit.cues[0].layers.push(second_layer);
+
+        let diagnostics = ValidatedProject::validate(implicit.clone())
+            .expect_err("implicit overlap is ambiguous");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == CUE_LAYER_ATTRIBUTE_CONFLICT
+                && diagnostic.path.ends_with("layers[1].mix_overrides")
+                && diagnostic
+                    .recovery
+                    .as_deref()
+                    .is_some_and(|recovery| recovery.action == "choose_mix_policy")
+        }));
+
+        implicit.cues[0].layers[1].mix_overrides = vec![CueMixOverride {
+            attribute_id: "intensity".to_string(),
+            policy: crate::document::MixPolicy::Htp,
+        }];
+        ValidatedProject::validate(implicit).expect("explicit mix policy documents the intent");
+
+        let mut disjoint = valid_bundle();
+        disjoint.stages[0].target_sets[0].selector = TargetSetSelector::FixtureIds {
+            fixture_ids: vec![1, 2],
+        };
+        disjoint.stages[0].target_sets.push(TargetSetDefinition {
+            id: "fixtures-3-4".to_string(),
+            name: "Fixtures 3–4".to_string(),
+            selector: TargetSetSelector::FixtureIds {
+                fixture_ids: vec![3, 4],
+            },
+            weights: Vec::new(),
+        });
+        let mut disjoint_layer = disjoint.cues[0].layers[0].clone();
+        disjoint_layer.id = "disjoint-intensity".to_string();
+        disjoint_layer.target_set_ref.target_set_id = "fixtures-3-4".to_string();
+        disjoint_layer.layer = 1;
+        disjoint_layer.priority = 1;
+        disjoint.cues[0].layers.push(disjoint_layer);
+        ValidatedProject::validate(disjoint)
+            .expect("the same attribute may target disjoint fixtures without a mix policy");
     }
 
     #[test]

@@ -1729,9 +1729,9 @@
     {
       "schema_version": 1,
       "id": "recipe.moving-sweep",
-      "revision": 1,
+      "revision": 2,
       "name": "Moving Sweep",
-      "description": "A pan and tilt combination for position-capable fixtures.",
+      "description": "A coherent pan sweep for position-capable fixtures.",
       "nominal_length_ticks": 30720,
       "layers": [
         {
@@ -1743,19 +1743,6 @@
           "seed": "5000000000000005",
           "layer": 0,
           "priority": 0
-        },
-        {
-          "id": "tilt",
-          "effect_ref": { "id": "builtin.movement.tilt-wave", "revision": 1 },
-          "target": { "type": "any_compatible" },
-          "parameter_overrides": {
-            "speed": { "type": "scalar", "value": 0.5 },
-            "phase": { "type": "scalar", "value": 0.25 }
-          },
-          "phase": 0.0,
-          "seed": "5000000000000006",
-          "layer": 1,
-          "priority": 1
         }
       ],
       "trigger_policy": { "mode": "timeline", "quantize": "bar" }
@@ -1763,37 +1750,11 @@
     {
       "schema_version": 1,
       "id": "recipe.layered-peak",
-      "revision": 1,
-      "name": "Layered Peak Build",
-      "description": "Three capability-resolved layers for a structured peak section.",
+      "revision": 2,
+      "name": "Peak Zone Chase",
+      "description": "A fast zone chase with scene-driven targeting and one clear visual intent.",
       "nominal_length_ticks": 15360,
       "layers": [
-        {
-          "id": "base",
-          "effect_ref": { "id": "builtin.intensity.pulse", "revision": 1 },
-          "target": { "type": "all" },
-          "parameter_overrides": {
-            "speed": { "type": "scalar", "value": 1.0 },
-            "intensity": { "type": "scalar", "value": 0.75 }
-          },
-          "phase": 0.0,
-          "seed": "6000000000000006",
-          "layer": 0,
-          "priority": 0
-        },
-        {
-          "id": "color",
-          "effect_ref": { "id": "builtin.color.dual-sweep", "revision": 1 },
-          "target": { "type": "columns" },
-          "parameter_overrides": {
-            "speed": { "type": "scalar", "value": 1.0 },
-            "phase": { "type": "scalar", "value": 0.25 }
-          },
-          "phase": 0.0,
-          "seed": "6000000000000007",
-          "layer": 1,
-          "priority": 1
-        },
         {
           "id": "zones",
           "effect_ref": { "id": "builtin.intensity.chase", "revision": 1 },
@@ -1805,8 +1766,8 @@
           },
           "phase": 0.0,
           "seed": "6000000000000008",
-          "layer": 2,
-          "priority": 2
+          "layer": 0,
+          "priority": 0
         }
       ],
       "trigger_policy": { "mode": "timeline", "quantize": "bar" }
@@ -1839,37 +1800,23 @@
     {
       "schema_version": 1,
       "id": "recipe.build-transition",
-      "revision": 1,
-      "name": "Build / Transition",
-      "description": "A safe full-stage fade layered with a capability-resolved spatial wipe.",
+      "revision": 2,
+      "name": "Blackout-safe Build / Transition",
+      "description": "A single full-stage transition with blackout-safe intensity handling.",
       "nominal_length_ticks": 15360,
       "layers": [
         {
-          "id": "fade",
-          "effect_ref": { "id": "builtin.transition.fade-crossfade", "revision": 1 },
+          "id": "blackout-safe",
+          "effect_ref": { "id": "builtin.transition.blackout-safe", "revision": 1 },
           "target": { "type": "all" },
           "parameter_overrides": {
             "speed": { "type": "scalar", "value": 0.5 },
-            "intensity": { "type": "scalar", "value": 0.7 }
+            "intensity": { "type": "scalar", "value": 0.8 }
           },
           "phase": 0.0,
           "seed": "8000000000000008",
           "layer": 0,
           "priority": 0
-        },
-        {
-          "id": "wipe",
-          "effect_ref": { "id": "builtin.transition.wipe", "revision": 1 },
-          "target": { "type": "any_compatible" },
-          "parameter_overrides": {
-            "speed": { "type": "scalar", "value": 1.0 },
-            "phase": { "type": "scalar", "value": 0.25 },
-            "intensity": { "type": "scalar", "value": 0.8 }
-          },
-          "phase": 0.0,
-          "seed": "8000000000000009",
-          "layer": 1,
-          "priority": 1
         }
       ],
       "trigger_policy": { "mode": "timeline", "quantize": "bar" }

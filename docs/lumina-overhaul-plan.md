@@ -927,6 +927,10 @@ Effect/Cue working draft、统一 Rust Catalog validator、multi-tick golden、�
 30×30 五层 A/B 60Hz gate 和真实 Tauri 主路径。18 template / 43 legacy Effect 不再进入普通 Catalog；必要
 migration/golden consumer 保留。7.5D scoped complete，并明确停止，不提前勾选 7.5E。
 
+2026-08-05 用户反馈复查：8 个默认 Cue recipe 均收敛为单一视觉意图；Project Cue 中覆盖相同 fixture、写入相同
+attribute 的后续 layer 必须显式声明 mix policy。隐式 Pulse + Gradient、双 movement intensity 或双 transition
+intensity composition 会在 Rust validation 阶段失败，不进入 preview/save。
+
 ### 7.5E 验证与收口
 
 - [ ] 建立多布局、多 tick golden frame 和 1,000 fixtures 多层 release benchmark。
