@@ -100,7 +100,7 @@ export class CanvasRenderer {
       ctx.fill();
     }
 
-    ctx.strokeStyle = "#52525b";
+    ctx.strokeStyle = "rgba(82, 82, 91, 0.5)";
     ctx.lineWidth = 0.5 / scale;
     ctx.beginPath();
     for (const visual of this.fixtures.values()) {
@@ -109,7 +109,7 @@ export class CanvasRenderer {
     }
     ctx.stroke();
 
-    ctx.strokeStyle = "#3f3f46";
+    ctx.strokeStyle = "rgba(63, 63, 70, 0.5)";
     ctx.setLineDash([2 / scale, 2 / scale]);
     ctx.beginPath();
     for (const visual of this.fixtures.values()) {

@@ -103,5 +103,6 @@ describe("CanvasRenderer frame budget", () => {
 
     scheduled?.(0);
     expect(context.setLineDash).toHaveBeenCalledWith(expect.arrayContaining([expect.any(Number)]));
+    expect(context.strokeStyle).toBe("rgba(63, 63, 70, 0.5)");
   });
 });
