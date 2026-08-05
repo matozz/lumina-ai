@@ -8,6 +8,7 @@ import {
 import { activeStage, assetKey, exactAsset } from "@/document/projectModel";
 import {
   PREVIEW_DARK_FRAME_NOTICE_THRESHOLD,
+  isLegacyAcceptanceWorkspace,
   projectActions,
   simplifyLegacyCueNames,
   useProjectStore,
@@ -68,6 +69,31 @@ describe("Stage 7 Project state", () => {
       litFixtureCount: 1,
       consecutiveDarkFrames: 0,
     });
+  });
+
+  it("refreshes only the known local acceptance workspace on the storage upgrade", async () => {
+    const effect = projectActions.createEffect("Breathe Custom")!;
+    projectActions.createCue([effect], "New Cue");
+    const legacyBundle = structuredClone(useProjectStore.getState().bundle);
+    expect(isLegacyAcceptanceWorkspace(legacyBundle)).toBe(true);
+
+    const migrate = useProjectStore.persist.getOptions().migrate;
+    expect(migrate).toBeDefined();
+    const migrated = (await Promise.resolve(migrate?.({ bundle: legacyBundle }, 3))) as
+      | ReturnType<typeof useProjectStore.getState>
+      | undefined;
+
+    expect(migrated?.bundle.effects).toEqual([]);
+    expect(migrated?.bundle.cues).toEqual([]);
+    expect(migrated?.bundle.arrangements[0].tracks[0].clips).toEqual([]);
+    expect(migrated?.selectedEffectRef).toBeNull();
+    expect(migrated?.selectedCueRef).toBeNull();
+    expect(activeStage(migrated!.bundle).target_sets.map((target) => target.id)).toEqual(
+      expect.arrayContaining(["rows", "columns", "zones-3x3", "center", "edges"]),
+    );
+
+    legacyBundle.manifest.name = "My Tour";
+    expect(isLegacyAcceptanceWorkspace(legacyBundle)).toBe(false);
   });
 
   it("pauses the current preview before selecting another Effect", () => {

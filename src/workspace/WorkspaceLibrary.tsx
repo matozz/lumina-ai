@@ -96,7 +96,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   }, [workspace]);
 
   useEffect(() => {
-    if (workspace === "effect-lab" || workspace === "cues") {
+    if (workspace === "effect-lab" || workspace === "cues" || workspace === "arrange") {
       void productionCatalogActions.ensureLoaded();
     }
   }, [workspace]);
@@ -144,8 +144,26 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   const startRecipeDraft = async (recipeId: string, revision: number, name: string) => {
     setResolvingRecipeId(recipeId);
     setRecipeError(null);
+    const baseCueId = recipeId.replace(/^recipe\./, "cue-").replace(/[^a-z0-9-]+/g, "-");
+    const reusableCueRef =
+      workspace === "arrange"
+        ? latestRefsById(bundle.manifest.cue_refs).find((reference) => {
+            const cue = exactAsset(bundle.cues, reference);
+            return cue
+              ? (cue.id === baseCueId || cue.id.startsWith(`${baseCueId}-`)) &&
+                  cue.name === name &&
+                  assetKey(cue.compatible_stage_ref) === assetKey(stage)
+              : false;
+          })
+        : undefined;
+    if (reusableCueRef) {
+      projectActions.setSelectedCueRef(reusableCueRef);
+      workspaceActions.setPublishStatus("idle", `${name} selected for placement.`);
+      setResolvingRecipeId(null);
+      return;
+    }
     const cueId = uniqueId(
-      recipeId.replace(/^recipe\./, "cue-").replace(/[^a-z0-9-]+/g, "-"),
+      baseCueId,
       bundle.cues.map((cue) => cue.id),
     );
     try {
@@ -157,9 +175,26 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
         cueRevision: 1,
         cueName: name,
       });
-      authoringDraftActions.beginNewCue(cue);
-      projectActions.setSelectedCueRef({ id: cue.id, revision: cue.revision });
-      workspaceActions.setPublishStatus("idle", `${cue.name} opened as a safe Cue draft.`);
+      if (workspace === "arrange") {
+        const productionEffects = [
+          ...new Map(
+            cue.layers.flatMap((layer) => {
+              const effect = exactAsset(productionCatalog?.effects ?? [], layer.effect_ref);
+              return effect ? [[assetKey(effect), effect] as const] : [];
+            }),
+          ).values(),
+        ];
+        const saved = projectActions.saveCueWorkingDraft(cue, productionEffects);
+        projectActions.setSelectedCueRef({ id: saved.id, revision: saved.revision });
+        workspaceActions.setPublishStatus(
+          "idle",
+          `${saved.name} added to Project Cues and selected for placement.`,
+        );
+      } else {
+        authoringDraftActions.beginNewCue(cue);
+        projectActions.setSelectedCueRef({ id: cue.id, revision: cue.revision });
+        workspaceActions.setPublishStatus("idle", `${cue.name} opened as a safe Cue draft.`);
+      }
     } catch (error) {
       const message = Array.isArray(error)
         ? error.map((diagnostic) => diagnostic.message).join(" · ")
@@ -313,97 +348,93 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
 
           {(workspace === "cues" || workspace === "arrange") && (
             <>
-              {workspace === "cues" && (
-                <>
-                  <LibrarySectionLabel>Production Recipes</LibrarySectionLabel>
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    className="mx-1 justify-start"
-                    onClick={() => setTargetEditorOpen(true)}
-                  >
-                    <ScanSearch data-icon="inline-start" aria-hidden="true" />
-                    Edit fixture areas
-                  </Button>
-                  {productionCatalog?.cue_recipes.map((recipe) => {
-                    const missingAttributes = new Set<string>();
-                    const missingAreas = new Set<string>();
-                    let missingPlaybackPattern = false;
-                    for (const layer of recipe.layers) {
-                      const effect = exactAsset(productionCatalog.effects, layer.effect_ref);
-                      if (!effect) continue;
-                      const targets = stage.target_sets.filter((target) =>
-                        recipeTargetMatches(target.selector, layer.target),
-                      );
-                      if (targets.length === 0) {
-                        missingAreas.add(friendlyRecipeTarget(layer.target));
-                        continue;
-                      }
-                      const compatibility = targets.map((target) =>
-                        effectTargetCompatibility(stage, layout, target, effect),
-                      );
-                      if (!compatibility.some((result) => result.compatible)) {
-                        for (const result of compatibility) {
-                          for (const attribute of result.missingAttributes) {
-                            missingAttributes.add(attribute);
-                          }
-                        }
-                      }
-                      if (
-                        layer.scene &&
-                        !(stage.targeting_scenes ?? []).some(
-                          (scene) =>
-                            scene.steps.length >= layer.scene!.minimum_steps &&
-                            (!layer.scene!.requires_weighted_transition ||
-                              scene.steps.some((step) => step.transition.type === "weighted")),
-                        )
-                      ) {
-                        missingPlaybackPattern = true;
+              <LibrarySectionLabel>
+                {workspace === "arrange" ? "Built-in Cues" : "Production Recipes"}
+              </LibrarySectionLabel>
+              <Button
+                size="xs"
+                variant="outline"
+                className="mx-1 justify-start"
+                onClick={() => setTargetEditorOpen(true)}
+              >
+                <ScanSearch data-icon="inline-start" aria-hidden="true" />
+                Edit fixture areas
+              </Button>
+              {productionCatalog?.cue_recipes.map((recipe) => {
+                const missingAttributes = new Set<string>();
+                const missingAreas = new Set<string>();
+                let missingPlaybackPattern = false;
+                for (const layer of recipe.layers) {
+                  const effect = exactAsset(productionCatalog.effects, layer.effect_ref);
+                  if (!effect) continue;
+                  const targets = stage.target_sets.filter((target) =>
+                    recipeTargetMatches(target.selector, layer.target),
+                  );
+                  if (targets.length === 0) {
+                    missingAreas.add(friendlyRecipeTarget(layer.target));
+                    continue;
+                  }
+                  const compatibility = targets.map((target) =>
+                    effectTargetCompatibility(stage, layout, target, effect),
+                  );
+                  if (!compatibility.some((result) => result.compatible)) {
+                    for (const result of compatibility) {
+                      for (const attribute of result.missingAttributes) {
+                        missingAttributes.add(attribute);
                       }
                     }
-                    const disabledReason =
-                      missingAreas.size > 0
-                        ? `Needs ${[...missingAreas].join(" or ")} area`
-                        : missingAttributes.size > 0
-                          ? `Needs ${[...missingAttributes].map(friendlyEffectAttribute).join(", ")}`
-                          : missingPlaybackPattern
-                            ? "Needs a compatible playback pattern"
-                            : undefined;
-                    const resolving = resolvingRecipeId === recipe.id;
-                    return (
-                      <Button
-                        key={`${recipe.id}@${recipe.revision}`}
-                        size="sm"
-                        variant="ghost"
-                        className="h-auto w-full justify-start py-1.5"
-                        title={disabledReason ?? recipe.description}
-                        disabled={Boolean(disabledReason) || resolvingRecipeId !== null}
-                        onClick={() =>
-                          void startRecipeDraft(recipe.id, recipe.revision, recipe.name)
-                        }
-                      >
-                        <span className="min-w-0 flex-1 truncate text-left">
-                          {resolving ? "Opening…" : recipe.name}
-                        </span>
-                        <span className="text-muted-foreground text-[9px]">
-                          {disabledReason ??
-                            `${recipe.layers.length} ${recipe.layers.length === 1 ? "effect" : "effects"}`}
-                        </span>
-                      </Button>
-                    );
-                  })}
-                  {recipeError && (
-                    <Alert variant="destructive">
-                      <AlertTitle>Recipe unavailable</AlertTitle>
-                      <AlertDescription>{recipeError}</AlertDescription>
-                    </Alert>
-                  )}
-                  <LibrarySectionLabel>Project Cues</LibrarySectionLabel>
-                </>
+                  }
+                  if (
+                    layer.scene &&
+                    !(stage.targeting_scenes ?? []).some(
+                      (scene) =>
+                        scene.steps.length >= layer.scene!.minimum_steps &&
+                        (!layer.scene!.requires_weighted_transition ||
+                          scene.steps.some((step) => step.transition.type === "weighted")),
+                    )
+                  ) {
+                    missingPlaybackPattern = true;
+                  }
+                }
+                const disabledReason =
+                  missingAreas.size > 0
+                    ? `Needs ${[...missingAreas].join(" or ")} area`
+                    : missingAttributes.size > 0
+                      ? `Needs ${[...missingAttributes].map(friendlyEffectAttribute).join(", ")}`
+                      : missingPlaybackPattern
+                        ? "Needs a compatible playback pattern"
+                        : undefined;
+                const resolving = resolvingRecipeId === recipe.id;
+                return (
+                  <Button
+                    key={`${recipe.id}@${recipe.revision}`}
+                    size="sm"
+                    variant="ghost"
+                    className="h-auto w-full justify-start py-1.5"
+                    title={disabledReason ?? recipe.description}
+                    disabled={Boolean(disabledReason) || resolvingRecipeId !== null}
+                    onClick={() => void startRecipeDraft(recipe.id, recipe.revision, recipe.name)}
+                  >
+                    <span className="min-w-0 flex-1 truncate text-left">
+                      {resolving ? (workspace === "arrange" ? "Adding…" : "Opening…") : recipe.name}
+                    </span>
+                    <span className="text-muted-foreground text-[9px]">
+                      {disabledReason ??
+                        `${recipe.layers.length} ${recipe.layers.length === 1 ? "effect" : "effects"}`}
+                    </span>
+                  </Button>
+                );
+              })}
+              {recipeError && (
+                <Alert variant="destructive">
+                  <AlertTitle>Recipe unavailable</AlertTitle>
+                  <AlertDescription>{recipeError}</AlertDescription>
+                </Alert>
               )}
+              <LibrarySectionLabel>Project Cues</LibrarySectionLabel>
               {workspace === "arrange" && (
                 <p className="text-muted-foreground px-1 text-[10px]">
-                  Select a Cue, then place it at the authoring playhead.
+                  Choose a built-in or saved Cue, then place it at the playhead.
                 </p>
               )}
               {latestRefsById(bundle.manifest.cue_refs).map((reference) => {
@@ -431,8 +462,12 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
               {bundle.cues.length === 0 && (
                 <CompactEmpty
                   icon={Layers2}
-                  title="No Cues yet"
-                  description="Create Effects first, then combine them in Cues."
+                  title="No saved Cues yet"
+                  description={
+                    workspace === "arrange"
+                      ? "Choose a built-in Cue above to add it to this project."
+                      : "Create Effects first, then combine them in Cues."
+                  }
                 />
               )}
             </>

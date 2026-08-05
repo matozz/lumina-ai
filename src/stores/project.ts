@@ -75,6 +75,14 @@ export interface ProjectState {
 }
 
 const starter = createStarterProjectBundle();
+const LOCAL_WORKSPACE_STORAGE_VERSION = 4;
+const LEGACY_LOCAL_EFFECT_NAMES = new Set([
+  "Breathe Custom",
+  "Gradient 2",
+  "Gradient Draft v3",
+  "Pulse 2",
+]);
+const LEGACY_LOCAL_CUE_NAMES = new Set(["Gradient Cue", "New Cue"]);
 
 const initialState: ProjectState = {
   bundle: starter,
@@ -98,16 +106,27 @@ const initialState: ProjectState = {
 export const useProjectStore = create<ProjectState>()(
   persist(() => initialState, {
     name: "lumina-project-v1",
-    version: 3,
-    migrate: (persistedState) => {
+    version: LOCAL_WORKSPACE_STORAGE_VERSION,
+    migrate: (persistedState, version) => {
       const state = persistedState as Partial<ProjectState>;
-      const bundle = migrateProjectBundle(state.bundle ?? starter).bundle;
+      let bundle = migrateProjectBundle(state.bundle ?? starter).bundle;
+      const refreshed =
+        version < LOCAL_WORKSPACE_STORAGE_VERSION && isLegacyAcceptanceWorkspace(bundle);
+      if (refreshed) bundle = createStarterProjectBundle();
       simplifyLegacyCueNames(bundle);
       return {
         ...initialState,
         ...state,
         bundle,
-        selectedLayoutRef: state.selectedLayoutRef ?? bundle.manifest.layout_refs[0],
+        selectedLayoutRef: refreshed
+          ? bundle.manifest.layout_refs[0]
+          : (state.selectedLayoutRef ?? bundle.manifest.layout_refs[0]),
+        selectedEffectRef: refreshed ? null : (state.selectedEffectRef ?? null),
+        selectedCueRef: refreshed ? null : (state.selectedCueRef ?? null),
+        selectedArrangementRef: refreshed
+          ? activeArrangementRef(bundle)
+          : (state.selectedArrangementRef ?? activeArrangementRef(bundle)),
+        selectedTargetSetId: refreshed ? "all" : (state.selectedTargetSetId ?? "all"),
       } satisfies ProjectState;
     },
     partialize: (state) => ({
@@ -120,6 +139,20 @@ export const useProjectStore = create<ProjectState>()(
     }),
   }),
 );
+
+export function isLegacyAcceptanceWorkspace(bundle: ProjectBundle) {
+  if (
+    bundle.manifest.project_id !== "lumina-project" ||
+    bundle.manifest.name !== "Untitled Lighting Project"
+  ) {
+    return false;
+  }
+  const hasLegacyEffect = bundle.effects.some((effect) =>
+    LEGACY_LOCAL_EFFECT_NAMES.has(effect.name),
+  );
+  const hasLegacyCue = bundle.cues.some((cue) => LEGACY_LOCAL_CUE_NAMES.has(cue.name));
+  return hasLegacyEffect && hasLegacyCue;
+}
 
 export function simplifyLegacyCueNames(bundle: ProjectBundle) {
   for (const cue of bundle.cues) {

@@ -73,6 +73,23 @@ describe("Cue Builder safe authoring", () => {
     );
   });
 
+  it("adds a built-in Cue once and selects it for Arrange placement", async () => {
+    render(<WorkspaceLibrary workspace="arrange" />);
+
+    expect(screen.getByText("Built-in Cues")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
+
+    await waitFor(() => expect(useProjectStore.getState().bundle.cues).toHaveLength(1));
+    const state = useProjectStore.getState();
+    expect(state.selectedCueRef).toEqual({ id: "cue-four-on-floor", revision: 1 });
+    expect(state.bundle.effects.map((effect) => effect.id)).toContain("builtin.intensity.pulse");
+    expect(useAuthoringDraftStore.getState().cue).toBeNull();
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Four on Floor.*1 effect/ })[0]);
+    expect(useProjectStore.getState().bundle.cues).toHaveLength(1);
+    expect(bridge.resolveProductionCueRecipe).toHaveBeenCalledTimes(1);
+  });
+
   it("shows bars and hides internal layer controls by default", async () => {
     workspaceActions.setAdvancedMode(false);
     render(<Harness />);

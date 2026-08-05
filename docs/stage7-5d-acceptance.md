@@ -45,8 +45,11 @@ colorfulness、required attributes、layout capabilities、strobe risk、参数�
 | Peak Zone Chase                  |      1 | scene-driven zone chase                  |
 | Strip / Bar Traveler             |      1 | linear/coordinate target                 |
 | Blackout-safe Build / Transition |      1 | full-stage blackout-safe transition      |
+| Gentle Breathe                   |      1 | low-risk full-stage intensity breathing  |
+| Center-out Bloom                 |      1 | compatible coordinate target             |
+| Spatial Wipe In                  |      1 | compatible spatial transition target     |
 
-共 8 个 Production Cue recipe，超过 scoped 最低 6 个。resolver 只按 Stage capability、selector/partition role 和
+共 11 个 Production Cue recipe，超过 scoped 最低 6 个。resolver 只按 Stage capability、selector/partition role 和
 scene capability 匹配；不硬编码 starter Stage、`all`、`zones-3x3` 等示例 identity。能力不足时返回稳定
 Diagnostic 和 `choose_target` recovery，不创建半有效 Cue。
 

@@ -1820,6 +1820,80 @@
         }
       ],
       "trigger_policy": { "mode": "timeline", "quantize": "bar" }
+    },
+    {
+      "schema_version": 1,
+      "id": "recipe.gentle-breathe",
+      "revision": 1,
+      "name": "Gentle Breathe",
+      "description": "A slow, low-risk full-stage breathing look for quieter sections.",
+      "nominal_length_ticks": 15360,
+      "layers": [
+        {
+          "id": "breathe",
+          "effect_ref": { "id": "builtin.intensity.breathe", "revision": 1 },
+          "target": { "type": "all" },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 0.5 },
+            "intensity": { "type": "scalar", "value": 0.65 }
+          },
+          "phase": 0.0,
+          "seed": "9000000000000009",
+          "layer": 0,
+          "priority": 0
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "bar" }
+    },
+    {
+      "schema_version": 1,
+      "id": "recipe.center-bloom",
+      "revision": 1,
+      "name": "Center-out Bloom",
+      "description": "A single center-out intensity bloom resolved to a compatible Stage area.",
+      "nominal_length_ticks": 15360,
+      "layers": [
+        {
+          "id": "bloom",
+          "effect_ref": { "id": "builtin.spatial.radial-bloom", "revision": 1 },
+          "target": { "type": "any_compatible" },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 0.5 },
+            "intensity": { "type": "scalar", "value": 0.8 },
+            "direction": { "type": "direction", "value": "forward" }
+          },
+          "phase": 0.0,
+          "seed": "a00000000000000a",
+          "layer": 0,
+          "priority": 0
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "bar" }
+    },
+    {
+      "schema_version": 1,
+      "id": "recipe.spatial-wipe",
+      "revision": 1,
+      "name": "Spatial Wipe In",
+      "description": "A readable single-layer wipe for entering a new section without stacked effects.",
+      "nominal_length_ticks": 15360,
+      "layers": [
+        {
+          "id": "wipe",
+          "effect_ref": { "id": "builtin.transition.wipe", "revision": 1 },
+          "target": { "type": "any_compatible" },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 0.5 },
+            "phase": { "type": "scalar", "value": 0.0 },
+            "intensity": { "type": "scalar", "value": 0.8 }
+          },
+          "phase": 0.0,
+          "seed": "b00000000000000b",
+          "layer": 0,
+          "priority": 0
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "bar" }
     }
   ]
 }
