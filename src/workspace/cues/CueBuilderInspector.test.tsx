@@ -11,7 +11,7 @@ import { assetKey, createCueAsset, createEffectAsset } from "@/document/projectM
 import { authoringDraftActions, useAuthoringDraftStore } from "@/stores/authoringDraft";
 import { productionCatalogActions } from "@/stores/productionCatalog";
 import { projectActions, useProjectStore } from "@/stores/project";
-import { workspaceActions } from "@/stores/workspace";
+import { useWorkspaceStore, workspaceActions } from "@/stores/workspace";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
 import { WorkspaceLibrary } from "../WorkspaceLibrary";
 import { CueBuilderInspector } from "./CueBuilderInspector";
@@ -44,13 +44,21 @@ describe("Cue Builder safe authoring", () => {
     localStorage.clear();
     projectActions.reset();
     authoringDraftActions.reset();
+    workspaceActions.reset();
     workspaceActions.setAdvancedMode(true);
     const fixture = cueFixture();
     cue = fixture.cue;
     catalog = fixture.catalog;
     productionCatalogActions.setCatalog(catalog);
     bridge.resolveProductionCueRecipe.mockReset();
-    bridge.resolveProductionCueRecipe.mockResolvedValue(structuredClone(cue));
+    bridge.resolveProductionCueRecipe.mockImplementation(
+      async (request: { cueId: string; cueRevision: number; cueName: string }) => ({
+        ...structuredClone(cue),
+        id: request.cueId,
+        revision: request.cueRevision,
+        name: request.cueName,
+      }),
+    );
     bridge.validateProjectWorkingDraft.mockClear();
   });
 
@@ -73,20 +81,29 @@ describe("Cue Builder safe authoring", () => {
     );
   });
 
-  it("adds a built-in Cue once and selects it for Arrange placement", async () => {
+  it("selects a built-in Cue for Arrange without copying it into the Project", async () => {
     render(<WorkspaceLibrary workspace="arrange" />);
 
     expect(screen.getByText("Built-in Cues")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
 
-    await waitFor(() => expect(useProjectStore.getState().bundle.cues).toHaveLength(1));
+    await waitFor(() =>
+      expect(useWorkspaceStore.getState().selectedArrangeBuiltInCue?.recipeRef).toEqual({
+        id: "recipe.four-on-floor",
+        revision: 1,
+      }),
+    );
     const state = useProjectStore.getState();
-    expect(state.selectedCueRef).toEqual({ id: "cue-four-on-floor", revision: 1 });
-    expect(state.bundle.effects.map((effect) => effect.id)).toContain("builtin.intensity.pulse");
+    expect(state.selectedCueRef).toBeNull();
+    expect(state.bundle.cues).toHaveLength(0);
+    expect(state.bundle.effects).toHaveLength(0);
+    expect(useWorkspaceStore.getState().selectedArrangeBuiltInCue?.cue.id).toMatch(
+      /^__builtin-cue-four-on-floor/,
+    );
     expect(useAuthoringDraftStore.getState().cue).toBeNull();
 
-    fireEvent.click(screen.getAllByRole("button", { name: /Four on Floor.*1 effect/ })[0]);
-    expect(useProjectStore.getState().bundle.cues).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
+    expect(useProjectStore.getState().bundle.cues).toHaveLength(0);
     expect(bridge.resolveProductionCueRecipe).toHaveBeenCalledTimes(1);
   });
 

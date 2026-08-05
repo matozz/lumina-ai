@@ -58,6 +58,7 @@ function WorkspaceSurface({ workspace }: { workspace: WorkspaceId }) {
       <div className="relative min-h-0 flex-1">
         <CanvasView
           frameSource={workspace === "live" && liveViewMode === "live" ? "live" : "preview"}
+          showIntensityWithoutColor={workspace === "arrange"}
         />
       </div>
     </section>

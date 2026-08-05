@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ArrangementDocument } from "@/bridge/types";
+import type { ArrangementDocument, ProjectBundle } from "@/bridge/types";
 import { AuthoringDiagnosticAlert } from "@/authoring/AuthoringDiagnosticAlert";
 import { authoringDiagnostic, type AuthoringDiagnostic } from "@/authoring/diagnostics";
 import {
@@ -7,10 +7,12 @@ import {
   authoringTransportActions,
   useAuthoringTransportStore,
 } from "@/authoring/transport";
-import { assetKey, exactAsset } from "@/document/projectModel";
+import { activeStage, appendExactRef, assetKey, exactAsset } from "@/document/projectModel";
 import { isTextEditingTarget } from "@/lib/dom";
 import { BEAT_WIDTH_STEP, ticksToPixels } from "@/panel/timelineGeometry";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
+import { productionCatalogSelectors, useProductionCatalogStore } from "@/stores/productionCatalog";
+import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/stores/workspace";
 import { ArrangementClipInspector } from "./timeline/ArrangementClipInspector";
 import {
   ArrangementGrid,
@@ -35,9 +37,17 @@ export function ArrangementTimeline() {
   const bundle = useProjectStore(projectSelectors.bundle);
   const reference = useProjectStore(projectSelectors.selectedArrangementRef);
   const selectedCueRef = useProjectStore(projectSelectors.selectedCueRef);
+  const pendingBuiltInCue = useWorkspaceStore(workspaceSelectors.selectedArrangeBuiltInCue);
+  const productionCatalog = useProductionCatalogStore(productionCatalogSelectors.catalog);
   const canUndo = useProjectStore(projectSelectors.canUndo);
   const canRedo = useProjectStore(projectSelectors.canRedo);
   const arrangement = exactAsset(bundle.arrangements, reference);
+  const stage = activeStage(bundle);
+  const selectedBuiltInCue =
+    pendingBuiltInCue && assetKey(pendingBuiltInCue.cue.compatible_stage_ref) === assetKey(stage)
+      ? pendingBuiltInCue
+      : null;
+  const selectedCue = selectedBuiltInCue?.cue ?? exactAsset(bundle.cues, selectedCueRef);
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [diagnostic, setDiagnostic] = useState<AuthoringDiagnostic | null>(null);
   const snapGuideRef = useRef<HTMLDivElement>(null);
@@ -60,20 +70,22 @@ export function ArrangementTimeline() {
   const runCommand = (
     label: string,
     path: string,
-    update: (draft: ArrangementDocument) => void,
+    update: (draft: ArrangementDocument, bundle: ProjectBundle) => void,
   ) => {
     try {
       projectActions.updateArrangement(reference, label, update);
       setDiagnostic(null);
+      return true;
     } catch (error) {
       setDiagnostic(authoringDiagnostic(error, path));
+      return false;
     }
   };
 
   const placeSelectedCue = () => {
-    if (!selectedCueRef) return;
-    const cue = exactAsset(bundle.cues, selectedCueRef);
-    if (!cue) {
+    const cue = selectedCue;
+    const cueRef = cue ? { id: cue.id, revision: cue.revision } : null;
+    if (!cue || !cueRef) {
       setDiagnostic(
         authoringDiagnostic(
           new Error("The selected pinned Cue revision is missing."),
@@ -85,27 +97,50 @@ export function ArrangementTimeline() {
     const durationTick = Math.min(arrangement.length_ticks, cue.nominal_length_ticks);
     const cursorTick = useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick ?? 0;
     const startTick = Math.min(arrangement.length_ticks - durationTick, cursorTick);
-    runCommand(`Place Cue ${cue.name}`, "arrangement.toolbar.place_cue", (draft) => {
-      const track = draft.tracks[0];
-      track.clips ??= [];
-      const existing = new Set(
-        draft.tracks.flatMap((item) => item.clips?.map((clip) => clip.id) ?? []),
-      );
-      let id = `${cue.id}-clip`;
-      let suffix = 2;
-      while (existing.has(id)) id = `${cue.id}-clip-${suffix++}`;
-      track.clips.push({
-        id,
-        cue_ref: { ...selectedCueRef },
-        start_tick: startTick,
-        duration_tick: durationTick,
-        source_offset_tick: 0,
-        playback: "loop",
-        layer: 0,
-        layer_overrides: [],
-      });
-      setSelectedClipId(id);
-    });
+    const placed = runCommand(
+      `Place Cue ${cue.name}`,
+      "arrangement.toolbar.place_cue",
+      (draft, workingBundle) => {
+        if (selectedBuiltInCue) {
+          for (const layer of cue.layers) {
+            const effect = exactAsset(productionCatalog?.effects ?? [], layer.effect_ref);
+            if (!effect) {
+              throw new Error(`Built-in Effect ${assetKey(layer.effect_ref)} is unavailable.`);
+            }
+            if (!exactAsset(workingBundle.effects, effect)) {
+              workingBundle.effects.push(structuredClone(effect));
+            }
+            appendExactRef(workingBundle.manifest.effect_refs, effect);
+          }
+          if (!exactAsset(workingBundle.cues, cueRef)) {
+            workingBundle.cues.push(structuredClone(cue));
+          }
+          appendExactRef(workingBundle.manifest.cue_refs, cueRef);
+        }
+        const track = draft.tracks[0];
+        track.clips ??= [];
+        const existing = new Set(
+          draft.tracks.flatMap((item) => item.clips?.map((clip) => clip.id) ?? []),
+        );
+        let id = `${cue.id}-clip`;
+        let suffix = 2;
+        while (existing.has(id)) id = `${cue.id}-clip-${suffix++}`;
+        track.clips.push({
+          id,
+          cue_ref: { ...cueRef },
+          start_tick: startTick,
+          duration_tick: durationTick,
+          source_offset_tick: 0,
+          playback: "loop",
+          layer: 0,
+          layer_overrides: [],
+        });
+        setSelectedClipId(id);
+      },
+    );
+    if (placed) {
+      workspaceActions.setPublishStatus("idle", `${cue.name} placed at the playhead.`);
+    }
   };
 
   const updateSnapPreview = (tick: number | null) => {
@@ -174,7 +209,7 @@ export function ArrangementTimeline() {
         onZoomIn={() => zoom(beatWidth + BEAT_WIDTH_STEP)}
         onZoomOut={() => zoom(beatWidth - BEAT_WIDTH_STEP)}
         reference={reference}
-        selectedCueRef={selectedCueRef}
+        selectedCueName={selectedCue?.name ?? null}
       />
       {diagnostic && !clipDiagnostic && (
         <AuthoringDiagnosticAlert

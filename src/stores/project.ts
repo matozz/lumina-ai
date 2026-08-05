@@ -30,6 +30,7 @@ import {
   uniqueId,
 } from "@/document/projectModel";
 import { migrateProjectBundle } from "@/document/projectMigration";
+import { INTERNAL_PRODUCTION_CUE_PREFIX } from "@/document/productionCue";
 import { layoutCapacity } from "@/document/layoutDefinition";
 import { analyzeStageTopology, resolveTargetSet } from "@/document/stageTopology";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
@@ -75,7 +76,7 @@ export interface ProjectState {
 }
 
 const starter = createStarterProjectBundle();
-const LOCAL_WORKSPACE_STORAGE_VERSION = 4;
+const LOCAL_WORKSPACE_STORAGE_VERSION = 5;
 const LEGACY_LOCAL_EFFECT_NAMES = new Set([
   "Breathe Custom",
   "Gradient 2",
@@ -83,6 +84,19 @@ const LEGACY_LOCAL_EFFECT_NAMES = new Set([
   "Pulse 2",
 ]);
 const LEGACY_LOCAL_CUE_NAMES = new Set(["Gradient Cue", "New Cue"]);
+const LEGACY_ARRANGE_RECIPE_CUES = new Map([
+  ["cue-four-on-floor", "Full-stage Drop Pulse"],
+  ["cue-row-chase", "Matrix Spatial Chase"],
+  ["cue-rainbow-wash", "Slow Atmospheric Look"],
+  ["cue-radial-bloom", "3×3 Zone Burst"],
+  ["cue-moving-sweep", "Moving Sweep"],
+  ["cue-layered-peak", "Peak Zone Chase"],
+  ["cue-strip-traveler", "Strip / Bar Traveler"],
+  ["cue-build-transition", "Blackout-safe Build / Transition"],
+  ["cue-gentle-breathe", "Gentle Breathe"],
+  ["cue-center-bloom", "Center-out Bloom"],
+  ["cue-spatial-wipe", "Spatial Wipe In"],
+]);
 
 const initialState: ProjectState = {
   bundle: starter,
@@ -113,6 +127,13 @@ export const useProjectStore = create<ProjectState>()(
       const refreshed =
         version < LOCAL_WORKSPACE_STORAGE_VERSION && isLegacyAcceptanceWorkspace(bundle);
       if (refreshed) bundle = createStarterProjectBundle();
+      const cleanedArrangeCopies =
+        !refreshed &&
+        version < LOCAL_WORKSPACE_STORAGE_VERSION &&
+        bundle.manifest.project_id === "lumina-project" &&
+        bundle.manifest.name === "Untitled Lighting Project"
+          ? cleanupLegacyArrangeCueCopies(bundle)
+          : false;
       simplifyLegacyCueNames(bundle);
       return {
         ...initialState,
@@ -121,8 +142,16 @@ export const useProjectStore = create<ProjectState>()(
         selectedLayoutRef: refreshed
           ? bundle.manifest.layout_refs[0]
           : (state.selectedLayoutRef ?? bundle.manifest.layout_refs[0]),
-        selectedEffectRef: refreshed ? null : (state.selectedEffectRef ?? null),
-        selectedCueRef: refreshed ? null : (state.selectedCueRef ?? null),
+        selectedEffectRef:
+          refreshed ||
+          (cleanedArrangeCopies && !exactAsset(bundle.effects, state.selectedEffectRef ?? null))
+            ? null
+            : (state.selectedEffectRef ?? null),
+        selectedCueRef:
+          refreshed ||
+          (cleanedArrangeCopies && !exactAsset(bundle.cues, state.selectedCueRef ?? null))
+            ? null
+            : (state.selectedCueRef ?? null),
         selectedArrangementRef: refreshed
           ? activeArrangementRef(bundle)
           : (state.selectedArrangementRef ?? activeArrangementRef(bundle)),
@@ -152,6 +181,67 @@ export function isLegacyAcceptanceWorkspace(bundle: ProjectBundle) {
   );
   const hasLegacyCue = bundle.cues.some((cue) => LEGACY_LOCAL_CUE_NAMES.has(cue.name));
   return hasLegacyEffect && hasLegacyCue;
+}
+
+export function cleanupLegacyArrangeCueCopies(bundle: ProjectBundle) {
+  const referencedCueKeys = new Set(
+    bundle.arrangements.flatMap((arrangement) =>
+      arrangement.tracks.flatMap((track) =>
+        (track.clips ?? []).map((clip) => assetKey(clip.cue_ref)),
+      ),
+    ),
+  );
+  const replacements = new Map<string, AssetRef>();
+  const removed = new Set<string>();
+  const occupiedIds = new Set(bundle.cues.map((cue) => cue.id));
+
+  for (const cue of bundle.cues) {
+    const legacyBaseId = [...LEGACY_ARRANGE_RECIPE_CUES.entries()].find(
+      ([baseId, name]) =>
+        cue.name === name && (cue.id === baseId || cue.id.startsWith(`${baseId}-`)),
+    )?.[0];
+    if (!legacyBaseId) continue;
+    const previousRef = { id: cue.id, revision: cue.revision };
+    const previousKey = assetKey(previousRef);
+    if (!referencedCueKeys.has(previousKey)) {
+      removed.add(previousKey);
+      continue;
+    }
+    const nextId = uniqueId(`${INTERNAL_PRODUCTION_CUE_PREFIX}${cue.id.replace(/^cue-/, "")}`, [
+      ...occupiedIds,
+    ]);
+    occupiedIds.add(nextId);
+    cue.id = nextId;
+    replacements.set(previousKey, { id: nextId, revision: cue.revision });
+  }
+
+  if (replacements.size === 0 && removed.size === 0) return false;
+
+  bundle.cues = bundle.cues.filter((cue) => !removed.has(assetKey(cue)));
+  bundle.manifest.cue_refs = bundle.manifest.cue_refs.flatMap((reference) => {
+    const key = assetKey(reference);
+    if (removed.has(key)) return [];
+    return [replacements.get(key) ?? reference];
+  });
+  for (const arrangement of bundle.arrangements) {
+    for (const track of arrangement.tracks) {
+      for (const clip of track.clips ?? []) {
+        clip.cue_ref = replacements.get(assetKey(clip.cue_ref)) ?? clip.cue_ref;
+      }
+    }
+  }
+
+  const referencedEffectKeys = new Set(
+    bundle.cues.flatMap((cue) => cue.layers.map((layer) => assetKey(layer.effect_ref))),
+  );
+  bundle.effects = bundle.effects.filter(
+    (effect) => effect.source !== "built_in" || referencedEffectKeys.has(assetKey(effect)),
+  );
+  const remainingEffectKeys = new Set(bundle.effects.map(assetKey));
+  bundle.manifest.effect_refs = bundle.manifest.effect_refs.filter((reference) =>
+    remainingEffectKeys.has(assetKey(reference)),
+  );
+  return true;
 }
 
 export function simplifyLegacyCueNames(bundle: ProjectBundle) {
@@ -1018,7 +1108,7 @@ export const projectActions = {
   updateArrangement: (
     reference: AssetRef,
     label: string,
-    update: (arrangement: ArrangementDocument) => void,
+    update: (arrangement: ArrangementDocument, bundle: ProjectBundle) => void,
   ) => updateArrangement(reference, label, update),
   updateStage: (label: string, update: (stage: ProjectBundle["stages"][number]) => void) =>
     updateActiveStageRevision(label, update),
@@ -1099,14 +1189,14 @@ function updateCue(
 function updateArrangement(
   reference: AssetRef,
   label: string,
-  update: (arrangement: ArrangementDocument) => void,
+  update: (arrangement: ArrangementDocument, bundle: ProjectBundle) => void,
 ) {
   let selected = reference;
   transact(label, (bundle, published) => {
     selected = forkAssetRevision(bundle, published, "arrangement", reference);
     const arrangement = exactAsset(bundle.arrangements, selected);
     if (!arrangement) throw new Error("Arrangement revision is missing");
-    update(arrangement);
+    update(arrangement, bundle);
     bundle.manifest.active_arrangement_id = arrangement.id;
     bumpManifestRevision(bundle, published);
   });

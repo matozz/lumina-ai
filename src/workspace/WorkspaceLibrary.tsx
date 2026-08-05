@@ -47,6 +47,11 @@ import {
   uniqueId,
 } from "@/document/projectModel";
 import { effectTargetCompatibility, friendlyEffectAttribute } from "@/document/effectCompatibility";
+import {
+  isInternalProductionCueId,
+  productionRecipeCueBaseId,
+  productionRecipeCueInternalId,
+} from "@/document/productionCue";
 import { authoringDraftActions } from "@/stores/authoringDraft";
 import { engineSelectors, useEngineStore } from "@/stores/engine";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
@@ -71,6 +76,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   const selectedCueRef = useProjectStore(projectSelectors.selectedCueRef);
   const liveEffects = useEngineStore(engineSelectors.liveEffects);
   const selectedLiveEffectId = useWorkspaceStore(workspaceSelectors.selectedLiveEffectId);
+  const selectedArrangeBuiltInCue = useWorkspaceStore(workspaceSelectors.selectedArrangeBuiltInCue);
   const favorites = useWorkspaceStore(workspaceSelectors.favoriteEffectIds);
   const productionCatalog = useProductionCatalogStore(productionCatalogSelectors.catalog);
   const productionCatalogStatus = useProductionCatalogStore(productionCatalogSelectors.status);
@@ -144,28 +150,26 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   const startRecipeDraft = async (recipeId: string, revision: number, name: string) => {
     setResolvingRecipeId(recipeId);
     setRecipeError(null);
-    const baseCueId = recipeId.replace(/^recipe\./, "cue-").replace(/[^a-z0-9-]+/g, "-");
-    const reusableCueRef =
-      workspace === "arrange"
-        ? latestRefsById(bundle.manifest.cue_refs).find((reference) => {
-            const cue = exactAsset(bundle.cues, reference);
-            return cue
-              ? (cue.id === baseCueId || cue.id.startsWith(`${baseCueId}-`)) &&
-                  cue.name === name &&
-                  assetKey(cue.compatible_stage_ref) === assetKey(stage)
-              : false;
-          })
-        : undefined;
-    if (reusableCueRef) {
-      projectActions.setSelectedCueRef(reusableCueRef);
+    const recipeRef = { id: recipeId, revision };
+    if (
+      workspace === "arrange" &&
+      selectedArrangeBuiltInCue?.recipeRef.id === recipeId &&
+      selectedArrangeBuiltInCue.recipeRef.revision === revision &&
+      assetKey(selectedArrangeBuiltInCue.cue.compatible_stage_ref) === assetKey(stage)
+    ) {
+      projectActions.setSelectedCueRef(null);
       workspaceActions.setPublishStatus("idle", `${name} selected for placement.`);
       setResolvingRecipeId(null);
       return;
     }
-    const cueId = uniqueId(
-      baseCueId,
-      bundle.cues.map((cue) => cue.id),
-    );
+    const baseCueId = productionRecipeCueBaseId(recipeId);
+    const cueId =
+      workspace === "arrange"
+        ? productionRecipeCueInternalId(recipeId, revision, stage)
+        : uniqueId(
+            baseCueId,
+            bundle.cues.map((cue) => cue.id),
+          );
     try {
       const cue = await engine.resolveProductionCueRecipe({
         project: bundle,
@@ -176,19 +180,11 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
         cueName: name,
       });
       if (workspace === "arrange") {
-        const productionEffects = [
-          ...new Map(
-            cue.layers.flatMap((layer) => {
-              const effect = exactAsset(productionCatalog?.effects ?? [], layer.effect_ref);
-              return effect ? [[assetKey(effect), effect] as const] : [];
-            }),
-          ).values(),
-        ];
-        const saved = projectActions.saveCueWorkingDraft(cue, productionEffects);
-        projectActions.setSelectedCueRef({ id: saved.id, revision: saved.revision });
+        workspaceActions.setSelectedArrangeBuiltInCue({ recipeRef, cue });
+        projectActions.setSelectedCueRef(null);
         workspaceActions.setPublishStatus(
           "idle",
-          `${saved.name} added to Project Cues and selected for placement.`,
+          `${cue.name} selected from Built-in Cues. Place it at the playhead when ready.`,
         );
       } else {
         authoringDraftActions.beginNewCue(cue);
@@ -409,14 +405,26 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                   <Button
                     key={`${recipe.id}@${recipe.revision}`}
                     size="sm"
-                    variant="ghost"
+                    variant={
+                      workspace === "arrange" &&
+                      selectedArrangeBuiltInCue?.recipeRef.id === recipe.id &&
+                      selectedArrangeBuiltInCue.recipeRef.revision === recipe.revision &&
+                      assetKey(selectedArrangeBuiltInCue.cue.compatible_stage_ref) ===
+                        assetKey(stage)
+                        ? "secondary"
+                        : "ghost"
+                    }
                     className="h-auto w-full justify-start py-1.5"
                     title={disabledReason ?? recipe.description}
                     disabled={Boolean(disabledReason) || resolvingRecipeId !== null}
                     onClick={() => void startRecipeDraft(recipe.id, recipe.revision, recipe.name)}
                   >
                     <span className="min-w-0 flex-1 truncate text-left">
-                      {resolving ? (workspace === "arrange" ? "Adding…" : "Opening…") : recipe.name}
+                      {resolving
+                        ? workspace === "arrange"
+                          ? "Selecting…"
+                          : "Opening…"
+                        : recipe.name}
                     </span>
                     <span className="text-muted-foreground text-[9px]">
                       {disabledReason ??
@@ -431,15 +439,17 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                   <AlertDescription>{recipeError}</AlertDescription>
                 </Alert>
               )}
-              <LibrarySectionLabel>Project Cues</LibrarySectionLabel>
+              <LibrarySectionLabel>
+                {workspace === "arrange" ? "My Cues" : "Project Cues"}
+              </LibrarySectionLabel>
               {workspace === "arrange" && (
                 <p className="text-muted-foreground px-1 text-[10px]">
-                  Choose a built-in or saved Cue, then place it at the playhead.
+                  Built-ins stay in the catalog. Saved and customized Cues appear here.
                 </p>
               )}
               {latestRefsById(bundle.manifest.cue_refs).map((reference) => {
                 const cue = exactAsset(bundle.cues, reference);
-                if (!cue) return null;
+                if (!cue || isInternalProductionCueId(cue.id)) return null;
                 return (
                   <Button
                     key={assetKey(reference)}
@@ -450,7 +460,10 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                     }
                     size="sm"
                     className="h-auto w-full justify-start py-1.5"
-                    onClick={() => projectActions.setSelectedCueRef(reference)}
+                    onClick={() => {
+                      workspaceActions.setSelectedArrangeBuiltInCue(null);
+                      projectActions.setSelectedCueRef(reference);
+                    }}
                   >
                     <span className="min-w-0 flex-1 truncate text-left">{cue.name}</span>
                     <span className="text-muted-foreground text-[9px]">
@@ -459,13 +472,13 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                   </Button>
                 );
               })}
-              {bundle.cues.length === 0 && (
+              {bundle.cues.every((cue) => isInternalProductionCueId(cue.id)) && (
                 <CompactEmpty
                   icon={Layers2}
-                  title="No saved Cues yet"
+                  title="No custom Cues yet"
                   description={
                     workspace === "arrange"
-                      ? "Choose a built-in Cue above to add it to this project."
+                      ? "Create or customize Cues in the Cues workspace."
                       : "Create Effects first, then combine them in Cues."
                   }
                 />

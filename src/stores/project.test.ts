@@ -96,6 +96,37 @@ describe("Stage 7 Project state", () => {
     expect(isLegacyAcceptanceWorkspace(legacyBundle)).toBe(false);
   });
 
+  it("moves legacy Arrange recipe copies behind the internal Cue boundary", async () => {
+    const effectRef = projectActions.createEffect("Pulse")!;
+    const originalCueRef = projectActions.createCue([effectRef], "Full-stage Drop Pulse")!;
+    const legacyBundle = structuredClone(useProjectStore.getState().bundle);
+    const cue = exactAsset(legacyBundle.cues, originalCueRef)!;
+    cue.id = "cue-four-on-floor";
+    const legacyCueRef = { id: cue.id, revision: cue.revision };
+    legacyBundle.manifest.cue_refs = [legacyCueRef];
+    legacyBundle.arrangements[0].tracks[0].clips = [
+      {
+        id: "drop-pulse-clip",
+        cue_ref: legacyCueRef,
+        start_tick: 0,
+        duration_tick: cue.nominal_length_ticks,
+        playback: "loop",
+      },
+    ];
+
+    const migrate = useProjectStore.persist.getOptions().migrate;
+    const migrated = (await Promise.resolve(
+      migrate?.({ bundle: legacyBundle, selectedCueRef: legacyCueRef }, 4),
+    )) as ReturnType<typeof useProjectStore.getState>;
+    const migratedCue = migrated.bundle.cues[0]!;
+    const migratedClip = migrated.bundle.arrangements[0].tracks[0].clips![0]!;
+
+    expect(migratedCue.id).toMatch(/^__builtin-cue-four-on-floor/);
+    expect(migratedClip.cue_ref).toEqual({ id: migratedCue.id, revision: migratedCue.revision });
+    expect(migrated.bundle.manifest.cue_refs).toContainEqual(migratedClip.cue_ref);
+    expect(migrated.selectedCueRef).toBeNull();
+  });
+
   it("pauses the current preview before selecting another Effect", () => {
     const first = projectActions.createEffect("First")!;
     const second = projectActions.createEffect("Second")!;

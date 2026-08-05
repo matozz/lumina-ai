@@ -29,7 +29,7 @@ interface ArrangementTimelineToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   reference: AssetRef;
-  selectedCueRef: AssetRef | null;
+  selectedCueName: string | null;
 }
 
 export function ArrangementTimelineToolbar({
@@ -47,7 +47,7 @@ export function ArrangementTimelineToolbar({
   onZoomIn,
   onZoomOut,
   reference,
-  selectedCueRef,
+  selectedCueName,
 }: ArrangementTimelineToolbarProps) {
   const refs = latestRefsById(bundle.manifest.arrangement_refs);
   const items = refs.map((candidate) => ({
@@ -86,9 +86,14 @@ export function ArrangementTimelineToolbar({
         <Copy data-icon="inline-start" aria-hidden="true" />
         Duplicate
       </Button>
-      <Button size="xs" disabled={!selectedCueRef} onClick={onPlaceCue}>
+      <Button
+        size="xs"
+        disabled={!selectedCueName}
+        title={selectedCueName ? `Place ${selectedCueName} at the playhead` : undefined}
+        onClick={onPlaceCue}
+      >
         <Plus data-icon="inline-start" aria-hidden="true" />
-        Place selected Cue
+        Place Cue at playhead
       </Button>
       <div className="ml-auto flex items-center gap-0.5" aria-label="Timeline zoom and snap">
         <Button

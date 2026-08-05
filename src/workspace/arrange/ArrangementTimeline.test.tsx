@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { assetKey, exactAsset } from "@/document/projectModel";
+import { assetKey, createCueAsset, createEffectAsset, exactAsset } from "@/document/projectModel";
+import { productionCatalogActions } from "@/stores/productionCatalog";
 import { projectActions, useProjectStore } from "@/stores/project";
+import { workspaceActions } from "@/stores/workspace";
 import { addAutomationLane, automationOptions } from "./timeline/arrangementTimelineModel";
 import { ArrangementTimeline } from "./ArrangementTimeline";
 
@@ -9,10 +11,46 @@ describe("ArrangementTimeline workflow", () => {
   beforeEach(() => {
     localStorage.clear();
     projectActions.reset();
+    productionCatalogActions.reset();
+    workspaceActions.reset();
     Object.defineProperty(HTMLElement.prototype, "setPointerCapture", {
       configurable: true,
       value: vi.fn(),
     });
+  });
+
+  it("materializes a selected built-in Cue only when placing it", () => {
+    const scratch = useProjectStore.getState().bundle;
+    const effect = createEffectAsset(scratch, "Pulse");
+    effect.id = "builtin.intensity.pulse";
+    effect.source = "built_in";
+    const cue = createCueAsset(scratch, [effect], "Full-stage Drop Pulse");
+    cue.id = "__builtin-cue-four-on-floor--stage-1-r1";
+    productionCatalogActions.setCatalog({
+      schema_version: 1,
+      effects: [effect],
+      cue_recipes: [],
+    });
+    workspaceActions.setSelectedArrangeBuiltInCue({
+      recipeRef: { id: "recipe.four-on-floor", revision: 1 },
+      cue,
+    });
+    const historyBefore = useProjectStore.getState().historyCursor;
+
+    render(<ArrangementTimeline />);
+
+    expect(useProjectStore.getState().bundle.cues).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: "Place Cue at playhead" }));
+
+    const state = useProjectStore.getState();
+    const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
+    expect(state.bundle.cues).toContainEqual(cue);
+    expect(state.bundle.effects).toContainEqual(effect);
+    expect(arrangement.tracks[0].clips).toContainEqual(
+      expect.objectContaining({ cue_ref: { id: cue.id, revision: cue.revision } }),
+    );
+    expect(state.selectedCueRef).toBeNull();
+    expect(state.historyCursor).toBe(historyBefore + 1);
   });
 
   it("renders multi-meter ruler marks, zoom snap, selection inspector, and one-step keyboard edits", async () => {
