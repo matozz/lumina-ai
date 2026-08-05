@@ -3,9 +3,11 @@ use crate::compiler::diagnostic::{
 };
 use crate::compiler::{CompiledProjectSnapshot, Compiler, LayoutCoord};
 use crate::document::{
-    layout_capacity, layout_fixture_size_for_fixture, layout_to_legacy, load_document,
-    load_project_bundle, migrate_project_bundle, validate_layout_geometry, AssetRef,
-    LayoutDefinition, MetaDSL, MigrationReport, PatchDSL, ShowDocumentV4, StageDocument,
+    builtin_production_catalog, layout_capacity, layout_fixture_size_for_fixture, layout_to_legacy,
+    load_document, load_project_bundle, migrate_project_bundle, resolve_cue_recipe,
+    validate_effect_draft, validate_layout_geometry, validate_production_catalog, AssetRef,
+    CueDefinition, CueRecipeRef, EffectDefinitionDocument, LayoutDefinition, MetaDSL,
+    MigrationReport, PatchDSL, ProductionCatalog, ShowDocumentV4, StageDocument,
 };
 use crate::engine::attribute::FixtureFramePayload;
 use crate::engine::effect::{
@@ -138,6 +140,46 @@ pub async fn query_effect_catalog(
             missing_attributes: matched.missing_attributes,
         })
         .collect())
+}
+
+#[tauri::command]
+pub fn get_production_catalog() -> Result<ProductionCatalog, Vec<Diagnostic>> {
+    let catalog = builtin_production_catalog().map_err(|diagnostic| vec![diagnostic])?;
+    let diagnostics = validate_production_catalog(&catalog);
+    if diagnostics.is_empty() {
+        Ok(catalog)
+    } else {
+        Err(diagnostics)
+    }
+}
+
+#[tauri::command]
+pub fn validate_effect_working_draft(
+    effect: EffectDefinitionDocument,
+) -> Result<EffectDefinitionDocument, Vec<Diagnostic>> {
+    validate_effect_draft(effect)
+}
+
+#[tauri::command]
+pub fn resolve_production_cue_recipe(
+    project_json: String,
+    recipe_ref: CueRecipeRef,
+    stage_ref: AssetRef,
+    cue_id: String,
+    cue_revision: u32,
+    cue_name: String,
+) -> Result<CueDefinition, Vec<Diagnostic>> {
+    let project = load_project_bundle(&project_json)?.into_bundle();
+    let catalog = get_production_catalog()?;
+    resolve_cue_recipe(
+        &catalog,
+        &project,
+        &recipe_ref,
+        &stage_ref,
+        cue_id,
+        cue_revision,
+        cue_name,
+    )
 }
 
 #[tauri::command]

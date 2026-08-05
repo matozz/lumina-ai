@@ -9,6 +9,8 @@ pub enum AnimatableValue {
     Float(f64),
     Color(u8, u8, u8),
     Direction(DirectionDSL),
+    Boolean(bool),
+    Enum(String),
 }
 
 impl AnimatableValue {
@@ -19,6 +21,9 @@ impl AnimatableValue {
                 .ok()
                 .map(|(red, green, blue)| Self::Color(red, green, blue)),
             ParameterValueDSL::Direction(direction) => Some(Self::Direction(*direction)),
+            ParameterValueDSL::Boolean(value) => Some(Self::Boolean(*value)),
+            ParameterValueDSL::Enum(value) => Some(Self::Enum(value.clone())),
+            ParameterValueDSL::ColorStops(_) => None,
         }
     }
 
@@ -37,6 +42,16 @@ impl AnimatableValue {
                 } else {
                     Self::Direction(*left)
                 }
+            }
+            (AnimatableValue::Boolean(left), AnimatableValue::Boolean(right)) => {
+                Self::Boolean(if t >= 1.0 { *right } else { *left })
+            }
+            (AnimatableValue::Enum(left), AnimatableValue::Enum(right)) => {
+                Self::Enum(if t >= 1.0 {
+                    right.clone()
+                } else {
+                    left.clone()
+                })
             }
             // Fallback: If types don't match, just snap to the target if we are halfway there
             _ => {
@@ -114,7 +129,10 @@ impl ParameterContext {
     ) -> Option<f64> {
         match self.effect_params.get(instance)?.get(&parameter)? {
             AnimatableValue::Float(value) => Some(*value),
-            AnimatableValue::Color(_, _, _) | AnimatableValue::Direction(_) => None,
+            AnimatableValue::Color(_, _, _)
+            | AnimatableValue::Direction(_)
+            | AnimatableValue::Boolean(_)
+            | AnimatableValue::Enum(_) => None,
         }
     }
 
@@ -139,7 +157,10 @@ impl ParameterContext {
     ) -> Option<DirectionDSL> {
         match self.effect_params.get(instance)?.get(&parameter)? {
             AnimatableValue::Direction(direction) => Some(*direction),
-            AnimatableValue::Float(_) | AnimatableValue::Color(_, _, _) => None,
+            AnimatableValue::Float(_)
+            | AnimatableValue::Color(_, _, _)
+            | AnimatableValue::Boolean(_)
+            | AnimatableValue::Enum(_) => None,
         }
     }
 

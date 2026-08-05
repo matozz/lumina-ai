@@ -260,7 +260,10 @@ fn tangent_slope(tangent: Option<crate::compiler::CompiledKeyframeTangent>) -> f
 fn scalar_value(value: &AnimatableValue) -> Option<f64> {
     match value {
         AnimatableValue::Float(value) => Some(*value),
-        AnimatableValue::Color(_, _, _) | AnimatableValue::Direction(_) => None,
+        AnimatableValue::Color(_, _, _)
+        | AnimatableValue::Direction(_)
+        | AnimatableValue::Boolean(_)
+        | AnimatableValue::Enum(_) => None,
     }
 }
 

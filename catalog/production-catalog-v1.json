@@ -1,0 +1,1440 @@
+{
+  "schema_version": 1,
+  "effects": [
+    {
+      "schema_version": 1,
+      "id": "builtin.intensity.pulse",
+      "name": "Pulse",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 1.0 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Beat-synced pulse speed.",
+          "safe_fallback": { "type": "scalar", "value": 1.0 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.85 },
+          "range": [0.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Maximum dimmer output.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "waveform",
+          "name": "Waveform",
+          "value_type": "enum",
+          "default_value": { "type": "enum", "value": "sine" },
+          "required": true,
+          "help": "Pulse oscillator shape.",
+          "safe_fallback": { "type": "enum", "value": "sine" },
+          "override_policy": "effect_only",
+          "advanced": true,
+          "enum_values": ["sine", "triangle", "saw", "pulse"],
+          "graph_binding": { "node_id": "oscillator", "property": "waveform" },
+          "unit": "choice",
+          "ui_hint": "select",
+          "automation": "disabled"
+        },
+        {
+          "id": "attack",
+          "name": "Attack",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.08 },
+          "range": [0.0, 1.0],
+          "step": 0.01,
+          "required": true,
+          "help": "Envelope rise fraction.",
+          "safe_fallback": { "type": "scalar", "value": 0.08 },
+          "override_policy": "effect_only",
+          "advanced": true,
+          "graph_binding": { "node_id": "envelope", "property": "attack" },
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "disabled"
+        },
+        {
+          "id": "release",
+          "name": "Release",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.22 },
+          "range": [0.0, 1.0],
+          "step": 0.01,
+          "required": true,
+          "help": "Envelope fall fraction.",
+          "safe_fallback": { "type": "scalar", "value": 0.22 },
+          "override_policy": "effect_only",
+          "advanced": true,
+          "graph_binding": { "node_id": "envelope", "property": "release" },
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "disabled"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "oscillator",
+            "id": "oscillator",
+            "waveform": "sine",
+            "phase": { "node_id": "time", "port": "scalar" }
+          },
+          {
+            "type": "envelope",
+            "id": "envelope",
+            "input": { "node_id": "oscillator", "port": "scalar" },
+            "attack": 0.08,
+            "release": 0.22
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "envelope", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "intensity",
+        "category": "Rhythm",
+        "visibility": "standard",
+        "mood": ["steady", "club"],
+        "energy": 0.65,
+        "density": 0.55,
+        "motion": "pulse",
+        "colorfulness": 0.0,
+        "strobe_risk": "low",
+        "required_attributes": ["intensity"],
+        "layout_capabilities": ["any"],
+        "parameter_summary": ["speed", "intensity"],
+        "deprecated": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.intensity.breathe",
+      "name": "Breathe",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.5 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Beat-synced breathing speed.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.7 },
+          "range": [0.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Maximum dimmer output.",
+          "safe_fallback": { "type": "scalar", "value": 0.4 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "attack",
+          "name": "Attack",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.35 },
+          "range": [0.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Soft rise fraction.",
+          "safe_fallback": { "type": "scalar", "value": 0.35 },
+          "override_policy": "effect_only",
+          "advanced": true,
+          "graph_binding": { "node_id": "envelope", "property": "attack" },
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "disabled"
+        },
+        {
+          "id": "release",
+          "name": "Release",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.65 },
+          "range": [0.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Soft fall fraction.",
+          "safe_fallback": { "type": "scalar", "value": 0.65 },
+          "override_policy": "effect_only",
+          "advanced": true,
+          "graph_binding": { "node_id": "envelope", "property": "release" },
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "disabled"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "oscillator",
+            "id": "oscillator",
+            "waveform": "sine",
+            "phase": { "node_id": "time", "port": "scalar" }
+          },
+          {
+            "type": "envelope",
+            "id": "envelope",
+            "input": { "node_id": "oscillator", "port": "scalar" },
+            "attack": 0.35,
+            "release": 0.65
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "envelope", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "intensity",
+        "category": "Atmosphere",
+        "visibility": "standard",
+        "mood": ["calm", "ambient"],
+        "energy": 0.25,
+        "density": 0.35,
+        "motion": "organic",
+        "colorfulness": 0.0,
+        "strobe_risk": "none",
+        "required_attributes": ["intensity"],
+        "layout_capabilities": ["any"],
+        "parameter_summary": ["speed", "intensity"],
+        "deprecated": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.intensity.chase",
+      "name": "Chase",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 1.0 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Beat-synced chase speed.",
+          "safe_fallback": { "type": "scalar", "value": 1.0 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 1.0 },
+          "range": [0.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Maximum chase output.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "direction",
+          "name": "Direction",
+          "value_type": "direction",
+          "default_value": { "type": "direction", "value": "forward" },
+          "required": true,
+          "help": "Chase travel direction.",
+          "safe_fallback": { "type": "direction", "value": "forward" },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "direction",
+          "ui_hint": "segmented",
+          "automation": "discrete"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": { "node_id": "time", "port": "scalar" },
+            "basis": "index",
+            "from": 0.0,
+            "to": 1.0,
+            "wrap": true,
+            "custom_order": []
+          },
+          {
+            "type": "oscillator",
+            "id": "oscillator",
+            "waveform": "pulse",
+            "phase": { "node_id": "spatial", "port": "scalar" }
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "oscillator", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "spatial",
+        "category": "Chases",
+        "visibility": "standard",
+        "mood": ["driving", "kinetic"],
+        "energy": 0.8,
+        "density": 0.45,
+        "motion": "chase",
+        "colorfulness": 0.0,
+        "strobe_risk": "low",
+        "required_attributes": ["intensity"],
+        "layout_capabilities": ["linear", "matrix", "coordinates"],
+        "parameter_summary": ["speed", "intensity", "direction"],
+        "deprecated": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.intensity.wave",
+      "name": "Position Wave",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 1.0 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Beat-synced wave speed.",
+          "safe_fallback": { "type": "scalar", "value": 1.0 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "phase",
+          "name": "Phase",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.0 },
+          "range": [-1.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Cycle offset across the layout.",
+          "safe_fallback": { "type": "scalar", "value": 0.0 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "cycles",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.9 },
+          "range": [0.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Maximum wave output.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": { "node_id": "time", "port": "scalar" },
+            "basis": "x",
+            "from": 0.0,
+            "to": 1.0,
+            "wrap": true,
+            "custom_order": []
+          },
+          {
+            "type": "oscillator",
+            "id": "oscillator",
+            "waveform": "sine",
+            "phase": { "node_id": "spatial", "port": "scalar" }
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "oscillator", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "spatial",
+        "category": "Waves",
+        "visibility": "standard",
+        "mood": ["fluid", "wide"],
+        "energy": 0.55,
+        "density": 0.7,
+        "motion": "sweep",
+        "colorfulness": 0.0,
+        "strobe_risk": "none",
+        "required_attributes": ["intensity"],
+        "layout_capabilities": ["coordinates"],
+        "parameter_summary": ["speed", "phase", "intensity"],
+        "deprecated": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.color.rainbow",
+      "name": "Rainbow Flow",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.5 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Beat-synced color travel speed.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "phase",
+          "name": "Phase",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.0 },
+          "range": [-1.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Color cycle offset.",
+          "safe_fallback": { "type": "scalar", "value": 0.0 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "cycles",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "palette",
+          "name": "Palette",
+          "value_type": "color_stops",
+          "default_value": {
+            "type": "color_stops",
+            "value": [
+              { "position": 0.0, "color": "#FF245D" },
+              { "position": 0.33, "color": "#FFD84A" },
+              { "position": 0.66, "color": "#36E6A5" },
+              { "position": 1.0, "color": "#5B7CFF" }
+            ]
+          },
+          "required": true,
+          "help": "Ordered colors used by the flow.",
+          "safe_fallback": {
+            "type": "color_stops",
+            "value": [
+              { "position": 0.0, "color": "#FF245D" },
+              { "position": 1.0, "color": "#5B7CFF" }
+            ]
+          },
+          "override_policy": "effect_only",
+          "advanced": true,
+          "graph_binding": { "node_id": "gradient", "property": "color_stops" },
+          "unit": "color_stops",
+          "ui_hint": "color_stops",
+          "automation": "disabled"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": { "node_id": "time", "port": "scalar" },
+            "basis": "x",
+            "from": 0.0,
+            "to": 1.0,
+            "wrap": true,
+            "custom_order": []
+          },
+          {
+            "type": "color_gradient",
+            "id": "gradient",
+            "input": { "node_id": "spatial", "port": "scalar" },
+            "stops": [
+              { "position": 0.0, "color": "#FF245D" },
+              { "position": 0.33, "color": "#FFD84A" },
+              { "position": 0.66, "color": "#36E6A5" },
+              { "position": 1.0, "color": "#5B7CFF" }
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "gradient", "port": "color" },
+            "attribute_id": "color.rgb"
+          },
+          {
+            "type": "constant",
+            "id": "visible-intensity",
+            "value": { "type": "scalar", "value": 1.0 }
+          },
+          {
+            "type": "attribute_writer",
+            "id": "intensity-writer",
+            "input": { "node_id": "visible-intensity", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "color",
+        "category": "Color Motion",
+        "visibility": "standard",
+        "mood": ["festival", "bright"],
+        "energy": 0.7,
+        "density": 0.85,
+        "motion": "sweep",
+        "colorfulness": 1.0,
+        "strobe_risk": "none",
+        "required_attributes": ["color.rgb", "intensity"],
+        "layout_capabilities": ["coordinates"],
+        "parameter_summary": ["speed", "phase"],
+        "deprecated": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.color.dual-sweep",
+      "name": "Dual Color Sweep",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 1.0 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Beat-synced sweep speed.",
+          "safe_fallback": { "type": "scalar", "value": 1.0 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "phase",
+          "name": "Phase",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.0 },
+          "range": [-1.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Sweep cycle offset.",
+          "safe_fallback": { "type": "scalar", "value": 0.0 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "cycles",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "palette",
+          "name": "Palette",
+          "value_type": "color_stops",
+          "default_value": {
+            "type": "color_stops",
+            "value": [
+              { "position": 0.0, "color": "#FF3B81" },
+              { "position": 1.0, "color": "#2ED3FF" }
+            ]
+          },
+          "required": true,
+          "help": "Two-color sweep palette.",
+          "safe_fallback": {
+            "type": "color_stops",
+            "value": [
+              { "position": 0.0, "color": "#FFFFFF" },
+              { "position": 1.0, "color": "#4A6FFF" }
+            ]
+          },
+          "override_policy": "effect_only",
+          "advanced": true,
+          "graph_binding": { "node_id": "gradient", "property": "color_stops" },
+          "unit": "color_stops",
+          "ui_hint": "color_stops",
+          "automation": "disabled"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": { "node_id": "time", "port": "scalar" },
+            "basis": "y",
+            "from": 0.0,
+            "to": 1.0,
+            "wrap": true,
+            "custom_order": []
+          },
+          {
+            "type": "color_gradient",
+            "id": "gradient",
+            "input": { "node_id": "spatial", "port": "scalar" },
+            "stops": [
+              { "position": 0.0, "color": "#FF3B81" },
+              { "position": 1.0, "color": "#2ED3FF" }
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "gradient", "port": "color" },
+            "attribute_id": "color.rgb"
+          },
+          {
+            "type": "constant",
+            "id": "visible-intensity",
+            "value": { "type": "scalar", "value": 1.0 }
+          },
+          {
+            "type": "attribute_writer",
+            "id": "intensity-writer",
+            "input": { "node_id": "visible-intensity", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "color",
+        "category": "Color Motion",
+        "visibility": "standard",
+        "mood": ["modern", "clean"],
+        "energy": 0.55,
+        "density": 0.75,
+        "motion": "sweep",
+        "colorfulness": 0.9,
+        "strobe_risk": "none",
+        "required_attributes": ["color.rgb", "intensity"],
+        "layout_capabilities": ["coordinates"],
+        "parameter_summary": ["speed", "phase"],
+        "deprecated": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.color.pulse",
+      "name": "Color Pulse",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 1.0 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Beat-synced color pulse speed.",
+          "safe_fallback": { "type": "scalar", "value": 1.0 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "palette",
+          "name": "Palette",
+          "value_type": "color_stops",
+          "default_value": {
+            "type": "color_stops",
+            "value": [
+              { "position": 0.0, "color": "#190D3B" },
+              { "position": 1.0, "color": "#FF4FD8" }
+            ]
+          },
+          "required": true,
+          "help": "Dark-to-bright pulse colors.",
+          "safe_fallback": {
+            "type": "color_stops",
+            "value": [
+              { "position": 0.0, "color": "#000000" },
+              { "position": 1.0, "color": "#FFFFFF" }
+            ]
+          },
+          "override_policy": "effect_only",
+          "advanced": true,
+          "graph_binding": { "node_id": "gradient", "property": "color_stops" },
+          "unit": "color_stops",
+          "ui_hint": "color_stops",
+          "automation": "disabled"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "oscillator",
+            "id": "oscillator",
+            "waveform": "sine",
+            "phase": { "node_id": "time", "port": "scalar" }
+          },
+          {
+            "type": "color_gradient",
+            "id": "gradient",
+            "input": { "node_id": "oscillator", "port": "scalar" },
+            "stops": [
+              { "position": 0.0, "color": "#190D3B" },
+              { "position": 1.0, "color": "#FF4FD8" }
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "gradient", "port": "color" },
+            "attribute_id": "color.rgb"
+          },
+          {
+            "type": "constant",
+            "id": "visible-intensity",
+            "value": { "type": "scalar", "value": 1.0 }
+          },
+          {
+            "type": "attribute_writer",
+            "id": "intensity-writer",
+            "input": { "node_id": "visible-intensity", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "color",
+        "category": "Rhythm",
+        "visibility": "standard",
+        "mood": ["neon", "club"],
+        "energy": 0.65,
+        "density": 0.6,
+        "motion": "pulse",
+        "colorfulness": 0.9,
+        "strobe_risk": "low",
+        "required_attributes": ["color.rgb", "intensity"],
+        "layout_capabilities": ["any"],
+        "parameter_summary": ["speed"],
+        "deprecated": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.spatial.radial-bloom",
+      "name": "Radial Bloom",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.5 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Beat-synced radial speed.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.9 },
+          "range": [0.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Maximum bloom output.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "direction",
+          "name": "Direction",
+          "value_type": "direction",
+          "default_value": { "type": "direction", "value": "forward" },
+          "required": true,
+          "help": "Outward or inward travel.",
+          "safe_fallback": { "type": "direction", "value": "forward" },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "direction",
+          "ui_hint": "segmented",
+          "automation": "discrete"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": { "node_id": "time", "port": "scalar" },
+            "basis": "distance",
+            "from": 0.0,
+            "to": 1.0,
+            "wrap": true,
+            "custom_order": []
+          },
+          {
+            "type": "oscillator",
+            "id": "oscillator",
+            "waveform": "sine",
+            "phase": { "node_id": "spatial", "port": "scalar" }
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "oscillator", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "spatial",
+        "category": "Geometry",
+        "visibility": "standard",
+        "mood": ["expansive", "cinematic"],
+        "energy": 0.55,
+        "density": 0.8,
+        "motion": "organic",
+        "colorfulness": 0.0,
+        "strobe_risk": "none",
+        "required_attributes": ["intensity"],
+        "layout_capabilities": ["coordinates", "radial"],
+        "parameter_summary": ["speed", "intensity", "direction"],
+        "deprecated": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.spatial.angular-orbit",
+      "name": "Angular Orbit",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 1.0 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Beat-synced orbit speed.",
+          "safe_fallback": { "type": "scalar", "value": 1.0 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "phase",
+          "name": "Phase",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.0 },
+          "range": [-1.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Angular cycle offset.",
+          "safe_fallback": { "type": "scalar", "value": 0.0 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "cycles",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.9 },
+          "range": [0.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Maximum orbit output.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": { "node_id": "time", "port": "scalar" },
+            "basis": "angle",
+            "from": 0.0,
+            "to": 1.0,
+            "wrap": true,
+            "custom_order": []
+          },
+          {
+            "type": "oscillator",
+            "id": "oscillator",
+            "waveform": "triangle",
+            "phase": { "node_id": "spatial", "port": "scalar" }
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "oscillator", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "spatial",
+        "category": "Geometry",
+        "visibility": "standard",
+        "mood": ["circular", "hypnotic"],
+        "energy": 0.65,
+        "density": 0.65,
+        "motion": "sweep",
+        "colorfulness": 0.0,
+        "strobe_risk": "low",
+        "required_attributes": ["intensity"],
+        "layout_capabilities": ["coordinates", "radial"],
+        "parameter_summary": ["speed", "phase", "intensity"],
+        "deprecated": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.movement.pan-sweep",
+      "name": "Pan Sweep",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.5 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Beat-synced pan speed.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "direction",
+          "name": "Direction",
+          "value_type": "direction",
+          "default_value": { "type": "direction", "value": "forward" },
+          "required": true,
+          "help": "Sweep travel direction.",
+          "safe_fallback": { "type": "direction", "value": "forward" },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "direction",
+          "ui_hint": "segmented",
+          "automation": "discrete"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "oscillator",
+            "id": "oscillator",
+            "waveform": "sine",
+            "phase": { "node_id": "time", "port": "scalar" }
+          },
+          {
+            "type": "map",
+            "id": "pan-map",
+            "input": { "node_id": "oscillator", "port": "scalar" },
+            "input_range": [0.0, 1.0],
+            "output_range": [-180.0, 180.0]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "pan-map", "port": "scalar" },
+            "attribute_id": "position.pan"
+          },
+          {
+            "type": "constant",
+            "id": "visible-intensity",
+            "value": { "type": "scalar", "value": 1.0 }
+          },
+          {
+            "type": "attribute_writer",
+            "id": "intensity-writer",
+            "input": { "node_id": "visible-intensity", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "movement",
+        "category": "Movement",
+        "visibility": "standard",
+        "mood": ["searching", "wide"],
+        "energy": 0.5,
+        "density": 0.7,
+        "motion": "sweep",
+        "colorfulness": 0.0,
+        "strobe_risk": "none",
+        "required_attributes": ["position.pan", "intensity"],
+        "layout_capabilities": ["any"],
+        "parameter_summary": ["speed", "direction"],
+        "deprecated": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.movement.tilt-wave",
+      "name": "Tilt Wave",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.5 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Beat-synced tilt speed.",
+          "safe_fallback": { "type": "scalar", "value": 0.5 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "phase",
+          "name": "Phase",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.0 },
+          "range": [-1.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Tilt cycle offset.",
+          "safe_fallback": { "type": "scalar", "value": 0.0 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "cycles",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": { "node_id": "time", "port": "scalar" },
+            "basis": "index",
+            "from": 0.0,
+            "to": 0.5,
+            "wrap": true,
+            "custom_order": []
+          },
+          {
+            "type": "oscillator",
+            "id": "oscillator",
+            "waveform": "sine",
+            "phase": { "node_id": "spatial", "port": "scalar" }
+          },
+          {
+            "type": "map",
+            "id": "tilt-map",
+            "input": { "node_id": "oscillator", "port": "scalar" },
+            "input_range": [0.0, 1.0],
+            "output_range": [-60.0, 60.0]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "tilt-map", "port": "scalar" },
+            "attribute_id": "position.tilt"
+          },
+          {
+            "type": "constant",
+            "id": "visible-intensity",
+            "value": { "type": "scalar", "value": 1.0 }
+          },
+          {
+            "type": "attribute_writer",
+            "id": "intensity-writer",
+            "input": { "node_id": "visible-intensity", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "movement",
+        "category": "Movement",
+        "visibility": "standard",
+        "mood": ["rolling", "kinetic"],
+        "energy": 0.55,
+        "density": 0.75,
+        "motion": "organic",
+        "colorfulness": 0.0,
+        "strobe_risk": "none",
+        "required_attributes": ["position.tilt", "intensity"],
+        "layout_capabilities": ["linear", "matrix", "coordinates"],
+        "parameter_summary": ["speed", "phase"],
+        "deprecated": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.strobe.safe-pulse",
+      "name": "Safe Strobe Pulse",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 2.0 },
+          "range": [0.25, 8.0],
+          "step": 0.25,
+          "required": true,
+          "help": "Beat-synced flash rate; review risk before use.",
+          "safe_fallback": { "type": "scalar", "value": 1.0 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 0.65 },
+          "range": [0.0, 1.0],
+          "step": 0.05,
+          "required": true,
+          "help": "Maximum flash intensity.",
+          "safe_fallback": { "type": "scalar", "value": 0.25 },
+          "override_policy": "cue_override",
+          "advanced": false,
+          "unit": "normalized",
+          "ui_hint": "slider",
+          "automation": "continuous"
+        }
+      ],
+      "graph": {
+        "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "oscillator",
+            "id": "oscillator",
+            "waveform": "pulse",
+            "phase": { "node_id": "time", "port": "scalar" }
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": { "node_id": "oscillator", "port": "scalar" },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "strobe",
+        "category": "Risk",
+        "visibility": "standard",
+        "mood": ["impact", "peak"],
+        "energy": 0.9,
+        "density": 0.4,
+        "motion": "pulse",
+        "colorfulness": 0.0,
+        "strobe_risk": "medium",
+        "required_attributes": ["intensity"],
+        "layout_capabilities": ["any"],
+        "parameter_summary": ["speed", "intensity"],
+        "deprecated": false
+      }
+    }
+  ],
+  "cue_recipes": [
+    {
+      "schema_version": 1,
+      "id": "recipe.four-on-floor",
+      "revision": 1,
+      "name": "Four on the Floor",
+      "description": "A steady intensity pulse across the active Stage.",
+      "nominal_length_ticks": 15360,
+      "layers": [
+        {
+          "id": "pulse",
+          "effect_ref": { "id": "builtin.intensity.pulse", "revision": 1 },
+          "target": { "type": "all" },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1.0 },
+            "intensity": { "type": "scalar", "value": 0.8 }
+          },
+          "phase": 0.0,
+          "seed": "1000000000000001",
+          "layer": 0,
+          "priority": 0
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+    },
+    {
+      "schema_version": 1,
+      "id": "recipe.row-chase",
+      "revision": 1,
+      "name": "Row Chase",
+      "description": "A directional chase resolved to a row-capable TargetSet.",
+      "nominal_length_ticks": 15360,
+      "layers": [
+        {
+          "id": "chase",
+          "effect_ref": { "id": "builtin.intensity.chase", "revision": 1 },
+          "target": { "type": "rows" },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1.0 },
+            "direction": { "type": "direction", "value": "forward" }
+          },
+          "phase": 0.0,
+          "seed": "2000000000000002",
+          "layer": 0,
+          "priority": 0
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "bar" }
+    },
+    {
+      "schema_version": 1,
+      "id": "recipe.rainbow-wash",
+      "revision": 1,
+      "name": "Rainbow Wash",
+      "description": "A full-stage color flow with a pinned Production palette.",
+      "nominal_length_ticks": 30720,
+      "layers": [
+        {
+          "id": "rainbow",
+          "effect_ref": { "id": "builtin.color.rainbow", "revision": 1 },
+          "target": { "type": "all" },
+          "parameter_overrides": { "speed": { "type": "scalar", "value": 0.5 } },
+          "phase": 0.0,
+          "seed": "3000000000000003",
+          "layer": 0,
+          "priority": 0
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "bar" }
+    },
+    {
+      "schema_version": 1,
+      "id": "recipe.radial-bloom",
+      "revision": 1,
+      "name": "Radial Bloom",
+      "description": "A coordinate-driven bloom resolved to any compatible TargetSet.",
+      "nominal_length_ticks": 15360,
+      "layers": [
+        {
+          "id": "bloom",
+          "effect_ref": { "id": "builtin.spatial.radial-bloom", "revision": 1 },
+          "target": { "type": "any_compatible" },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 0.5 },
+            "intensity": { "type": "scalar", "value": 0.85 }
+          },
+          "phase": 0.0,
+          "seed": "4000000000000004",
+          "layer": 0,
+          "priority": 0
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "bar" }
+    },
+    {
+      "schema_version": 1,
+      "id": "recipe.moving-sweep",
+      "revision": 1,
+      "name": "Moving Sweep",
+      "description": "A pan and tilt combination for position-capable fixtures.",
+      "nominal_length_ticks": 30720,
+      "layers": [
+        {
+          "id": "pan",
+          "effect_ref": { "id": "builtin.movement.pan-sweep", "revision": 1 },
+          "target": { "type": "all" },
+          "parameter_overrides": { "speed": { "type": "scalar", "value": 0.5 } },
+          "phase": 0.0,
+          "seed": "5000000000000005",
+          "layer": 0,
+          "priority": 0
+        },
+        {
+          "id": "tilt",
+          "effect_ref": { "id": "builtin.movement.tilt-wave", "revision": 1 },
+          "target": { "type": "any_compatible" },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 0.5 },
+            "phase": { "type": "scalar", "value": 0.25 }
+          },
+          "phase": 0.0,
+          "seed": "5000000000000006",
+          "layer": 1,
+          "priority": 1
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "bar" }
+    },
+    {
+      "schema_version": 1,
+      "id": "recipe.layered-peak",
+      "revision": 1,
+      "name": "Layered Peak",
+      "description": "Three capability-resolved layers for a structured peak section.",
+      "nominal_length_ticks": 15360,
+      "layers": [
+        {
+          "id": "base",
+          "effect_ref": { "id": "builtin.intensity.pulse", "revision": 1 },
+          "target": { "type": "all" },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1.0 },
+            "intensity": { "type": "scalar", "value": 0.75 }
+          },
+          "phase": 0.0,
+          "seed": "6000000000000006",
+          "layer": 0,
+          "priority": 0
+        },
+        {
+          "id": "color",
+          "effect_ref": { "id": "builtin.color.dual-sweep", "revision": 1 },
+          "target": { "type": "columns" },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1.0 },
+            "phase": { "type": "scalar", "value": 0.25 }
+          },
+          "phase": 0.0,
+          "seed": "6000000000000007",
+          "layer": 1,
+          "priority": 1
+        },
+        {
+          "id": "zones",
+          "effect_ref": { "id": "builtin.intensity.chase", "revision": 1 },
+          "target": { "type": "grid_zones" },
+          "scene": { "minimum_steps": 3, "requires_weighted_transition": true },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 2.0 },
+            "intensity": { "type": "scalar", "value": 0.9 }
+          },
+          "phase": 0.0,
+          "seed": "6000000000000008",
+          "layer": 2,
+          "priority": 2
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "bar" }
+    }
+  ]
+}

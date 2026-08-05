@@ -9,11 +9,12 @@ use crate::engine::animation::AnimatableValue;
 use crate::engine::attribute::{resolve_attribute, AttributeHandle};
 use crate::engine::color::parse_hex_color;
 use crate::engine::effect::{
-    AutomationPolicy, CompiledColorStop, CompiledEffectGraph, CompiledEffectNode,
-    CompiledEffectStep, CompiledProfileSequence, Direction, EffectCatalog, EffectCatalogMatch,
-    EffectCatalogQuery, EffectDefinition, EffectDefinitionHandle, EffectInstance, EffectNodeHandle,
-    EffectSource, MathOperation, MotionTag, OscillatorWaveform, ParameterDefinition,
-    ParameterHandle, ParameterUiHint, ParameterUnit, ParameterValue, ParameterValueType,
+    AutomationPolicy, CatalogVisibility, CompiledColorStop, CompiledEffectGraph,
+    CompiledEffectNode, CompiledEffectStep, CompiledProfileSequence, Direction, EffectCatalog,
+    EffectCatalogMatch, EffectCatalogQuery, EffectDefinition, EffectDefinitionHandle, EffectFamily,
+    EffectInstance, EffectNodeHandle, EffectReplacement, EffectSource, LayoutCapability,
+    MathOperation, MotionTag, OscillatorWaveform, ParameterDefinition, ParameterHandle,
+    ParameterOverridePolicy, ParameterUiHint, ParameterUnit, ParameterValue, ParameterValueType,
     SpatialBasis, StrobeRisk,
 };
 use crate::engine::musical_time::{MusicalTime, TempoMap, TempoPoint};
@@ -1299,6 +1300,20 @@ fn compile_effect_models(
 
 fn compile_effect_catalog(catalog: &EffectCatalogDSL) -> EffectCatalog {
     EffectCatalog {
+        family: catalog.family.map(|family| match family {
+            EffectFamilyDSL::Intensity => EffectFamily::Intensity,
+            EffectFamilyDSL::Color => EffectFamily::Color,
+            EffectFamilyDSL::Movement => EffectFamily::Movement,
+            EffectFamilyDSL::Spatial => EffectFamily::Spatial,
+            EffectFamilyDSL::Strobe => EffectFamily::Strobe,
+            EffectFamilyDSL::Utility => EffectFamily::Utility,
+        }),
+        category: catalog.category.clone(),
+        visibility: match catalog.visibility {
+            CatalogVisibilityDSL::Standard => CatalogVisibility::Standard,
+            CatalogVisibilityDSL::Advanced => CatalogVisibility::Advanced,
+            CatalogVisibilityDSL::Hidden => CatalogVisibility::Hidden,
+        },
         mood: catalog.mood.clone(),
         energy: catalog.energy,
         density: catalog.density,
@@ -1317,6 +1332,27 @@ fn compile_effect_catalog(catalog: &EffectCatalogDSL) -> EffectCatalog {
             StrobeRiskDSL::High => StrobeRisk::High,
         },
         required_attributes: catalog.required_attributes.clone(),
+        layout_capabilities: catalog
+            .layout_capabilities
+            .iter()
+            .map(|capability| match capability {
+                LayoutCapabilityDSL::Any => LayoutCapability::Any,
+                LayoutCapabilityDSL::Linear => LayoutCapability::Linear,
+                LayoutCapabilityDSL::Matrix => LayoutCapability::Matrix,
+                LayoutCapabilityDSL::Radial => LayoutCapability::Radial,
+                LayoutCapabilityDSL::Coordinates => LayoutCapability::Coordinates,
+                LayoutCapabilityDSL::TargetingScene => LayoutCapability::TargetingScene,
+            })
+            .collect(),
+        parameter_summary: catalog.parameter_summary.clone(),
+        deprecated: catalog.deprecated,
+        replacement: catalog
+            .replacement
+            .as_ref()
+            .map(|replacement| EffectReplacement {
+                id: replacement.id.clone(),
+                revision: replacement.revision,
+            }),
     }
 }
 
@@ -1686,10 +1722,28 @@ fn compile_parameter_definition(
             ParameterValueTypeDSL::Scalar => ParameterValueType::Scalar,
             ParameterValueTypeDSL::Color => ParameterValueType::Color,
             ParameterValueTypeDSL::Direction => ParameterValueType::Direction,
+            ParameterValueTypeDSL::Boolean => ParameterValueType::Boolean,
+            ParameterValueTypeDSL::Enum => ParameterValueType::Enum,
+            ParameterValueTypeDSL::ColorStops => ParameterValueType::ColorStops,
         },
         default_value,
         range: parameter.range,
+        step: parameter.step,
+        required: parameter.required,
+        help: parameter.help.clone(),
+        safe_fallback: parameter
+            .safe_fallback
+            .as_ref()
+            .and_then(|fallback| compile_parameter_value(fallback, errors)),
+        override_policy: parameter.override_policy.map(|policy| match policy {
+            ParameterOverridePolicyDSL::CueOverride => ParameterOverridePolicy::CueOverride,
+            ParameterOverridePolicyDSL::EffectOnly => ParameterOverridePolicy::EffectOnly,
+            ParameterOverridePolicyDSL::Locked => ParameterOverridePolicy::Locked,
+        }),
+        advanced: parameter.advanced,
+        enum_values: parameter.enum_values.clone(),
         unit: match parameter.unit {
+            ParameterUnitDSL::None => ParameterUnit::None,
             ParameterUnitDSL::Multiplier => ParameterUnit::Multiplier,
             ParameterUnitDSL::Cycles => ParameterUnit::Cycles,
             ParameterUnitDSL::Percent => ParameterUnit::Percent,
@@ -1697,16 +1751,23 @@ fn compile_parameter_definition(
             ParameterUnitDSL::Color => ParameterUnit::Color,
             ParameterUnitDSL::Direction => ParameterUnit::Direction,
             ParameterUnitDSL::Degrees => ParameterUnit::Degrees,
+            ParameterUnitDSL::Boolean => ParameterUnit::Boolean,
+            ParameterUnitDSL::Choice => ParameterUnit::Choice,
+            ParameterUnitDSL::ColorStops => ParameterUnit::ColorStops,
         },
         ui_hint: match parameter.ui_hint {
             ParameterUiHintDSL::Slider => ParameterUiHint::Slider,
             ParameterUiHintDSL::Color => ParameterUiHint::Color,
             ParameterUiHintDSL::Segmented => ParameterUiHint::Segmented,
             ParameterUiHintDSL::Angle => ParameterUiHint::Angle,
+            ParameterUiHintDSL::Toggle => ParameterUiHint::Toggle,
+            ParameterUiHintDSL::Select => ParameterUiHint::Select,
+            ParameterUiHintDSL::ColorStops => ParameterUiHint::ColorStops,
         },
         automation: match parameter.automation {
             AutomationPolicyDSL::Continuous => AutomationPolicy::Continuous,
             AutomationPolicyDSL::Discrete => AutomationPolicy::Discrete,
+            AutomationPolicyDSL::Disabled => AutomationPolicy::Disabled,
         },
     })
 }
@@ -1735,6 +1796,25 @@ fn compile_parameter_value(
                 DirectionDSL::Reverse => Direction::Reverse,
             }))
         }
+        ParameterValueDSL::Boolean(value) => Some(ParameterValue::Boolean(*value)),
+        ParameterValueDSL::Enum(value) => Some(ParameterValue::Enum(value.clone())),
+        ParameterValueDSL::ColorStops(stops) => stops
+            .iter()
+            .map(|stop| {
+                parse_hex_color(&stop.color)
+                    .map(|(red, green, blue)| (stop.position, [red, green, blue]))
+                    .map_err(|error| {
+                        errors.push(Diagnostic::error(
+                            DOC_INVALID_COLOR,
+                            "effect_definitions.parameters.default_value",
+                            error.to_string(),
+                            "Use colors in #RRGGBB format.",
+                        ));
+                    })
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .ok()
+            .map(ParameterValue::ColorStops),
     }
 }
 

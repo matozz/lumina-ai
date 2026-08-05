@@ -1,10 +1,11 @@
+use super::validation::{validate_effect_definition_document, validate_parameter_value_contract};
 use super::{
     layout_capacity, layout_grid_dimensions, migrate_project_bundle, validate_layout_geometry,
     ArrangementAutomationTarget, ArrangementDocument, AssetRef, CenterEdgesRegion, CueDefinition,
     CueLayer, CueMixOverride, EffectDefinitionDocument, LayoutDefinition, LayoutGeometry,
-    ParameterValueDSL, ProjectBundle, StageDocument, TargetSetDefinition, TargetSetSelector,
-    TargetingDuration, TargetingDurationUnit, TargetingTransition,
-    ARRANGEMENT_DOCUMENT_SCHEMA_VERSION, CUE_DEFINITION_SCHEMA_VERSION,
+    ParameterOverridePolicyDSL, ParameterValueDSL, ProjectBundle, StageDocument,
+    TargetSetDefinition, TargetSetSelector, TargetingDuration, TargetingDurationUnit,
+    TargetingTransition, ARRANGEMENT_DOCUMENT_SCHEMA_VERSION, CUE_DEFINITION_SCHEMA_VERSION,
     EFFECT_DEFINITION_SCHEMA_VERSION, LAYOUT_DEFINITION_SCHEMA_VERSION,
     PROJECT_BUNDLE_SCHEMA_VERSION, PROJECT_MANIFEST_SCHEMA_VERSION, STAGE_DOCUMENT_SCHEMA_VERSION,
 };
@@ -345,6 +346,7 @@ fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
             }
             validate_cue_layer(bundle, stage, layout, layer, &path, diagnostics);
         }
+        validate_cue_summary(bundle, cue, &cue_path, diagnostics);
         let mut lane_ids = BTreeSet::new();
         for (lane_index, lane) in cue.automation_lanes.iter().enumerate() {
             let lane_path = format!("{cue_path}.automation_lanes[{lane_index}]");
@@ -401,9 +403,74 @@ fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
     }
 }
 
+fn validate_cue_summary(
+    bundle: &ProjectBundle,
+    cue: &CueDefinition,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let mut required_attributes = BTreeSet::new();
+    let mut strobe_risk = super::StrobeRiskDSL::None;
+    for layer in &cue.layers {
+        let Some(effect) = exact_asset(&bundle.effects, &layer.effect_ref, |asset| {
+            (&asset.id, asset.revision)
+        }) else {
+            continue;
+        };
+        required_attributes.extend(effect.catalog.required_attributes.iter().cloned());
+        if strobe_rank(effect.catalog.strobe_risk) > strobe_rank(strobe_risk) {
+            strobe_risk = effect.catalog.strobe_risk;
+        }
+    }
+    let expected_attributes: Vec<_> = required_attributes.into_iter().collect();
+    let mut actual_attributes = cue.capability_summary.required_attributes.clone();
+    actual_attributes.sort();
+    actual_attributes.dedup();
+    if actual_attributes != expected_attributes {
+        diagnostics.push(
+            Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                format!("{path}.capability_summary"),
+                "Cue capability summary does not match its pinned Effect layers.",
+                "Recompute the summary from exact Effect revision metadata.",
+            )
+            .with_recovery(
+                "recompute_cue_summary",
+                "Recompute Cue summary",
+                Some(format!("{path}.capability_summary")),
+            ),
+        );
+    }
+    if strobe_risk != cue.risk_summary.strobe_risk {
+        diagnostics.push(
+            Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                format!("{path}.risk_summary"),
+                "Cue strobe risk does not match the highest pinned Effect risk.",
+                "Recompute the risk summary from exact Effect revision metadata.",
+            )
+            .with_recovery(
+                "recompute_cue_summary",
+                "Recompute Cue summary",
+                Some(format!("{path}.risk_summary")),
+            ),
+        );
+    }
+}
+
+fn strobe_rank(risk: super::StrobeRiskDSL) -> u8 {
+    match risk {
+        super::StrobeRiskDSL::None => 0,
+        super::StrobeRiskDSL::Low => 1,
+        super::StrobeRiskDSL::Medium => 2,
+        super::StrobeRiskDSL::High => 3,
+    }
+}
+
 fn validate_effects(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
     for (effect_index, effect) in bundle.effects.iter().enumerate() {
         let path = format!("effects[{effect_index}]");
+        validate_effect_definition_document(effect, &path, diagnostics);
         for (parameter_index, parameter) in effect.parameters.iter().enumerate() {
             validate_beat_sync_speed_override(
                 &parameter.id,
@@ -1189,16 +1256,32 @@ fn validate_parameter_value(
             "Use the value type declared by the referenced Effect revision.",
         ));
     }
-    if let (Some(range), ParameterValueDSL::Scalar(value)) = (parameter.range, value) {
-        if !value.is_finite() || !(range.0..=range.1).contains(value) {
-            diagnostics.push(Diagnostic::error(
+    if parameter
+        .override_policy
+        .is_some_and(|policy| !matches!(policy, ParameterOverridePolicyDSL::CueOverride))
+    {
+        diagnostics.push(
+            Diagnostic::error(
                 PROJECT_SCHEMA_INVALID,
                 format!("{path}.parameter_overrides.{parameter_id}"),
-                "Scalar override is outside the pinned Effect parameter range.",
-                "Use a finite value within the Effect revision's declared range.",
-            ));
-        }
+                "Pinned Effect parameter does not allow Cue overrides.",
+                "Customize the Effect or remove the incompatible override.",
+            )
+            .with_recovery(
+                "remove_incompatible_override",
+                "Remove incompatible override",
+                Some(format!("{path}.parameter_overrides.{parameter_id}")),
+            ),
+        );
     }
+    validate_parameter_value_contract(
+        value,
+        parameter.value_type,
+        parameter.range,
+        &parameter.enum_values,
+        &format!("{path}.parameter_overrides.{parameter_id}"),
+        diagnostics,
+    );
 }
 
 fn validate_beat_sync_speed_override(

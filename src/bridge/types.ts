@@ -1,5 +1,6 @@
 import type {
   AutomationTargetV3DSL,
+  ParameterValueDSL,
   ShowDocumentV4,
   TimelineV4DSL,
 } from "@/generated/show-document-v4";
@@ -42,6 +43,14 @@ export type {
   TimelineTrackDSL,
   TimelineV4DSL,
 } from "@/generated/show-document-v4";
+
+export type {
+  CueRecipeDefinition,
+  CueRecipeLayer,
+  CueRecipeSceneDSL,
+  CueRecipeTargetDSL,
+  ProductionCatalog,
+} from "@/generated/production-catalog-v1";
 
 export type {
   ArrangementAutomationLane,
@@ -99,7 +108,11 @@ export type {
 
 export type FullDSL = ShowDocumentV4;
 export type TimelineDSL = TimelineV4DSL;
-export type FromTo = number | string;
+export interface CueRecipeRef {
+  id: string;
+  revision: number;
+}
+export type FromTo = ParameterValueDSL["value"];
 export type Easing = "hold" | "linear" | "ease_in" | "ease_out" | "ease_in_out" | "bezier";
 export type TimelineActionDSL =
   | { type: "effect"; instance_id: string }
@@ -190,6 +203,16 @@ export interface Diagnostic {
   path: string;
   message: string;
   hint: string | null;
+  asset?: {
+    kind: string;
+    id: string;
+    revision: number;
+  };
+  recovery?: {
+    action: string;
+    label: string;
+    path?: string;
+  };
 }
 
 export interface EngineStatePayload {

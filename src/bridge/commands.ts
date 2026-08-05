@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   CompileResult,
   Diagnostic,
+  EffectDefinitionDocument,
   AssetRef,
   FixtureFramePayload,
   LayoutDefinition,
@@ -14,7 +15,10 @@ import type {
   ProjectBundle,
   ProjectCompileResult,
   ProjectPreviewFrame,
+  ProductionCatalog,
   PreviewSource,
+  CueDefinition,
+  CueRecipeRef,
   RenderContext,
   ShowSnapshotState,
   StageDocument,
@@ -64,6 +68,28 @@ export const engine = {
   getShowSnapshotState: () => invoke<ShowSnapshotState>("get_show_snapshot_state"),
 
   validateDSL: (json: string) => invoke<Diagnostic[]>("validate_dsl", { dslJson: json }),
+
+  getProductionCatalog: () => invoke<ProductionCatalog>("get_production_catalog"),
+
+  validateEffectWorkingDraft: (effect: EffectDefinitionDocument) =>
+    invoke<EffectDefinitionDocument>("validate_effect_working_draft", { effect }),
+
+  resolveProductionCueRecipe: (options: {
+    project: ProjectBundle;
+    recipeRef: CueRecipeRef;
+    stageRef: AssetRef;
+    cueId: string;
+    cueRevision: number;
+    cueName: string;
+  }) =>
+    invoke<CueDefinition>("resolve_production_cue_recipe", {
+      projectJson: JSON.stringify(options.project),
+      recipeRef: options.recipeRef,
+      stageRef: options.stageRef,
+      cueId: options.cueId,
+      cueRevision: options.cueRevision,
+      cueName: options.cueName,
+    }),
 
   play: () => invoke("play"),
   pause: () => invoke("pause"),

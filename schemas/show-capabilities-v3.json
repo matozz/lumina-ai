@@ -29,7 +29,7 @@
       "attribute_writer"
     ],
     "effect_sources": ["built_in", "project_local", "user_library"],
-    "parameter_types": ["scalar", "color", "direction"],
+    "parameter_types": ["scalar", "color", "direction", "boolean", "enum", "color_stops"],
     "spatial_bases": ["index", "x", "y", "distance", "angle", "custom"]
   },
   "document_schema": "show-document-v3.schema.json",
