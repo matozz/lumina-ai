@@ -16,11 +16,13 @@ export function BeatSyncSpeedSelect({
   id,
   value,
   defaultLabel,
+  disabled = false,
   onChange,
 }: {
   id?: string;
   value: number | null;
   defaultLabel?: string;
+  disabled?: boolean;
   onChange: (value: number | null) => void;
 }) {
   const currentValue = value === null ? "__default__" : String(value);
@@ -47,6 +49,7 @@ export function BeatSyncSpeedSelect({
     <Select
       items={items}
       value={currentValue}
+      disabled={disabled}
       onValueChange={(next) => {
         if (!next) return;
         onChange(next === "__default__" ? null : Number(next));

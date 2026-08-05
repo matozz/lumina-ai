@@ -3,14 +3,29 @@ import { AuthoringTransportBar } from "@/authoring/AuthoringTransportBar";
 import { CanvasView } from "@/canvas/CanvasView";
 import { Badge } from "@/components/ui/badge";
 import { exactAsset } from "@/document/projectModel";
+import { authoringDraftSelectors, useAuthoringDraftStore } from "@/stores/authoringDraft";
+import { productionCatalogSelectors, useProductionCatalogStore } from "@/stores/productionCatalog";
 import { projectSelectors, useProjectStore } from "@/stores/project";
+import { materializeAuthoringPreview } from "../authoringPreviewBundle";
 
 export function CuePreview() {
   const bundle = useProjectStore(projectSelectors.bundle);
   const selected = useProjectStore(projectSelectors.selectedCueRef);
+  const selectedEffect = useProjectStore(projectSelectors.selectedEffectRef);
   const arrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
   const error = useProjectStore(projectSelectors.previewError);
-  const cue = exactAsset(bundle.cues, selected);
+  const effectDraft = useAuthoringDraftStore(authoringDraftSelectors.effect);
+  const cueDraft = useAuthoringDraftStore(authoringDraftSelectors.cue);
+  const comparison = useAuthoringDraftStore(authoringDraftSelectors.comparison);
+  const catalog = useProductionCatalogStore(productionCatalogSelectors.catalog);
+  const materialized = materializeAuthoringPreview(
+    bundle,
+    selectedEffect,
+    selected,
+    { effect: effectDraft, cue: cueDraft, comparison },
+    catalog,
+  );
+  const cue = materialized.cue;
   const arrangement = exactAsset(bundle.arrangements, arrangementRef);
 
   return (
@@ -19,14 +34,18 @@ export function CuePreview() {
         <Layers2 className="text-primary" aria-hidden="true" />
         <span className="text-xs font-medium">Cue loop preview</span>
         <Badge variant="outline">Authoring Preview</Badge>
+        {cueDraft?.status === "invalid" && <Badge variant="destructive">Held at LKG</Badge>}
+        {cueDraft && (cueDraft.soloLayerId || cueDraft.mutedLayerIds.length > 0) && (
+          <Badge variant="secondary">Audition filter</Badge>
+        )}
         <span className="text-muted-foreground ml-auto truncate text-[10px]">
           {cue ? `${cue.name} · ${cue.layers.length} layers · r${cue.revision}` : "No Cue selected"}
         </span>
       </div>
-      {selected && arrangement && (
+      {materialized.cueRef && arrangement && (
         <AuthoringTransportBar
           scope="cue"
-          reference={selected}
+          reference={materialized.cueRef}
           arrangement={arrangement}
           disabled={!cue}
         />

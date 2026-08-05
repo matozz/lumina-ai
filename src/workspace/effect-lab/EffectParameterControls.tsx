@@ -1,110 +1,75 @@
-import { BeatSyncSpeedSelect } from "@/authoring/BeatSyncSpeedSelect";
-import { isBeatSyncSpeedMultiplier } from "@/authoring/speedMultipliers";
+import { RotateCcw } from "lucide-react";
+import type { Diagnostic, ParameterDefinitionDSL, ParameterValueDSL } from "@/bridge/types";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import type { EffectFormValues } from "./effectFactory";
+import { EffectParameterInput } from "./EffectParameterInput";
 
 export function EffectParameterControls({
-  values,
+  parameters,
+  diagnostics,
+  readOnly,
   onChange,
+  onRestoreFallback,
 }: {
-  values: EffectFormValues;
-  onChange: (key: "speed" | "phase" | "width" | "transition", value: number) => void;
+  parameters: ParameterDefinitionDSL[];
+  diagnostics: Diagnostic[];
+  readOnly: boolean;
+  onChange: (parameterId: string, value: ParameterValueDSL) => void;
+  onRestoreFallback: (parameterId: string) => void;
 }) {
   return (
-    <div className="border-border grid gap-3 rounded-md border p-2.5">
-      <Field>
-        <FieldLabel htmlFor="effect-form-speed">Speed</FieldLabel>
-        <BeatSyncSpeedSelect
-          id="effect-form-speed"
-          value={values.speed}
-          onChange={(value) => value !== null && onChange("speed", value)}
-        />
-        <FieldDescription>Locked to musical ratios of the Arrangement BPM.</FieldDescription>
-      </Field>
-      <ParameterSlider
-        label="Phase"
-        value={values.phase}
-        min={-1}
-        max={1}
-        step={0.01}
-        suffix=" cyc"
-        onChange={(value) => onChange("phase", value)}
-      />
-      <ParameterSlider
-        label="Width"
-        value={values.width}
-        min={1}
-        max={100}
-        step={1}
-        suffix="%"
-        onChange={(value) => onChange("width", value)}
-      />
-      <ParameterSlider
-        label="Transition"
-        value={values.transition}
-        min={0}
-        max={100}
-        step={1}
-        suffix="%"
-        onChange={(value) => onChange("transition", value)}
-      />
+    <div className="flex flex-col gap-3">
+      {parameters.map((parameter, index) => {
+        const parameterDiagnostics = diagnostics.filter((diagnostic) =>
+          diagnostic.path.includes(`parameters[${index}]`),
+        );
+        return (
+          <Field
+            key={parameter.id}
+            className="border-border bg-background/40 rounded-md border p-2.5"
+            aria-invalid={parameterDiagnostics.length > 0}
+          >
+            <div className="flex items-center gap-1.5">
+              <FieldLabel htmlFor={`effect-parameter-${parameter.id}`} className="text-xs">
+                {parameter.name}
+              </FieldLabel>
+              {parameter.required && <Badge variant="outline">required</Badge>}
+              <Badge variant="secondary" className="ml-auto">
+                {parameter.override_policy?.replace("_", " ") ?? "effect only"}
+              </Badge>
+              <Badge variant="outline">{parameter.automation}</Badge>
+            </div>
+            <EffectParameterInput
+              parameter={parameter}
+              readOnly={readOnly}
+              onChange={(value) => onChange(parameter.id, value)}
+            />
+            {parameter.help && <FieldDescription>{parameter.help}</FieldDescription>}
+            {parameter.graph_binding && (
+              <FieldDescription>
+                Typed binding · {parameter.graph_binding.node_id}.{parameter.graph_binding.property}
+              </FieldDescription>
+            )}
+            {parameterDiagnostics.map((diagnostic) => (
+              <div key={`${diagnostic.code}:${diagnostic.path}`} className="grid gap-1">
+                <p className="text-destructive text-[10px]" role="alert">
+                  {diagnostic.message}
+                </p>
+                {diagnostic.hint && (
+                  <p className="text-muted-foreground text-[10px]">{diagnostic.hint}</p>
+                )}
+              </div>
+            ))}
+            {parameter.safe_fallback && parameterDiagnostics.length > 0 && !readOnly && (
+              <Button size="xs" variant="outline" onClick={() => onRestoreFallback(parameter.id)}>
+                <RotateCcw data-icon="inline-start" aria-hidden="true" />
+                Restore safe fallback
+              </Button>
+            )}
+          </Field>
+        );
+      })}
     </div>
   );
-}
-
-export function effectNumbersAreValid(values: EffectFormValues) {
-  return (
-    isBeatSyncSpeedMultiplier(values.speed) &&
-    Number.isFinite(values.phase) &&
-    values.phase >= -1 &&
-    values.phase <= 1 &&
-    Number.isFinite(values.width) &&
-    values.width >= 1 &&
-    values.width <= 100 &&
-    Number.isFinite(values.transition) &&
-    values.transition >= 0 &&
-    values.transition <= 100
-  );
-}
-
-function ParameterSlider({
-  label,
-  value,
-  min,
-  max,
-  step,
-  suffix,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  suffix: string;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <div className="grid grid-cols-[4.5rem_1fr_3.5rem] items-center gap-2">
-      <Label className="text-[10px]">{label}</Label>
-      <Slider
-        aria-label={label}
-        min={min}
-        max={max}
-        step={step}
-        value={[value]}
-        onValueChange={(next) => onChange(typeof next === "number" ? next : (next[0] ?? value))}
-      />
-      <span className="bg-background border-border rounded border px-1.5 py-1 text-right font-mono text-[10px] tabular-nums">
-        {formatNumber(value)}
-        {suffix}
-      </span>
-    </div>
-  );
-}
-
-function formatNumber(value: number) {
-  return Number.isInteger(value) ? value.toString() : value.toFixed(2).replace(/0+$/, "");
 }

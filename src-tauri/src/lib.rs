@@ -55,6 +55,7 @@ pub fn run() {
             commands::query_effect_catalog,
             commands::get_production_catalog,
             commands::validate_effect_working_draft,
+            commands::validate_project_working_draft,
             commands::resolve_production_cue_recipe,
             commands::play,
             commands::pause,

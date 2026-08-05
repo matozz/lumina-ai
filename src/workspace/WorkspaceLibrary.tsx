@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { Boxes, Copy, Layers2, Layers3, Lightbulb, Plus, RadioTower, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { engine } from "@/bridge/commands";
 import type { AssetRef, ProjectBundle } from "@/bridge/types";
 import {
   Empty,
@@ -10,9 +12,22 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { assetKey, exactAsset, latestRefsById } from "@/document/projectModel";
+import {
+  activeStage,
+  assetKey,
+  createCueAsset,
+  exactAsset,
+  latestRefsById,
+  uniqueId,
+} from "@/document/projectModel";
+import { authoringDraftActions } from "@/stores/authoringDraft";
 import { engineSelectors, useEngineStore } from "@/stores/engine";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
+import {
+  productionCatalogActions,
+  productionCatalogSelectors,
+  useProductionCatalogStore,
+} from "@/stores/productionCatalog";
 import {
   type WorkspaceId,
   useWorkspaceStore,
@@ -28,6 +43,62 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   const liveEffects = useEngineStore(engineSelectors.liveEffects);
   const selectedLiveEffectId = useWorkspaceStore(workspaceSelectors.selectedLiveEffectId);
   const favorites = useWorkspaceStore(workspaceSelectors.favoriteEffectIds);
+  const productionCatalog = useProductionCatalogStore(productionCatalogSelectors.catalog);
+  const productionCatalogStatus = useProductionCatalogStore(productionCatalogSelectors.status);
+  const productionCatalogError = useProductionCatalogStore(productionCatalogSelectors.error);
+
+  useEffect(() => {
+    if (workspace === "effect-lab" || workspace === "cues") {
+      void productionCatalogActions.ensureLoaded();
+    }
+  }, [workspace]);
+
+  useEffect(() => {
+    if (workspace === "effect-lab" && !selectedEffectRef && productionCatalog?.effects[0]) {
+      const effect = productionCatalog.effects[0];
+      projectActions.setSelectedEffectRef({ id: effect.id, revision: effect.revision });
+    }
+  }, [productionCatalog, selectedEffectRef, workspace]);
+
+  const startCueDraft = () => {
+    if (!selectedEffectRef) return;
+    const scratch = structuredClone(bundle);
+    const productionEffect = exactAsset(productionCatalog?.effects ?? [], selectedEffectRef);
+    if (productionEffect && !exactAsset(scratch.effects, selectedEffectRef)) {
+      scratch.effects.push(structuredClone(productionEffect));
+    }
+    const cue = createCueAsset(scratch, [selectedEffectRef]);
+    authoringDraftActions.beginNewCue(cue);
+    projectActions.setSelectedCueRef({ id: cue.id, revision: cue.revision });
+  };
+
+  const startRecipeDraft = async (recipeId: string, revision: number, name: string) => {
+    const stage = activeStage(bundle);
+    const cueId = uniqueId(
+      recipeId.replace(/^recipe\./, "cue-").replace(/[^a-z0-9-]+/g, "-"),
+      bundle.cues.map((cue) => cue.id),
+    );
+    try {
+      const cue = await engine.resolveProductionCueRecipe({
+        project: bundle,
+        recipeRef: { id: recipeId, revision },
+        stageRef: { id: stage.id, revision: stage.revision },
+        cueId,
+        cueRevision: 1,
+        cueName: name,
+      });
+      authoringDraftActions.beginNewCue(cue);
+      projectActions.setSelectedCueRef({ id: cue.id, revision: cue.revision });
+      workspaceActions.setPublishStatus("idle", `${cue.name} opened as a safe Cue draft.`);
+    } catch (error) {
+      const message = Array.isArray(error)
+        ? error.map((diagnostic) => diagnostic.message).join(" · ")
+        : error instanceof Error
+          ? error.message
+          : String(error);
+      workspaceActions.setPublishStatus("error", message);
+    }
+  };
 
   return (
     <aside className="bg-card flex h-full min-h-0 flex-col" aria-label={`${workspace} library`}>
@@ -63,7 +134,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
             className="ml-auto"
             aria-label="Create Cue"
             disabled={!selectedEffectRef}
-            onClick={() => selectedEffectRef && projectActions.createCue([selectedEffectRef])}
+            onClick={startCueDraft}
           >
             <Plus aria-hidden="true" />
           </Button>
@@ -95,47 +166,76 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
 
           {workspace === "effect-lab" && (
             <>
-              <div className="grid grid-cols-2 gap-1.5">
-                <Button
-                  size="xs"
-                  variant="outline"
-                  onClick={() => projectActions.createEffect("Pulse")}
-                >
-                  Pulse
-                </Button>
-                <Button
-                  size="xs"
-                  variant="outline"
-                  onClick={() => projectActions.createEffect("Gradient")}
-                >
-                  Gradient
-                </Button>
-              </div>
+              <LibrarySectionLabel>Production Catalog</LibrarySectionLabel>
+              {productionCatalog?.effects
+                .filter((effect) => effect.catalog.visibility !== "hidden")
+                .map((effect) => {
+                  const reference = { id: effect.id, revision: effect.revision };
+                  return (
+                    <EffectLibraryButton
+                      key={assetKey(reference)}
+                      reference={reference}
+                      name={effect.name}
+                      family={effect.catalog.family ?? "effect"}
+                      source="production"
+                      selected={selectedEffectRef}
+                    />
+                  );
+                })}
+              {productionCatalogStatus === "loading" && (
+                <p className="text-muted-foreground px-1 text-[10px]">Loading pinned revisions…</p>
+              )}
+              {productionCatalogStatus === "error" && (
+                <p className="text-destructive px-1 text-[10px]">{productionCatalogError}</p>
+              )}
+
+              <LibrarySectionLabel>Project Drafts</LibrarySectionLabel>
               {latestRefsById(bundle.manifest.effect_refs).map((reference) => {
                 const effect = exactAsset(bundle.effects, reference);
-                if (!effect) return null;
+                if (!effect || effect.source === "built_in") return null;
                 return (
-                  <Button
+                  <EffectLibraryButton
                     key={assetKey(reference)}
-                    variant={
-                      selectedEffectRef && assetKey(selectedEffectRef) === assetKey(reference)
-                        ? "secondary"
-                        : "ghost"
-                    }
-                    size="sm"
-                    className="h-auto w-full justify-start py-1.5"
-                    onClick={() => projectActions.setSelectedEffectRef(reference)}
-                  >
-                    <span className="min-w-0 flex-1 truncate text-left">{effect.name}</span>
-                    <Badge variant="outline">r{effect.revision}</Badge>
-                  </Button>
+                    reference={reference}
+                    name={effect.name}
+                    family={effect.catalog.family ?? "local"}
+                    source="project"
+                    selected={selectedEffectRef}
+                  />
                 );
               })}
+              {bundle.effects.filter((effect) => effect.source !== "built_in").length === 0 && (
+                <p className="text-muted-foreground px-1 text-[10px]">
+                  Customize a Production Effect or create a project-local revision.
+                </p>
+              )}
             </>
           )}
 
           {(workspace === "cues" || workspace === "arrange") && (
             <>
+              {workspace === "cues" && (
+                <>
+                  <LibrarySectionLabel>Production Recipes</LibrarySectionLabel>
+                  {productionCatalog?.cue_recipes.map((recipe) => (
+                    <Button
+                      key={`${recipe.id}@${recipe.revision}`}
+                      size="sm"
+                      variant="ghost"
+                      className="h-auto w-full justify-start py-1.5"
+                      title={recipe.description}
+                      onClick={() => void startRecipeDraft(recipe.id, recipe.revision, recipe.name)}
+                    >
+                      <span className="min-w-0 flex-1 truncate text-left">{recipe.name}</span>
+                      <span className="text-muted-foreground text-[9px]">
+                        {recipe.layers.length}L
+                      </span>
+                      <Badge variant="secondary">r{recipe.revision}</Badge>
+                    </Button>
+                  ))}
+                  <LibrarySectionLabel>Project Cues</LibrarySectionLabel>
+                </>
+              )}
               {workspace === "arrange" && (
                 <p className="text-muted-foreground px-1 text-[10px]">
                   Select a Cue, then place it at the authoring playhead.
@@ -267,6 +367,43 @@ function CompactEmpty({
         <EmptyDescription>{description}</EmptyDescription>
       </EmptyHeader>
     </Empty>
+  );
+}
+
+function LibrarySectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-muted-foreground px-1 pt-1 text-[9px] font-medium tracking-wide uppercase">
+      {children}
+    </p>
+  );
+}
+
+function EffectLibraryButton({
+  reference,
+  name,
+  family,
+  source,
+  selected,
+}: {
+  reference: AssetRef;
+  name: string;
+  family: string;
+  source: "production" | "project";
+  selected: AssetRef | null;
+}) {
+  return (
+    <Button
+      variant={selected && assetKey(selected) === assetKey(reference) ? "secondary" : "ghost"}
+      size="sm"
+      className="h-auto w-full justify-start py-1.5"
+      onClick={() => projectActions.setSelectedEffectRef(reference)}
+    >
+      <span className="min-w-0 flex-1 truncate text-left">{name}</span>
+      <span className="text-muted-foreground text-[9px]">{family}</span>
+      <Badge variant={source === "production" ? "secondary" : "outline"}>
+        r{reference.revision}
+      </Badge>
+    </Button>
   );
 }
 

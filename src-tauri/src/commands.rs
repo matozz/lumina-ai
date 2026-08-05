@@ -161,6 +161,13 @@ pub fn validate_effect_working_draft(
 }
 
 #[tauri::command]
+pub fn validate_project_working_draft(
+    project_json: String,
+) -> Result<crate::document::ProjectBundle, Vec<Diagnostic>> {
+    load_project_bundle(&project_json).map(|validated| validated.into_bundle())
+}
+
+#[tauri::command]
 pub fn resolve_production_cue_recipe(
     project_json: String,
     recipe_ref: CueRecipeRef,

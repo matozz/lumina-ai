@@ -6,6 +6,7 @@ import type {
   AssetRef,
   CueDefinition,
   CueLayer,
+  EffectDefinitionDocument,
   GroupDSL,
   LayoutDefinition,
   ProjectBundle,
@@ -726,6 +727,26 @@ export const projectActions = {
     });
     useProjectStore.setState({ selectedEffectRef: selected });
   },
+  saveEffectWorkingDraft: (draft: EffectDefinitionDocument) => {
+    if (draft.source === "built_in") {
+      throw new Error("Built-in Effects are read-only. Customize before saving.");
+    }
+    let selected: AssetRef = { id: draft.id, revision: draft.revision };
+    let saved = structuredClone(draft);
+    transact(`Save Effect ${draft.name}`, (bundle, published) => {
+      const revisions = bundle.effects
+        .filter((effect) => effect.id === draft.id)
+        .map((effect) => effect.revision);
+      saved = structuredClone(draft);
+      saved.revision = revisions.length > 0 ? Math.max(...revisions) + 1 : 1;
+      selected = { id: saved.id, revision: saved.revision };
+      bundle.effects.push(saved);
+      appendExactRef(bundle.manifest.effect_refs, selected);
+      bumpManifestRevision(bundle, published);
+    });
+    useProjectStore.setState({ selectedEffectRef: selected });
+    return structuredClone(saved);
+  },
   createCue: (effectRefs: AssetRef[], name = "New Cue") => {
     let created: AssetRef | null = null;
     transact(`Create Cue ${name}`, (bundle, published) => {
@@ -823,6 +844,29 @@ export const projectActions = {
       if (cue.layers.length <= 1) throw new Error("A Cue requires at least one layer");
       cue.layers = cue.layers.filter((layer) => layer.id !== layerId);
     }),
+  saveCueWorkingDraft: (
+    draft: CueDefinition,
+    productionEffects: EffectDefinitionDocument[] = [],
+  ) => {
+    let selected: AssetRef = { id: draft.id, revision: draft.revision };
+    let saved = structuredClone(draft);
+    transact(`Save Cue ${draft.name}`, (bundle, published) => {
+      for (const effect of productionEffects) {
+        const reference = { id: effect.id, revision: effect.revision };
+        if (!exactAsset(bundle.effects, reference)) bundle.effects.push(structuredClone(effect));
+        appendExactRef(bundle.manifest.effect_refs, reference);
+      }
+      const revisions = bundle.cues.filter((cue) => cue.id === draft.id).map((cue) => cue.revision);
+      saved = structuredClone(draft);
+      saved.revision = revisions.length > 0 ? Math.max(...revisions) + 1 : 1;
+      selected = { id: saved.id, revision: saved.revision };
+      bundle.cues.push(saved);
+      appendExactRef(bundle.manifest.cue_refs, selected);
+      bumpManifestRevision(bundle, published);
+    });
+    useProjectStore.setState({ selectedCueRef: selected });
+    return structuredClone(saved);
+  },
   duplicateArrangement: (reference: AssetRef, name?: string) => {
     let created: AssetRef | null = null;
     transact("Duplicate Arrangement", (bundle, published) => {

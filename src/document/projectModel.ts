@@ -309,7 +309,7 @@ function slug(value: string) {
   );
 }
 
-function stableSeed(value: string) {
+export function stableSeed(value: string) {
   let hash = 0xcbf29ce484222325n;
   for (const character of value) {
     hash ^= BigInt(character.charCodeAt(0));

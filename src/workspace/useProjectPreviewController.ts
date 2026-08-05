@@ -17,7 +17,10 @@ import type {
 } from "@/bridge/types";
 import { assetKey, exactAsset } from "@/document/projectModel";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
+import { authoringDraftSelectors, useAuthoringDraftStore } from "@/stores/authoringDraft";
+import { productionCatalogSelectors, useProductionCatalogStore } from "@/stores/productionCatalog";
 import type { WorkspaceId } from "@/stores/workspace";
+import { materializeAuthoringPreview } from "./authoringPreviewBundle";
 
 interface ActiveAuthoringSession {
   key: string;
@@ -35,25 +38,51 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
   const previewSourceMode = useProjectStore(projectSelectors.previewSource);
   const liveViewMode = useProjectStore(projectSelectors.liveViewMode);
   const publishedRevision = useProjectStore(projectSelectors.rehearsalPublishedRevision);
+  const effectDraft = useAuthoringDraftStore(authoringDraftSelectors.effect);
+  const cueDraft = useAuthoringDraftStore(authoringDraftSelectors.cue);
+  const comparison = useAuthoringDraftStore(authoringDraftSelectors.comparison);
+  const productionCatalog = useProductionCatalogStore(productionCatalogSelectors.catalog);
   const compiledKeyRef = useRef<string | null>(null);
   const requestRef = useRef(0);
 
-  const arrangement = exactAsset(bundle.arrangements, selectedArrangementRef);
+  const materialized = useMemo(
+    () =>
+      materializeAuthoringPreview(
+        bundle,
+        selectedEffectRef,
+        selectedCueRef,
+        { effect: effectDraft, cue: cueDraft, comparison },
+        productionCatalog,
+      ),
+    [
+      bundle,
+      comparison,
+      cueDraft,
+      effectDraft,
+      productionCatalog,
+      selectedCueRef,
+      selectedEffectRef,
+    ],
+  );
+  const previewBundle = materialized.bundle;
+  const previewEffectRef = materialized.effectRef;
+  const previewCueRef = materialized.cueRef;
+  const arrangement = exactAsset(previewBundle.arrangements, selectedArrangementRef);
   const previewActive = workspace !== "live" || liveViewMode === "rehearsal";
   const context = useMemo<RenderContext>(() => {
-    if (workspace === "effect-lab" && selectedEffectRef) {
+    if (workspace === "effect-lab" && previewEffectRef) {
       return {
         type: "effect",
-        effect_ref: selectedEffectRef,
+        effect_ref: previewEffectRef,
         target_set_id: selectedTargetSetId,
       };
     }
-    if (workspace === "cues" && selectedCueRef) {
-      return { type: "cue", cue_ref: selectedCueRef };
+    if (workspace === "cues" && previewCueRef) {
+      return { type: "cue", cue_ref: previewCueRef };
     }
     if (workspace === "arrange" || workspace === "live") return { type: "arrangement" };
     return { type: "stage" };
-  }, [selectedCueRef, selectedEffectRef, selectedTargetSetId, workspace]);
+  }, [previewCueRef, previewEffectRef, selectedTargetSetId, workspace]);
   const source = useMemo<PreviewSource>(
     () =>
       workspace !== "live"
@@ -65,18 +94,18 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
   );
   const activeAuthoring = useMemo<ActiveAuthoringSession | null>(() => {
     if (!arrangement) return null;
-    if (workspace === "effect-lab" && selectedEffectRef) {
-      return authoringDescriptor("effect", selectedEffectRef, arrangement);
+    if (workspace === "effect-lab" && previewEffectRef) {
+      return authoringDescriptor("effect", previewEffectRef, arrangement);
     }
-    if (workspace === "cues" && selectedCueRef) {
-      return authoringDescriptor("cue", selectedCueRef, arrangement);
+    if (workspace === "cues" && previewCueRef) {
+      return authoringDescriptor("cue", previewCueRef, arrangement);
     }
     if (workspace === "arrange" || workspace === "live") {
       return authoringDescriptor("arrangement", selectedArrangementRef, arrangement);
     }
     return null;
-  }, [arrangement, selectedArrangementRef, selectedCueRef, selectedEffectRef, workspace]);
-  const serializedBundle = useMemo(() => JSON.stringify(bundle), [bundle]);
+  }, [arrangement, previewCueRef, previewEffectRef, selectedArrangementRef, workspace]);
+  const serializedBundle = useMemo(() => JSON.stringify(previewBundle), [previewBundle]);
   const compileKey =
     source.type === "rehearsal_published"
       ? `published:${source.revision}:${assetKey(selectedArrangementRef)}`
@@ -102,7 +131,7 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
     const compile = compiledKeyRef.current !== compileKey;
     const promise = compile
       ? engine.previewProject({
-          project: source.type === "rehearsal_published" ? undefined : bundle,
+          project: source.type === "rehearsal_published" ? undefined : previewBundle,
           arrangementRef:
             source.type === "rehearsal_published" ? undefined : selectedArrangementRef,
           source,
@@ -122,7 +151,15 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
         compiledKeyRef.current = null;
         projectActions.setPreviewError(formatPreviewError(error));
       });
-  }, [activeAuthoring, bundle, compileKey, context, previewActive, selectedArrangementRef, source]);
+  }, [
+    activeAuthoring,
+    compileKey,
+    context,
+    previewActive,
+    previewBundle,
+    selectedArrangementRef,
+    source,
+  ]);
 
   useEffect(() => {
     if (!previewActive || !activeAuthoring) return;

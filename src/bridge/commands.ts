@@ -74,6 +74,11 @@ export const engine = {
   validateEffectWorkingDraft: (effect: EffectDefinitionDocument) =>
     invoke<EffectDefinitionDocument>("validate_effect_working_draft", { effect }),
 
+  validateProjectWorkingDraft: (project: ProjectBundle) =>
+    invoke<ProjectBundle>("validate_project_working_draft", {
+      projectJson: JSON.stringify(project),
+    }),
+
   resolveProductionCueRecipe: (options: {
     project: ProjectBundle;
     recipeRef: CueRecipeRef;
