@@ -20,10 +20,12 @@ export function StageLayoutImpactPanel({
   impact,
   onApply,
   onClose,
+  advanced = false,
 }: {
   impact: StageTopologyImpact;
   onApply: (request: StageLayoutUpgradeRequest) => void;
   onClose: () => void;
+  advanced?: boolean;
 }) {
   const invalidTargets = impact.targetSets.filter((target) => !target.valid);
   const defaultTargetId = impact.validTargetSetIds.includes("all")
@@ -54,6 +56,83 @@ export function StageLayoutImpactPanel({
       targetMappings,
       upgradeDependents,
     });
+
+  if (!advanced) {
+    return (
+      <section
+        className="border-primary/40 bg-background/80 flex flex-col gap-3 rounded-md border p-3"
+        aria-label="Stage Layout impact"
+      >
+        <div className="flex items-start gap-2">
+          {impact.capacityFits ? (
+            <CheckCircle2 className="mt-0.5 size-4 text-emerald-400" aria-hidden="true" />
+          ) : (
+            <AlertTriangle className="text-destructive mt-0.5 size-4" aria-hidden="true" />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">
+              {impact.capacityFits ? "Update the Stage?" : "This layout is too small"}
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              {impact.capacityFits
+                ? "This changes where existing Cues play. Lumina will keep compatible Cues working and ask only about fixture groups that no longer fit."
+                : `This layout has ${impact.candidateCapacity} positions, but your Stage uses ${impact.fixtureCount} fixtures. Increase the layout size before continuing.`}
+            </p>
+          </div>
+          <Button size="icon-xs" variant="ghost" aria-label="Cancel Stage update" onClick={onClose}>
+            <X aria-hidden="true" />
+          </Button>
+        </div>
+
+        {invalidTargets.map((target) => (
+          <div key={target.id} className="border-border grid gap-1.5 rounded-md border p-2.5">
+            <p className="text-xs font-medium">Where should “{target.name}” play?</p>
+            <Select
+              value={targetMappings[target.id]}
+              onValueChange={(value) =>
+                value && setTargetMappings((current) => ({ ...current, [target.id]: value }))
+              }
+            >
+              <SelectTrigger size="sm" className="w-full" aria-label={`Remap ${target.name}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {impact.targetSets
+                    .filter((candidate) => candidate.valid)
+                    .map((candidate) => (
+                      <SelectItem key={candidate.id} value={candidate.id}>
+                        {candidate.name}
+                      </SelectItem>
+                    ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+        ))}
+
+        <div className="border-border flex items-center gap-2 rounded-md border p-2.5">
+          <ShieldCheck className="size-4 text-emerald-400" aria-hidden="true" />
+          <p className="text-muted-foreground text-xs">
+            Your published and live show will not change until you publish again.
+          </p>
+        </div>
+
+        {impact.capacityFits && (
+          <Button
+            size="sm"
+            disabled={!mappingsComplete}
+            onClick={() => apply(impact.compatible ? "upgrade" : "remap", true)}
+          >
+            Update Stage & choose an Effect
+          </Button>
+        )}
+        <Button size="sm" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+      </section>
+    );
+  }
 
   return (
     <section

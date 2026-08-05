@@ -52,6 +52,6 @@ describe("LivePadSettings", () => {
     render(<LivePadSettings effects={[liveEffect]} selectedEffectId={liveEffect.instance_id} />);
 
     expect(screen.getByText("Draft newer")).toBeTruthy();
-    expect(screen.getByText(/Live r1/)).toBeTruthy();
+    expect(screen.getByText(/Fixtures: all-fixtures/)).toBeTruthy();
   });
 });

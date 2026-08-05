@@ -53,6 +53,12 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
         selectedCueRef,
         { effect: effectDraft, cue: cueDraft, comparison },
         productionCatalog,
+        workspace === "effect-lab" || workspace === "cues" || workspace === "stage"
+          ? {
+              scope: workspace === "effect-lab" ? "effect" : workspace === "cues" ? "cue" : "stage",
+              arrangementRef: selectedArrangementRef,
+            }
+          : {},
       ),
     [
       bundle,
@@ -62,6 +68,8 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
       productionCatalog,
       selectedCueRef,
       selectedEffectRef,
+      selectedArrangementRef,
+      workspace,
     ],
   );
   const previewBundle = materialized.bundle;
@@ -243,12 +251,23 @@ function dispatchPreviewFrame(frame: ProjectPreviewFrame) {
   window.dispatchEvent(new CustomEvent("engine:project-preview-frame", { detail: frame }));
 }
 
-function formatPreviewError(error: unknown) {
+export function formatPreviewError(error: unknown) {
   if (Array.isArray(error)) {
-    return error
-      .map((item) => (typeof item?.message === "string" ? item.message : String(item)))
-      .join(" · ");
+    const messages = error.map((item) =>
+      typeof item?.message === "string" ? item.message : String(item),
+    );
+    return [...new Set(messages)].map(friendlyPreviewMessage).join(" · ");
   }
-  if (error instanceof Error) return error.message;
-  return String(error);
+  if (error instanceof Error) return friendlyPreviewMessage(error.message);
+  return friendlyPreviewMessage(String(error));
+}
+
+function friendlyPreviewMessage(message: string) {
+  if (message.includes("Speed override must be a beat-synchronized multiplier")) {
+    return "Choose a synced speed: ¼×, ½×, 1×, 2×, 4×, or 8×.";
+  }
+  if (message.includes("CUE_LAYER_ATTRIBUTE_CONFLICT")) {
+    return "These effects control the same lights in conflicting ways. Remove one effect or open Advanced to choose how they mix.";
+  }
+  return message;
 }

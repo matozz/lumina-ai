@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Layers2, Plus, Save, ShieldCheck, Trash2, Undo2 } from "lucide-react";
+import { musicalPositionAtTick } from "@/authoring/musicalTime";
 import type { CueDefinition, EffectDefinitionDocument } from "@/bridge/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,14 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogClose,
@@ -24,7 +33,7 @@ import {
 } from "@/stores/authoringDraft";
 import { productionCatalogSelectors, useProductionCatalogStore } from "@/stores/productionCatalog";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
-import { workspaceActions } from "@/stores/workspace";
+import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/stores/workspace";
 import { AuthoringSignalSpine } from "../AuthoringSignalSpine";
 import {
   appendCueLayer,
@@ -43,9 +52,11 @@ export function CueBuilderInspector() {
   const bundle = useProjectStore(projectSelectors.bundle);
   const reference = useProjectStore(projectSelectors.selectedCueRef);
   const selectedEffectRef = useProjectStore(projectSelectors.selectedEffectRef);
+  const selectedArrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
   const catalog = useProductionCatalogStore(productionCatalogSelectors.catalog);
   const session = useAuthoringDraftStore(authoringDraftSelectors.cue);
   const comparison = useAuthoringDraftStore(authoringDraftSelectors.comparison);
+  const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
   const [pendingHighRiskEffect, setPendingHighRiskEffect] =
     useState<EffectDefinitionDocument | null>(null);
   const persistedCue = exactAsset(bundle.cues, reference);
@@ -53,6 +64,10 @@ export function CueBuilderInspector() {
     reference && session && assetKey(session.pinned) === assetKey(reference),
   );
   const effects = useMemo(() => collectCueEffects(bundle, catalog), [bundle, catalog]);
+  const arrangement = exactAsset(bundle.arrangements, selectedArrangementRef);
+  const barTicks = arrangement
+    ? musicalPositionAtTick(0, arrangement.ppq, arrangement.time_signatures).barTicks
+    : 3_840;
   const validate = useCueDraftValidation(bundle, catalog, session, sessionMatches);
 
   useEffect(() => {
@@ -62,7 +77,7 @@ export function CueBuilderInspector() {
   if (!reference || !session || !sessionMatches) return <CueBuilderEmpty />;
   const cue = session.working;
   const stage = exactAsset(bundle.stages, cue.compatible_stage_ref);
-  if (!stage) return <CueBuilderEmpty error="Pinned Cue Stage revision is missing." />;
+  if (!stage) return <CueBuilderEmpty error="This Cue no longer matches the current Stage." />;
 
   const selectedLayer =
     cue.layers.find((layer) => layer.id === session.selectedLayerId) ?? cue.layers[0];
@@ -118,14 +133,11 @@ export function CueBuilderInspector() {
         productionEffects ?? [],
       );
       authoringDraftActions.commitCue(saved);
-      workspaceActions.setPublishStatus(
-        "idle",
-        `${saved.name} saved as immutable revision ${saved.revision}.`,
-      );
+      workspaceActions.setPublishStatus("idle", `${saved.name} saved.`);
     } catch (error) {
       workspaceActions.setPublishStatus(
         "error",
-        error instanceof Error ? error.message : "Cue revision could not be saved.",
+        error instanceof Error ? error.message : "Cue could not be saved.",
       );
     }
   };
@@ -153,32 +165,41 @@ export function CueBuilderInspector() {
           <Layers2 className="text-primary" aria-hidden="true" />
           <span className="text-xs font-medium">Cue Builder</span>
           <Badge variant="outline" className="ml-auto">
-            {session.mode} · r{cue.revision}
+            {session.mode === "new" ? "New Cue" : "Editing"}
           </Badge>
         </div>
         <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
           <div className="flex min-w-0 flex-col gap-3 p-3">
-            <AuthoringSignalSpine
-              revision={session.pinned.revision}
-              status={session.status}
-              comparison={comparison}
-              onComparisonChange={authoringDraftActions.setComparison}
+            {advancedMode && (
+              <AuthoringSignalSpine
+                revision={session.pinned.revision}
+                status={session.status}
+                comparison={comparison}
+                onComparisonChange={authoringDraftActions.setComparison}
+              />
+            )}
+            <CueCoreFields
+              cue={cue}
+              barTicks={barTicks}
+              advanced={advancedMode}
+              onUpdate={updateCue}
             />
-            <CueCoreFields cue={cue} onUpdate={updateCue} />
             <Separator />
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-medium">Layers</span>
+              <span className="text-xs font-medium">Effects</span>
               <Badge variant="secondary">{cue.layers.length}</Badge>
-              <Button
-                size="xs"
-                variant="outline"
-                className="ml-auto"
-                disabled={!selectedEffectRef}
-                onClick={addSelectedEffect}
-              >
-                <Plus data-icon="inline-start" aria-hidden="true" />
-                Add selected
-              </Button>
+              {advancedMode && (
+                <Button
+                  size="xs"
+                  variant="outline"
+                  className="ml-auto"
+                  disabled={!selectedEffectRef}
+                  onClick={addSelectedEffect}
+                >
+                  <Plus data-icon="inline-start" aria-hidden="true" />
+                  Add selected Effect
+                </Button>
+              )}
             </div>
             <CueLayerList
               cue={cue}
@@ -187,6 +208,7 @@ export function CueBuilderInspector() {
               onSelect={authoringDraftActions.selectCueLayer}
               onToggleMute={authoringDraftActions.toggleCueLayerMute}
               onToggleSolo={authoringDraftActions.toggleCueLayerSolo}
+              advanced={advancedMode}
             />
             {selectedLayer && selectedEffect && (
               <CueLayerEditor
@@ -207,9 +229,10 @@ export function CueBuilderInspector() {
                   });
                   if (duplicateId) authoringDraftActions.selectCueLayer(duplicateId);
                 }}
+                advanced={advancedMode}
               />
             )}
-            <CueSummary cue={cue} />
+            <CueSummary cue={cue} advanced={advancedMode} />
             <CueDiagnostics
               diagnostics={session.diagnostics}
               onRecompute={() => updateCue(() => undefined)}
@@ -218,26 +241,36 @@ export function CueBuilderInspector() {
               }
               onRevert={authoringDraftActions.revertCueToLastKnownGood}
             />
-            <div className="grid grid-cols-2 gap-1.5">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={session.status === "validating"}
-                onClick={() => validate(structuredClone(session.working), session.generation)}
-              >
-                <ShieldCheck data-icon="inline-start" aria-hidden="true" />
-                Validate
-              </Button>
+            {advancedMode && (
+              <div className="grid grid-cols-2 gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={session.status === "validating"}
+                  onClick={() => validate(structuredClone(session.working), session.generation)}
+                >
+                  <ShieldCheck data-icon="inline-start" aria-hidden="true" />
+                  Validate
+                </Button>
+                <Button size="sm" disabled={session.status !== "valid"} onClick={save}>
+                  <Save data-icon="inline-start" aria-hidden="true" />
+                  Save Cue
+                </Button>
+              </div>
+            )}
+            {!advancedMode && (
               <Button size="sm" disabled={session.status !== "valid"} onClick={save}>
                 <Save data-icon="inline-start" aria-hidden="true" />
-                Save new revision
+                Save Cue
               </Button>
-            </div>
-            <Button size="xs" variant="ghost" onClick={authoringDraftActions.discardCue}>
-              <Undo2 data-icon="inline-start" aria-hidden="true" />
-              Discard working draft
-            </Button>
-            {session.mode === "edit" && (
+            )}
+            {advancedMode && (
+              <Button size="xs" variant="ghost" onClick={authoringDraftActions.discardCue}>
+                <Undo2 data-icon="inline-start" aria-hidden="true" />
+                Discard working draft
+              </Button>
+            )}
+            {advancedMode && session.mode === "edit" && (
               <Button
                 size="xs"
                 variant="ghost"
@@ -247,7 +280,7 @@ export function CueBuilderInspector() {
                 Save As new Draft
               </Button>
             )}
-            {session.mode === "edit" && <DeleteCueButton reference={reference} />}
+            {advancedMode && session.mode === "edit" && <DeleteCueButton reference={reference} />}
           </div>
         </ScrollArea>
       </aside>
@@ -283,11 +316,22 @@ export function CueBuilderInspector() {
 
 function CueCoreFields({
   cue,
+  barTicks,
+  advanced,
   onUpdate,
 }: {
   cue: CueDefinition;
+  barTicks: number;
+  advanced: boolean;
   onUpdate: (update: (draft: CueDefinition) => void) => void;
 }) {
+  const barOptions = [1, 2, 4, 8].map((bars) => ({
+    value: String(bars * barTicks),
+    label: `${bars} ${bars === 1 ? "bar" : "bars"}`,
+  }));
+  if (!barOptions.some((option) => option.value === String(cue.nominal_length_ticks))) {
+    barOptions.push({ value: String(cue.nominal_length_ticks), label: "Custom length" });
+  }
   return (
     <FieldGroup>
       <Field>
@@ -302,28 +346,57 @@ function CueCoreFields({
           }
         />
       </Field>
-      <Field>
-        <FieldLabel htmlFor="cue-length">Nominal length · ticks</FieldLabel>
-        <Input
-          id="cue-length"
-          type="number"
-          min={1}
-          step={960}
-          value={cue.nominal_length_ticks}
-          onChange={(event) => {
-            const value = Number(event.currentTarget.value);
-            if (Number.isInteger(value))
+      {advanced ? (
+        <Field>
+          <FieldLabel htmlFor="cue-length">Exact length · ticks</FieldLabel>
+          <Input
+            id="cue-length"
+            type="number"
+            min={1}
+            step={barTicks}
+            value={cue.nominal_length_ticks}
+            onChange={(event) => {
+              const value = Number(event.currentTarget.value);
+              if (Number.isInteger(value))
+                onUpdate((draft) => {
+                  draft.nominal_length_ticks = value;
+                });
+            }}
+          />
+        </Field>
+      ) : (
+        <Field>
+          <FieldLabel>Cue length</FieldLabel>
+          <Select
+            items={barOptions}
+            value={String(cue.nominal_length_ticks)}
+            onValueChange={(value) =>
+              value &&
               onUpdate((draft) => {
-                draft.nominal_length_ticks = value;
-              });
-          }}
-        />
-      </Field>
+                draft.nominal_length_ticks = Number(value);
+              })
+            }
+          >
+            <SelectTrigger size="sm" className="w-full" aria-label="Cue length">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={false}>
+              <SelectGroup>
+                {barOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+      )}
     </FieldGroup>
   );
 }
 
-function CueSummary({ cue }: { cue: CueDefinition }) {
+function CueSummary({ cue, advanced }: { cue: CueDefinition; advanced: boolean }) {
   return (
     <>
       <Separator />
@@ -336,7 +409,9 @@ function CueSummary({ cue }: { cue: CueDefinition }) {
         <Badge variant={cue.risk_summary.strobe_risk === "high" ? "destructive" : "secondary"}>
           {cue.risk_summary.strobe_risk} strobe risk
         </Badge>
-        <Badge variant="outline">{cue.automation_lanes?.length ?? 0} automation lanes</Badge>
+        {advanced && (
+          <Badge variant="outline">{cue.automation_lanes?.length ?? 0} automation lanes</Badge>
+        )}
       </div>
     </>
   );

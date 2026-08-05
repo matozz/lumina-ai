@@ -21,6 +21,11 @@ interface PreviewDraftState {
   comparison: "pinned" | "working";
 }
 
+export interface AuthoringPreviewOptions {
+  scope?: "effect" | "cue" | "stage";
+  arrangementRef?: AssetRef | null;
+}
+
 export interface AuthoringPreviewMaterialization {
   bundle: ProjectBundle;
   effectRef: AssetRef | null;
@@ -35,6 +40,7 @@ export function materializeAuthoringPreview(
   selectedCueRef: AssetRef | null,
   draft: PreviewDraftState,
   catalog: ProductionCatalog | null,
+  options: AuthoringPreviewOptions = {},
 ): AuthoringPreviewMaterialization {
   const effectSessionMatches =
     selectedEffectRef &&
@@ -80,7 +86,9 @@ export function materializeAuthoringPreview(
   }
 
   return {
-    bundle: next,
+    bundle: options.scope
+      ? isolateAuthoringBundle(next, options.scope, effect, cue, options.arrangementRef)
+      : next,
     effectRef: effect ? { id: effect.id, revision: effect.revision } : selectedEffectRef,
     cueRef: cue ? { id: cue.id, revision: cue.revision } : selectedCueRef,
     effect,
@@ -92,6 +100,7 @@ export function materializeCueDraftBundle(
   bundle: ProjectBundle,
   cue: CueDefinition,
   catalog: ProductionCatalog | null,
+  arrangementRef?: AssetRef | null,
 ) {
   const next = structuredClone(bundle);
   for (const layer of cue.layers) {
@@ -104,6 +113,70 @@ export function materializeCueDraftBundle(
   if (index >= 0) next.cues[index] = structuredClone(cue);
   else next.cues.push(structuredClone(cue));
   appendExactRef(next.manifest.cue_refs, { id: cue.id, revision: cue.revision });
+  return isolateAuthoringBundle(next, "cue", null, cue, arrangementRef);
+}
+
+export function materializeStagePreviewBundle(
+  bundle: ProjectBundle,
+  arrangementRef?: AssetRef | null,
+) {
+  return isolateAuthoringBundle(bundle, "stage", null, null, arrangementRef);
+}
+
+function isolateAuthoringBundle(
+  bundle: ProjectBundle,
+  scope: NonNullable<AuthoringPreviewOptions["scope"]>,
+  effect: EffectDefinitionDocument | null,
+  cue: CueDefinition | null,
+  arrangementRef?: AssetRef | null,
+) {
+  const next = structuredClone(bundle);
+  const stageRef = cue?.compatible_stage_ref ?? next.manifest.stage_ref;
+  const stage = exactAsset(next.stages, stageRef);
+  const layout = stage ? exactAsset(next.layouts, stage.layout_ref) : null;
+  const selectedArrangementRef =
+    arrangementRef ??
+    next.manifest.arrangement_refs.find(
+      (reference) => reference.id === next.manifest.active_arrangement_id,
+    ) ??
+    null;
+  const arrangement = exactAsset(next.arrangements, selectedArrangementRef);
+
+  next.stages = stage ? [stage] : [];
+  next.layouts = layout ? [layout] : [];
+  next.arrangements = arrangement
+    ? [
+        {
+          ...arrangement,
+          tracks: arrangement.tracks.map((track) => ({
+            ...track,
+            automation_lanes: [],
+            clips: [],
+          })),
+        },
+      ]
+    : [];
+
+  if (scope === "cue" && cue) {
+    next.cues = [cue];
+    const effectKeys = new Set(cue.layers.map((layer) => assetKey(layer.effect_ref)));
+    next.effects = next.effects.filter((candidate) => effectKeys.has(assetKey(candidate)));
+  } else if (scope === "effect" && effect) {
+    next.cues = [];
+    next.effects = next.effects.filter((candidate) => assetKey(candidate) === assetKey(effect));
+  } else {
+    next.cues = [];
+    next.effects = [];
+  }
+
+  next.manifest.stage_ref = { id: stageRef.id, revision: stageRef.revision };
+  next.manifest.layout_refs = layout ? [{ id: layout.id, revision: layout.revision }] : [];
+  next.manifest.arrangement_refs = arrangement
+    ? [{ id: arrangement.id, revision: arrangement.revision }]
+    : [];
+  next.manifest.active_arrangement_id = arrangement?.id ?? next.manifest.active_arrangement_id;
+  next.manifest.cue_refs = next.cues.map(({ id, revision }) => ({ id, revision }));
+  next.manifest.effect_refs = next.effects.map(({ id, revision }) => ({ id, revision }));
   return next;
 }
 

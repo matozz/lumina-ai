@@ -42,8 +42,8 @@ describe("WorkspaceHeader revision boundary", () => {
       </TooltipProvider>,
     );
 
-    expect(screen.getByText("Published r1")).toBeTruthy();
-    expect(screen.getByText("Live r1")).toBeTruthy();
+    expect(screen.getByText("Published")).toBeTruthy();
+    expect(screen.getByText("Live")).toBeTruthy();
     expect((screen.getByRole("button", { name: "Take live" }) as HTMLButtonElement).disabled).toBe(
       true,
     );
@@ -51,8 +51,8 @@ describe("WorkspaceHeader revision boundary", () => {
     fireEvent.click(screen.getByRole("button", { name: "Publish" }));
 
     await waitFor(() => expect(commandMocks.publishProject).toHaveBeenCalledOnce());
-    expect(screen.getByText("Published r2")).toBeTruthy();
-    expect(screen.getByText("Live r1")).toBeTruthy();
+    expect(screen.getByText("Published")).toBeTruthy();
+    expect(screen.getByText("Live")).toBeTruthy();
     expect((screen.getByRole("button", { name: "Take live" }) as HTMLButtonElement).disabled).toBe(
       false,
     );
@@ -60,7 +60,7 @@ describe("WorkspaceHeader revision boundary", () => {
     fireEvent.click(screen.getByRole("button", { name: "Take live" }));
 
     await waitFor(() => expect(commandMocks.activateShowRevision).toHaveBeenCalledWith(2));
-    expect(screen.getByText("Live r2")).toBeTruthy();
+    expect(screen.getByText("Live")).toBeTruthy();
     expect((screen.getByRole("button", { name: "Take live" }) as HTMLButtonElement).disabled).toBe(
       true,
     );

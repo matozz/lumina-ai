@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ProductionCatalog } from "@/bridge/types";
 import { createCueAsset, createEffectAsset, exactAsset } from "@/document/projectModel";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
-import { materializeAuthoringPreview } from "./authoringPreviewBundle";
+import { materializeAuthoringPreview, materializeCueDraftBundle } from "./authoringPreviewBundle";
 
 describe("authoring preview materialization", () => {
   it("uses Last Known Good and leaves the persisted bundle untouched", () => {
@@ -85,5 +85,51 @@ describe("authoring preview materialization", () => {
       Object.keys(result.bundle.manifest.cue_refs[result.bundle.manifest.cue_refs.length - 1]),
     ).toEqual(["id", "revision"]);
     expect(cue.layers).toHaveLength(2);
+  });
+
+  it("isolates Effect authoring from unrelated project assets", () => {
+    const bundle = createStarterProjectBundle();
+    const effect = createEffectAsset(bundle, "Pulse");
+    const unrelated = createEffectAsset(bundle, "Broken Effect");
+    bundle.effects.push(effect, unrelated);
+    bundle.manifest.effect_refs.push(effect, unrelated);
+    const result = materializeAuthoringPreview(
+      bundle,
+      effect,
+      null,
+      { comparison: "working", effect: null, cue: null },
+      null,
+      { scope: "effect", arrangementRef: bundle.manifest.arrangement_refs[0] },
+    );
+
+    expect(result.bundle.effects.map((candidate) => candidate.id)).toEqual([effect.id]);
+    expect(result.bundle.cues).toEqual([]);
+    expect(result.bundle.arrangements[0].tracks.every((track) => track.clips?.length === 0)).toBe(
+      true,
+    );
+    expect(result.bundle.manifest.effect_refs).toEqual([
+      { id: effect.id, revision: effect.revision },
+    ]);
+  });
+
+  it("validates a Cue against only its exact Effect dependencies", () => {
+    const bundle = createStarterProjectBundle();
+    const effect = createEffectAsset(bundle, "Pulse");
+    const unrelated = createEffectAsset(bundle, "Broken Effect");
+    bundle.effects.push(effect, unrelated);
+    bundle.manifest.effect_refs.push(effect, unrelated);
+    const cue = createCueAsset(bundle, [effect], "Focused Cue");
+
+    const result = materializeCueDraftBundle(
+      bundle,
+      cue,
+      null,
+      bundle.manifest.arrangement_refs[0],
+    );
+
+    expect(result.cues).toEqual([cue]);
+    expect(result.effects.map((candidate) => candidate.id)).toEqual([effect.id]);
+    expect(result.manifest.cue_refs).toEqual([{ id: cue.id, revision: cue.revision }]);
+    expect(result.arrangements[0].tracks.every((track) => track.clips?.length === 0)).toBe(true);
   });
 });

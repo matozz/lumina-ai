@@ -24,6 +24,7 @@ export function CuePreview() {
     selected,
     { effect: effectDraft, cue: cueDraft, comparison },
     catalog,
+    { scope: "cue", arrangementRef },
   );
   const cue = materialized.cue;
   const arrangement = exactAsset(bundle.arrangements, arrangementRef);
@@ -39,7 +40,7 @@ export function CuePreview() {
           <Badge variant="secondary">Audition filter</Badge>
         )}
         <span className="text-muted-foreground ml-auto truncate text-[10px]">
-          {cue ? `${cue.name} · ${cue.layers.length} layers · r${cue.revision}` : "No Cue selected"}
+          {cue ? `${cue.name} · ${cue.layers.length} effects` : "No Cue selected"}
         </span>
       </div>
       {materialized.cueRef && arrangement && (

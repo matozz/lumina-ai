@@ -22,10 +22,12 @@ export function StagePatchDialog({
   draftCapacity,
   open,
   onOpenChange,
+  advanced = false,
 }: {
   draftCapacity: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  advanced?: boolean;
 }) {
   const bundle = useProjectStore(projectSelectors.bundle);
   const stage = activeStage(bundle);
@@ -74,18 +76,17 @@ export function StagePatchDialog({
         <DialogHeader className="border-border border-b px-4 py-3 pr-12">
           <DialogTitle>Configure Stage patch</DialogTitle>
           <DialogDescription>
-            Patch owns the real fixture IDs and profiles. Layout positions beyond this count are
-            preview-only until an explicit Stage revision is saved.
+            Set how many real fixtures are connected to this Stage.
           </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="min-h-0">
           <div className="flex flex-col gap-4 p-4">
-            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border sm:grid-cols-4">
+            <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border">
               <PatchMetric label="Draft positions" value={String(draftCapacity)} />
               <PatchMetric label="Active Layout" value={String(capacity)} />
               <PatchMetric label="Patched fixtures" value={String(currentCount)} />
-              <PatchMetric label="Stage revision" value={"r" + stage.revision} />
+              {advanced && <PatchMetric label="Internal version" value={String(stage.revision)} />}
             </div>
 
             {draftCapacity !== capacity && (
@@ -94,20 +95,22 @@ export function StagePatchDialog({
                 <AlertDescription>
                   This Draft has {draftCapacity} positions, while the active Stage Layout has{" "}
                   {capacity}. Save the Layout and complete Use on Stage impact/remap first; then
-                  reopen this dialog to expand the Patch up to {draftCapacity} fixtures.
+                  reopen this dialog to expand the Stage up to {draftCapacity} fixtures.
                 </AlertDescription>
               </Alert>
             )}
 
-            <Alert>
-              <Cable aria-hidden="true" />
-              <AlertTitle>Layout and patch are separate</AlertTitle>
-              <AlertDescription>
-                A 21×45 Layout contains 945 positions. If this Stage still patches 900 fixtures,
-                Canvas shows the remaining 45 positions with dashed hairline borders; they do not
-                render output or belong to Groups/TargetSets yet.
-              </AlertDescription>
-            </Alert>
+            {advanced && (
+              <Alert>
+                <Cable aria-hidden="true" />
+                <AlertTitle>Layout and patch are separate</AlertTitle>
+                <AlertDescription>
+                  A 21×45 Layout contains 945 positions. If this Stage still patches 900 fixtures,
+                  Canvas shows the remaining 45 positions with dashed hairline borders; they do not
+                  render output or belong to Groups/TargetSets yet.
+                </AlertDescription>
+              </Alert>
+            )}
 
             <FieldGroup>
               <Field data-invalid={!valid}>
@@ -143,20 +146,24 @@ export function StagePatchDialog({
 
             <section className="border-border flex flex-col gap-2 rounded-md border p-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-medium">Revision impact</p>
+                <p className="text-xs font-medium">
+                  {advanced ? "Internal impact" : "What changes"}
+                </p>
                 <Badge variant={delta === 0 ? "outline" : "secondary"}>
                   {delta > 0 ? "+" + delta : delta} fixtures
                 </Badge>
               </div>
               <p className="text-muted-foreground text-[10px] leading-relaxed">
-                Saving forks Stage and upgrades {cueRefs.size} pinned Draft Cue revisions and{" "}
-                {arrangementCount} indirect Arrangement revisions. Published revisions and Live
-                Snapshot remain unchanged.
+                {advanced
+                  ? `Saving updates ${cueRefs.size} Draft Cues and ${arrangementCount} arrangements that use this Stage.`
+                  : "Lumina will keep Draft Cues aligned with the new fixture count. Your published and live show stay unchanged."}
               </p>
-              <p className="text-muted-foreground font-mono text-[9px]">
-                {affectedMemberships.groups} Groups · {affectedMemberships.targetSets} TargetSets
-                require membership trimming when the patch shrinks.
-              </p>
+              {advanced && (
+                <p className="text-muted-foreground font-mono text-[9px]">
+                  {affectedMemberships.groups} Groups · {affectedMemberships.targetSets} TargetSets
+                  require membership trimming when the patch shrinks.
+                </p>
+              )}
             </section>
 
             {diagnostic && (
@@ -176,7 +183,7 @@ export function StagePatchDialog({
           </Button>
           <Button disabled={!valid || fixtureCount === currentCount} onClick={apply}>
             <Save data-icon="inline-start" aria-hidden="true" />
-            Save Stage patch revision
+            Save fixture count
           </Button>
         </DialogFooter>
       </DialogContent>

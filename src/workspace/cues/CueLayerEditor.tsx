@@ -33,6 +33,7 @@ export function CueLayerEditor({
   onRemove,
   onMove,
   onDuplicate,
+  advanced,
 }: {
   cue: CueDefinition;
   layer: CueLayer;
@@ -43,14 +44,15 @@ export function CueLayerEditor({
   onRemove: () => void;
   onMove: (direction: -1 | 1) => void;
   onDuplicate: () => void;
+  advanced: boolean;
 }) {
   const effectItems = effects.map((candidate) => ({
     value: assetKey(candidate),
-    label: `${candidate.name} · r${candidate.revision}`,
+    label: candidate.name,
   }));
   const targetItems = stage.target_sets.map((target) => ({ value: target.id, label: target.name }));
   const sceneItems = [
-    { value: "__static__", label: "Static TargetSet" },
+    { value: "__static__", label: "Stay on selected fixtures" },
     ...(stage.targeting_scenes ?? []).map((scene) => ({ value: scene.id, label: scene.name })),
   ];
   return (
@@ -59,44 +61,52 @@ export function CueLayerEditor({
       data-layout-region="cue-layer-editor"
     >
       <div className="flex min-w-0 items-center gap-1.5">
-        <span className="min-w-0 flex-1 truncate text-xs font-medium">Selected layer</span>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label="Move selected layer up"
-          onClick={() => onMove(-1)}
-        >
-          <ArrowUp aria-hidden="true" />
-        </Button>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label="Move selected layer down"
-          onClick={() => onMove(1)}
-        >
-          <ArrowDown aria-hidden="true" />
-        </Button>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label="Duplicate selected layer"
-          onClick={onDuplicate}
-        >
-          <Copy aria-hidden="true" />
-        </Button>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label="Remove selected layer"
-          disabled={cue.layers.length <= 1}
-          onClick={onRemove}
-        >
-          <Trash2 aria-hidden="true" />
-        </Button>
+        <span className="min-w-0 flex-1 truncate text-xs font-medium">Selected Effect</span>
+        {advanced && (
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            aria-label="Move selected layer up"
+            onClick={() => onMove(-1)}
+          >
+            <ArrowUp aria-hidden="true" />
+          </Button>
+        )}
+        {advanced && (
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            aria-label="Move selected layer down"
+            onClick={() => onMove(1)}
+          >
+            <ArrowDown aria-hidden="true" />
+          </Button>
+        )}
+        {advanced && (
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            aria-label="Duplicate selected layer"
+            onClick={onDuplicate}
+          >
+            <Copy aria-hidden="true" />
+          </Button>
+        )}
+        {advanced && (
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            aria-label="Remove selected layer"
+            disabled={cue.layers.length <= 1}
+            onClick={onRemove}
+          >
+            <Trash2 aria-hidden="true" />
+          </Button>
+        )}
       </div>
 
       <Field>
-        <FieldLabel>Effect revision</FieldLabel>
+        <FieldLabel>Effect</FieldLabel>
         <Select
           items={effectItems}
           value={assetKey(layer.effect_ref)}
@@ -126,13 +136,15 @@ export function CueLayerEditor({
             </SelectGroup>
           </SelectContent>
         </Select>
-        <FieldDescription>
-          Switching revisions explicitly clears incompatible overrides and automation lanes.
-        </FieldDescription>
+        {advanced && (
+          <FieldDescription>
+            Changing the Effect resets incompatible custom settings.
+          </FieldDescription>
+        )}
       </Field>
 
       <Field>
-        <FieldLabel>TargetSet</FieldLabel>
+        <FieldLabel>Fixtures</FieldLabel>
         <ValueSelect
           value={layer.target_set_ref.target_set_id}
           items={targetItems}
@@ -148,7 +160,7 @@ export function CueLayerEditor({
       </Field>
 
       <Field>
-        <FieldLabel>TargetingScene / Spatial Mask</FieldLabel>
+        <FieldLabel>Playback pattern</FieldLabel>
         <ValueSelect
           value={layer.targeting_scene_ref?.targeting_scene_id ?? "__static__"}
           items={sceneItems}
@@ -167,93 +179,106 @@ export function CueLayerEditor({
         />
       </Field>
 
-      <div className="grid grid-cols-3 gap-2">
-        <NumberField
-          label="Phase"
-          value={layer.phase}
-          step={0.01}
-          onChange={(value) =>
-            onUpdate((draftLayer) => {
-              draftLayer.phase = value;
-            })
-          }
-        />
-        <NumberField
-          label="Layer"
-          value={layer.layer ?? 0}
-          step={1}
-          onChange={(value) =>
-            onUpdate((draftLayer) => {
-              draftLayer.layer = value;
-            })
-          }
-        />
-        <NumberField
-          label="Priority"
-          value={layer.priority ?? 0}
-          step={1}
-          onChange={(value) =>
-            onUpdate((draftLayer) => {
-              draftLayer.priority = value;
-            })
-          }
-        />
-      </div>
+      {advanced && (
+        <div className="grid grid-cols-3 gap-2">
+          <NumberField
+            label="Phase"
+            value={layer.phase}
+            step={0.01}
+            onChange={(value) =>
+              onUpdate((draftLayer) => {
+                draftLayer.phase = value;
+              })
+            }
+          />
+          <NumberField
+            label="Layer"
+            value={layer.layer ?? 0}
+            step={1}
+            onChange={(value) =>
+              onUpdate((draftLayer) => {
+                draftLayer.layer = value;
+              })
+            }
+          />
+          <NumberField
+            label="Priority"
+            value={layer.priority ?? 0}
+            step={1}
+            onChange={(value) =>
+              onUpdate((draftLayer) => {
+                draftLayer.priority = value;
+              })
+            }
+          />
+        </div>
+      )}
 
-      <Field>
-        <FieldLabel htmlFor={`${layer.id}-seed`}>Deterministic seed</FieldLabel>
-        <Input
-          id={`${layer.id}-seed`}
-          className="font-mono"
-          value={layer.seed}
-          maxLength={16}
-          onChange={(event) =>
-            onUpdate((draftLayer) => {
-              draftLayer.seed = event.currentTarget.value;
-            })
-          }
-        />
-        <FieldDescription>
-          Exactly 16 hexadecimal characters; invalid text remains local.
-        </FieldDescription>
-      </Field>
+      {advanced && (
+        <Field>
+          <FieldLabel htmlFor={`${layer.id}-seed`}>Deterministic seed</FieldLabel>
+          <Input
+            id={`${layer.id}-seed`}
+            className="font-mono"
+            value={layer.seed}
+            maxLength={16}
+            onChange={(event) =>
+              onUpdate((draftLayer) => {
+                draftLayer.seed = event.currentTarget.value;
+              })
+            }
+          />
+          <FieldDescription>
+            Exactly 16 hexadecimal characters; invalid text remains local.
+          </FieldDescription>
+        </Field>
+      )}
 
-      <div className="grid grid-cols-2 gap-2">
-        <SelectField
-          label="Intensity mix"
-          value={
-            layer.mix_overrides?.find((item) => item.attribute_id === "intensity")?.policy ?? "htp"
-          }
-          items={MIX_ITEMS}
-          onChange={(value) =>
-            onUpdate((draftLayer) => {
-              draftLayer.mix_overrides = [
-                ...(draftLayer.mix_overrides ?? []).filter(
-                  (item) => item.attribute_id !== "intensity",
-                ),
-                { attribute_id: "intensity", policy: value as MixPolicy },
-              ];
-            })
-          }
-        />
-        <SelectField
-          label="Trigger"
-          value={layer.trigger_policy.mode}
-          items={TRIGGER_ITEMS}
-          onChange={(value) =>
-            onUpdate((draftLayer) => {
-              draftLayer.trigger_policy = {
-                ...draftLayer.trigger_policy,
-                mode: value as CueTriggerMode,
-              };
-            })
-          }
-        />
-      </div>
+      {advanced && (
+        <div className="grid grid-cols-2 gap-2">
+          <SelectField
+            label="Intensity mix"
+            value={
+              layer.mix_overrides?.find((item) => item.attribute_id === "intensity")?.policy ??
+              "htp"
+            }
+            items={MIX_ITEMS}
+            onChange={(value) =>
+              onUpdate((draftLayer) => {
+                draftLayer.mix_overrides = [
+                  ...(draftLayer.mix_overrides ?? []).filter(
+                    (item) => item.attribute_id !== "intensity",
+                  ),
+                  { attribute_id: "intensity", policy: value as MixPolicy },
+                ];
+              })
+            }
+          />
+          <SelectField
+            label="Trigger"
+            value={layer.trigger_policy.mode}
+            items={TRIGGER_ITEMS}
+            onChange={(value) =>
+              onUpdate((draftLayer) => {
+                draftLayer.trigger_policy = {
+                  ...draftLayer.trigger_policy,
+                  mode: value as CueTriggerMode,
+                };
+              })
+            }
+          />
+        </div>
+      )}
 
       <Separator />
-      <p className="text-xs font-medium">Parameter defaults / overrides</p>
-      <CueOverrideControls cue={cue} layer={layer} effect={effect} onUpdate={onUpdate} />
+      <p className="text-xs font-medium">Effect settings</p>
+      <CueOverrideControls
+        cue={cue}
+        layer={layer}
+        effect={effect}
+        onUpdate={onUpdate}
+        advanced={advanced}
+      />
     </div>
   );
 }

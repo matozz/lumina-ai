@@ -15,7 +15,11 @@ export function useCueDraftValidation(
   const validate = useCallback(
     (draft: CueDefinition, generation: number) => {
       authoringDraftActions.markCueValidating(generation);
-      const candidateBundle = materializeCueDraftBundle(bundle, draft, catalog);
+      const arrangementRef =
+        bundle.manifest.arrangement_refs.find(
+          (reference) => reference.id === bundle.manifest.active_arrangement_id,
+        ) ?? null;
+      const candidateBundle = materializeCueDraftBundle(bundle, draft, catalog, arrangementRef);
       void engine
         .validateProjectWorkingDraft(candidateBundle)
         .then((normalizedBundle) => {

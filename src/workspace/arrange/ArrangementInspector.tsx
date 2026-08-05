@@ -145,7 +145,7 @@ export function ArrangementInspector() {
         <Gauge className="text-primary" aria-hidden="true" />
         <span className="text-xs font-medium">Arrangement clock</span>
         <Badge variant="outline" className="ml-auto">
-          r{arrangement.revision}
+          Editing
         </Badge>
       </div>
       <ScrollArea className="min-h-0 flex-1">

@@ -25,7 +25,7 @@ export function LiveRehearsalInspector() {
           )}
           <span className="text-xs font-medium">Output source</span>
           <Badge variant={viewMode === "live" ? "destructive" : "secondary"} className="ml-auto">
-            {viewMode === "live" ? `Live ${formatRevision(liveRevision)}` : "Rehearsal sink"}
+            {viewMode === "live" ? (liveRevision === null ? "Not live" : "Live") : "Rehearsal"}
           </Badge>
         </div>
         <div className="grid grid-cols-3 gap-1">
@@ -104,8 +104,4 @@ function RehearsalControls() {
       </div>
     </ScrollArea>
   );
-}
-
-function formatRevision(revision: number | null) {
-  return revision === null ? "—" : `r${revision}`;
 }

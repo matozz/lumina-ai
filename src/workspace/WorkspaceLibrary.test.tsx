@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { engineActions, useEngineStore } from "@/stores/engine";
 import { workspaceActions } from "@/stores/workspace";
+import { projectActions } from "@/stores/project";
 import { createStarterProject } from "./defaultProject";
 import { createEffectPair } from "./effect-lab/effectFactory";
 import { WorkspaceLibrary } from "./WorkspaceLibrary";
@@ -14,6 +15,7 @@ describe("Live workspace library", () => {
   beforeEach(() => {
     localStorage.clear();
     workspaceActions.reset();
+    projectActions.reset();
     useEngineStore.setState(useEngineStore.getInitialState(), true);
   });
 
@@ -37,6 +39,14 @@ describe("Live workspace library", () => {
 
     expect(screen.getByText("Live Wash")).toBeTruthy();
     expect(screen.queryByText("Draft-only Pulse")).toBeNull();
-    expect(screen.getByText("r2")).toBeTruthy();
+    expect(screen.queryByText(/r2/)).toBeNull();
+  });
+
+  it("keeps layout selection simple until Advanced is enabled", () => {
+    render(<WorkspaceLibrary workspace="stage" />);
+
+    expect(screen.getByRole("button", { name: /Matrix 4×4/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Duplicate Matrix 4×4/ })).toBeNull();
+    expect(screen.queryByText("Generated / Advanced")).toBeNull();
   });
 });

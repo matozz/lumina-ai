@@ -28,8 +28,8 @@ export function LiveControlPanel({ embedded = false }: { embedded?: boolean }) {
       <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
         <RadioTower className="size-3.5 text-amber-400" aria-hidden="true" />
         <span className="text-xs font-medium">Live / Rehearse</span>
-        <span className="text-muted-foreground ml-auto font-mono text-[10px]">
-          {liveRevision === null ? "No snapshot" : `Live r${liveRevision}`}
+        <span className="text-muted-foreground ml-auto text-[10px]">
+          {liveRevision === null ? "Not live" : "Live"}
         </span>
       </div>
       <ScrollArea className="min-h-0 flex-1">

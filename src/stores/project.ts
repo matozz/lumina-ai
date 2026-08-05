@@ -89,10 +89,11 @@ const initialState: ProjectState = {
 export const useProjectStore = create<ProjectState>()(
   persist(() => initialState, {
     name: "lumina-project-v1",
-    version: 2,
+    version: 3,
     migrate: (persistedState) => {
       const state = persistedState as Partial<ProjectState>;
       const bundle = migrateProjectBundle(state.bundle ?? starter).bundle;
+      simplifyLegacyCueNames(bundle);
       return {
         ...initialState,
         ...state,
@@ -110,6 +111,14 @@ export const useProjectStore = create<ProjectState>()(
     }),
   }),
 );
+
+export function simplifyLegacyCueNames(bundle: ProjectBundle) {
+  for (const cue of bundle.cues) {
+    if (cue.name !== "Pulse + Gradient" || cue.layers.length !== 1) continue;
+    const effect = exactAsset(bundle.effects, cue.layers[0].effect_ref);
+    cue.name = `${effect?.name ?? "Pulse"} Cue`;
+  }
+}
 
 export const projectActions = {
   loadBundle: (bundle: ProjectBundle) => {

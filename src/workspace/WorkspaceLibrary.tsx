@@ -24,7 +24,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   activeStage,
   assetKey,
-  createCueAsset,
   exactAsset,
   latestRefsById,
   uniqueId,
@@ -43,6 +42,7 @@ import {
   workspaceActions,
   workspaceSelectors,
 } from "@/stores/workspace";
+import { createCueDraftFromEffect } from "./cues/cueAuthoring";
 
 export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   const bundle = useProjectStore(projectSelectors.bundle);
@@ -55,6 +55,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   const productionCatalog = useProductionCatalogStore(productionCatalogSelectors.catalog);
   const productionCatalogStatus = useProductionCatalogStore(productionCatalogSelectors.status);
   const productionCatalogError = useProductionCatalogStore(productionCatalogSelectors.error);
+  const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
   const [confirmHighRiskCreate, setConfirmHighRiskCreate] = useState(false);
 
   useEffect(() => {
@@ -72,12 +73,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
 
   const createCueDraft = () => {
     if (!selectedEffectRef) return;
-    const scratch = structuredClone(bundle);
-    const productionEffect = exactAsset(productionCatalog?.effects ?? [], selectedEffectRef);
-    if (productionEffect && !exactAsset(scratch.effects, selectedEffectRef)) {
-      scratch.effects.push(structuredClone(productionEffect));
-    }
-    const cue = createCueAsset(scratch, [selectedEffectRef]);
+    const cue = createCueDraftFromEffect(bundle, selectedEffectRef, productionCatalog);
     authoringDraftActions.beginNewCue(cue);
     projectActions.setSelectedCueRef({ id: cue.id, revision: cue.revision });
   };
@@ -137,7 +133,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
             <Plus aria-hidden="true" />
           </Button>
         )}
-        {workspace === "stage" && (
+        {workspace === "stage" && advancedMode && (
           <Button
             size="icon-xs"
             variant="ghost"
@@ -172,16 +168,20 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                 )}
                 bundle={bundle}
                 selected={selectedLayoutRef}
+                advanced={advancedMode}
               />
-              <LayoutLibrarySection
-                title="Generated / Advanced"
-                refs={latestRefsById(bundle.manifest.layout_refs).filter(
-                  (reference) =>
-                    exactAsset(bundle.layouts, reference)?.category === "generated_advanced",
-                )}
-                bundle={bundle}
-                selected={selectedLayoutRef}
-              />
+              {advancedMode && (
+                <LayoutLibrarySection
+                  title="Generated / Advanced"
+                  refs={latestRefsById(bundle.manifest.layout_refs).filter(
+                    (reference) =>
+                      exactAsset(bundle.layouts, reference)?.category === "generated_advanced",
+                  )}
+                  bundle={bundle}
+                  selected={selectedLayoutRef}
+                  advanced={advancedMode}
+                />
+              )}
             </>
           )}
 
@@ -204,7 +204,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                   );
                 })}
               {productionCatalogStatus === "loading" && (
-                <p className="text-muted-foreground px-1 text-[10px]">Loading pinned revisions…</p>
+                <p className="text-muted-foreground px-1 text-[10px]">Loading effects…</p>
               )}
               {productionCatalogStatus === "error" && (
                 <p className="text-destructive px-1 text-[10px]">{productionCatalogError}</p>
@@ -227,7 +227,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
               })}
               {bundle.effects.filter((effect) => effect.source !== "built_in").length === 0 && (
                 <p className="text-muted-foreground px-1 text-[10px]">
-                  Customize a Production Effect or create a project-local revision.
+                  Customize a Production Effect to save your own version.
                 </p>
               )}
             </>
@@ -249,9 +249,8 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                     >
                       <span className="min-w-0 flex-1 truncate text-left">{recipe.name}</span>
                       <span className="text-muted-foreground text-[9px]">
-                        {recipe.layers.length}L
+                        {recipe.layers.length} {recipe.layers.length === 1 ? "effect" : "effects"}
                       </span>
-                      <Badge variant="secondary">r{recipe.revision}</Badge>
                     </Button>
                   ))}
                   <LibrarySectionLabel>Project Cues</LibrarySectionLabel>
@@ -278,8 +277,9 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                     onClick={() => projectActions.setSelectedCueRef(reference)}
                   >
                     <span className="min-w-0 flex-1 truncate text-left">{cue.name}</span>
-                    <span className="text-muted-foreground text-[9px]">{cue.layers.length}L</span>
-                    <Badge variant="outline">r{cue.revision}</Badge>
+                    <span className="text-muted-foreground text-[9px]">
+                      {cue.layers.length} {cue.layers.length === 1 ? "effect" : "effects"}
+                    </span>
                   </Button>
                 );
               })}
@@ -303,9 +303,6 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                 onClick={() => workspaceActions.setSelectedLiveEffectId(effect.instance_id)}
               >
                 <span className="min-w-0 flex-1 truncate text-left">{effect.name}</span>
-                <span className="text-muted-foreground font-mono text-[9px]">
-                  r{effect.definition_revision}
-                </span>
                 {favorites.includes(effect.definition_id) && <Star aria-label="Favorite" />}
               </Button>
             ))}
@@ -314,7 +311,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
             <CompactEmpty
               icon={Boxes}
               title="No Live snapshot"
-              description="Publish a Project revision, then explicitly Take live."
+              description="Publish your show, then explicitly Take live."
             />
           )}
         </div>
@@ -351,11 +348,13 @@ function LayoutLibrarySection({
   refs,
   bundle,
   selected,
+  advanced,
 }: {
   title: string;
   refs: AssetRef[];
   bundle: ProjectBundle;
   selected: AssetRef;
+  advanced: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -375,16 +374,17 @@ function LayoutLibrarySection({
             >
               <span className="min-w-0 flex-1 truncate text-left">{layout.name}</span>
               <span className="text-muted-foreground text-[9px]">{layout.geometry.shape}</span>
-              <Badge variant="outline">r{layout.revision}</Badge>
             </Button>
-            <Button
-              size="icon-xs"
-              variant="ghost"
-              aria-label={`Duplicate ${layout.name}`}
-              onClick={() => projectActions.duplicateLayout(reference)}
-            >
-              <Copy aria-hidden="true" />
-            </Button>
+            {advanced && (
+              <Button
+                size="icon-xs"
+                variant="ghost"
+                aria-label={`Duplicate ${layout.name}`}
+                onClick={() => projectActions.duplicateLayout(reference)}
+              >
+                <Copy aria-hidden="true" />
+              </Button>
+            )}
           </div>
         );
       })}
@@ -444,9 +444,7 @@ function EffectLibraryButton({
     >
       <span className="min-w-0 flex-1 truncate text-left">{name}</span>
       <span className="text-muted-foreground text-[9px]">{family}</span>
-      <Badge variant={source === "production" ? "secondary" : "outline"}>
-        r{reference.revision}
-      </Badge>
+      {source === "project" && <Badge variant="outline">Custom</Badge>}
     </Button>
   );
 }

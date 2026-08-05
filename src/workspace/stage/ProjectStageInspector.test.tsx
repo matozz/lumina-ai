@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProjectBundle } from "@/bridge/types";
 import { activeStage, exactAsset } from "@/document/projectModel";
 import { projectActions, useProjectStore } from "@/stores/project";
+import { useWorkspaceStore, workspaceActions } from "@/stores/workspace";
 import { ProjectStageInspector } from "./ProjectStageInspector";
 
 const commandMocks = vi.hoisted(() => ({ previewLayout: vi.fn(), previewProject: vi.fn() }));
@@ -17,6 +18,7 @@ describe("ProjectStageInspector Layout workflow", () => {
     vi.clearAllMocks();
     localStorage.clear();
     projectActions.reset();
+    workspaceActions.setAdvancedMode(true);
     commandMocks.previewLayout.mockResolvedValue([]);
     commandMocks.previewProject.mockImplementation(({ project }) =>
       Promise.resolve({
@@ -70,6 +72,16 @@ describe("ProjectStageInspector Layout workflow", () => {
       exactAsset(useProjectStore.getState().bundle.stages, originalStageRef)?.layout_ref,
     ).toEqual(originalLayoutRef);
     expect(useProjectStore.getState().publishedBundle).toBeNull();
+  });
+
+  it("continues from the active Stage to Effect selection in the simple workflow", async () => {
+    workspaceActions.setAdvancedMode(false);
+    render(<ProjectStageInspector />);
+    await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
+
+    expect(screen.queryByRole("button", { name: "Groups" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Choose an Effect" }));
+    expect(useWorkspaceStore.getState().activeWorkspace).toBe("effect-lab");
   });
 
   it("keeps an unsaved Layout Draft when Stage subviews update the bundle", async () => {

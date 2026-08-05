@@ -7,7 +7,6 @@ export function LiveDiagnostics() {
   const frameLag = useEngineStore(engineSelectors.frameLagMs);
   const adapter = useEngineStore(engineSelectors.outputAdapter);
   const lastError = useEngineStore(engineSelectors.lastOutputError);
-  const liveRevision = useEngineStore(engineSelectors.liveShowRevision);
   const lagging = frameLag > 1_000 / outputRate;
 
   return (
@@ -20,10 +19,7 @@ export function LiveDiagnostics() {
         <Diagnostic label="FPS" value={`${outputRate} target`} />
         <Diagnostic label="Frame lag" value={`${frameLag.toFixed(1)} ms`} warning={lagging} />
         <Diagnostic label="Adapter" value={adapter} />
-        <Diagnostic
-          label="Show revision"
-          value={liveRevision === null ? "—" : `r${liveRevision}`}
-        />
+        <Diagnostic label="Status" value="Live output" />
       </dl>
       <div
         className={cn(

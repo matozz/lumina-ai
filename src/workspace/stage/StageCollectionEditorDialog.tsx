@@ -45,8 +45,8 @@ export function StageCollectionEditorDialog({
             </Badge>
           </div>
           <DialogDescription>
-            {fixtures.length} patched fixtures · Stage {stage.id}@{stage.revision}. The expanded
-            grid keeps fixture cells usable without stacking inside the Stage inspector.
+            {fixtures.length} connected fixtures. The expanded grid keeps fixture cells usable
+            without stacking inside the Stage inspector.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="min-h-0">
@@ -83,7 +83,7 @@ export function StageCollectionEditorLauncher({
           {count} {kind === "groups" ? "Fixture Groups" : "TargetSets"}
         </p>
         <p className="text-muted-foreground mt-1 text-[10px] leading-relaxed">
-          Open the expanded editor for a responsive fixture grid and revision-safe save controls.
+          Open the expanded editor for a responsive fixture grid and safe save controls.
         </p>
       </div>
       <Button size="sm" onClick={onOpen}>

@@ -16,11 +16,13 @@ export function CueOverrideControls({
   layer,
   effect,
   onUpdate,
+  advanced,
 }: {
   cue: CueDefinition;
   layer: CueLayer;
   effect: EffectDefinitionDocument;
   onUpdate: (update: CueLayerUpdate) => void;
+  advanced: boolean;
 }) {
   const overrideable = effect.parameters.filter(
     (parameter) => parameter.override_policy === "cue_override",
@@ -43,40 +45,42 @@ export function CueOverrideControls({
         };
         return (
           <div key={parameter.id} className="grid gap-1.5">
-            <div className="flex items-center gap-1.5">
-              <Badge variant={override ? "secondary" : "outline"}>
-                {override ? "override" : "Effect default"}
-              </Badge>
-              {override && (
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  onClick={() =>
-                    onUpdate((draftLayer) => {
-                      const overrides = { ...(draftLayer.parameter_overrides ?? {}) };
-                      delete overrides[parameter.id];
-                      draftLayer.parameter_overrides = overrides;
-                    })
-                  }
-                >
-                  Use default
-                </Button>
-              )}
-              {parameter.automation !== "disabled" && (
-                <Button
-                  size="xs"
-                  variant={lane ? "secondary" : "outline"}
-                  className="ml-auto"
-                  onClick={() =>
-                    onUpdate((draftLayer, draftCue) =>
-                      toggleAutomation(draftLayer, draftCue, parameter, override, lane?.id),
-                    )
-                  }
-                >
-                  {lane ? "Automated" : "Add automation"}
-                </Button>
-              )}
-            </div>
+            {advanced && (
+              <div className="flex items-center gap-1.5">
+                <Badge variant={override ? "secondary" : "outline"}>
+                  {override ? "override" : "Effect default"}
+                </Badge>
+                {override && (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    onClick={() =>
+                      onUpdate((draftLayer) => {
+                        const overrides = { ...(draftLayer.parameter_overrides ?? {}) };
+                        delete overrides[parameter.id];
+                        draftLayer.parameter_overrides = overrides;
+                      })
+                    }
+                  >
+                    Use default
+                  </Button>
+                )}
+                {parameter.automation !== "disabled" && (
+                  <Button
+                    size="xs"
+                    variant={lane ? "secondary" : "outline"}
+                    className="ml-auto"
+                    onClick={() =>
+                      onUpdate((draftLayer, draftCue) =>
+                        toggleAutomation(draftLayer, draftCue, parameter, override, lane?.id),
+                      )
+                    }
+                  >
+                    {lane ? "Automated" : "Add automation"}
+                  </Button>
+                )}
+              </div>
+            )}
             <EffectParameterControls
               parameters={[displayed]}
               diagnostics={[]}
@@ -90,6 +94,7 @@ export function CueOverrideControls({
                 })
               }
               onRestoreFallback={() => undefined}
+              showMetadata={advanced}
             />
           </div>
         );

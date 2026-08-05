@@ -5,6 +5,7 @@ import { createEffectAsset, exactAsset } from "@/document/projectModel";
 import { authoringDraftActions } from "@/stores/authoringDraft";
 import { productionCatalogActions } from "@/stores/productionCatalog";
 import { projectActions, useProjectStore } from "@/stores/project";
+import { useWorkspaceStore, workspaceActions } from "@/stores/workspace";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
 import { WorkspaceLibrary } from "../WorkspaceLibrary";
 import { EffectLabInspector } from "./EffectLabInspector";
@@ -35,6 +36,7 @@ describe("Effect Lab safe authoring", () => {
     localStorage.clear();
     projectActions.reset();
     authoringDraftActions.reset();
+    workspaceActions.setAdvancedMode(true);
     productionCatalogActions.setCatalog(productionCatalog());
     bridge.validateEffectWorkingDraft.mockClear();
   });
@@ -45,10 +47,21 @@ describe("Effect Lab safe authoring", () => {
     expect(screen.getByText("Production Catalog")).toBeTruthy();
     expect(screen.getByText("Project Drafts")).toBeTruthy();
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /Pulse.*intensity.*r1/ })).toBeTruthy(),
+      expect(screen.getByRole("button", { name: /Pulse.*intensity/ })).toBeTruthy(),
     );
-    expect(screen.getByText("Production revision is read-only")).toBeTruthy();
+    expect(screen.getByText("Production Effect")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Customize" })).toBeTruthy();
+  });
+
+  it("turns a selected Effect into a Cue through the primary action", async () => {
+    workspaceActions.setAdvancedMode(false);
+    render(<EffectLabHarness />);
+
+    const useInCue = await screen.findByRole("button", { name: "Use in Cue" });
+    fireEvent.click(useInCue);
+
+    expect(useWorkspaceStore.getState().activeWorkspace).toBe("cues");
+    expect(useProjectStore.getState().selectedCueRef).toBeTruthy();
   });
 
   it("customizes a built-in without mutating or persisting its pinned identity", async () => {
@@ -58,7 +71,7 @@ describe("Effect Lab safe authoring", () => {
     fireEvent.click(screen.getByRole("button", { name: "Customize" }));
     fireEvent.change(screen.getByLabelText("Effect name"), { target: { value: "Pulse House" } });
 
-    const save = screen.getByRole("button", { name: "Save new revision" });
+    const save = screen.getByRole("button", { name: "Save changes" });
     await waitFor(() => expect(save.hasAttribute("disabled")).toBe(false));
     fireEvent.click(save);
 
@@ -80,7 +93,7 @@ describe("Effect Lab safe authoring", () => {
     fireEvent.mouseMove(doubleSpeed);
     fireEvent.click(doubleSpeed);
 
-    const save = screen.getByRole("button", { name: "Save new revision" });
+    const save = screen.getByRole("button", { name: "Save changes" });
     await waitFor(() => expect(save.hasAttribute("disabled")).toBe(false));
     fireEvent.click(save);
 

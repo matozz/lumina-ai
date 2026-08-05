@@ -7,6 +7,7 @@ import {
   LayoutTemplate,
   PencilLine,
   Save,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { engine } from "@/bridge/commands";
@@ -26,7 +27,10 @@ import {
 } from "@/document/layoutDefinition";
 import { activeLayout, activeStage, assetKey, exactAsset } from "@/document/projectModel";
 import { analyzeStageTopology } from "@/document/stageTopology";
+import { cn } from "@/lib/utils";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
+import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/stores/workspace";
+import { materializeStagePreviewBundle } from "../authoringPreviewBundle";
 import { LayoutGeometryEditor } from "./LayoutGeometryEditor";
 import {
   StageCollectionEditorDialog,
@@ -43,6 +47,7 @@ export function ProjectStageInspector() {
   const bundle = useProjectStore(projectSelectors.bundle);
   const selectedLayoutRef = useProjectStore(projectSelectors.selectedLayoutRef);
   const selectedArrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
+  const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
   const stage = activeStage(bundle);
   const stageLayout = activeLayout(bundle);
   const selectedLayout = exactAsset(bundle.layouts, selectedLayoutRef) ?? stageLayout;
@@ -119,7 +124,7 @@ export function ProjectStageInspector() {
     let active = true;
     void engine
       .previewProject({
-        project: bundle,
+        project: materializeStagePreviewBundle(bundle, selectedArrangementRef),
         arrangementRef: selectedArrangementRef,
         source: { type: "authoring_draft" },
         context: { type: "stage" },
@@ -150,47 +155,56 @@ export function ProjectStageInspector() {
     <aside className="bg-card flex h-full min-h-0 flex-col" aria-label="Stage inspector">
       <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
         <LayoutTemplate className="text-primary size-3.5" aria-hidden="true" />
-        <span className="text-xs font-medium">Layout Draft</span>
+        <span className="text-xs font-medium">Stage setup</span>
         {dirty && <Badge variant="secondary">Unsaved</Badge>}
-        <Badge variant="outline" className="ml-auto font-mono">
-          r{selectedLayout.revision}
-        </Badge>
+        {!dirty && (
+          <Badge variant="outline" className="ml-auto">
+            Ready
+          </Badge>
+        )}
       </div>
-      <div className="border-border flex shrink-0 items-center border-b px-2 py-1.5">
-        <ToggleGroup
-          variant="outline"
-          size="sm"
-          spacing={0}
-          value={[view]}
-          onValueChange={(value) => {
-            const next = value[0];
-            if (next === "layout" || next === "groups" || next === "targets" || next === "scenes") {
-              setView(next);
-              if (next === "groups" || next === "targets") {
-                setCollectionEditorKind(next);
-                setCollectionEditorOpen(true);
-              } else {
-                setCollectionEditorOpen(false);
+      {advancedMode && (
+        <div className="border-border flex shrink-0 items-center border-b px-2 py-1.5">
+          <ToggleGroup
+            variant="outline"
+            size="sm"
+            spacing={0}
+            value={[view]}
+            onValueChange={(value) => {
+              const next = value[0];
+              if (
+                next === "layout" ||
+                next === "groups" ||
+                next === "targets" ||
+                next === "scenes"
+              ) {
+                setView(next);
+                if (next === "groups" || next === "targets") {
+                  setCollectionEditorKind(next);
+                  setCollectionEditorOpen(true);
+                } else {
+                  setCollectionEditorOpen(false);
+                }
               }
-            }
-          }}
-          aria-label="Stage secondary editor"
-          className="w-full"
-        >
-          <ToggleGroupItem value="layout" className="min-w-0 flex-1">
-            Setup
-          </ToggleGroupItem>
-          <ToggleGroupItem value="groups" className="min-w-0 flex-1">
-            Groups
-          </ToggleGroupItem>
-          <ToggleGroupItem value="targets" className="min-w-0 flex-1">
-            TargetSets
-          </ToggleGroupItem>
-          <ToggleGroupItem value="scenes" className="min-w-0 flex-1">
-            Scenes
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </div>
+            }}
+            aria-label="Stage secondary editor"
+            className="w-full"
+          >
+            <ToggleGroupItem value="layout" className="min-w-0 flex-1">
+              Setup
+            </ToggleGroupItem>
+            <ToggleGroupItem value="groups" className="min-w-0 flex-1">
+              Groups
+            </ToggleGroupItem>
+            <ToggleGroupItem value="targets" className="min-w-0 flex-1">
+              TargetSets
+            </ToggleGroupItem>
+            <ToggleGroupItem value="scenes" className="min-w-0 flex-1">
+              Scenes
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+      )}
       <section
         className="border-border flex shrink-0 flex-col gap-2 border-b p-2"
         aria-label="Layout asset controls"
@@ -198,19 +212,17 @@ export function ProjectStageInspector() {
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-medium">{selectedLayout.name}</p>
-            <p className="text-muted-foreground font-mono text-[8px]">
-              {selectedLayout.id}@{selectedLayout.revision}
-            </p>
+            <p className="text-muted-foreground text-[9px]">Fixture layout</p>
           </div>
           {usedOnStage && <Badge variant="secondary">On Stage</Badge>}
-          <Badge variant="outline">{draft.editor.mode}</Badge>
+          {advancedMode && <Badge variant="outline">{draft.editor.mode}</Badge>}
         </div>
         <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border">
           <Metric label="Shape" value={draft.geometry.shape} />
           <Metric label="Positions" value={String(layoutCapacity(draft))} />
           <Metric label="Patched" value={String(fixtureIds.length)} />
         </div>
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className={cn("grid gap-1.5", advancedMode ? "grid-cols-3" : "grid-cols-2")}>
           <Button
             size="xs"
             disabled={!dirty || !editable || blockingDiagnostics.length > 0}
@@ -224,58 +236,66 @@ export function ProjectStageInspector() {
             <Save data-icon="inline-start" aria-hidden="true" />
             Save
           </Button>
+          {advancedMode && (
+            <>
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={!editable || blockingDiagnostics.length > 0}
+                onClick={() => setSaveAsState(saveAsState === "open" ? "closed" : "open")}
+              >
+                Save As…
+              </Button>
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={() =>
+                  runAction("layout.duplicate", () => {
+                    projectActions.duplicateLayout(selectedLayoutRef);
+                  })
+                }
+              >
+                <Copy data-icon="inline-start" aria-hidden="true" />
+                Duplicate
+              </Button>
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={!draft.name.trim() || draft.name === selectedLayout.name || !editable}
+                onClick={() =>
+                  runAction("layout.rename", () => {
+                    projectActions.renameLayout(selectedLayoutRef, draft.name);
+                  })
+                }
+              >
+                <PencilLine data-icon="inline-start" aria-hidden="true" />
+                Rename
+              </Button>
+              <Button
+                size="xs"
+                variant="outline"
+                className="text-destructive hover:text-destructive"
+                disabled={usedOnStage}
+                title={usedOnStage ? "The current Stage pins this Layout revision." : undefined}
+                onClick={() =>
+                  runAction("layout.delete", () => projectActions.deleteLayout(selectedLayoutRef))
+                }
+              >
+                <Trash2 data-icon="inline-start" aria-hidden="true" />
+                Delete
+              </Button>
+            </>
+          )}
           <Button
             size="xs"
-            variant="outline"
-            disabled={!editable || blockingDiagnostics.length > 0}
-            onClick={() => setSaveAsState(saveAsState === "open" ? "closed" : "open")}
+            disabled={dirty || blockingDiagnostics.length > 0}
+            onClick={() => {
+              if (usedOnStage) workspaceActions.setActiveWorkspace("effect-lab");
+              else setImpactOpen(true);
+            }}
           >
-            Save As…
-          </Button>
-          <Button
-            size="xs"
-            variant="outline"
-            onClick={() =>
-              runAction("layout.duplicate", () => {
-                projectActions.duplicateLayout(selectedLayoutRef);
-              })
-            }
-          >
-            <Copy data-icon="inline-start" aria-hidden="true" />
-            Duplicate
-          </Button>
-          <Button
-            size="xs"
-            variant="outline"
-            disabled={!draft.name.trim() || draft.name === selectedLayout.name || !editable}
-            onClick={() =>
-              runAction("layout.rename", () => {
-                projectActions.renameLayout(selectedLayoutRef, draft.name);
-              })
-            }
-          >
-            <PencilLine data-icon="inline-start" aria-hidden="true" />
-            Rename
-          </Button>
-          <Button
-            size="xs"
-            variant="outline"
-            className="text-destructive hover:text-destructive"
-            disabled={usedOnStage}
-            title={usedOnStage ? "The current Stage pins this Layout revision." : undefined}
-            onClick={() =>
-              runAction("layout.delete", () => projectActions.deleteLayout(selectedLayoutRef))
-            }
-          >
-            <Trash2 data-icon="inline-start" aria-hidden="true" />
-            Delete
-          </Button>
-          <Button
-            size="xs"
-            disabled={usedOnStage || dirty || blockingDiagnostics.length > 0}
-            onClick={() => setImpactOpen(true)}
-          >
-            Use on Stage
+            <Sparkles data-icon="inline-start" aria-hidden="true" />
+            {usedOnStage ? "Choose an Effect" : "Use on Stage"}
           </Button>
         </div>
         <div className="text-muted-foreground flex items-center gap-1.5 text-[9px]">
@@ -349,11 +369,13 @@ export function ProjectStageInspector() {
           <div className="p-3">
             <StageLayoutImpactPanel
               impact={analyzeStageTopology(bundle, selectedLayoutRef)}
+              advanced={advancedMode}
               onClose={() => setImpactOpen(false)}
               onApply={(request) =>
                 runAction("stage.layout_upgrade", () => {
                   projectActions.useLayoutOnStage(request);
                   setImpactOpen(false);
+                  if (!advancedMode) workspaceActions.setActiveWorkspace("effect-lab");
                 })
               }
             />
@@ -395,12 +417,16 @@ export function ProjectStageInspector() {
                 onChange={(event) => setDraft({ ...draft, name: event.target.value })}
               />
               <FieldDescription>
-                Editing and previewing do not change Stage, Cue, Arrangement, Published revisions,
-                or Live Snapshot.
+                Changes stay in Draft until you use this layout on Stage.
               </FieldDescription>
             </Field>
 
-            <LayoutGeometryEditor layout={draft} stage={stage} onChange={setDraft} />
+            <LayoutGeometryEditor
+              layout={draft}
+              stage={stage}
+              advanced={advancedMode}
+              onChange={setDraft}
+            />
 
             {localDiagnostics.map((diagnostic) => (
               <LayoutDiagnosticAlert
@@ -436,6 +462,7 @@ export function ProjectStageInspector() {
       )}
       <StagePatchDialog
         draftCapacity={layoutCapacity(draft)}
+        advanced={advancedMode}
         open={patchOpen}
         onOpenChange={setPatchOpen}
       />
@@ -499,7 +526,7 @@ function normalizeDiagnostics(error: unknown, path: string): Diagnostic[] {
       severity: "error",
       path,
       message: error instanceof Error ? error.message : String(error),
-      hint: "Review the exact Layout and Stage revisions, then retry at this editor.",
+      hint: "Review the layout and Stage settings, then try again.",
     },
   ];
 }

@@ -13,9 +13,23 @@ import {
   latestRefsById,
   stableSeed,
   uniqueId,
+  createCueAsset,
 } from "@/document/projectModel";
 
 export type CueLayerUpdate = (layer: CueLayer, cue: CueDefinition) => void;
+
+export function createCueDraftFromEffect(
+  bundle: ProjectBundle,
+  effectRef: { id: string; revision: number },
+  catalog: ProductionCatalog | null,
+) {
+  const scratch = structuredClone(bundle);
+  const productionEffect = exactAsset(catalog?.effects ?? [], effectRef);
+  if (productionEffect && !exactAsset(scratch.effects, effectRef)) {
+    scratch.effects.push(structuredClone(productionEffect));
+  }
+  return createCueAsset(scratch, [effectRef]);
+}
 
 export function collectCueEffects(bundle: ProjectBundle, catalog: ProductionCatalog | null) {
   const effects = new Map<string, EffectDefinitionDocument>();

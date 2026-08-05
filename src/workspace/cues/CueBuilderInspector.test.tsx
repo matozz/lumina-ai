@@ -10,6 +10,7 @@ import { createCueAsset, createEffectAsset } from "@/document/projectModel";
 import { authoringDraftActions, useAuthoringDraftStore } from "@/stores/authoringDraft";
 import { productionCatalogActions } from "@/stores/productionCatalog";
 import { projectActions, useProjectStore } from "@/stores/project";
+import { workspaceActions } from "@/stores/workspace";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
 import { WorkspaceLibrary } from "../WorkspaceLibrary";
 import { CueBuilderInspector } from "./CueBuilderInspector";
@@ -42,6 +43,7 @@ describe("Cue Builder safe authoring", () => {
     localStorage.clear();
     projectActions.reset();
     authoringDraftActions.reset();
+    workspaceActions.setAdvancedMode(true);
     const fixture = cueFixture();
     cue = fixture.cue;
     catalog = fixture.catalog;
@@ -54,7 +56,7 @@ describe("Cue Builder safe authoring", () => {
   it("resolves a Production recipe into a session-only draft before save", async () => {
     render(<Harness />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1L.*r1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
 
     await waitFor(() => expect(screen.getByLabelText("Cue name")).toBeTruthy());
     expect(useProjectStore.getState().bundle.cues).toHaveLength(0);
@@ -62,9 +64,21 @@ describe("Cue Builder safe authoring", () => {
     expect(screen.getByText("Production Recipes")).toBeTruthy();
   });
 
+  it("shows bars and hides internal layer controls by default", async () => {
+    workspaceActions.setAdvancedMode(false);
+    render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
+
+    await waitFor(() => expect(screen.getByLabelText("Cue length")).toBeTruthy());
+    expect(screen.getByText("1 bar")).toBeTruthy();
+    expect(screen.queryByText("Exact length · ticks")).toBeNull();
+    expect(screen.queryByText("Deterministic seed")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add selected Effect" })).toBeNull();
+  });
+
   it("keeps mute, solo, overrides, and automation local until one immutable save", async () => {
     render(<Harness />);
-    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1L.*r1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Mute layer 2" })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Mute layer 2" }));
@@ -78,7 +92,7 @@ describe("Cue Builder safe authoring", () => {
     });
     expect(useAuthoringDraftStore.getState().cue?.working.automation_lanes).toHaveLength(1);
 
-    const save = screen.getByRole("button", { name: "Save new revision" });
+    const save = screen.getByRole("button", { name: "Save Cue" });
     await waitFor(() => expect(save.hasAttribute("disabled")).toBe(false));
     fireEvent.click(save);
 
@@ -90,12 +104,12 @@ describe("Cue Builder safe authoring", () => {
 
   it("requires confirmation before adding a high-risk strobe layer", async () => {
     render(<Harness />);
-    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1L.*r1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
     await waitFor(() => expect(screen.getByLabelText("Cue name")).toBeTruthy());
 
     const strobe = catalog.effects.find((effect) => effect.catalog.strobe_risk === "high")!;
     act(() => projectActions.setSelectedEffectRef({ id: strobe.id, revision: strobe.revision }));
-    const add = screen.getByRole("button", { name: "Add selected" });
+    const add = screen.getByRole("button", { name: "Add selected Effect" });
     await waitFor(() => expect(add.hasAttribute("disabled")).toBe(false));
     fireEvent.click(add);
 
@@ -107,7 +121,7 @@ describe("Cue Builder safe authoring", () => {
 
   it("duplicates automation with unique IDs and keeps layer ordering deterministic", async () => {
     render(<Harness />);
-    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1L.*r1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
     await waitFor(() => expect(screen.getByLabelText("Cue name")).toBeTruthy());
 
     fireEvent.click(screen.getAllByRole("button", { name: "Add automation" })[0]);
@@ -132,11 +146,11 @@ describe("Cue Builder safe authoring", () => {
     productionCatalogActions.setCatalog(catalog);
     render(<Harness />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1L.*r1/ }));
-    await waitFor(() => expect(screen.getByText("Selected layer")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
+    await waitFor(() => expect(screen.getByText("Selected Effect")).toBeTruthy());
 
     const editor = screen
-      .getByText("Selected layer")
+      .getByText("Selected Effect")
       .closest('[data-layout-region="cue-layer-editor"]');
     const trigger = editor?.querySelector<HTMLElement>('[data-slot="select-trigger"]');
     const value = trigger?.querySelector<HTMLElement>('[data-slot="select-value"]');

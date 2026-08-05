@@ -4,6 +4,7 @@ import {
   ChevronRight,
   FlaskConical,
   GitFork,
+  Layers2,
   Save,
   ShieldCheck,
   Undo2,
@@ -15,6 +16,15 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -36,8 +46,9 @@ import {
   useProductionCatalogStore,
 } from "@/stores/productionCatalog";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
-import { workspaceActions } from "@/stores/workspace";
+import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/stores/workspace";
 import { AuthoringSignalSpine } from "../AuthoringSignalSpine";
+import { createCueDraftFromEffect } from "../cues/cueAuthoring";
 import { EffectParameterControls } from "./EffectParameterControls";
 
 export function EffectLabInspector() {
@@ -49,7 +60,9 @@ export function EffectLabInspector() {
   const catalogError = useProductionCatalogStore(productionCatalogSelectors.error);
   const session = useAuthoringDraftStore(authoringDraftSelectors.effect);
   const comparison = useAuthoringDraftStore(authoringDraftSelectors.comparison);
+  const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
   const [advancedVisible, setAdvancedVisible] = useState(false);
+  const [confirmHighRiskUse, setConfirmHighRiskUse] = useState(false);
   const selectedEffect =
     exactAsset(bundle.effects, reference) ?? exactAsset(catalog?.effects ?? [], reference);
   const stage = activeStage(bundle);
@@ -90,7 +103,7 @@ export function EffectLabInspector() {
         <p className="text-muted-foreground text-center text-xs">
           {catalogStatus === "error"
             ? `Production Catalog unavailable: ${catalogError}`
-            : "Select a Production or Project Effect revision."}
+            : "Select an Effect to preview and use in a Cue."}
         </p>
       </aside>
     );
@@ -129,20 +142,43 @@ export function EffectLabInspector() {
   };
 
   const save = () => {
-    if (!canSave) return;
+    if (!canSave) return null;
     try {
       const saved = projectActions.saveEffectWorkingDraft(session.lastKnownGood);
       authoringDraftActions.commitEffect(saved);
-      workspaceActions.setPublishStatus(
-        "idle",
-        `${saved.name} saved as immutable revision ${saved.revision}.`,
-      );
+      workspaceActions.setPublishStatus("idle", `${saved.name} saved.`);
+      return saved;
     } catch (error) {
       workspaceActions.setPublishStatus(
         "error",
-        error instanceof Error ? error.message : "Effect revision could not be saved.",
+        error instanceof Error ? error.message : "Effect could not be saved.",
       );
+      return null;
     }
+  };
+
+  const useEffectInCue = () => {
+    const saved = !readOnly && session.status !== "pristine" ? save() : session.lastKnownGood;
+    if (!saved) return;
+    const currentBundle = useProjectStore.getState().bundle;
+    const cue = createCueDraftFromEffect(
+      currentBundle,
+      { id: saved.id, revision: saved.revision },
+      catalog,
+    );
+    authoringDraftActions.beginNewCue(cue);
+    projectActions.setSelectedEffectRef({ id: saved.id, revision: saved.revision });
+    projectActions.setSelectedCueRef({ id: cue.id, revision: cue.revision });
+    workspaceActions.setActiveWorkspace("cues");
+    workspaceActions.setPublishStatus("idle", `${saved.name} is ready in a new Cue.`);
+  };
+
+  const requestUseEffectInCue = () => {
+    if (effect.catalog.strobe_risk === "high") {
+      setConfirmHighRiskUse(true);
+      return;
+    }
+    useEffectInCue();
   };
 
   const saveAsNewDraft = () => {
@@ -161,196 +197,242 @@ export function EffectLabInspector() {
   };
 
   return (
-    <aside className="bg-card flex h-full min-h-0 flex-col" aria-label="Effect Lab inspector">
-      <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
-        <FlaskConical className="text-primary" aria-hidden="true" />
-        <span className="text-xs font-medium">Effect controls</span>
-        <Badge variant={effect.source === "built_in" ? "secondary" : "outline"} className="ml-auto">
-          {effect.source.replace("_", " ")} · r{effect.revision}
-        </Badge>
-      </div>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-3 p-3">
-          <AuthoringSignalSpine
-            revision={session.pinned.revision}
-            status={session.status}
-            comparison={comparison}
-            onComparisonChange={authoringDraftActions.setComparison}
-          />
-
-          {readOnly && (
-            <div className="border-primary/30 bg-primary/5 grid gap-2 rounded-md border p-2.5">
-              <div className="flex items-center gap-1.5 text-xs font-medium">
-                <ShieldCheck className="text-primary size-3.5" aria-hidden="true" />
-                Production revision is read-only
-              </div>
-              <FieldDescription>
-                Customize creates a project-local fork. The built-in identity remains pinned and
-                unchanged.
-              </FieldDescription>
-              <Button size="xs" variant="outline" onClick={customize}>
-                <GitFork data-icon="inline-start" aria-hidden="true" />
-                Customize
-              </Button>
-            </div>
-          )}
-
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="effect-name">Effect name</FieldLabel>
-              <Input
-                id="effect-name"
-                value={effect.name}
-                disabled={readOnly}
-                onChange={(event) =>
-                  authoringDraftActions.updateEffect((draft) => {
-                    draft.name = event.currentTarget.value;
-                  })
-                }
+    <>
+      <aside className="bg-card flex h-full min-h-0 flex-col" aria-label="Effect Lab inspector">
+        <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
+          <FlaskConical className="text-primary" aria-hidden="true" />
+          <span className="text-xs font-medium">Effect controls</span>
+          <Badge
+            variant={effect.source === "built_in" ? "secondary" : "outline"}
+            className="ml-auto"
+          >
+            {effect.source === "built_in" ? "Ready to use" : "Custom"}
+          </Badge>
+        </div>
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="flex flex-col gap-3 p-3">
+            {advancedMode && (
+              <AuthoringSignalSpine
+                revision={session.pinned.revision}
+                status={session.status}
+                comparison={comparison}
+                onComparisonChange={authoringDraftActions.setComparison}
               />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="effect-preview-target">Preview TargetSet</FieldLabel>
-              <Select
-                items={targetItems}
-                value={targetSetId}
-                onValueChange={(value) => value && projectActions.setSelectedTargetSetId(value)}
-              >
-                <SelectTrigger id="effect-preview-target" size="sm" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent alignItemWithTrigger={false}>
-                  <SelectGroup>
-                    {targetItems.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              <FieldDescription>
-                PreviewSession-only choice; it is never written into the Effect asset.
-              </FieldDescription>
-            </Field>
-          </FieldGroup>
+            )}
 
-          <div className="flex flex-wrap gap-1.5">
-            {effect.catalog.family && <Badge variant="secondary">{effect.catalog.family}</Badge>}
-            {effect.catalog.category && <Badge variant="outline">{effect.catalog.category}</Badge>}
-            {(effect.catalog.layout_capabilities ?? []).map((capability) => (
-              <Badge key={capability} variant="outline">
-                {capability}
+            {readOnly && (
+              <div className="border-primary/30 bg-primary/5 grid gap-2 rounded-md border p-2.5">
+                <div className="flex items-center gap-1.5 text-xs font-medium">
+                  <ShieldCheck className="text-primary size-3.5" aria-hidden="true" />
+                  Production Effect
+                </div>
+                <FieldDescription>
+                  Ready to use as-is. Customize only if you want your own version.
+                </FieldDescription>
+                <Button size="xs" variant="outline" onClick={customize}>
+                  <GitFork data-icon="inline-start" aria-hidden="true" />
+                  Customize
+                </Button>
+              </div>
+            )}
+
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="effect-name">Effect name</FieldLabel>
+                <Input
+                  id="effect-name"
+                  value={effect.name}
+                  disabled={readOnly}
+                  onChange={(event) =>
+                    authoringDraftActions.updateEffect((draft) => {
+                      draft.name = event.currentTarget.value;
+                    })
+                  }
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="effect-preview-target">Preview fixtures</FieldLabel>
+                <Select
+                  items={targetItems}
+                  value={targetSetId}
+                  onValueChange={(value) => value && projectActions.setSelectedTargetSetId(value)}
+                >
+                  <SelectTrigger id="effect-preview-target" size="sm" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent alignItemWithTrigger={false}>
+                    <SelectGroup>
+                      {targetItems.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <FieldDescription>Choose which fixtures light up in this preview.</FieldDescription>
+              </Field>
+            </FieldGroup>
+
+            <div className="flex flex-wrap gap-1.5">
+              {effect.catalog.family && <Badge variant="secondary">{effect.catalog.family}</Badge>}
+              {effect.catalog.category && (
+                <Badge variant="outline">{effect.catalog.category}</Badge>
+              )}
+              {(effect.catalog.layout_capabilities ?? []).map((capability) => (
+                <Badge key={capability} variant="outline">
+                  {capability}
+                </Badge>
+              ))}
+              <Badge variant={effect.catalog.strobe_risk === "high" ? "destructive" : "secondary"}>
+                {effect.catalog.strobe_risk} strobe risk
               </Badge>
+            </div>
+
+            <Separator />
+            <EffectParameterControls
+              parameters={commonParameters}
+              diagnostics={session.diagnostics}
+              readOnly={readOnly}
+              parameterIndices={parameterIndices}
+              onChange={updateParameter}
+              onRestoreFallback={authoringDraftActions.restoreEffectFallback}
+              showMetadata={advancedMode}
+            />
+
+            {advancedParameters.length > 0 && (
+              <div className="grid gap-2">
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  className="justify-start"
+                  aria-expanded={advancedVisible}
+                  onClick={() => setAdvancedVisible((visible) => !visible)}
+                >
+                  {advancedVisible ? (
+                    <ChevronDown aria-hidden="true" />
+                  ) : (
+                    <ChevronRight aria-hidden="true" />
+                  )}
+                  Advanced parameters · {advancedParameters.length}
+                </Button>
+                {advancedVisible && (
+                  <EffectParameterControls
+                    parameters={advancedParameters}
+                    diagnostics={session.diagnostics}
+                    readOnly={readOnly}
+                    parameterIndices={parameterIndices}
+                    onChange={updateParameter}
+                    onRestoreFallback={authoringDraftActions.restoreEffectFallback}
+                    showMetadata={advancedMode}
+                  />
+                )}
+              </div>
+            )}
+
+            {advancedMode && (
+              <div className="border-border bg-muted/20 grid gap-1.5 rounded-md border p-2.5">
+                <p className="text-[10px] font-medium">Graph contract</p>
+                <p className="text-muted-foreground text-[10px]">
+                  {effect.graph.nodes.length} typed nodes ·{" "}
+                  {effect.graph.nodes.filter((node) => node.type === "attribute_writer").length}{" "}
+                  writers
+                </p>
+                <p className="text-muted-foreground text-[10px]">
+                  Structural edits materialize through typed bindings before validation and save.
+                </p>
+                {!readOnly && (
+                  <Button size="xs" variant="ghost" disabled={!canSave} onClick={saveAsNewDraft}>
+                    Save As new Draft
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {generalDiagnostics.map((diagnostic) => (
+              <div
+                key={`${diagnostic.code}:${diagnostic.path}`}
+                className="border-destructive/40 bg-destructive/5 grid gap-1 rounded-md border p-2"
+              >
+                <p className="text-destructive text-[10px]" role="alert">
+                  {diagnostic.message}
+                </p>
+                {diagnostic.hint && (
+                  <p className="text-muted-foreground text-[10px]">{diagnostic.hint}</p>
+                )}
+                <Button
+                  size="xs"
+                  variant="outline"
+                  onClick={authoringDraftActions.revertEffectToLastKnownGood}
+                >
+                  Revert to Last Known Good
+                </Button>
+              </div>
             ))}
-            <Badge variant={effect.catalog.strobe_risk === "high" ? "destructive" : "secondary"}>
-              {effect.catalog.strobe_risk} strobe risk
-            </Badge>
-          </div>
 
-          <Separator />
-          <EffectParameterControls
-            parameters={commonParameters}
-            diagnostics={session.diagnostics}
-            readOnly={readOnly}
-            parameterIndices={parameterIndices}
-            onChange={updateParameter}
-            onRestoreFallback={authoringDraftActions.restoreEffectFallback}
-          />
-
-          {advancedParameters.length > 0 && (
-            <div className="grid gap-2">
+            {advancedMode && (
+              <div className="grid grid-cols-2 gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={readOnly || session.status === "validating"}
+                  onClick={() => validate(structuredClone(session.working), session.generation)}
+                >
+                  <ShieldCheck data-icon="inline-start" aria-hidden="true" />
+                  Validate
+                </Button>
+                <Button size="sm" disabled={!canSave} onClick={save}>
+                  <Save data-icon="inline-start" aria-hidden="true" />
+                  Save changes
+                </Button>
+              </div>
+            )}
+            <Button
+              size="sm"
+              disabled={!readOnly && session.status !== "valid" && session.status !== "pristine"}
+              onClick={requestUseEffectInCue}
+            >
+              <Layers2 data-icon="inline-start" aria-hidden="true" />
+              {!readOnly && session.status !== "pristine" ? "Save & use in Cue" : "Use in Cue"}
+            </Button>
+            {advancedMode && (
               <Button
                 size="xs"
                 variant="ghost"
-                className="justify-start"
-                aria-expanded={advancedVisible}
-                onClick={() => setAdvancedVisible((visible) => !visible)}
+                disabled={readOnly || (session.status === "pristine" && session.mode === "edit")}
+                onClick={authoringDraftActions.discardEffect}
               >
-                {advancedVisible ? (
-                  <ChevronDown aria-hidden="true" />
-                ) : (
-                  <ChevronRight aria-hidden="true" />
-                )}
-                Advanced parameters · {advancedParameters.length}
-              </Button>
-              {advancedVisible && (
-                <EffectParameterControls
-                  parameters={advancedParameters}
-                  diagnostics={session.diagnostics}
-                  readOnly={readOnly}
-                  parameterIndices={parameterIndices}
-                  onChange={updateParameter}
-                  onRestoreFallback={authoringDraftActions.restoreEffectFallback}
-                />
-              )}
-            </div>
-          )}
-
-          <div className="border-border bg-muted/20 grid gap-1.5 rounded-md border p-2.5">
-            <p className="text-[10px] font-medium">Graph contract</p>
-            <p className="text-muted-foreground text-[10px]">
-              {effect.graph.nodes.length} typed nodes ·{" "}
-              {effect.graph.nodes.filter((node) => node.type === "attribute_writer").length} writers
-            </p>
-            <p className="text-muted-foreground text-[10px]">
-              Structural edits materialize through typed bindings before validation and save.
-            </p>
-            {!readOnly && (
-              <Button size="xs" variant="ghost" disabled={!canSave} onClick={saveAsNewDraft}>
-                Save As new Draft
+                <Undo2 data-icon="inline-start" aria-hidden="true" />
+                Discard working draft
               </Button>
             )}
           </div>
-
-          {generalDiagnostics.map((diagnostic) => (
-            <div
-              key={`${diagnostic.code}:${diagnostic.path}`}
-              className="border-destructive/40 bg-destructive/5 grid gap-1 rounded-md border p-2"
-            >
-              <p className="text-destructive text-[10px]" role="alert">
-                {diagnostic.message}
-              </p>
-              {diagnostic.hint && (
-                <p className="text-muted-foreground text-[10px]">{diagnostic.hint}</p>
-              )}
-              <Button
-                size="xs"
-                variant="outline"
-                onClick={authoringDraftActions.revertEffectToLastKnownGood}
-              >
-                Revert to Last Known Good
-              </Button>
-            </div>
-          ))}
-
-          <div className="grid grid-cols-2 gap-1.5">
+        </ScrollArea>
+      </aside>
+      <Dialog open={confirmHighRiskUse} onOpenChange={setConfirmHighRiskUse}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm high strobe risk</DialogTitle>
+            <DialogDescription>
+              This Effect can produce high-frequency intensity changes. Verify audience safety and
+              the selected fixtures before using it in a Cue.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
             <Button
-              size="sm"
-              variant="outline"
-              disabled={readOnly || session.status === "validating"}
-              onClick={() => validate(structuredClone(session.working), session.generation)}
+              variant="destructive"
+              onClick={() => {
+                useEffectInCue();
+                setConfirmHighRiskUse(false);
+              }}
             >
-              <ShieldCheck data-icon="inline-start" aria-hidden="true" />
-              Validate
+              Use high-risk Effect
             </Button>
-            <Button size="sm" disabled={!canSave} onClick={save}>
-              <Save data-icon="inline-start" aria-hidden="true" />
-              Save new revision
-            </Button>
-          </div>
-          <Button
-            size="xs"
-            variant="ghost"
-            disabled={readOnly || (session.status === "pristine" && session.mode === "edit")}
-            onClick={authoringDraftActions.discardEffect}
-          >
-            <Undo2 data-icon="inline-start" aria-hidden="true" />
-            Discard working draft
-          </Button>
-        </div>
-      </ScrollArea>
-    </aside>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

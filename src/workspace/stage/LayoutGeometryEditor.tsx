@@ -19,10 +19,12 @@ import type { StageDocument } from "@/bridge/types";
 export function LayoutGeometryEditor({
   layout,
   stage,
+  advanced = false,
   onChange,
 }: {
   layout: LayoutDefinition;
   stage: StageDocument;
+  advanced?: boolean;
   onChange: (layout: LayoutDefinition) => void;
 }) {
   const fixtureIds = fixtureIdsForStage(stage);
@@ -41,7 +43,12 @@ export function LayoutGeometryEditor({
   const geometry = layout.geometry;
   return (
     <FieldGroup>
-      <FixtureSizeFields layout={layout} fixtureIds={fixtureIds} onChange={onChange} />
+      <FixtureSizeFields
+        layout={layout}
+        fixtureIds={fixtureIds}
+        advanced={advanced}
+        onChange={onChange}
+      />
       {(geometry.shape === "matrix" || geometry.shape === "wall" || geometry.shape === "frame") && (
         <GridGeometryFields geometry={geometry} onChange={updateGeometry} />
       )}
@@ -73,8 +80,8 @@ export function LayoutGeometryEditor({
           <Braces aria-hidden="true" />
           <AlertTitle>SVG path source</AlertTitle>
           <AlertDescription>
-            This revision preserves {geometry.svg_path.sample_count} sampled positions. Duplicate it
-            before changing source data in the advanced editor.
+            This layout preserves {geometry.svg_path.sample_count} sampled positions. Duplicate it
+            before changing the source in Advanced.
           </AlertDescription>
         </Alert>
       )}
@@ -463,10 +470,12 @@ function OriginFields<T extends OriginGeometry>({
 function FixtureSizeFields({
   layout,
   fixtureIds,
+  advanced,
   onChange,
 }: {
   layout: LayoutDefinition;
   fixtureIds: number[];
+  advanced: boolean;
   onChange: (layout: LayoutDefinition) => void;
 }) {
   const geometry = layout.geometry;
@@ -551,64 +560,66 @@ function FixtureSizeFields({
           onChange={(height) => update("height", height)}
         />
       </div>
-      <div className="border-border bg-background/30 flex flex-col gap-2 rounded-md border p-2">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-medium">Individual fixture size</p>
-          <span className="text-muted-foreground font-mono text-[9px]">
-            {fixtureSizeOverrides.length} overrides
-          </span>
+      {advanced && (
+        <div className="border-border bg-background/30 flex flex-col gap-2 rounded-md border p-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] font-medium">Individual fixture size</p>
+            <span className="text-muted-foreground font-mono text-[9px]">
+              {fixtureSizeOverrides.length} overrides
+            </span>
+          </div>
+          <NumberField
+            label="Fixture ID for size override"
+            shortLabel="Fixture ID"
+            value={selectedFixtureId}
+            min={fixtureIds[0] ?? 0}
+            integer
+            onChange={setSelectedFixtureId}
+          />
+          {selectedFixtureExists ? (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <NumberField
+                  label={`Fixture ${selectedFixtureId} width`}
+                  shortLabel="Width"
+                  value={selectedSize.width}
+                  min={1}
+                  integer
+                  onChange={(width) => updateFixture("width", width)}
+                />
+                <NumberField
+                  label={`Fixture ${selectedFixtureId} height`}
+                  shortLabel="Height"
+                  value={selectedSize.height}
+                  min={1}
+                  integer
+                  onChange={(height) => updateFixture("height", height)}
+                />
+              </div>
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={!override}
+                onClick={() => {
+                  const remaining = fixtureSizeOverrides.filter(
+                    (item) => item.fixture_id !== selectedFixtureId,
+                  );
+                  onChange({
+                    ...layout,
+                    fixture_size_overrides: remaining.length > 0 ? remaining : undefined,
+                  });
+                }}
+              >
+                Clear fixture override
+              </Button>
+            </>
+          ) : (
+            <FieldDescription>
+              Enter a patched fixture ID to edit its size without changing the other blocks.
+            </FieldDescription>
+          )}
         </div>
-        <NumberField
-          label="Fixture ID for size override"
-          shortLabel="Fixture ID"
-          value={selectedFixtureId}
-          min={fixtureIds[0] ?? 0}
-          integer
-          onChange={setSelectedFixtureId}
-        />
-        {selectedFixtureExists ? (
-          <>
-            <div className="grid grid-cols-2 gap-2">
-              <NumberField
-                label={`Fixture ${selectedFixtureId} width`}
-                shortLabel="Width"
-                value={selectedSize.width}
-                min={1}
-                integer
-                onChange={(width) => updateFixture("width", width)}
-              />
-              <NumberField
-                label={`Fixture ${selectedFixtureId} height`}
-                shortLabel="Height"
-                value={selectedSize.height}
-                min={1}
-                integer
-                onChange={(height) => updateFixture("height", height)}
-              />
-            </div>
-            <Button
-              size="xs"
-              variant="outline"
-              disabled={!override}
-              onClick={() => {
-                const remaining = fixtureSizeOverrides.filter(
-                  (item) => item.fixture_id !== selectedFixtureId,
-                );
-                onChange({
-                  ...layout,
-                  fixture_size_overrides: remaining.length > 0 ? remaining : undefined,
-                });
-              }}
-            >
-              Clear fixture override
-            </Button>
-          </>
-        ) : (
-          <FieldDescription>
-            Enter a patched fixture ID to edit its size without changing the other blocks.
-          </FieldDescription>
-        )}
-      </div>
+      )}
     </>
   );
 }

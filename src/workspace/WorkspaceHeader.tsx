@@ -33,7 +33,7 @@ export function WorkspaceHeader() {
 
   const publishDraft = async () => {
     if (busy) return;
-    workspaceActions.setPublishStatus("publishing", "Publishing validated revision…");
+    workspaceActions.setPublishStatus("publishing", "Checking and publishing your show…");
     engineActions.setCompileStatus("compiling");
     try {
       const result = await engine.publishProject(bundle, arrangementRef);
@@ -46,7 +46,7 @@ export function WorkspaceHeader() {
       projectActions.markPublished();
       projectActions.setPreviewSource("rehearsal_published", result.show_revision);
       workspaceActions.setPublishedRevision(result.show_revision);
-      workspaceActions.setPublishStatus("idle", `Published revision ${result.show_revision}.`);
+      workspaceActions.setPublishStatus("idle", "Published. Your live show is unchanged.");
     } catch (error) {
       engineActions.setCompileStatus("error");
       workspaceActions.setPublishStatus(
@@ -58,18 +58,18 @@ export function WorkspaceHeader() {
 
   const takeLive = async () => {
     if (publishedRevision === null || publishedRevision === liveRevision || busy) return;
-    workspaceActions.setPublishStatus("activating", "Taking published revision live…");
+    workspaceActions.setPublishStatus("activating", "Taking the published show live…");
     try {
       const snapshot = await engine.activateShowRevision(publishedRevision);
       workspaceActions.setSnapshotState(snapshot);
       const catalog = await engine.getLiveEffects();
       engineActions.setLiveEffectCatalog(catalog);
-      workspaceActions.setPublishStatus("idle", `Live is now revision ${snapshot.live_revision}.`);
+      workspaceActions.setPublishStatus("idle", "The published show is now live.");
       window.dispatchEvent(new CustomEvent("engine:layout-ready"));
     } catch (error) {
       workspaceActions.setPublishStatus(
         "error",
-        error instanceof Error ? error.message : "Published revision could not go live.",
+        error instanceof Error ? error.message : "The published show could not go live.",
       );
     }
   };
@@ -93,14 +93,13 @@ export function WorkspaceHeader() {
 
       <Separator orientation="vertical" className="mx-1 h-6" />
 
-      <div className="flex min-w-0 items-center gap-1.5" aria-label="Show revision state">
-        <Badge variant={isDirty ? "outline" : "secondary"}>
-          Draft Project r{bundle.manifest.revision}
-          {isDirty ? " • edited" : ""}
+      <div className="flex min-w-0 items-center gap-1.5" aria-label="Show status">
+        <Badge variant={isDirty ? "outline" : "secondary"}>Draft{isDirty ? " • edited" : ""}</Badge>
+        <Badge variant="outline">
+          {publishedRevision === null ? "Not published" : "Published"}
         </Badge>
-        <Badge variant="outline">Published {formatRevision(publishedRevision)}</Badge>
         <Badge variant={publishedRevision !== liveRevision ? "destructive" : "secondary"}>
-          Live {formatRevision(liveRevision)}
+          {liveRevision === null ? "Not live" : "Live"}
         </Badge>
         {statusMessage && (
           <span className="text-muted-foreground hidden max-w-52 truncate text-xs xl:inline">
@@ -176,8 +175,4 @@ function PanelToggle({
       <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   );
-}
-
-function formatRevision(revision: number | null) {
-  return revision === null ? "—" : `r${revision}`;
 }

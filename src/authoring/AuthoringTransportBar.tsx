@@ -7,6 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { assetKey } from "@/document/projectModel";
 import { cn } from "@/lib/utils";
+import { useWorkspaceStore, workspaceSelectors } from "@/stores/workspace";
 import { AuthoringDiagnosticAlert } from "./AuthoringDiagnosticAlert";
 import { clockForSession } from "./clockDefinition";
 import { authoringDiagnostic, type AuthoringDiagnostic } from "./diagnostics";
@@ -36,6 +37,7 @@ export function AuthoringTransportBar({
   className,
 }: AuthoringTransportBarProps) {
   const key = authoringSessionKey(scope, assetKey(reference));
+  const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
   const storedSession = useAuthoringTransportStore((state) => state.sessions[key]);
   const fallback = useMemo(
     () =>
@@ -187,7 +189,7 @@ export function AuthoringTransportBar({
           ))}
         </div>
 
-        {scope !== "arrangement" && (
+        {advancedMode && scope !== "arrangement" && (
           <ToggleGroup
             className="ml-auto"
             variant="outline"
@@ -226,11 +228,13 @@ export function AuthoringTransportBar({
             );
           }}
         />
-        <span className="text-muted-foreground w-20 text-right font-mono text-[10px] tabular-nums">
-          {session.cursorTick} t
+        <span className="text-muted-foreground w-24 text-right text-[10px] tabular-nums">
+          {advancedMode
+            ? `${session.cursorTick} ticks`
+            : `Bar ${position.bar} · Beat ${position.beat}`}
         </span>
 
-        {scope !== "arrangement" && session.clockSource === "local" && (
+        {advancedMode && scope !== "arrangement" && session.clockSource === "local" && (
           <LocalPreviewTimingFields
             sessionKey={key}
             timing={session.localTiming}

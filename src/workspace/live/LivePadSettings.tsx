@@ -40,9 +40,7 @@ export function LivePadSettings({
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-xs font-medium">{effect.name}</p>
-          <p className="text-muted-foreground font-mono text-[9px]">
-            Live r{effect.definition_revision} · {effect.target_group_id}
-          </p>
+          <p className="text-muted-foreground text-[9px]">Fixtures: {effect.target_group_id}</p>
         </div>
         {draftAhead && (
           <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[9px] text-amber-300">

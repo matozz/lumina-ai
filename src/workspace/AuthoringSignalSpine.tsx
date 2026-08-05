@@ -18,7 +18,7 @@ export function AuthoringSignalSpine({
   return (
     <div className="border-border bg-muted/20 grid gap-2 rounded-md border p-2">
       <div className="grid grid-cols-[auto_1fr_auto_1fr_auto] items-center gap-1.5 text-[9px]">
-        <SignalNode icon={GitCommitHorizontal} label={`Pinned r${revision}`} />
+        <SignalNode icon={GitCommitHorizontal} label={`Saved version ${revision}`} />
         <span className="bg-border h-px" />
         <SignalNode
           icon={CircleDot}

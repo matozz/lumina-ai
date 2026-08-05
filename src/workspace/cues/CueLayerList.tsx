@@ -11,6 +11,7 @@ export function CueLayerList({
   onSelect,
   onToggleMute,
   onToggleSolo,
+  advanced,
 }: {
   cue: CueDefinition;
   effects: EffectDefinitionDocument[];
@@ -18,6 +19,7 @@ export function CueLayerList({
   onSelect: (layerId: string) => void;
   onToggleMute: (layerId: string) => void;
   onToggleSolo: (layerId: string) => void;
+  advanced: boolean;
 }) {
   const activeUnmuted = cue.layers.filter(
     (candidate) => !session.mutedLayerIds.includes(candidate.id),
@@ -38,31 +40,37 @@ export function CueLayerList({
               className="h-auto min-w-0 flex-1 justify-start py-1.5"
               onClick={() => onSelect(layer.id)}
             >
-              <Badge variant="outline">L{index + 1}</Badge>
+              {advanced && <Badge variant="outline">L{index + 1}</Badge>}
               <span className="min-w-0 flex-1 truncate text-left">
                 {definition?.name ?? layer.id}
               </span>
-              <span className="text-muted-foreground text-[9px]">P{layer.priority ?? 0}</span>
+              {advanced && (
+                <span className="text-muted-foreground text-[9px]">P{layer.priority ?? 0}</span>
+              )}
             </Button>
-            <Button
-              size="icon-xs"
-              variant={muted ? "secondary" : "ghost"}
-              aria-label={`Mute layer ${index + 1}`}
-              aria-pressed={muted}
-              disabled={!muted && activeUnmuted <= 1}
-              onClick={() => onToggleMute(layer.id)}
-            >
-              M
-            </Button>
-            <Button
-              size="icon-xs"
-              variant={solo ? "secondary" : "ghost"}
-              aria-label={`Solo layer ${index + 1}`}
-              aria-pressed={solo}
-              onClick={() => onToggleSolo(layer.id)}
-            >
-              S
-            </Button>
+            {advanced && (
+              <Button
+                size="icon-xs"
+                variant={muted ? "secondary" : "ghost"}
+                aria-label={`Mute layer ${index + 1}`}
+                aria-pressed={muted}
+                disabled={!muted && activeUnmuted <= 1}
+                onClick={() => onToggleMute(layer.id)}
+              >
+                M
+              </Button>
+            )}
+            {advanced && (
+              <Button
+                size="icon-xs"
+                variant={solo ? "secondary" : "ghost"}
+                aria-label={`Solo layer ${index + 1}`}
+                aria-pressed={solo}
+                onClick={() => onToggleSolo(layer.id)}
+              >
+                S
+              </Button>
+            )}
           </div>
         );
       })}

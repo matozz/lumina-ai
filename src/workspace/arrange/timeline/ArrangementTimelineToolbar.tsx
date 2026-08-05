@@ -1,6 +1,5 @@
 import { CircleHelp, Copy, Plus, Redo2, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 import type { ArrangementDocument, AssetRef, ProjectBundle } from "@/bridge/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -34,7 +33,6 @@ interface ArrangementTimelineToolbarProps {
 }
 
 export function ArrangementTimelineToolbar({
-  arrangement,
   beatWidth,
   bundle,
   canRedo,
@@ -54,8 +52,7 @@ export function ArrangementTimelineToolbar({
   const refs = latestRefsById(bundle.manifest.arrangement_refs);
   const items = refs.map((candidate) => ({
     value: assetKey(candidate),
-    label:
-      exactAsset(bundle.arrangements, candidate)?.name ?? `${candidate.id} r${candidate.revision}`,
+    label: exactAsset(bundle.arrangements, candidate)?.name ?? candidate.id,
   }));
 
   return (
@@ -81,7 +78,6 @@ export function ArrangementTimelineToolbar({
           </SelectGroup>
         </SelectContent>
       </Select>
-      <Badge variant="outline">r{arrangement.revision}</Badge>
       <Button size="xs" variant="ghost" onClick={onCreate}>
         <Plus data-icon="inline-start" aria-hidden="true" />
         New

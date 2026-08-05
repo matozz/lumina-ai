@@ -5,7 +5,7 @@ import {
   useAuthoringTransportStore,
 } from "@/authoring/transport";
 import { activeStage, assetKey, exactAsset } from "@/document/projectModel";
-import { projectActions, useProjectStore } from "./project";
+import { projectActions, simplifyLegacyCueNames, useProjectStore } from "./project";
 
 describe("Stage 7 Project state", () => {
   beforeEach(() => projectActions.reset());
@@ -473,5 +473,15 @@ describe("Stage 7 Project state", () => {
     expect(activeStage(reopened.bundle).targeting_scenes?.[0].looped).toBe(true);
     expect(useAuthoringTransportStore.getState().sessions[sessionKey]).toBeUndefined();
     expect(persisted).not.toContain("cursorTick");
+  });
+
+  it("repairs the misleading name left by the removed Pulse plus Gradient stack", () => {
+    const effect = projectActions.createEffect("Pulse")!;
+    const cueRef = projectActions.createCue([effect], "Pulse + Gradient")!;
+    const bundle = useProjectStore.getState().bundle;
+
+    simplifyLegacyCueNames(bundle);
+
+    expect(exactAsset(bundle.cues, cueRef)?.name).toBe("Pulse Cue");
   });
 });

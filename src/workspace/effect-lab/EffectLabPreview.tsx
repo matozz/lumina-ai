@@ -24,6 +24,7 @@ export function EffectLabPreview() {
     selectedCue,
     { effect: effectDraft, cue: cueDraft, comparison },
     catalog,
+    { scope: "effect", arrangementRef },
   );
   const effect = materialized.effect;
   const arrangement = exactAsset(bundle.arrangements, arrangementRef);
@@ -36,7 +37,7 @@ export function EffectLabPreview() {
         <Badge variant="outline">Authoring Preview</Badge>
         {effectDraft?.status === "invalid" && <Badge variant="destructive">Held at LKG</Badge>}
         <span className="text-muted-foreground ml-auto truncate text-[10px]">
-          {effect ? `${effect.name} · r${effect.revision}` : "No Effect selected"}
+          {effect?.name ?? "No Effect selected"}
         </span>
       </div>
       {materialized.effectRef && arrangement && (

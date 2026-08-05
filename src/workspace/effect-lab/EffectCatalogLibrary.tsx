@@ -129,7 +129,7 @@ export function EffectCatalogLibrary({ document }: { document: FullDSL }) {
             >
               <span className="min-w-0 flex-1 truncate text-left">{definition.name}</span>
               <Badge variant="outline" className="font-mono text-[9px]">
-                r{definition.revision}
+                Version {definition.revision}
               </Badge>
             </Button>
             <Button

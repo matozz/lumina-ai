@@ -10,6 +10,7 @@ export function EffectParameterControls({
   diagnostics,
   readOnly,
   parameterIndices,
+  showMetadata = false,
   onChange,
   onRestoreFallback,
 }: {
@@ -17,6 +18,7 @@ export function EffectParameterControls({
   diagnostics: Diagnostic[];
   readOnly: boolean;
   parameterIndices?: Record<string, number>;
+  showMetadata?: boolean;
   onChange: (parameterId: string, value: ParameterValueDSL) => void;
   onRestoreFallback: (parameterId: string) => void;
 }) {
@@ -37,11 +39,15 @@ export function EffectParameterControls({
               <FieldLabel htmlFor={`effect-parameter-${parameter.id}`} className="text-xs">
                 {parameter.name}
               </FieldLabel>
-              {parameter.required && <Badge variant="outline">required</Badge>}
-              <Badge variant="secondary" className="ml-auto">
-                {parameter.override_policy?.replace("_", " ") ?? "effect only"}
-              </Badge>
-              <Badge variant="outline">{parameter.automation}</Badge>
+              {showMetadata && parameter.required && <Badge variant="outline">required</Badge>}
+              {showMetadata && (
+                <>
+                  <Badge variant="secondary" className="ml-auto">
+                    {parameter.override_policy?.replace("_", " ") ?? "effect only"}
+                  </Badge>
+                  <Badge variant="outline">{parameter.automation}</Badge>
+                </>
+              )}
             </div>
             <EffectParameterInput
               parameter={parameter}
@@ -49,7 +55,7 @@ export function EffectParameterControls({
               onChange={(value) => onChange(parameter.id, value)}
             />
             {parameter.help && <FieldDescription>{parameter.help}</FieldDescription>}
-            {parameter.graph_binding && (
+            {showMetadata && parameter.graph_binding && (
               <FieldDescription>
                 Typed binding · {parameter.graph_binding.node_id}.{parameter.graph_binding.property}
               </FieldDescription>

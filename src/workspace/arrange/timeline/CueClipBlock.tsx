@@ -187,7 +187,7 @@ export const CueClipBlock = memo(function CueClipBlock({
     >
       <span className="pointer-events-none block truncate font-medium">{cueName}</span>
       <span className="pointer-events-none block truncate opacity-75">
-        Cue r{clip.cue_ref.revision} · {clip.duration_tick} t
+        Cue · {clip.duration_tick} ticks
       </span>
       <span
         data-resize-handle
