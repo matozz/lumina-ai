@@ -58,7 +58,10 @@ export function materializeAuthoringPreview(
     const visibleLayers = draft.cue!.soloLayerId
       ? cue.layers.filter((layer) => layer.id === draft.cue!.soloLayerId)
       : cue.layers.filter((layer) => !draft.cue!.mutedLayerIds.includes(layer.id));
-    if (visibleLayers.length > 0) cue.layers = visibleLayers;
+    if (visibleLayers.length > 0) {
+      cue.layers = visibleLayers;
+      recomputePreviewCueSummary(cue, bundle, catalog);
+    }
   }
 
   const next = structuredClone(bundle);
@@ -111,4 +114,24 @@ function upsertEffect(bundle: ProjectBundle, effect: EffectDefinitionDocument) {
   if (index >= 0) bundle.effects[index] = structuredClone(effect);
   else bundle.effects.push(structuredClone(effect));
   appendExactRef(bundle.manifest.effect_refs, { id: effect.id, revision: effect.revision });
+}
+
+function recomputePreviewCueSummary(
+  cue: CueDefinition,
+  bundle: ProjectBundle,
+  catalog: ProductionCatalog | null,
+) {
+  const required = new Set<string>();
+  let risk: CueDefinition["risk_summary"]["strobe_risk"] = "none";
+  const rank = { none: 0, low: 1, medium: 2, high: 3 } as const;
+  for (const layer of cue.layers) {
+    const effect =
+      exactAsset(bundle.effects, layer.effect_ref) ??
+      exactAsset(catalog?.effects ?? [], layer.effect_ref);
+    for (const attribute of effect?.catalog.required_attributes ?? []) required.add(attribute);
+    const effectRisk = effect?.catalog.strobe_risk ?? "none";
+    if (rank[effectRisk] > rank[risk]) risk = effectRisk;
+  }
+  cue.capability_summary.required_attributes = [...required].sort();
+  cue.risk_summary.strobe_risk = risk;
 }

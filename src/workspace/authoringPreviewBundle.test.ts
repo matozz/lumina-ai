@@ -49,9 +49,17 @@ describe("authoring preview materialization", () => {
   it("applies Cue mute and solo only to the preview copy", () => {
     const bundle = createStarterProjectBundle();
     const effect = createEffectAsset(bundle, "Pulse");
-    bundle.effects.push(effect);
+    effect.catalog.required_attributes = ["intensity"];
+    effect.catalog.strobe_risk = "low";
+    const colorEffect = structuredClone(effect);
+    colorEffect.id = "color-pulse";
+    colorEffect.name = "Color Pulse";
+    colorEffect.catalog.required_attributes = ["color.rgb"];
+    colorEffect.catalog.strobe_risk = "high";
+    bundle.effects.push(effect, colorEffect);
     bundle.manifest.effect_refs.push({ id: effect.id, revision: effect.revision });
-    const cue = createCueAsset(bundle, [effect, effect], "Layered Cue");
+    bundle.manifest.effect_refs.push({ id: colorEffect.id, revision: colorEffect.revision });
+    const cue = createCueAsset(bundle, [effect, colorEffect], "Layered Cue");
 
     const result = materializeAuthoringPreview(
       bundle,
@@ -71,6 +79,8 @@ describe("authoring preview materialization", () => {
     );
 
     expect(result.cue?.layers.map((layer) => layer.id)).toEqual([cue.layers[1].id]);
+    expect(result.cue?.capability_summary.required_attributes).toEqual(["color.rgb"]);
+    expect(result.cue?.risk_summary.strobe_risk).toBe("high");
     expect(
       Object.keys(result.bundle.manifest.cue_refs[result.bundle.manifest.cue_refs.length - 1]),
     ).toEqual(["id", "revision"]);
