@@ -481,6 +481,7 @@ fn validate_cue_layer(
     }
     for (parameter_id, value) in &layer.parameter_overrides {
         validate_parameter_value(effect, parameter_id, value, path, diagnostics);
+        validate_beat_sync_speed_override(parameter_id, value, path, diagnostics);
     }
     validate_mix_overrides(
         stage,
@@ -569,6 +570,12 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
                         };
                         validate_parameter_value(
                             effect,
+                            parameter_id,
+                            value,
+                            &override_path,
+                            diagnostics,
+                        );
+                        validate_beat_sync_speed_override(
                             parameter_id,
                             value,
                             &override_path,
@@ -1148,6 +1155,30 @@ fn validate_parameter_value(
     }
 }
 
+fn validate_beat_sync_speed_override(
+    parameter_id: &str,
+    value: &ParameterValueDSL,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    const MULTIPLIERS: [f64; 6] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0];
+    let ParameterValueDSL::Scalar(value) = value else {
+        return;
+    };
+    if parameter_id == "speed"
+        && !MULTIPLIERS
+            .iter()
+            .any(|multiplier| (multiplier - value).abs() <= f64::EPSILON)
+    {
+        diagnostics.push(Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            format!("{path}.parameter_overrides.speed"),
+            "Speed override must be a beat-synchronized multiplier.",
+            "Choose 0.25, 0.5, 1, 2, 4, or 8 so the Effect remains synchronized to Arrangement BPM.",
+        ));
+    }
+}
+
 fn validate_bundle_graph(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
     let project = format!(
         "project:{}@{}",
@@ -1714,6 +1745,34 @@ pub(crate) mod tests {
         assert!(diagnostics
             .iter()
             .any(|diagnostic| diagnostic.code == PROJECT_CAPABILITY_MISMATCH));
+    }
+
+    #[test]
+    fn rejects_non_musical_speed_overrides() {
+        let mut bundle = valid_bundle();
+        bundle.effects[0].parameters.push(
+            serde_json::from_value(json!({
+                "id": "speed",
+                "name": "Speed",
+                "value_type": "scalar",
+                "default_value": { "type": "scalar", "value": 1.0 },
+                "range": [0.125, 8.0],
+                "unit": "multiplier",
+                "ui_hint": "slider",
+                "automation": "continuous"
+            }))
+            .expect("speed parameter"),
+        );
+        bundle.cues[0].layers[0]
+            .parameter_overrides
+            .insert("speed".to_string(), ParameterValueDSL::Scalar(0.375));
+
+        let diagnostics = ValidatedProject::validate(bundle).expect_err("speed must stay musical");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == PROJECT_SCHEMA_INVALID
+                && diagnostic.path.ends_with("parameter_overrides.speed")
+                && diagnostic.message.contains("beat-synchronized")
+        }));
     }
 
     #[test]

@@ -15,6 +15,11 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import type { CueTriggerMode, MixPolicy } from "@/bridge/types";
+import {
+  BEAT_SYNC_SPEED_MULTIPLIERS,
+  isBeatSyncSpeedMultiplier,
+  speedMultiplierLabel,
+} from "@/authoring/speedMultipliers";
 import { assetKey, exactAsset } from "@/document/projectModel";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import { workspaceActions } from "@/stores/workspace";
@@ -150,6 +155,7 @@ export function CueBuilderInspector() {
             const speedOverride = layer.parameter_overrides?.speed;
             const speedOverrideValue =
               speedOverride?.type === "scalar" ? String(speedOverride.value) : "";
+            const speedItems = speedOverrideItems(speedOverrideValue);
             const intensityMix =
               layer.mix_overrides?.find((override) => override.attribute_id === "intensity")
                 ?.policy ?? "htp";
@@ -358,25 +364,36 @@ export function CueBuilderInspector() {
                   </Field>
                 </div>
                 <Field>
-                  <FieldLabel htmlFor={`${layer.id}-speed-override`}>Speed override</FieldLabel>
-                  <Input
-                    id={`${layer.id}-speed-override`}
-                    type="number"
-                    min={0.125}
-                    max={8}
-                    step={0.125}
-                    defaultValue={speedOverrideValue}
-                    placeholder="Use Effect default"
-                    onBlur={(event) => {
-                      const value = event.currentTarget.value.trim();
+                  <FieldLabel>Speed override</FieldLabel>
+                  <Select
+                    items={speedItems}
+                    value={speedOverrideValue || "__default__"}
+                    onValueChange={(value) => {
+                      if (!value) return;
                       const parameterOverrides = { ...(layer.parameter_overrides ?? {}) };
-                      if (!value) delete parameterOverrides.speed;
+                      if (value === "__default__") delete parameterOverrides.speed;
                       else parameterOverrides.speed = { type: "scalar", value: Number(value) };
                       projectActions.updateCueLayer(reference, layer.id, {
                         parameter_overrides: parameterOverrides,
                       });
                     }}
-                  />
+                  >
+                    <SelectTrigger id={`${layer.id}-speed-override`} size="sm" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent alignItemWithTrigger={false}>
+                      <SelectGroup>
+                        {speedItems.map((item) => (
+                          <SelectItem key={item.value} value={item.value} disabled={item.disabled}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FieldDescription>
+                    Beat-synced ratios only: 0.25×, 0.5×, 1×, 2×, 4×, or 8×.
+                  </FieldDescription>
                 </Field>
                 <FieldDescription>
                   Effect r{layer.effect_ref.revision} · seed {layer.seed.slice(-6)} ·{" "}
@@ -412,3 +429,26 @@ const TRIGGER_ITEMS = ["timeline", "toggle", "momentary", "one_shot"].map((value
   value,
   label: value.replace("_", " "),
 }));
+
+function speedOverrideItems(currentValue: string) {
+  const current = Number(currentValue);
+  const unsupported =
+    currentValue && !isBeatSyncSpeedMultiplier(current)
+      ? [
+          {
+            value: currentValue,
+            label: `${currentValue}× · choose a beat-synced ratio`,
+            disabled: true,
+          },
+        ]
+      : [];
+  return [
+    { value: "__default__", label: "Use Effect default", disabled: false },
+    ...unsupported,
+    ...BEAT_SYNC_SPEED_MULTIPLIERS.map((value) => ({
+      value: String(value),
+      label: speedMultiplierLabel(value),
+      disabled: false,
+    })),
+  ];
+}
