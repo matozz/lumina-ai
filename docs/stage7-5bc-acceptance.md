@@ -61,8 +61,8 @@ Arrangement，并成功完成 remap。重开后 Stage r5、20×45 Layout、3×3 
 | Gate             | 结果                                                                                            |
 | ---------------- | ----------------------------------------------------------------------------------------------- |
 | `pnpm check:all` | 通过；schema、Prettier、TypeScript、Vite、strict Clippy、全部前端/Rust 测试                     |
-| Frontend         | 59 files / 150 tests；migration、reference、Undo/Redo、revision isolation、编辑器和 persistence |
-| Rust             | 107 unit + 12 integration/contracts = 119                                                       |
+| Frontend         | 60 files / 157 tests；migration、reference、Undo/Redo、revision isolation、编辑器和 persistence |
+| Rust             | 109 unit + 12 integration/contracts = 121                                                       |
 | 30×30            | All → 9 个 3×3 partitions → All；hard/weighted；随机 Seek/Replay frame 相等                     |
 | ≥1,000 fixtures  | 4 个并行 TargetingScene layers、180 个随机 60Hz frames；确定性且平均低于 16.67ms                |
 | 时间语义         | 完整 TimeSignatureMap；3/8→4/4 bar snap；beat/bar transition；phase continuity on/off           |
@@ -84,6 +84,23 @@ Arrangement，并成功完成 remap。重开后 Stage r5、20×45 Layout、3×3 
 
 全程没有自动 Publish、Take Live 或修改 Fixture Group membership。旧 V4 Stage Setup shell 只在表单、
 Canvas、Group、migration 与回归 parity 完成后删除。
+
+## 补充布局与速度回归
+
+2026-08-05 根据 10×10 Draft、Stage 子视图切换和 speed override 的真实使用反馈补充验证：
+
+- Layout Draft preview 改为直接编译候选 Layout，不再因当前 Stage patch 数大于候选容量而停留在旧 Canvas；
+  容量差异仅在 Use on Stage impact 中作为结构化 warning/blocker 处理。
+- 矩形类 Setup 只暴露 rows、columns、fixture width/height 与 edge gap；circle 只暴露 rings、ring gap 与共用
+  fixture width/height。派生 pitch、ring pitch 和 circle increment 不再要求用户重复输入。
+- fixture size、gap、行列和圈数均规范化为整数；所有可编辑 Layout 支持全局 fixture size 与按 fixture ID
+  的独立 width/height override，Canvas 按最终尺寸渲染矩形或椭圆，而不是固定尺寸方块。
+- Layout asset control 固定在 Setup、Groups、TargetSets、Scenes 共用区域；Stage/TargetSet/Group transaction
+  不会因 bundle 对象身份变化重置未保存 Draft。
+- Cue speed override 只允许 Effect default、0.25×、0.5×、1×、2×、4×、8×；前端选择器与 Rust semantic
+  validation 使用同一组节拍同步倍率。
+- 真实 Tauri 验证 900-fixture Stage 上的 10×10 独立 Canvas preview、7.4→7 整数规范化、跨 Groups transaction
+  Draft 保持和完整 speed 倍率菜单；`pnpm check:all`、debug app bundle 全部通过。
 
 ## Scope stop
 

@@ -1150,10 +1150,10 @@ flowchart LR
 ## Handoff
 
 - Current Stage: Stage 7.5 为 `in_progress`；7.5A、7.5B、7.5C 已完成 scoped 退出；7.5D/7.5E 未开始。
-- Slice completed: 独立 LayoutDefinition/迁移、Layout Library/Draft/Canvas、Stage topology impact/remap、可视化 TargetSet/TargetingScene、预计算 spatial weight cache 与确定性运行时全部接通；Stage 7/7.5A revision 和 AuthoringTransport 边界保留。
-- Commits: `8402091`、`0c79132`、`871b6cb`、`c99b8aa`，以及本次 7.5B/C 验收/交接提交。
+- Slice completed: 独立 LayoutDefinition/迁移、Layout Library/Draft/Canvas、Stage topology impact/remap、可视化 TargetSet/TargetingScene、预计算 spatial weight cache 与确定性运行时全部接通；补充完成独立容量 preview、跨子视图 Draft 保持、简化整数几何、全局/单 fixture size 和 beat-sync speed override；Stage 7/7.5A revision 和 AuthoringTransport 边界保留。
+- Commits: `8402091`、`0c79132`、`871b6cb`、`c99b8aa`，以及本次 7.5B/C 验收/补充提交。
 - Files changed: Project schema/migration/compiler/store；Stage Layout/Group/TargetSet/Scene 工作区；删除已完成 capability parity 的 V4 Stage Setup shell；新增 ADR-0012 与 7.5B/C acceptance。
-- Validation: `pnpm check:all`；59 frontend files/150 tests；107 Rust unit + 12 integration/contracts；app-only debug bundle；真实 Tauri Duplicate/Edit/Save As/Canvas/impact/remap/TargetSet/Scene/save-reopen/keyboard/inline recovery。
+- Validation: `pnpm check:all`；60 frontend files/157 tests；109 Rust unit + 12 integration/contracts；app-only debug bundle；真实 Tauri Duplicate/Edit/Save As/Canvas/impact/remap/TargetSet/Scene/save-reopen/keyboard/inline recovery，并补测 900-patch Stage 上 10×10 preview、整数输入、跨 Groups transaction Draft 保持与 speed 倍率菜单。
 - ADRs added/updated: ADR-0012 Accepted 并补充实现 commits；ADR-0002、ADR-0006、ADR-0010、ADR-0011 继续成立。
 - Risks opened/closed: R-028 closed；R-031 closed；R-019 的默认 debug DMG bundler 问题仍 open，但 app-only bundle 成功且不阻塞本 scope。
 - Remaining exit criteria: 7.5B/7.5C 无剩余 scoped blocker。Production Effect/Cue Catalog（7.5D）与 Stage 7.5 全目录/整链路收口（7.5E）保持未实现。
@@ -1307,6 +1307,7 @@ flowchart LR
 | 2026-08-05 | 7.5B     | Layout workflow + Stage remap  | completed  | `871b6cb`               | Draft/Canvas；compatible + 20×45 incompatible impact/remap；Undo/Redo/reopen   | R-028 closed；Published/Live 与旧 revisions 保持隔离           | Production Targeting runtime                |
 | 2026-08-05 | 7.5C     | Targeting editor + runtime     | completed  | `871b6cb`               | 30×30/1,000 fixtures；All→3×3→All；weighted；random seek；60Hz average gate    | immutable TargetSet/Scene；precomputed weights/index/cache     | native scoped acceptance                    |
 | 2026-08-05 | 7.5B/C   | Scoped final gate              | completed  | 本次交接提交            | `check:all`；150 frontend；119 Rust；debug app；native remap/reopen/keyboard   | R-031 closed；7.5D/7.5E 未开始                                 | 停止；等待显式 7.5D Goal                    |
+| 2026-08-05 | 7.5B/C   | Layout workflow feedback       | completed  | 本次补充提交            | `check:all`；157 frontend；121 Rust；native 10×10/integer/Draft/speed menu     | 容量差异归 Use on Stage；共用 controls；beat-sync speed only   | 停止；不进入 7.5D                           |
 
 ## 21. Open Risks
 
