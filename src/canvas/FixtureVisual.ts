@@ -5,6 +5,7 @@ export class FixtureVisual {
   readonly type: string;
   readonly width: number;
   readonly height: number;
+  readonly patched: boolean;
   readonly radius: number;
 
   currentColor: { r: number; g: number; b: number } = { r: 0, g: 0, b: 0 };
@@ -16,6 +17,7 @@ export class FixtureVisual {
     type: string = "spot",
     width?: number,
     height?: number,
+    patched: boolean = true,
   ) {
     this.id = id;
     this.x = x;
@@ -25,6 +27,7 @@ export class FixtureVisual {
     const defaultDiameter = this.type === "pixel" ? 8 : 16;
     this.width = width ?? defaultDiameter;
     this.height = height ?? defaultDiameter;
+    this.patched = patched;
     this.radius = Math.max(this.width, this.height) / 2;
   }
 

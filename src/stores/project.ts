@@ -13,6 +13,7 @@ import type {
   TargetingSceneDefinition,
 } from "@/bridge/types";
 import {
+  activeLayout,
   activeStage,
   activeArrangementRef,
   appendExactRef,
@@ -27,6 +28,7 @@ import {
   uniqueId,
 } from "@/document/projectModel";
 import { migrateProjectBundle } from "@/document/projectMigration";
+import { layoutCapacity } from "@/document/layoutDefinition";
 import { analyzeStageTopology, resolveTargetSet } from "@/document/stageTopology";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
 
@@ -526,6 +528,56 @@ export const projectActions = {
       stage.groups = stage.groups.filter((group) => group.id !== groupId);
     });
   },
+  resizeActiveStagePatch: (fixtureCount: number) => {
+    const current = useProjectStore.getState();
+    const stage = activeStage(current.bundle);
+    const layout = activeLayout(current.bundle);
+    if (!Number.isInteger(fixtureCount) || fixtureCount < 1) {
+      throw new Error("Stage patch fixture count must be a positive integer");
+    }
+    if (stage.patch.length !== 1) {
+      throw new Error("Fixture count resize currently requires one contiguous Stage patch range");
+    }
+    const capacity = layoutCapacity(layout);
+    if (fixtureCount > capacity) {
+      throw new Error(
+        `Active Layout provides ${capacity} positions; apply a larger Layout before patching ${fixtureCount} fixtures`,
+      );
+    }
+    const [start] = stage.patch[0].id_range;
+    const end = start + fixtureCount - 1;
+    if (!Number.isSafeInteger(end) || end > 0xffff_ffff) {
+      throw new Error("Stage patch fixture IDs exceed the supported range");
+    }
+    const validFixtureIds = new Set(
+      Array.from({ length: fixtureCount }, (_, index) => start + index),
+    );
+    updateActiveStageRevision("Resize Stage patch", (nextStage) => {
+      nextStage.patch[0]!.id_range = [start, end];
+      nextStage.groups = nextStage.groups.map((group) => {
+        if (group.id === "all-fixtures") {
+          return { ...group, fixtures: { range: [start, end] as [number, number] } };
+        }
+        return {
+          ...group,
+          fixtures: fixtureIdsForGroup(group).filter((fixtureId) => validFixtureIds.has(fixtureId)),
+        };
+      });
+      nextStage.target_sets = nextStage.target_sets.map((target) => ({
+        ...target,
+        selector:
+          target.selector.type === "fixture_ids"
+            ? {
+                ...target.selector,
+                fixture_ids: target.selector.fixture_ids.filter((fixtureId) =>
+                  validFixtureIds.has(fixtureId),
+                ),
+              }
+            : target.selector,
+        weights: (target.weights ?? []).filter((weight) => validFixtureIds.has(weight.fixture_id)),
+      }));
+    });
+  },
   duplicateTargetingScene: (sceneId: string) => {
     const state = useProjectStore.getState();
     const stage = activeStage(state.bundle);
@@ -988,6 +1040,12 @@ function updateActiveStageRevision(
   const selectedArrangementRef = arrangementUpgrades.get(assetKey(current.selectedArrangementRef));
   if (selectedArrangementRef) updates.selectedArrangementRef = selectedArrangementRef;
   useProjectStore.setState(updates);
+}
+
+function fixtureIdsForGroup(group: GroupDSL) {
+  if (Array.isArray(group.fixtures)) return group.fixtures;
+  const [start, end] = group.fixtures.range;
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 }
 
 function repairSelections() {

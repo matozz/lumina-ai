@@ -10,7 +10,7 @@ import type { EffectFormValues } from "./effectFactory";
 
 export function buildCommonParameters(values: EffectFormValues): ParameterDefinitionDSL[] {
   return [
-    scalarParameter("speed", "Speed", values.speed, [0.125, 8], "multiplier"),
+    scalarParameter("speed", "Speed", values.speed, [0.25, 8], "multiplier"),
     scalarParameter("phase", "Phase", values.phase, [-1, 1], "cycles"),
     scalarParameter("width", "Width", values.width, [1, 100], "percent"),
     scalarParameter("transition", "Transition", values.transition, [0, 100], "percent"),

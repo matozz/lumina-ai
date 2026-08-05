@@ -140,6 +140,38 @@ describe("Stage 7 Project state", () => {
     );
   });
 
+  it("resizes a contiguous Stage patch only after the active Layout has enough positions", () => {
+    const state = useProjectStore.getState();
+    const layoutRef = state.selectedLayoutRef;
+    const layout = structuredClone(exactAsset(state.bundle.layouts, layoutRef)!);
+    if (layout.geometry.shape !== "matrix") throw new Error("starter matrix missing");
+    layout.geometry.rows = 5;
+    layout.geometry.pitch.y = layout.geometry.fixture_size.height + layout.geometry.gap.y;
+    const largerLayoutRef = projectActions.saveLayoutDraft(layoutRef, layout);
+    const targetMappings = Object.fromEntries(
+      activeStage(state.bundle)
+        .target_sets.filter((target) => target.id !== "all")
+        .map((target) => [target.id, "all"]),
+    );
+    projectActions.useLayoutOnStage({
+      layoutRef: largerLayoutRef,
+      mode: "remap",
+      targetMappings,
+      upgradeDependents: true,
+    });
+    projectActions.markPublished();
+
+    projectActions.resizeActiveStagePatch(20);
+    const next = useProjectStore.getState();
+    expect(activeStage(next.bundle).patch).toEqual([
+      { profile_id: "generic-rgb", id_range: [1, 20] },
+    ]);
+    expect(activeStage(next.bundle).groups[0].fixtures).toEqual({ range: [1, 20] });
+    expect(activeStage(next.publishedBundle!).patch[0].id_range).toEqual([1, 16]);
+
+    expect(() => projectActions.resizeActiveStagePatch(21)).toThrow(/provides 20 positions/);
+  });
+
   it("upgrades compatible Stage, Cue, and Arrangement revisions as one explicit transaction", () => {
     const effect = projectActions.createEffect("Pulse")!;
     const cue = projectActions.createCue([effect], "Pulse Cue")!;

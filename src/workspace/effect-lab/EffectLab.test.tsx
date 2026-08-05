@@ -54,4 +54,24 @@ describe("Effect Lab Project assets", () => {
       JSON.stringify(exactAsset(useProjectStore.getState().bundle.effects, reference)),
     ).not.toContain("target_set");
   });
+
+  it("edits Effect default speed only through beat-synced ratios", async () => {
+    projectActions.createEffect("Pulse");
+    render(<EffectLabHarness />);
+
+    fireEvent.click(screen.getByLabelText("Default speed"));
+    expect(screen.queryByRole("option", { name: "0.375×" })).toBeNull();
+    const doubleSpeed = screen.getByRole("option", { name: "2×" });
+    fireEvent.mouseMove(doubleSpeed);
+    fireEvent.click(doubleSpeed);
+    fireEvent.click(screen.getByRole("button", { name: "Save Draft revision" }));
+
+    await waitFor(() => {
+      const selected = useProjectStore.getState().selectedEffectRef;
+      const effect = exactAsset(useProjectStore.getState().bundle.effects, selected);
+      expect(
+        effect?.parameters.find((parameter) => parameter.id === "speed")?.default_value,
+      ).toEqual({ type: "scalar", value: 2 });
+    });
+  });
 });

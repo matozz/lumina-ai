@@ -3,12 +3,15 @@ use crate::compiler::diagnostic::{
 };
 use crate::compiler::{CompiledProjectSnapshot, Compiler, LayoutCoord};
 use crate::document::{
-    layout_fixture_size_for_fixture, layout_to_legacy, load_document, load_project_bundle,
-    migrate_project_bundle, validate_layout_geometry, AssetRef, LayoutDefinition, MetaDSL,
-    MigrationReport, ShowDocumentV4, StageDocument,
+    layout_capacity, layout_fixture_size_for_fixture, layout_to_legacy, load_document,
+    load_project_bundle, migrate_project_bundle, validate_layout_geometry, AssetRef,
+    LayoutDefinition, MetaDSL, MigrationReport, PatchDSL, ShowDocumentV4, StageDocument,
 };
 use crate::engine::attribute::FixtureFramePayload;
-use crate::engine::effect::{EffectCatalog, EffectCatalogQuery, EffectSource, SPEED_PARAMETER_ID};
+use crate::engine::effect::{
+    is_beat_sync_speed_multiplier, EffectCatalog, EffectCatalogQuery, EffectSource,
+    SPEED_PARAMETER_ID,
+};
 use crate::engine::render::{render_at, LivePhaser, RenderSource, RenderTime};
 use crate::engine::transport::OutputRate;
 use crate::state::{
@@ -569,8 +572,8 @@ pub async fn queue_live_pad(
     one_shot_beats: Option<f64>,
     state: State<'_, Arc<EngineState>>,
 ) -> Result<QueuedLivePad, String> {
-    if !multiplier.is_finite() || !(0.125..=8.0).contains(&multiplier) {
-        return Err("Live Pad multiplier must be between 0.125 and 8.".to_string());
+    if !is_beat_sync_speed_multiplier(multiplier) {
+        return Err("Live Pad speed must be 0.25, 0.5, 1, 2, 4, or 8×.".to_string());
     }
     if one_shot_beats
         .is_some_and(|duration| !duration.is_finite() || !(0.25..=256.0).contains(&duration))
@@ -647,6 +650,9 @@ pub async fn trigger_phaser(
     multiplier: f64,
     state: State<'_, Arc<EngineState>>,
 ) -> Result<(), String> {
+    if !is_beat_sync_speed_multiplier(multiplier) {
+        return Err("Phaser speed must be 0.25, 0.5, 1, 2, 4, or 8×.".to_string());
+    }
     let now = state.clock.now();
     let mut r_state = state.runtime.write().await;
     let beat = r_state.transport.snapshot(now).cursor_beat;
@@ -738,8 +744,57 @@ pub fn preview_layout(
             "Enter valid integer fixture size and gap values, then retry this Layout Draft preview.",
         )]
     })?;
-    let fixture_ids: Vec<_> = stage
+    let patched_fixture_ids: Vec<_> = stage
         .patch
+        .iter()
+        .flat_map(|item| item.id_range.0..=item.id_range.1)
+        .collect();
+    let patched_fixture_set: std::collections::BTreeSet<_> =
+        patched_fixture_ids.iter().copied().collect();
+    let mut preview_patch = stage.patch;
+    let capacity = layout_capacity(&layout);
+    if capacity > patched_fixture_ids.len() {
+        let extra = u32::try_from(capacity - patched_fixture_ids.len()).map_err(|_| {
+            vec![Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                "layout.geometry",
+                "Layout preview capacity exceeds the supported fixture ID range.",
+                "Reduce the Layout position count and retry preview.",
+            )]
+        })?;
+        let first_id = patched_fixture_ids
+            .iter()
+            .max()
+            .copied()
+            .unwrap_or(0)
+            .checked_add(1)
+            .ok_or_else(|| {
+                vec![Diagnostic::error(
+                    PROJECT_SCHEMA_INVALID,
+                    "stage.patch",
+                    "No fixture IDs remain for unpatched Layout preview positions.",
+                    "Use a lower Stage fixture ID range or reduce the Layout capacity.",
+                )]
+            })?;
+        let last_id = first_id
+            .checked_add(extra.saturating_sub(1))
+            .ok_or_else(|| {
+                vec![Diagnostic::error(
+                    PROJECT_SCHEMA_INVALID,
+                    "stage.patch",
+                    "Unpatched Layout preview positions overflow the fixture ID range.",
+                    "Use a lower Stage fixture ID range or reduce the Layout capacity.",
+                )]
+            })?;
+        preview_patch.push(PatchDSL {
+            profile_id: preview_patch
+                .first()
+                .map(|item| item.profile_id.clone())
+                .unwrap_or_else(|| "generic-rgb".to_string()),
+            id_range: (first_id, last_id),
+        });
+    }
+    let preview_fixture_ids: Vec<_> = preview_patch
         .iter()
         .flat_map(|item| item.id_range.0..=item.id_range.1)
         .collect();
@@ -748,8 +803,8 @@ pub fn preview_layout(
         meta: MetaDSL {
             name: format!("{} · Layout Draft", layout.name),
         },
-        patch: stage.patch,
-        layout: layout_to_legacy(&layout, &fixture_ids),
+        patch: preview_patch,
+        layout: layout_to_legacy(&layout, &preview_fixture_ids),
         groups: Vec::new(),
         effect_definitions: Vec::new(),
         effect_instances: Vec::new(),
@@ -760,6 +815,7 @@ pub fn preview_layout(
         let fixture_size = layout_fixture_size_for_fixture(&layout, coord.id);
         coord.width = Some(fixture_size.width);
         coord.height = Some(fixture_size.height);
+        coord.patched = Some(patched_fixture_set.contains(&coord.id));
     }
     Ok(show.coords)
 }
@@ -1091,6 +1147,35 @@ mod tests {
             .all(|coord| coord.height.is_some_and(|height| height > 0.0)));
     }
 
+    #[test]
+    fn layout_draft_preview_marks_positions_beyond_the_stage_patch() {
+        let mut bundle = valid_bundle();
+        let layout = &mut bundle.layouts[0];
+        let LayoutGeometry::Matrix { rows, columns, .. } = &mut layout.geometry else {
+            panic!("matrix fixture");
+        };
+        *rows = 5;
+        *columns = 4;
+
+        let coords = preview_layout(layout.clone(), bundle.stages[0].clone())
+            .expect("larger Layout previews unpatched positions");
+        assert_eq!(coords.len(), 20);
+        assert_eq!(
+            coords
+                .iter()
+                .filter(|coord| coord.patched == Some(true))
+                .count(),
+            4
+        );
+        assert_eq!(
+            coords
+                .iter()
+                .filter(|coord| coord.patched == Some(false))
+                .count(),
+            16
+        );
+    }
+
     #[tokio::test]
     async fn effect_loop_preview_renders_without_publishing() {
         let source = r##"{
@@ -1102,7 +1187,7 @@ mod tests {
           "effect_definitions": [{
             "id": "project.red-pulse", "name": "Red Pulse", "revision": 1, "source": "project_local",
             "parameters": [
-              { "id": "speed", "name": "Speed", "value_type": "scalar", "default_value": { "type": "scalar", "value": 1.0 }, "range": [0.125, 8.0], "unit": "multiplier", "ui_hint": "slider", "automation": "continuous" },
+              { "id": "speed", "name": "Speed", "value_type": "scalar", "default_value": { "type": "scalar", "value": 1.0 }, "range": [0.25, 8.0], "unit": "multiplier", "ui_hint": "slider", "automation": "continuous" },
               { "id": "phase", "name": "Phase", "value_type": "scalar", "default_value": { "type": "scalar", "value": 0.0 }, "range": [-1.0, 1.0], "unit": "cycles", "ui_hint": "slider", "automation": "continuous" },
               { "id": "width", "name": "Width", "value_type": "scalar", "default_value": { "type": "scalar", "value": 100.0 }, "range": [1.0, 100.0], "unit": "percent", "ui_hint": "slider", "automation": "continuous" },
               { "id": "transition", "name": "Transition", "value_type": "scalar", "default_value": { "type": "scalar", "value": 20.0 }, "range": [0.0, 100.0], "unit": "percent", "ui_hint": "slider", "automation": "continuous" },

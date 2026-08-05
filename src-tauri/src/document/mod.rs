@@ -996,7 +996,7 @@ fn migrate_phasers_to_effects(
 
 fn migrated_common_parameters(speed: f64) -> serde_json::Value {
     serde_json::json!([
-        migrated_scalar_parameter("speed", "Speed", speed, [0.01, 64.0], "multiplier", "slider"),
+        migrated_scalar_parameter("speed", "Speed", speed, [0.25, 8.0], "multiplier", "slider"),
         migrated_scalar_parameter("phase", "Phase", 0.0, [-1.0, 1.0], "cycles", "slider"),
         migrated_scalar_parameter("width", "Width", 100.0, [0.0, 100.0], "percent", "slider"),
         migrated_scalar_parameter("transition", "Transition", 100.0, [0.0, 100.0], "percent", "slider"),

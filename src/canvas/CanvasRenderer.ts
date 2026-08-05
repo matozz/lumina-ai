@@ -21,8 +21,8 @@ export class CanvasRenderer {
 
   initFromLayout(coords: LayoutCoord[]): void {
     this.fixtures.clear();
-    for (const { id, x, y, type, width, height } of coords) {
-      this.fixtures.set(id, new FixtureVisual(id, x, y, type, width, height));
+    for (const { id, x, y, type, width, height, patched } of coords) {
+      this.fixtures.set(id, new FixtureVisual(id, x, y, type, width, height, patched));
     }
     this.camera.fitToContent(coords);
     this.dirty = true;
@@ -101,22 +101,23 @@ export class CanvasRenderer {
     }
 
     ctx.strokeStyle = "#52525b";
-    ctx.lineWidth = 1 / scale;
+    ctx.lineWidth = 0.5 / scale;
     ctx.beginPath();
     for (const visual of this.fixtures.values()) {
-      if (visual.type === "pixel") {
-        ctx.rect(
-          visual.x - visual.width / 2,
-          visual.y - visual.height / 2,
-          visual.width,
-          visual.height,
-        );
-      } else {
-        ctx.moveTo(visual.x + visual.width / 2, visual.y);
-        ctx.ellipse(visual.x, visual.y, visual.width / 2, visual.height / 2, 0, 0, Math.PI * 2);
-      }
+      if (!visual.patched) continue;
+      addFixturePath(ctx, visual);
     }
     ctx.stroke();
+
+    ctx.strokeStyle = "#3f3f46";
+    ctx.setLineDash([2 / scale, 2 / scale]);
+    ctx.beginPath();
+    for (const visual of this.fixtures.values()) {
+      if (visual.patched) continue;
+      addFixturePath(ctx, visual);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
 
     // Draw glow
     if (this.glowEnabled && this.fixtures.size <= 400) {
@@ -134,5 +135,19 @@ export class CanvasRenderer {
     }
 
     ctx.restore();
+  }
+}
+
+function addFixturePath(ctx: CanvasRenderingContext2D, visual: FixtureVisual) {
+  if (visual.type === "pixel") {
+    ctx.rect(
+      visual.x - visual.width / 2,
+      visual.y - visual.height / 2,
+      visual.width,
+      visual.height,
+    );
+  } else {
+    ctx.moveTo(visual.x + visual.width / 2, visual.y);
+    ctx.ellipse(visual.x, visual.y, visual.width / 2, visual.height / 2, 0, 0, Math.PI * 2);
   }
 }

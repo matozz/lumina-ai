@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { FlaskConical, Save } from "lucide-react";
+import { BeatSyncSpeedSelect } from "@/authoring/BeatSyncSpeedSelect";
+import { isBeatSyncSpeedMultiplier } from "@/authoring/speedMultipliers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -52,12 +54,7 @@ export function EffectLabInspector() {
   }));
   const edited = name.trim() !== effect.name || defaultSpeed !== speedValue;
   const save = () => {
-    if (
-      !name.trim() ||
-      !Number.isFinite(defaultSpeed) ||
-      defaultSpeed < 0.125 ||
-      defaultSpeed > 8
-    ) {
+    if (!name.trim() || !isBeatSyncSpeedMultiplier(defaultSpeed)) {
       return;
     }
     projectActions.updateEffect(reference, `Edit Effect ${effect.name}`, (draft) => {
@@ -90,15 +87,14 @@ export function EffectLabInspector() {
             </Field>
             <Field>
               <FieldLabel htmlFor="effect-speed">Default speed</FieldLabel>
-              <Input
+              <BeatSyncSpeedSelect
                 id="effect-speed"
-                type="number"
-                min={0.125}
-                max={8}
-                step={0.125}
                 value={defaultSpeed}
-                onChange={(event) => setDefaultSpeed(Number(event.target.value))}
+                onChange={(value) => value !== null && setDefaultSpeed(value)}
               />
+              <FieldDescription>
+                Beat-synced ratio relative to the Arrangement BPM.
+              </FieldDescription>
             </Field>
             <Field>
               <FieldLabel htmlFor="effect-preview-target">Preview TargetSet</FieldLabel>

@@ -79,16 +79,32 @@ describe("ProjectStageInspector Layout workflow", () => {
     fireEvent.change(screen.getByLabelText("Gap X"), { target: { value: "7.4" } });
     expect((screen.getByLabelText("Gap X") as HTMLInputElement).value).toBe("7");
     fireEvent.click(screen.getByRole("button", { name: "Groups" }));
-    const controls = screen.getByRole("region", { name: "Layout asset controls" });
-    expect(within(controls).getByRole("button", { name: "Save" })).toBeTruthy();
-    expect(within(controls).getByRole("button", { name: "Duplicate" })).toBeTruthy();
 
     act(() => {
       projectActions.duplicateStageGroup("all-fixtures");
     });
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
     fireEvent.click(screen.getByRole("button", { name: "Setup" }));
+    const controls = screen.getByRole("region", { name: "Layout asset controls" });
+    expect(within(controls).getByRole("button", { name: "Save" })).toBeTruthy();
+    expect(within(controls).getByRole("button", { name: "Duplicate" })).toBeTruthy();
     expect((screen.getByLabelText("Gap X") as HTMLInputElement).value).toBe("7");
     expect(screen.getByText("Unsaved")).toBeTruthy();
+  });
+
+  it("opens Groups and TargetSets in expanded responsive dialogs", async () => {
+    render(<ProjectStageInspector />);
+    await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole("button", { name: "Groups" }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByText("Fixture Group editor")).toBeTruthy();
+    expect(screen.getByRole("grid", { name: "Fixture Group membership" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "TargetSets" }));
+    expect(screen.getByText("TargetSet editor")).toBeTruthy();
+    expect(screen.getByRole("grid", { name: "TargetSet fixture preview" })).toBeTruthy();
   });
 
   it("previews and saves a smaller Layout while reporting Stage capacity separately", async () => {
@@ -109,6 +125,21 @@ describe("ProjectStageInspector Layout workflow", () => {
     expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(
       false,
     );
+  });
+
+  it("shows Layout positions beyond the Stage patch and exposes patch configuration", async () => {
+    render(<ProjectStageInspector />);
+    await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByLabelText("Rows"), { target: { value: "5" } });
+    expect(screen.getByText(/4 unpatched positions use dashed Canvas borders/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Stage patch: 16 fixtures/ }));
+
+    expect(screen.getByText("Configure Stage patch")).toBeTruthy();
+    expect(screen.getByText(/A 21×45 Layout contains 945 positions/)).toBeTruthy();
+    expect(screen.getByText("Draft is not on Stage yet")).toBeTruthy();
+    expect(screen.getByText(/This Draft has 20 positions/)).toBeTruthy();
+    expect(screen.getByLabelText("Fixture count")).toHaveProperty("value", "16");
   });
 
   it("edits circles through rings, ring gap, and shared fixture size", async () => {

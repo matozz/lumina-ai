@@ -1,3 +1,6 @@
+import { BeatSyncSpeedSelect } from "@/authoring/BeatSyncSpeedSelect";
+import { isBeatSyncSpeedMultiplier } from "@/authoring/speedMultipliers";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import type { EffectFormValues } from "./effectFactory";
@@ -11,15 +14,15 @@ export function EffectParameterControls({
 }) {
   return (
     <div className="border-border grid gap-3 rounded-md border p-2.5">
-      <ParameterSlider
-        label="Speed"
-        value={values.speed}
-        min={0.125}
-        max={8}
-        step={0.125}
-        suffix="×"
-        onChange={(value) => onChange("speed", value)}
-      />
+      <Field>
+        <FieldLabel htmlFor="effect-form-speed">Speed</FieldLabel>
+        <BeatSyncSpeedSelect
+          id="effect-form-speed"
+          value={values.speed}
+          onChange={(value) => value !== null && onChange("speed", value)}
+        />
+        <FieldDescription>Locked to musical ratios of the Arrangement BPM.</FieldDescription>
+      </Field>
       <ParameterSlider
         label="Phase"
         value={values.phase}
@@ -53,9 +56,7 @@ export function EffectParameterControls({
 
 export function effectNumbersAreValid(values: EffectFormValues) {
   return (
-    Number.isFinite(values.speed) &&
-    values.speed >= 0.125 &&
-    values.speed <= 8 &&
+    isBeatSyncSpeedMultiplier(values.speed) &&
     Number.isFinite(values.phase) &&
     values.phase >= -1 &&
     values.phase <= 1 &&

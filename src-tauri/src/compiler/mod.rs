@@ -114,6 +114,8 @@ pub struct LayoutCoord {
     pub width: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub height: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub patched: Option<bool>,
 }
 
 #[derive(Clone, Debug)]
@@ -439,6 +441,7 @@ impl Compiler {
                                 type_: get_type(fix_ids[idx]),
                                 width: None,
                                 height: None,
+                                patched: None,
                             });
                         }
                     }
@@ -459,6 +462,7 @@ impl Compiler {
                         type_: get_type(fix_ids[0]),
                         width: None,
                         height: None,
+                        patched: None,
                     });
                     let mut current_idx = 1;
                     for ring in 1..=*rings {
@@ -474,6 +478,7 @@ impl Compiler {
                                     type_: get_type(fix_ids[current_idx]),
                                     width: None,
                                     height: None,
+                                    patched: None,
                                 });
                                 current_idx += 1;
                             }
@@ -565,6 +570,7 @@ impl Compiler {
                             type_: get_type(fix_ids[i as usize]),
                             width: None,
                             height: None,
+                            patched: None,
                         });
                     }
                 }
@@ -580,6 +586,7 @@ impl Compiler {
                         type_: get_type(c.id),
                         width: None,
                         height: None,
+                        patched: None,
                     });
                 }
             }

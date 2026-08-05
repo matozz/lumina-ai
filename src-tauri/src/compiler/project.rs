@@ -428,6 +428,7 @@ impl Compiler {
             let fixture_size = layout_fixture_size_for_fixture(&layout, coord.id);
             coord.width = Some(fixture_size.width);
             coord.height = Some(fixture_size.height);
+            coord.patched = Some(true);
         }
 
         for (group_id, resolved) in target_cache {

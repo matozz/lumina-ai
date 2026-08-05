@@ -89,4 +89,31 @@ describe("AutomationKeyframeInspector", () => {
     renderInspector(angle);
     expect(screen.getByLabelText("Pan (°)")).toHaveProperty("value", "30");
   });
+
+  it("edits speed keyframes only through beat-synced ratios", () => {
+    const speed: ParameterDefinitionDSL = {
+      id: "speed",
+      name: "Speed",
+      value_type: "scalar",
+      default_value: { type: "scalar", value: 1 },
+      range: [0.125, 8],
+      unit: "multiplier",
+      ui_hint: "slider",
+      automation: "continuous",
+    };
+    const onApply = renderInspector(speed);
+
+    fireEvent.click(screen.getByLabelText("Speed (×)"));
+    expect(screen.queryByRole("option", { name: "1.25×" })).toBeNull();
+    const quadrupleSpeed = screen.getByRole("option", { name: "4×" });
+    fireEvent.mouseMove(quadrupleSpeed);
+    fireEvent.click(quadrupleSpeed);
+    fireEvent.click(screen.getByRole("button", { name: /Apply/ }));
+
+    expect(onApply).toHaveBeenCalledWith({
+      time_tick: 0,
+      value: { type: "scalar", value: 4 },
+      interpolation: "linear",
+    });
+  });
 });

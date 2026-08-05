@@ -1,5 +1,7 @@
 import { useId, useMemo, useState } from "react";
 import { Check, Trash2 } from "lucide-react";
+import { BeatSyncSpeedSelect } from "@/authoring/BeatSyncSpeedSelect";
+import { isBeatSyncSpeedMultiplier } from "@/authoring/speedMultipliers";
 import type {
   KeyframeDSL,
   KeyframeInterpolationDSL,
@@ -159,6 +161,18 @@ interface TypedValueInputProps {
 }
 
 const TypedValueInput = ({ definition, id, invalid, onChange, value }: TypedValueInputProps) => {
+  if (definition.id === "speed" && definition.value_type === "scalar") {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={id}>{definition.name} (×)</Label>
+        <BeatSyncSpeedSelect
+          id={id}
+          value={Number(value)}
+          onChange={(next) => next !== null && onChange(String(next))}
+        />
+      </div>
+    );
+  }
   if (definition.value_type === "direction") {
     return (
       <div className="flex flex-col gap-1.5">
@@ -214,6 +228,7 @@ function parseValue(
   }
   const parsed = Number(value) / scalarDisplayScale(definition);
   if (!Number.isFinite(parsed)) return undefined;
+  if (definition.id === "speed" && !isBeatSyncSpeedMultiplier(parsed)) return undefined;
   const range = definition.range;
   if (range && (parsed < range[0] || parsed > range[1])) return undefined;
   return { type: "scalar", value: parsed };

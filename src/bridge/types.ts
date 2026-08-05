@@ -146,6 +146,7 @@ export interface LayoutCoord {
   type: string;
   width?: number;
   height?: number;
+  patched?: boolean;
 }
 
 export interface CompileResult {

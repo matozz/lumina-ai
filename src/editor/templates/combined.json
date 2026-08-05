@@ -1082,7 +1082,7 @@
             "type": "scalar",
             "value": 1.0
           },
-          "range": [0.01, 64.0],
+          "range": [0.25, 8.0],
           "unit": "multiplier",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1267,7 +1267,7 @@
             "type": "scalar",
             "value": 1.0
           },
-          "range": [0.01, 64.0],
+          "range": [0.25, 8.0],
           "unit": "multiplier",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1452,7 +1452,7 @@
             "type": "scalar",
             "value": 1.0
           },
-          "range": [0.01, 64.0],
+          "range": [0.25, 8.0],
           "unit": "multiplier",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1637,7 +1637,7 @@
             "type": "scalar",
             "value": 1.0
           },
-          "range": [0.01, 64.0],
+          "range": [0.25, 8.0],
           "unit": "multiplier",
           "ui_hint": "slider",
           "automation": "continuous"
@@ -1822,7 +1822,7 @@
             "type": "scalar",
             "value": 1.0
           },
-          "range": [0.01, 64.0],
+          "range": [0.25, 8.0],
           "unit": "multiplier",
           "ui_hint": "slider",
           "automation": "continuous"

@@ -391,8 +391,8 @@
             "value": 1.0
           },
           "range": [
-            0.01,
-            64.0
+            0.25,
+            8.0
           ],
           "unit": "multiplier",
           "ui_hint": "slider",
@@ -600,8 +600,8 @@
             "value": 0.5
           },
           "range": [
-            0.01,
-            64.0
+            0.25,
+            8.0
           ],
           "unit": "multiplier",
           "ui_hint": "slider",

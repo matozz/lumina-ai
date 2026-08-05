@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Copy, Eye, LayoutTemplate, PencilLine, Save, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Cable,
+  Copy,
+  Eye,
+  LayoutTemplate,
+  PencilLine,
+  Save,
+  Trash2,
+} from "lucide-react";
 import { engine } from "@/bridge/commands";
 import type { Diagnostic, LayoutDefinition } from "@/bridge/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -19,9 +28,13 @@ import { activeLayout, activeStage, assetKey, exactAsset } from "@/document/proj
 import { analyzeStageTopology } from "@/document/stageTopology";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import { LayoutGeometryEditor } from "./LayoutGeometryEditor";
-import { ProjectGroupEditor } from "./ProjectGroupEditor";
+import {
+  StageCollectionEditorDialog,
+  StageCollectionEditorLauncher,
+  type StageCollectionEditorKind,
+} from "./StageCollectionEditorDialog";
 import { StageLayoutImpactPanel } from "./StageLayoutImpactPanel";
-import { TargetSetEditor } from "./TargetSetEditor";
+import { StagePatchDialog } from "./StagePatchDialog";
 import { TargetingSceneEditor } from "./TargetingSceneEditor";
 
 type SaveAsState = "closed" | "open";
@@ -40,6 +53,10 @@ export function ProjectStageInspector() {
   const [saveAsName, setSaveAsName] = useState(`${selectedLayout.name} Copy`);
   const [actionDiagnostic, setActionDiagnostic] = useState<Diagnostic | null>(null);
   const [impactOpen, setImpactOpen] = useState(false);
+  const [patchOpen, setPatchOpen] = useState(false);
+  const [collectionEditorOpen, setCollectionEditorOpen] = useState(false);
+  const [collectionEditorKind, setCollectionEditorKind] =
+    useState<StageCollectionEditorKind>("groups");
   const [view, setView] = useState<"layout" | "groups" | "targets" | "scenes">("layout");
   const fixtureIds = useMemo(() => fixtureIdsForStage(stage), [stage]);
   const localDiagnostics = useMemo(
@@ -149,6 +166,12 @@ export function ProjectStageInspector() {
             const next = value[0];
             if (next === "layout" || next === "groups" || next === "targets" || next === "scenes") {
               setView(next);
+              if (next === "groups" || next === "targets") {
+                setCollectionEditorKind(next);
+                setCollectionEditorOpen(true);
+              } else {
+                setCollectionEditorOpen(false);
+              }
             }
           }}
           aria-label="Stage secondary editor"
@@ -261,6 +284,21 @@ export function ProjectStageInspector() {
             {previewing ? "Compiling Canvas preview…" : "Canvas follows this isolated Draft"}
           </span>
         </div>
+        <Button
+          size="xs"
+          variant="ghost"
+          className="justify-start"
+          onClick={() => setPatchOpen(true)}
+        >
+          <Cable data-icon="inline-start" aria-hidden="true" />
+          Stage patch: {fixtureIds.length} fixtures · Configure
+        </Button>
+        {layoutCapacity(draft) > fixtureIds.length && (
+          <FieldDescription>
+            {layoutCapacity(draft) - fixtureIds.length} unpatched positions use dashed Canvas
+            borders.
+          </FieldDescription>
+        )}
         {saveAsState === "open" && (
           <div className="border-border bg-background/40 flex flex-col gap-2 rounded-md border p-2">
             <Field>
@@ -322,13 +360,25 @@ export function ProjectStageInspector() {
           </div>
         </ScrollArea>
       ) : view === "groups" ? (
-        <ScrollArea className="min-h-0 flex-1">
-          <ProjectGroupEditor />
-        </ScrollArea>
+        <div className="min-h-0 flex-1">
+          <StageCollectionEditorLauncher
+            kind="groups"
+            onOpen={() => {
+              setCollectionEditorKind("groups");
+              setCollectionEditorOpen(true);
+            }}
+          />
+        </div>
       ) : view === "targets" ? (
-        <ScrollArea className="min-h-0 flex-1">
-          <TargetSetEditor />
-        </ScrollArea>
+        <div className="min-h-0 flex-1">
+          <StageCollectionEditorLauncher
+            kind="targets"
+            onOpen={() => {
+              setCollectionEditorKind("targets");
+              setCollectionEditorOpen(true);
+            }}
+          />
+        </div>
       ) : view === "scenes" ? (
         <ScrollArea className="min-h-0 flex-1">
           <TargetingSceneEditor />
@@ -384,6 +434,16 @@ export function ProjectStageInspector() {
           </div>
         </ScrollArea>
       )}
+      <StagePatchDialog
+        draftCapacity={layoutCapacity(draft)}
+        open={patchOpen}
+        onOpenChange={setPatchOpen}
+      />
+      <StageCollectionEditorDialog
+        kind={collectionEditorKind}
+        open={collectionEditorOpen}
+        onOpenChange={setCollectionEditorOpen}
+      />
     </aside>
   );
 }

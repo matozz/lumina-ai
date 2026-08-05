@@ -13,6 +13,7 @@ use crate::compiler::diagnostic::{
     PROJECT_REFERENCE_NOT_FOUND, PROJECT_REVISION_MISMATCH, PROJECT_SCHEMA_INVALID,
     TARGET_SET_INVALID,
 };
+use crate::engine::effect::is_beat_sync_speed_multiplier;
 use crate::engine::profile::profile_by_id;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -34,6 +35,7 @@ impl ValidatedProject {
         validate_schema_versions(&bundle, &mut diagnostics);
         validate_manifest(&bundle, &mut diagnostics);
         validate_stages(&bundle, &mut diagnostics);
+        validate_effects(&bundle, &mut diagnostics);
         validate_cues(&bundle, &mut diagnostics);
         validate_arrangements(&bundle, &mut diagnostics);
         validate_bundle_graph(&bundle, &mut diagnostics);
@@ -379,7 +381,7 @@ fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
             if let Some(effect) = exact_asset(&bundle.effects, &layer.effect_ref, |asset| {
                 (&asset.id, asset.revision)
             }) {
-                for keyframe in &lane.keyframes {
+                for (keyframe_index, keyframe) in lane.keyframes.iter().enumerate() {
                     validate_parameter_value(
                         effect,
                         &lane.target.parameter_id,
@@ -387,8 +389,28 @@ fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
                         &lane_path,
                         diagnostics,
                     );
+                    validate_beat_sync_speed_override(
+                        &lane.target.parameter_id,
+                        &keyframe.value,
+                        &format!("{lane_path}.keyframes[{keyframe_index}].value"),
+                        diagnostics,
+                    );
                 }
             }
+        }
+    }
+}
+
+fn validate_effects(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
+    for (effect_index, effect) in bundle.effects.iter().enumerate() {
+        let path = format!("effects[{effect_index}]");
+        for (parameter_index, parameter) in effect.parameters.iter().enumerate() {
+            validate_beat_sync_speed_override(
+                &parameter.id,
+                &parameter.default_value,
+                &format!("{path}.parameters[{parameter_index}].default_value"),
+                diagnostics,
+            );
         }
     }
 }
@@ -481,7 +503,12 @@ fn validate_cue_layer(
     }
     for (parameter_id, value) in &layer.parameter_overrides {
         validate_parameter_value(effect, parameter_id, value, path, diagnostics);
-        validate_beat_sync_speed_override(parameter_id, value, path, diagnostics);
+        validate_beat_sync_speed_override(
+            parameter_id,
+            value,
+            &format!("{path}.parameter_overrides.{parameter_id}"),
+            diagnostics,
+        );
     }
     validate_mix_overrides(
         stage,
@@ -578,7 +605,7 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
                         validate_beat_sync_speed_override(
                             parameter_id,
                             value,
-                            &override_path,
+                            &format!("{override_path}.parameter_overrides.{parameter_id}"),
                             diagnostics,
                         );
                     }
@@ -657,6 +684,25 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
                         &format!("{lane_path}.target.parameter_id"),
                         diagnostics,
                     );
+                    if let Some(effect) = exact_asset(&bundle.effects, &layer.effect_ref, |asset| {
+                        (&asset.id, asset.revision)
+                    }) {
+                        for (keyframe_index, keyframe) in lane.keyframes.iter().enumerate() {
+                            validate_parameter_value(
+                                effect,
+                                parameter_id,
+                                &keyframe.value,
+                                &lane_path,
+                                diagnostics,
+                            );
+                            validate_beat_sync_speed_override(
+                                parameter_id,
+                                &keyframe.value,
+                                &format!("{lane_path}.keyframes[{keyframe_index}].value"),
+                                diagnostics,
+                            );
+                        }
+                    }
                 }
                 validate_keyframes(
                     lane.keyframes.as_slice(),
@@ -1161,18 +1207,13 @@ fn validate_beat_sync_speed_override(
     path: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    const MULTIPLIERS: [f64; 6] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0];
     let ParameterValueDSL::Scalar(value) = value else {
         return;
     };
-    if parameter_id == "speed"
-        && !MULTIPLIERS
-            .iter()
-            .any(|multiplier| (multiplier - value).abs() <= f64::EPSILON)
-    {
+    if parameter_id == "speed" && !is_beat_sync_speed_multiplier(*value) {
         diagnostics.push(Diagnostic::error(
             PROJECT_SCHEMA_INVALID,
-            format!("{path}.parameter_overrides.speed"),
+            path.to_string(),
             "Speed override must be a beat-synchronized multiplier.",
             "Choose 0.25, 0.5, 1, 2, 4, or 8 so the Effect remains synchronized to Arrangement BPM.",
         ));
@@ -1756,7 +1797,7 @@ pub(crate) mod tests {
                 "name": "Speed",
                 "value_type": "scalar",
                 "default_value": { "type": "scalar", "value": 1.0 },
-                "range": [0.125, 8.0],
+                "range": [0.25, 8.0],
                 "unit": "multiplier",
                 "ui_hint": "slider",
                 "automation": "continuous"
@@ -1771,6 +1812,74 @@ pub(crate) mod tests {
         assert!(diagnostics.iter().any(|diagnostic| {
             diagnostic.code == PROJECT_SCHEMA_INVALID
                 && diagnostic.path.ends_with("parameter_overrides.speed")
+                && diagnostic.message.contains("beat-synchronized")
+        }));
+    }
+
+    #[test]
+    fn rejects_non_musical_effect_default_speed() {
+        let mut bundle = valid_bundle();
+        bundle.effects[0].parameters.push(
+            serde_json::from_value(json!({
+                "id": "speed",
+                "name": "Speed",
+                "value_type": "scalar",
+                "default_value": { "type": "scalar", "value": 0.375 },
+                "range": [0.25, 8.0],
+                "unit": "multiplier",
+                "ui_hint": "slider",
+                "automation": "continuous"
+            }))
+            .expect("speed parameter"),
+        );
+
+        let diagnostics =
+            ValidatedProject::validate(bundle).expect_err("default speed must stay musical");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == PROJECT_SCHEMA_INVALID
+                && diagnostic.path.ends_with(".default_value")
+                && diagnostic.message.contains("beat-synchronized")
+        }));
+    }
+
+    #[test]
+    fn rejects_non_musical_speed_automation_keyframes() {
+        let mut bundle = valid_bundle();
+        bundle.effects[0].parameters.push(
+            serde_json::from_value(json!({
+                "id": "speed",
+                "name": "Speed",
+                "value_type": "scalar",
+                "default_value": { "type": "scalar", "value": 1.0 },
+                "range": [0.25, 8.0],
+                "unit": "multiplier",
+                "ui_hint": "slider",
+                "automation": "continuous"
+            }))
+            .expect("speed parameter"),
+        );
+        let layer_id = bundle.cues[0].layers[0].id.clone();
+        bundle.cues[0].automation_lanes.push(
+            serde_json::from_value(json!({
+                "id": "speed-lane",
+                "target": { "layer_id": layer_id, "parameter_id": "speed" },
+                "keyframes": [{
+                    "id": "speed-0",
+                    "time_tick": 0,
+                    "value": { "type": "scalar", "value": 1.25 },
+                    "interpolation": "hold"
+                }]
+            }))
+            .expect("speed automation lane"),
+        );
+
+        let diagnostics =
+            ValidatedProject::validate(bundle).expect_err("speed keyframe must stay musical");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == PROJECT_SCHEMA_INVALID
+                && diagnostic
+                    .path
+                    .ends_with("automation_lanes[0].keyframes[0].value")
                 && diagnostic.message.contains("beat-synchronized")
         }));
     }

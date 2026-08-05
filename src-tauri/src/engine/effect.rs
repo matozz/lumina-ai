@@ -6,6 +6,14 @@ use super::profile::{
 use std::collections::HashMap;
 
 pub const SPEED_PARAMETER_ID: &str = "speed";
+pub const BEAT_SYNC_SPEED_MULTIPLIERS: [f64; 6] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0];
+
+pub fn is_beat_sync_speed_multiplier(value: f64) -> bool {
+    value.is_finite()
+        && BEAT_SYNC_SPEED_MULTIPLIERS
+            .iter()
+            .any(|multiplier| (multiplier - value).abs() <= f64::EPSILON)
+}
 pub const PHASE_PARAMETER_ID: &str = "phase";
 pub const WIDTH_PARAMETER_ID: &str = "width";
 pub const TRANSITION_PARAMETER_ID: &str = "transition";
@@ -873,7 +881,7 @@ pub fn common_parameters(default_speed: f64) -> Vec<ParameterDefinition> {
         scalar_parameter(
             SPEED_PARAMETER_ID,
             default_speed,
-            (0.01, 64.0),
+            (0.25, 8.0),
             ParameterUnit::Multiplier,
             ParameterUiHint::Slider,
         ),
