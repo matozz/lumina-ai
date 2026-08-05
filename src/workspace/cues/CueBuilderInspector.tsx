@@ -145,7 +145,10 @@ export function CueBuilderInspector() {
 
   return (
     <>
-      <aside className="bg-card flex h-full min-h-0 flex-col" aria-label="Cue Builder">
+      <aside
+        className="bg-card flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
+        aria-label="Cue Builder"
+      >
         <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
           <Layers2 className="text-primary" aria-hidden="true" />
           <span className="text-xs font-medium">Cue Builder</span>
@@ -153,8 +156,8 @@ export function CueBuilderInspector() {
             {session.mode} · r{cue.revision}
           </Badge>
         </div>
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="flex flex-col gap-3 p-3">
+        <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
+          <div className="flex min-w-0 flex-col gap-3 p-3">
             <AuthoringSignalSpine
               revision={session.pinned.revision}
               status={session.status}

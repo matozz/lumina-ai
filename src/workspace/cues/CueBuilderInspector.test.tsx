@@ -126,6 +126,28 @@ describe("Cue Builder safe authoring", () => {
     expect(reordered?.layers[0].id).toBe(duplicateId);
     expect(reordered?.layers.map((layer) => layer.layer)).toEqual([0, 1, 2]);
   });
+
+  it("keeps long revision labels inside the shrinkable Cue inspector track", async () => {
+    catalog.effects[0].name = "Breathe Custom With A Deliberately Long Production Revision Name";
+    productionCatalogActions.setCatalog(catalog);
+    render(<Harness />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*2L.*r1/ }));
+    await waitFor(() => expect(screen.getByText("Selected layer")).toBeTruthy());
+
+    const editor = screen
+      .getByText("Selected layer")
+      .closest('[data-layout-region="cue-layer-editor"]');
+    const trigger = editor?.querySelector<HTMLElement>('[data-slot="select-trigger"]');
+    const value = trigger?.querySelector<HTMLElement>('[data-slot="select-value"]');
+
+    expect(editor?.className).toContain("min-w-0");
+    expect(editor?.className).toContain("grid-cols-[minmax(0,1fr)]");
+    expect(trigger?.className).toContain("min-w-0");
+    expect(trigger?.className).toContain("max-w-full");
+    expect(value?.className).toContain("min-w-0");
+    expect(value?.className).toContain("truncate");
+  });
 });
 
 function cueFixture() {

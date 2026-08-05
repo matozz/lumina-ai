@@ -54,8 +54,11 @@ export function CueLayerEditor({
     ...(stage.targeting_scenes ?? []).map((scene) => ({ value: scene.id, label: scene.name })),
   ];
   return (
-    <div className="border-border grid gap-3 rounded-md border p-2.5">
-      <div className="flex items-center gap-1.5">
+    <div
+      className="border-border grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 rounded-md border p-2.5"
+      data-layout-region="cue-layer-editor"
+    >
+      <div className="flex min-w-0 items-center gap-1.5">
         <span className="min-w-0 flex-1 truncate text-xs font-medium">Selected layer</span>
         <Button
           size="icon-xs"
