@@ -6,6 +6,8 @@
 >
 > 范围：18 个 `src/editor/templates/*.json`、V4 Effect schema/compiler/evaluator、Stage 7 Project Effect/Cue
 > 工作区、现有 golden/baseline fixtures
+>
+> 实施状态：审计结论已由 Stage 7.5D Production Catalog 落地；本文件保留原始 consumer/处置依据
 
 ## 结论
 
@@ -73,7 +75,7 @@ migration、golden 和 compatibility tests 读取。只有 consumer 审计和替
 | `spiral`         | Windmill                              | merge               | 合并到 Radial Wave；不以改色创建独立 Effect                           |
 | `zigzag`         | Top Fire / Bottom Fire                | legacy fixture only | 两个 tilt/group fixtures；方向差异不构成两个 Catalog Effect           |
 
-## 当前产品与 validation 缺口
+## 基线时的产品与 validation 缺口
 
 - `WorkspaceLibrary` 同时显示 New Effect、Pulse、Gradient 三个相近入口。
 - `EffectLabInspector` 只保存 name/default speed；built-in read-only、Customize fork、A/B、safe recovery 不存在。
@@ -96,6 +98,8 @@ migration、golden 和 compatibility tests 读取。只有 consumer 审计和替
 4. 删除不会改变已发布 schema artifact、migration report 或 baseline inventory；
 5. 先提交 consumer 替代，再以独立可回退提交删除。
 
-Stage 7.5D 初始决策：`keep=0`（普通 Catalog）、`rewrite=8`、`merge=22`、`hide=7`、
-`legacy fixture only=6`、`remove=0`。实现后的 acceptance 文档将记录实际 Production replacement exact refs、
-Catalog validation 结果和任何分类调整。
+Stage 7.5D 最终决策：`keep=0`（普通 Catalog）、`rewrite=8`、`merge=22`、`hide=7`、
+`legacy fixture only=6`、`remove=0`。实现新增 16 个 built-in Production Effect 和 8 个 capability-resolved Cue
+recipe；普通 Catalog 不再读取 template inventory。所有历史文件仍有 schema、migration、golden、baseline 或
+compatibility consumer，因此本 Stage 不做物理删除。实际 Catalog、validation、golden 与原生证据见
+[`stage7-5d-acceptance.md`](./stage7-5d-acceptance.md)。

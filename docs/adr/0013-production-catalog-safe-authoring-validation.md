@@ -183,4 +183,4 @@ export/loss report。
 - Stage 7 asset boundary: `61c150b`、`040e44b`、`9e67d53`
 - Stage 7.5A authoring transport: `18f864c`、`cd90388`、`e8b2bdd`
 - Stage 7.5B/C layout and targeting: `8402091`、`0c79132`、`871b6cb`
-- Stage 7.5D implementation: pending
+- Stage 7.5D implementation: `2b85218`、`0a02f7f`、`57cf17a`、`95612bb`、`0b0c58e`
