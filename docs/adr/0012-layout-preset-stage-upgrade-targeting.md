@@ -42,6 +42,12 @@ geometry 只定义坐标拓扑与预览尺寸：
 - editor capability 为 `form`、`parameter_schema`、`advanced_only` 或 `read_only`。capability 只决定可用编辑
   路径，不改变 geometry 的持久化语义。
 
+Layout capacity 与 Stage Patch 是两个独立概念。Layout Draft preview 始终生成候选 geometry 的完整位置；超过
+当前 Patch fixture count 的位置标记为 `patched=false`，只以虚线细边框参与 Authoring Canvas preview，不进入
+Group、TargetSet、compiler output 或硬件输出。Patch fixture ID/profile 仍只属于 Stage revision；扩缩 Patch
+必须经过显式 Stage transaction，并在 active Layout capacity 以内进行，不能通过修改 rows/columns 静默增删
+fixture。
+
 保存 Layout Draft、Save As、Duplicate、Rename、Delete 或 Project Publish 都不会自动改写任何 Stage、Cue、
 Arrangement、Published revision 或 Live Snapshot。只有显式 `Use on Stage` transaction 可以改变 Stage
 引用。
@@ -136,6 +142,10 @@ TargetSet/TargetingScene preview 写 Authoring PreviewSink，并明确显示当�
 Publish、不 Take Live，也不路由到硬件 OutputSink。Stage 工作区切换、预览和 Cancel 不影响 7.5A
 AuthoringTransport、ArrangementTimeline、Published bundle 或 Live Snapshot。
 
+大型矩阵的 Group/TargetSet membership 不塞入窄 Stage inspector。次级视图使用独立可滚动 Dialog，保留当前
+Stage revision、引用影响、Preview 和 Save controls；关闭 Dialog 后 Layout Draft 与共用 Layout asset controls
+保持不变。
+
 ## Alternatives considered
 
 1. 继续把 Layout 内嵌在 Stage：无法保存布局库或证明 Save As 不改 Stage，也会让布局发布与 Cue upgrade
@@ -175,3 +185,5 @@ Stage 7、7.5A、Published/Live isolation 和 save/reopen tests。
 - `871b6cb`：接通 Layout Library/Draft、Stage impact/remap、TargetSet/TargetingScene 编辑器、
   compiler cache、确定性 render 与 V4 Stage Setup 壳清理。
 - `c99b8aa`：锁定 TargetingScene 在 phase continuity 开启/关闭时的分区边界相位行为。
+- `c8fb70c`：区分 Layout Draft capacity 与 Stage Patch、补充显式 Patch revision editor、大布局 Group/TargetSet
+  Dialog，并统一节拍同步 speed 输入和验证。

@@ -61,8 +61,8 @@ Arrangement，并成功完成 remap。重开后 Stage r5、20×45 Layout、3×3 
 | Gate             | 结果                                                                                            |
 | ---------------- | ----------------------------------------------------------------------------------------------- |
 | `pnpm check:all` | 通过；schema、Prettier、TypeScript、Vite、strict Clippy、全部前端/Rust 测试                     |
-| Frontend         | 60 files / 157 tests；migration、reference、Undo/Redo、revision isolation、编辑器和 persistence |
-| Rust             | 109 unit + 12 integration/contracts = 121                                                       |
+| Frontend         | 60 files / 163 tests；migration、reference、Undo/Redo、revision isolation、编辑器和 persistence |
+| Rust             | 112 unit + 12 integration/contracts = 124                                                       |
 | 30×30            | All → 9 个 3×3 partitions → All；hard/weighted；随机 Seek/Replay frame 相等                     |
 | ≥1,000 fixtures  | 4 个并行 TargetingScene layers、180 个随机 60Hz frames；确定性且平均低于 16.67ms                |
 | 时间语义         | 完整 TimeSignatureMap；3/8→4/4 bar snap；beat/bar transition；phase continuity on/off           |
@@ -101,6 +101,25 @@ Canvas、Group、migration 与回归 parity 完成后删除。
   validation 使用同一组节拍同步倍率。
 - 真实 Tauri 验证 900-fixture Stage 上的 10×10 独立 Canvas preview、7.4→7 整数规范化、跨 Groups transaction
   Draft 保持和完整 speed 倍率菜单；`pnpm check:all`、debug app bundle 全部通过。
+
+## Patch、全局 speed 与大布局回归
+
+2026-08-05 根据 20×45 → 21×45、Effect default speed 和 900-fixture Group/TargetSet 的后续反馈补充：
+
+- Layout Draft capacity 与 Stage Patch fixture count 分离。20×45 Stage 上编辑 21×45 会立即预览 945 个位置，
+  其中现有 900 个为 patched，新增 45 个以 dashed hairline 显示；不会静默创建 fixture 或输出。
+- `Configure Stage patch` 并列显示 Draft positions、active Layout positions、patched fixtures 和 Stage revision。
+  Draft 尚未 Use on Stage 时给出“Save Layout → impact/remap → Use on Stage → reopen Patch”的就地 recovery；
+  保存 Patch 会 fork Stage 与列出的 Draft Cue/Arrangement revisions，Published/Live 保持隔离。
+- Canvas fixture outline 从 1px 降为 0.5px screen-space hairline；unpatched preview position 使用更暗的虚线。
+- Effect create/edit speed、Effect default speed、Cue speed override、typed speed automation keyframe、Live Pad 和
+  legacy phaser command 全部收敛到 0.25×、0.5×、1×、2×、4×、8×；Project semantic validation 同时覆盖
+  Effect default、Cue/Arrangement override 与 automation keyframe。
+- Groups 和 TargetSets 在 20×45 / 900 fixtures 下使用独立、可滚动的大 Dialog；membership grid、Save、
+  Duplicate、Preview、Delete protection 和引用影响不再在窄 inspector 中堆叠。
+- `pnpm check:all` 通过（163 frontend tests；112 Rust unit + 12 integration/contracts）；
+  `pnpm tauri build --debug --bundles app` 通过。真实 Tauri 已验证 21×45/945 Draft + 45 unpatched、Effect
+  default speed 完整倍率菜单，以及 20×45 Group/TargetSet expanded Dialog。
 
 ## Scope stop
 
