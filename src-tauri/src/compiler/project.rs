@@ -3,12 +3,13 @@ use crate::compiler::diagnostic::{
     Diagnostic, PROJECT_REFERENCE_NOT_FOUND, PROJECT_REVISION_MISMATCH,
 };
 use crate::document::{
-    layout_to_legacy, resolve_target_set, ArrangementAutomationTarget, ArrangementDocument,
-    ArrangementMarker, AssetRef, AutomationLaneDSL, AutomationTargetV3DSL, ClipPlaybackDSL,
-    CueAutomationLane, CueCapabilitySummary, CueDefinition, CueLayer, CueMixOverride,
-    CueRiskSummary, CueTriggerPolicy, EffectClipDSL, EffectDefinitionDSL, EffectInstanceDSL,
-    GroupDSL, GroupFixturesDSL, LayoutDefinition, MetaDSL, MixPolicy as CueMixPolicy,
-    ProjectBundle, ShowDocumentV4, StageDocument, TargetingDuration, TargetingDurationUnit,
+    layout_fixture_size_for_fixture, layout_to_legacy, resolve_target_set,
+    ArrangementAutomationTarget, ArrangementDocument, ArrangementMarker, AssetRef,
+    AutomationLaneDSL, AutomationTargetV3DSL, ClipPlaybackDSL, CueAutomationLane,
+    CueCapabilitySummary, CueDefinition, CueLayer, CueMixOverride, CueRiskSummary,
+    CueTriggerPolicy, EffectClipDSL, EffectDefinitionDSL, EffectInstanceDSL, GroupDSL,
+    GroupFixturesDSL, LayoutDefinition, MetaDSL, MixPolicy as CueMixPolicy, ProjectBundle,
+    ShowDocumentV4, StageDocument, TargetingDuration, TargetingDurationUnit,
     TargetingSceneDefinition, TargetingTransition, TimeSignaturePoint, TimelineTrackDSL,
     TimelineV4DSL, ValidatedProject,
 };
@@ -423,6 +424,11 @@ impl Compiler {
             }),
         };
         let mut show = Compiler::compile_document(document)?;
+        for coord in &mut show.coords {
+            let fixture_size = layout_fixture_size_for_fixture(&layout, coord.id);
+            coord.width = Some(fixture_size.width);
+            coord.height = Some(fixture_size.height);
+        }
 
         for (group_id, resolved) in target_cache {
             let group = show

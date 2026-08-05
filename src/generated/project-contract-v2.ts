@@ -329,6 +329,7 @@ export type LayoutCategory = "basic" | "generated_advanced";
 export interface LayoutDefinition {
   category: LayoutCategory;
   editor: LayoutEditorCapability;
+  fixture_size_overrides?: Array<LayoutFixtureSizeOverride>;
   geometry: LayoutGeometry;
   id: string;
   name: string;
@@ -351,6 +352,11 @@ export type LayoutEditorCapability =
       mode: "read_only";
       reason: string;
     };
+
+export interface LayoutFixtureSizeOverride {
+  fixture_id: number;
+  size: LayoutSize;
+}
 
 export interface LayoutGap {
   x: number;

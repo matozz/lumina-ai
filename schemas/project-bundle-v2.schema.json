@@ -1245,6 +1245,12 @@
         "editor": {
           "$ref": "#/$defs/LayoutEditorCapability"
         },
+        "fixture_size_overrides": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LayoutFixtureSizeOverride"
+          }
+        },
         "geometry": {
           "$ref": "#/$defs/LayoutGeometry"
         },
@@ -1325,6 +1331,21 @@
           "required": ["mode", "reason"]
         }
       ]
+    },
+    "LayoutFixtureSizeOverride": {
+      "type": "object",
+      "properties": {
+        "fixture_id": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "size": {
+          "$ref": "#/$defs/LayoutSize"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["fixture_id", "size"]
     },
     "LayoutGap": {
       "type": "object",

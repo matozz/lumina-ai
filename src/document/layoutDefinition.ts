@@ -11,9 +11,26 @@ const METRIC_EPSILON = 0.000_001;
 
 export interface LayoutDiagnostic {
   code: string;
+  severity: "error" | "warning";
   path: string;
   message: string;
   recovery: string;
+}
+
+export function layoutStageCapacityDiagnostic(
+  layout: LayoutDefinition,
+  fixtureIds: number[],
+): LayoutDiagnostic | null {
+  const capacity = layoutCapacity(layout);
+  if (capacity >= fixtureIds.length) return null;
+  return {
+    code: "LAYOUT_CAPACITY_BELOW_STAGE_PATCH",
+    severity: "warning",
+    path: "layout.geometry",
+    message: `${layout.geometry.shape} previews ${capacity} positions while this Stage patches ${fixtureIds.length} fixtures.`,
+    recovery:
+      "The Layout Draft can still be saved. Increase its rows, columns, rings, samples, or fixture count before Use on Stage.",
+  };
 }
 
 export function fixtureIdsForStage(stage: StageDocument) {
@@ -66,19 +83,10 @@ export function diagnoseLayoutDefinition(
   if (!layout.name.trim()) {
     diagnostics.push({
       code: "LAYOUT_NAME_EMPTY",
+      severity: "error",
       path: "layout.name",
       message: "Layout name is required.",
       recovery: "Enter a stable library name before saving the Layout.",
-    });
-  }
-  const capacity = layoutCapacity(layout);
-  if (capacity < fixtureIds.length) {
-    diagnostics.push({
-      code: "LAYOUT_CAPACITY_TOO_SMALL",
-      path: "layout.geometry",
-      message: `${layout.geometry.shape} provides ${capacity} positions for ${fixtureIds.length} patched fixtures.`,
-      recovery:
-        "Increase the row, column, ring, sample, or fixture count before previewing it on this Stage.",
     });
   }
   const geometryError = geometryDiagnostic(layout.geometry);
@@ -89,6 +97,7 @@ export function diagnoseLayoutDefinition(
     if (missing.length > 0) {
       diagnostics.push({
         code: "LAYOUT_CUSTOM_FIXTURES_MISSING",
+        severity: "error",
         path: "layout.geometry.fixtures",
         message: `Custom coordinates are missing fixture IDs ${missing.slice(0, 8).join(", ")}${missing.length > 8 ? "…" : ""}.`,
         recovery: "Add coordinates for every patched fixture ID or choose a generated Layout.",
@@ -254,7 +263,7 @@ function geometryDiagnostic(geometry: LayoutGeometry): LayoutDiagnostic | null {
 }
 
 function diagnostic(code: string, path: string, message: string, recovery: string) {
-  return { code, path, message, recovery };
+  return { code, severity: "error" as const, path, message, recovery };
 }
 
 function gridPositions(

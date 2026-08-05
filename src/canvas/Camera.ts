@@ -1,4 +1,9 @@
-import type { LayoutCoord } from "../bridge/types";
+type LayoutBoundsCoord = {
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+};
 
 export class Camera {
   offsetX: number = 0;
@@ -10,13 +15,13 @@ export class Camera {
     this.canvas = canvas;
   }
 
-  fitToContent(coords: LayoutCoord[]): void {
+  fitToContent(coords: LayoutBoundsCoord[]): void {
     if (coords.length === 0) return;
 
-    const minX = Math.min(...coords.map((c) => c.x));
-    const maxX = Math.max(...coords.map((c) => c.x));
-    const minY = Math.min(...coords.map((c) => c.y));
-    const maxY = Math.max(...coords.map((c) => c.y));
+    const minX = Math.min(...coords.map((coord) => coord.x - (coord.width ?? 0) / 2));
+    const maxX = Math.max(...coords.map((coord) => coord.x + (coord.width ?? 0) / 2));
+    const minY = Math.min(...coords.map((coord) => coord.y - (coord.height ?? 0) / 2));
+    const maxY = Math.max(...coords.map((coord) => coord.y + (coord.height ?? 0) / 2));
 
     const contentWidth = maxX - minX + 80; // padding
     const contentHeight = maxY - minY + 80;

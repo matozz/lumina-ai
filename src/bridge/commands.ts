@@ -4,6 +4,7 @@ import type {
   Diagnostic,
   AssetRef,
   FixtureFramePayload,
+  LayoutDefinition,
   LayoutCoord,
   FullDSL,
   LoadShowResult,
@@ -16,6 +17,7 @@ import type {
   PreviewSource,
   RenderContext,
   ShowSnapshotState,
+  StageDocument,
 } from "./types";
 
 export const engine = {
@@ -112,6 +114,9 @@ export const engine = {
   setSequencerMode: (mode: "live" | "timeline") => invoke("set_sequencer_mode", { mode }),
 
   getLayoutCoords: () => invoke<LayoutCoord[]>("get_layout_coords"),
+
+  previewLayout: (layout: LayoutDefinition, stage: StageDocument) =>
+    invoke<LayoutCoord[]>("preview_layout", { layout, stage }),
 
   requestFullFrame: () => invoke("request_full_frame"),
 };

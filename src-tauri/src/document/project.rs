@@ -68,6 +68,15 @@ pub struct LayoutDefinition {
     pub category: LayoutCategory,
     pub editor: LayoutEditorCapability,
     pub geometry: LayoutGeometry,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub fixture_size_overrides: Vec<LayoutFixtureSizeOverride>,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[serde(deny_unknown_fields)]
+pub struct LayoutFixtureSizeOverride {
+    pub fixture_id: u32,
+    pub size: LayoutSize,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]

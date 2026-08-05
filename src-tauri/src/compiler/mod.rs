@@ -110,6 +110,10 @@ pub struct LayoutCoord {
     pub y: f64,
     #[serde(rename = "type")]
     pub type_: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub width: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub height: Option<f64>,
 }
 
 #[derive(Clone, Debug)]
@@ -433,6 +437,8 @@ impl Compiler {
                                 x: ox + j as f64 * spacing,
                                 y: oy + i as f64 * spacing,
                                 type_: get_type(fix_ids[idx]),
+                                width: None,
+                                height: None,
                             });
                         }
                     }
@@ -451,6 +457,8 @@ impl Compiler {
                         x: cx,
                         y: cy,
                         type_: get_type(fix_ids[0]),
+                        width: None,
+                        height: None,
                     });
                     let mut current_idx = 1;
                     for ring in 1..=*rings {
@@ -464,6 +472,8 @@ impl Compiler {
                                     x: cx + angle.cos() * radius,
                                     y: cy + angle.sin() * radius,
                                     type_: get_type(fix_ids[current_idx]),
+                                    width: None,
+                                    height: None,
                                 });
                                 current_idx += 1;
                             }
@@ -553,6 +563,8 @@ impl Compiler {
                             x,
                             y,
                             type_: get_type(fix_ids[i as usize]),
+                            width: None,
+                            height: None,
                         });
                     }
                 }
@@ -566,6 +578,8 @@ impl Compiler {
                         x: c.x,
                         y: c.y,
                         type_: get_type(c.id),
+                        width: None,
+                        height: None,
                     });
                 }
             }

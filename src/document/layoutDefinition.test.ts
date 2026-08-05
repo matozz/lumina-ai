@@ -5,6 +5,7 @@ import {
   fixtureIdsForStage,
   layoutCapacity,
   layoutPositions,
+  layoutStageCapacityDiagnostic,
   previewBundleForLayout,
 } from "./layoutDefinition";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
@@ -43,5 +44,20 @@ describe("LayoutDefinition geometry", () => {
 
     expect(activeStage(preview).layout_ref).toEqual({ id: circle.id, revision: circle.revision });
     expect(activeStage(bundle).layout_ref).toEqual(sourceStageRef);
+  });
+
+  it("keeps Layout asset validation separate from Stage patch capacity", () => {
+    const bundle = createStarterProjectBundle();
+    const stage = activeStage(bundle);
+    const layout = structuredClone(activeLayout(bundle));
+    if (layout.geometry.shape !== "matrix") throw new Error("starter matrix missing");
+    layout.geometry.rows = 2;
+    layout.geometry.columns = 2;
+
+    expect(diagnoseLayoutDefinition(layout, fixtureIdsForStage(stage))).toEqual([]);
+    expect(layoutStageCapacityDiagnostic(layout, fixtureIdsForStage(stage))).toMatchObject({
+      code: "LAYOUT_CAPACITY_BELOW_STAGE_PATCH",
+      severity: "warning",
+    });
   });
 });

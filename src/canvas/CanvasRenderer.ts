@@ -21,8 +21,8 @@ export class CanvasRenderer {
 
   initFromLayout(coords: LayoutCoord[]): void {
     this.fixtures.clear();
-    for (const { id, x, y, type } of coords) {
-      this.fixtures.set(id, new FixtureVisual(id, x, y, type));
+    for (const { id, x, y, type, width, height } of coords) {
+      this.fixtures.set(id, new FixtureVisual(id, x, y, type, width, height));
     }
     this.camera.fitToContent(coords);
     this.dirty = true;
@@ -91,12 +91,10 @@ export class CanvasRenderer {
       ctx.beginPath();
       for (const v of batch) {
         if (v.type === "pixel") {
-          // Draw square for pixels
-          ctx.rect(v.x - v.radius, v.y - v.radius, v.radius * 2, v.radius * 2);
+          ctx.rect(v.x - v.width / 2, v.y - v.height / 2, v.width, v.height);
         } else {
-          // Draw circle for wash and spot
-          ctx.moveTo(v.x + v.radius, v.y);
-          ctx.arc(v.x, v.y, v.radius, 0, Math.PI * 2);
+          ctx.moveTo(v.x + v.width / 2, v.y);
+          ctx.ellipse(v.x, v.y, v.width / 2, v.height / 2, 0, 0, Math.PI * 2);
         }
       }
       ctx.fill();
@@ -108,14 +106,14 @@ export class CanvasRenderer {
     for (const visual of this.fixtures.values()) {
       if (visual.type === "pixel") {
         ctx.rect(
-          visual.x - visual.radius,
-          visual.y - visual.radius,
-          visual.radius * 2,
-          visual.radius * 2,
+          visual.x - visual.width / 2,
+          visual.y - visual.height / 2,
+          visual.width,
+          visual.height,
         );
       } else {
-        ctx.moveTo(visual.x + visual.radius, visual.y);
-        ctx.arc(visual.x, visual.y, visual.radius, 0, Math.PI * 2);
+        ctx.moveTo(visual.x + visual.width / 2, visual.y);
+        ctx.ellipse(visual.x, visual.y, visual.width / 2, visual.height / 2, 0, 0, Math.PI * 2);
       }
     }
     ctx.stroke();

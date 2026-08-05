@@ -33,6 +33,7 @@ export interface TargetSetTopologyImpact {
 
 export interface StageTopologyImpact {
   compatible: boolean;
+  capacityFits: boolean;
   currentLayoutRef: AssetRef;
   candidateLayoutRef: AssetRef;
   fixtureCount: number;
@@ -75,10 +76,11 @@ export function analyzeStageTopology(
     return clipCount > 0 ? [{ reference, name: arrangement.name, clipCount }] : [];
   });
   const movedFixtureCount = countMovedFixtures(currentLayout, candidateLayout, fixtureIds);
+  const capacityFits = layoutCapacity(candidateLayout) >= fixtureIds.length;
   return {
     compatible:
-      layoutCapacity(candidateLayout) >= fixtureIds.length &&
-      targetSets.every((target) => target.valid && !target.membershipChanged),
+      capacityFits && targetSets.every((target) => target.valid && !target.membershipChanged),
+    capacityFits,
     currentLayoutRef: stage.layout_ref,
     candidateLayoutRef,
     fixtureCount: fixtureIds.length,

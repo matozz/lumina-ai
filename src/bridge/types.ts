@@ -70,6 +70,7 @@ export type {
   LayoutCategory,
   LayoutDefinition,
   LayoutEditorCapability,
+  LayoutFixtureSizeOverride,
   LayoutGap,
   LayoutGeometry,
   LayoutOrientation,
@@ -143,6 +144,8 @@ export interface LayoutCoord {
   x: number;
   y: number;
   type: string;
+  width?: number;
+  height?: number;
 }
 
 export interface CompileResult {

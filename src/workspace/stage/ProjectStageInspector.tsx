@@ -13,7 +13,7 @@ import {
   diagnoseLayoutDefinition,
   fixtureIdsForStage,
   layoutCapacity,
-  previewBundleForLayout,
+  layoutStageCapacityDiagnostic,
 } from "@/document/layoutDefinition";
 import { activeLayout, activeStage, assetKey, exactAsset } from "@/document/projectModel";
 import { analyzeStageTopology } from "@/document/stageTopology";
@@ -46,6 +46,14 @@ export function ProjectStageInspector() {
     () => diagnoseLayoutDefinition(draft, fixtureIds),
     [draft, fixtureIds],
   );
+  const blockingDiagnostics = localDiagnostics.filter(
+    (diagnostic) => diagnostic.severity === "error",
+  );
+  const capacityDiagnostic = useMemo(
+    () => layoutStageCapacityDiagnostic(draft, fixtureIds),
+    [draft, fixtureIds],
+  );
+  const selectedLayoutFingerprint = JSON.stringify(selectedLayout);
   const usedOnStage = assetKey(stage.layout_ref) === assetKey(selectedLayoutRef);
   const dirty = JSON.stringify(draft) !== JSON.stringify(selectedLayout);
   const editable = draft.editor.mode !== "read_only";
@@ -56,11 +64,11 @@ export function ProjectStageInspector() {
     setSaveAsState("closed");
     setActionDiagnostic(null);
     setImpactOpen(false);
-  }, [selectedLayout]);
+  }, [selectedLayoutFingerprint]);
 
   useEffect(() => {
     if (view !== "layout") return;
-    if (localDiagnostics.length > 0) {
+    if (blockingDiagnostics.length > 0) {
       setPreviewDiagnostics([]);
       setPreviewing(false);
       return;
@@ -69,17 +77,11 @@ export function ProjectStageInspector() {
     setPreviewing(true);
     const timer = window.setTimeout(() => {
       void engine
-        .previewProject({
-          project: previewBundleForLayout(bundle, draft),
-          arrangementRef: selectedArrangementRef,
-          source: { type: "authoring_draft" },
-          context: { type: "stage" },
-          playheadTick: 0,
-        })
-        .then((frame) => {
+        .previewLayout(draft, stage)
+        .then((coords) => {
           if (request.signal.aborted) return;
           setPreviewDiagnostics([]);
-          window.dispatchEvent(new CustomEvent("engine:project-preview-frame", { detail: frame }));
+          window.dispatchEvent(new CustomEvent("engine:layout-draft-coords", { detail: coords }));
         })
         .catch((error) => {
           if (request.signal.aborted) return;
@@ -93,7 +95,7 @@ export function ProjectStageInspector() {
       request.abort();
       window.clearTimeout(timer);
     };
-  }, [bundle, draft, localDiagnostics.length, selectedArrangementRef, view]);
+  }, [blockingDiagnostics.length, draft, stage, view]);
 
   useEffect(() => {
     if (view === "layout") return;
@@ -166,7 +168,160 @@ export function ProjectStageInspector() {
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
-      {view === "groups" ? (
+      <section
+        className="border-border flex shrink-0 flex-col gap-2 border-b p-2"
+        aria-label="Layout asset controls"
+      >
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-medium">{selectedLayout.name}</p>
+            <p className="text-muted-foreground font-mono text-[8px]">
+              {selectedLayout.id}@{selectedLayout.revision}
+            </p>
+          </div>
+          {usedOnStage && <Badge variant="secondary">On Stage</Badge>}
+          <Badge variant="outline">{draft.editor.mode}</Badge>
+        </div>
+        <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border">
+          <Metric label="Shape" value={draft.geometry.shape} />
+          <Metric label="Positions" value={String(layoutCapacity(draft))} />
+          <Metric label="Patched" value={String(fixtureIds.length)} />
+        </div>
+        <div className="grid grid-cols-3 gap-1.5">
+          <Button
+            size="xs"
+            disabled={!dirty || !editable || blockingDiagnostics.length > 0}
+            onClick={() =>
+              runAction("layout.save_draft", () => {
+                const reference = projectActions.saveLayoutDraft(selectedLayoutRef, draft);
+                setDraft({ ...draft, revision: reference.revision });
+              })
+            }
+          >
+            <Save data-icon="inline-start" aria-hidden="true" />
+            Save
+          </Button>
+          <Button
+            size="xs"
+            variant="outline"
+            disabled={!editable || blockingDiagnostics.length > 0}
+            onClick={() => setSaveAsState(saveAsState === "open" ? "closed" : "open")}
+          >
+            Save As…
+          </Button>
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() =>
+              runAction("layout.duplicate", () => {
+                projectActions.duplicateLayout(selectedLayoutRef);
+              })
+            }
+          >
+            <Copy data-icon="inline-start" aria-hidden="true" />
+            Duplicate
+          </Button>
+          <Button
+            size="xs"
+            variant="outline"
+            disabled={!draft.name.trim() || draft.name === selectedLayout.name || !editable}
+            onClick={() =>
+              runAction("layout.rename", () => {
+                projectActions.renameLayout(selectedLayoutRef, draft.name);
+              })
+            }
+          >
+            <PencilLine data-icon="inline-start" aria-hidden="true" />
+            Rename
+          </Button>
+          <Button
+            size="xs"
+            variant="outline"
+            className="text-destructive hover:text-destructive"
+            disabled={usedOnStage}
+            title={usedOnStage ? "The current Stage pins this Layout revision." : undefined}
+            onClick={() =>
+              runAction("layout.delete", () => projectActions.deleteLayout(selectedLayoutRef))
+            }
+          >
+            <Trash2 data-icon="inline-start" aria-hidden="true" />
+            Delete
+          </Button>
+          <Button
+            size="xs"
+            disabled={usedOnStage || dirty || blockingDiagnostics.length > 0}
+            onClick={() => setImpactOpen(true)}
+          >
+            Use on Stage
+          </Button>
+        </div>
+        <div className="text-muted-foreground flex items-center gap-1.5 text-[9px]">
+          <Eye className="text-primary size-3" aria-hidden="true" />
+          <span>
+            {previewing ? "Compiling Canvas preview…" : "Canvas follows this isolated Draft"}
+          </span>
+        </div>
+        {saveAsState === "open" && (
+          <div className="border-border bg-background/40 flex flex-col gap-2 rounded-md border p-2">
+            <Field>
+              <FieldLabel htmlFor="layout-save-as-name">New Layout name</FieldLabel>
+              <Input
+                id="layout-save-as-name"
+                autoFocus
+                value={saveAsName}
+                onChange={(event) => setSaveAsName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") setSaveAsState("closed");
+                }}
+              />
+            </Field>
+            <div className="flex justify-end gap-1.5">
+              <Button size="xs" variant="ghost" onClick={() => setSaveAsState("closed")}>
+                Cancel
+              </Button>
+              <Button
+                size="xs"
+                disabled={!saveAsName.trim()}
+                onClick={() =>
+                  runAction("layout.save_as", () => {
+                    projectActions.saveLayoutAs(draft, saveAsName);
+                    setSaveAsState("closed");
+                  })
+                }
+              >
+                Save new Layout
+              </Button>
+            </div>
+          </div>
+        )}
+      </section>
+      {actionDiagnostic && (
+        <div className="border-border shrink-0 border-b p-2">
+          <LayoutDiagnosticAlert
+            severity="error"
+            code={actionDiagnostic.code}
+            path={actionDiagnostic.path}
+            message={actionDiagnostic.message}
+            recovery={actionDiagnostic.hint ?? "Review the references and retry the action."}
+          />
+        </div>
+      )}
+      {impactOpen ? (
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="p-3">
+            <StageLayoutImpactPanel
+              impact={analyzeStageTopology(bundle, selectedLayoutRef)}
+              onClose={() => setImpactOpen(false)}
+              onApply={(request) =>
+                runAction("stage.layout_upgrade", () => {
+                  projectActions.useLayoutOnStage(request);
+                  setImpactOpen(false);
+                })
+              }
+            />
+          </div>
+        </ScrollArea>
+      ) : view === "groups" ? (
         <ScrollArea className="min-h-0 flex-1">
           <ProjectGroupEditor />
         </ScrollArea>
@@ -181,32 +336,6 @@ export function ProjectStageInspector() {
       ) : (
         <ScrollArea className="min-h-0 flex-1">
           <div className="flex flex-col gap-3 p-3">
-            <section className="border-border flex flex-col gap-2.5 border-b pb-3">
-              <div className="flex items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{selectedLayout.name}</p>
-                  <p className="text-muted-foreground font-mono text-[9px]">
-                    {selectedLayout.id}@{selectedLayout.revision}
-                  </p>
-                </div>
-                {usedOnStage && <Badge variant="secondary">On Stage</Badge>}
-              </div>
-              <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border">
-                <Metric label="Shape" value={draft.geometry.shape} />
-                <Metric label="Capacity" value={String(layoutCapacity(draft))} />
-                <Metric label="Patched" value={String(fixtureIds.length)} />
-              </div>
-              <div className="text-muted-foreground flex items-center gap-1.5 text-[10px]">
-                <Eye className="text-primary size-3" aria-hidden="true" />
-                <span>
-                  {previewing ? "Compiling Canvas preview…" : "Canvas follows this isolated Draft"}
-                </span>
-                <Badge variant="outline" className="ml-auto">
-                  {draft.editor.mode}
-                </Badge>
-              </div>
-            </section>
-
             <Field>
               <FieldLabel htmlFor="layout-draft-name">Library name</FieldLabel>
               <Input
@@ -226,159 +355,32 @@ export function ProjectStageInspector() {
             {localDiagnostics.map((diagnostic) => (
               <LayoutDiagnosticAlert
                 key={`${diagnostic.code}:${diagnostic.path}`}
+                severity={diagnostic.severity}
                 code={diagnostic.code}
                 path={diagnostic.path}
                 message={diagnostic.message}
                 recovery={diagnostic.recovery}
               />
             ))}
+            {capacityDiagnostic && (
+              <LayoutDiagnosticAlert
+                severity={capacityDiagnostic.severity}
+                code={capacityDiagnostic.code}
+                path={capacityDiagnostic.path}
+                message={capacityDiagnostic.message}
+                recovery={capacityDiagnostic.recovery}
+              />
+            )}
             {previewDiagnostics.map((diagnostic) => (
               <LayoutDiagnosticAlert
                 key={`${diagnostic.code}:${diagnostic.path}`}
+                severity="error"
                 code={diagnostic.code}
                 path={diagnostic.path}
                 message={diagnostic.message}
                 recovery={diagnostic.hint ?? "Repair the Draft parameters and retry preview."}
               />
             ))}
-            {actionDiagnostic && (
-              <LayoutDiagnosticAlert
-                code={actionDiagnostic.code}
-                path={actionDiagnostic.path}
-                message={actionDiagnostic.message}
-                recovery={actionDiagnostic.hint ?? "Review the references and retry the action."}
-              />
-            )}
-
-            <section className="border-border flex flex-col gap-2 border-t pt-3">
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  size="sm"
-                  disabled={!dirty || !editable || localDiagnostics.length > 0}
-                  onClick={() =>
-                    runAction("layout.save_draft", () => {
-                      const reference = projectActions.saveLayoutDraft(selectedLayoutRef, draft);
-                      setDraft({ ...draft, revision: reference.revision });
-                    })
-                  }
-                >
-                  <Save data-icon="inline-start" aria-hidden="true" />
-                  Save Draft
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={!editable || localDiagnostics.length > 0}
-                  onClick={() => setSaveAsState(saveAsState === "open" ? "closed" : "open")}
-                >
-                  Save As…
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    runAction("layout.duplicate", () => {
-                      projectActions.duplicateLayout(selectedLayoutRef);
-                    })
-                  }
-                >
-                  <Copy data-icon="inline-start" aria-hidden="true" />
-                  Duplicate
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={!draft.name.trim() || draft.name === selectedLayout.name || !editable}
-                  onClick={() =>
-                    runAction("layout.rename", () => {
-                      projectActions.renameLayout(selectedLayoutRef, draft.name);
-                    })
-                  }
-                >
-                  <PencilLine data-icon="inline-start" aria-hidden="true" />
-                  Rename
-                </Button>
-              </div>
-
-              {saveAsState === "open" && (
-                <div className="border-border bg-background/40 flex flex-col gap-2 rounded-md border p-2">
-                  <Field>
-                    <FieldLabel htmlFor="layout-save-as-name">New Layout name</FieldLabel>
-                    <Input
-                      id="layout-save-as-name"
-                      autoFocus
-                      value={saveAsName}
-                      onChange={(event) => setSaveAsName(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Escape") setSaveAsState("closed");
-                      }}
-                    />
-                  </Field>
-                  <div className="flex justify-end gap-1.5">
-                    <Button size="xs" variant="ghost" onClick={() => setSaveAsState("closed")}>
-                      Cancel
-                    </Button>
-                    <Button
-                      size="xs"
-                      disabled={!saveAsName.trim()}
-                      onClick={() =>
-                        runAction("layout.save_as", () => {
-                          projectActions.saveLayoutAs(draft, saveAsName);
-                          setSaveAsState("closed");
-                        })
-                      }
-                    >
-                      Save new Layout
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-destructive hover:text-destructive"
-                disabled={usedOnStage}
-                title={usedOnStage ? "The current Stage pins this Layout revision." : undefined}
-                onClick={() =>
-                  runAction("layout.delete", () => projectActions.deleteLayout(selectedLayoutRef))
-                }
-              >
-                <Trash2 data-icon="inline-start" aria-hidden="true" />
-                Delete Layout
-              </Button>
-            </section>
-
-            {impactOpen ? (
-              <StageLayoutImpactPanel
-                impact={analyzeStageTopology(bundle, selectedLayoutRef)}
-                onClose={() => setImpactOpen(false)}
-                onApply={(request) =>
-                  runAction("stage.layout_upgrade", () => {
-                    projectActions.useLayoutOnStage(request);
-                    setImpactOpen(false);
-                  })
-                }
-              />
-            ) : (
-              <section className="border-primary/30 bg-primary/5 flex flex-col gap-2 rounded-md border p-2.5">
-                <div className="flex items-center gap-2">
-                  <LayoutTemplate className="text-primary size-3.5" aria-hidden="true" />
-                  <span className="text-xs font-medium">Use on {stage.name}</span>
-                </div>
-                <p className="text-muted-foreground text-[10px] leading-relaxed">
-                  Opens topology diff and reference impact. No Stage revision is created until an
-                  explicit compatible upgrade or remap transaction is confirmed.
-                </p>
-                <Button
-                  size="sm"
-                  disabled={usedOnStage || dirty || localDiagnostics.length > 0}
-                  onClick={() => setImpactOpen(true)}
-                >
-                  Review impact &amp; use on Stage
-                </Button>
-              </section>
-            )}
           </div>
         </ScrollArea>
       )}
@@ -396,18 +398,20 @@ function Metric({ label, value }: { label: string; value: string }) {
 }
 
 function LayoutDiagnosticAlert({
+  severity,
   code,
   path,
   message,
   recovery,
 }: {
+  severity: "error" | "warning";
   code: string;
   path: string;
   message: string;
   recovery: string;
 }) {
   return (
-    <Alert variant="destructive">
+    <Alert variant={severity === "error" ? "destructive" : "default"}>
       <AlertTriangle aria-hidden="true" />
       <AlertTitle>
         {code} · {path}

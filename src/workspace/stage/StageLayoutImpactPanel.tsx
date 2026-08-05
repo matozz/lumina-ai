@@ -68,7 +68,11 @@ export function StageLayoutImpactPanel({
         )}
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold">
-            {impact.compatible ? "Compatible Stage upgrade" : "Topology remap required"}
+            {impact.compatible
+              ? "Compatible Stage upgrade"
+              : impact.capacityFits
+                ? "Topology remap required"
+                : "Layout capacity cannot fit this Stage"}
           </p>
           <p className="text-muted-foreground font-mono text-[9px]">
             {formatRef(impact.currentLayoutRef)} <ArrowRight className="inline size-2.5" />{" "}
@@ -198,6 +202,18 @@ export function StageLayoutImpactPanel({
         </Alert>
       )}
 
+      {!impact.capacityFits && (
+        <Alert variant="destructive">
+          <AlertTriangle aria-hidden="true" />
+          <AlertTitle>LAYOUT_CAPACITY_BELOW_STAGE_PATCH · stage.patch</AlertTitle>
+          <AlertDescription>
+            This Layout has {impact.candidateCapacity} positions for {impact.fixtureCount} patched
+            fixtures. Keep the old Stage or cancel, then increase the Layout capacity before
+            applying it. The saved Layout asset and Canvas preview remain available.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="border-border flex items-center gap-2 rounded-md border p-2">
         <ShieldCheck className="size-3.5 text-emerald-400" aria-hidden="true" />
         <div className="min-w-0 flex-1">
@@ -215,16 +231,16 @@ export function StageLayoutImpactPanel({
             <GitBranch data-icon="inline-start" aria-hidden="true" />
             Upgrade Stage + listed dependents
           </Button>
-        ) : (
+        ) : impact.capacityFits ? (
           <Button size="sm" disabled={!mappingsComplete} onClick={() => apply("remap", true)}>
             <GitBranch data-icon="inline-start" aria-hidden="true" />
             Remap + upgrade listed dependents
           </Button>
-        )}
+        ) : null}
         <Button
           size="sm"
           variant="outline"
-          disabled={!mappingsComplete}
+          disabled={!impact.capacityFits || !mappingsComplete}
           onClick={() => apply("create_stage", false)}
         >
           Create new Stage + empty Arrangement

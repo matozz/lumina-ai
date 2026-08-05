@@ -71,6 +71,7 @@ pub fn run() {
             commands::migrate_show_project,
             commands::set_sequencer_mode,
             commands::get_layout_coords,
+            commands::preview_layout,
             commands::request_full_frame
         ])
         .build(tauri::generate_context!())

@@ -39,12 +39,18 @@ export const CanvasView = ({ frameSource = "live" }: { frameSource?: "preview" |
       renderer.initFromLayout(frame.layout_coords);
       renderer.applyFrame(frame.outputs, true);
     };
+    const handleLayoutDraft = (event: Event) => {
+      if (frameSource !== "preview") return;
+      renderer.initFromLayout((event as CustomEvent<LayoutCoord[]>).detail);
+    };
     window.addEventListener("engine:project-preview-frame", handleProjectPreview);
+    window.addEventListener("engine:layout-draft-coords", handleLayoutDraft);
 
     return () => {
       renderer.stopRenderLoop();
       unlistenPromise.then((fn) => fn());
       window.removeEventListener("engine:project-preview-frame", handleProjectPreview);
+      window.removeEventListener("engine:layout-draft-coords", handleLayoutDraft);
     };
   }, [frameSource]);
 

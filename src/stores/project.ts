@@ -220,6 +220,11 @@ export const projectActions = {
   useLayoutOnStage: (request: StageLayoutUpgradeRequest) => {
     const current = useProjectStore.getState();
     const impact = analyzeStageTopology(current.bundle, request.layoutRef);
+    if (!impact.capacityFits) {
+      throw new Error(
+        `Layout provides ${impact.candidateCapacity} positions for ${impact.fixtureCount} patched fixtures`,
+      );
+    }
     if (request.mode === "upgrade" && !impact.compatible) {
       throw new Error("Topology changed; choose an explicit TargetSet remap or create a new Stage");
     }

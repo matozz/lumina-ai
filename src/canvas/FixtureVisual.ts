@@ -3,23 +3,29 @@ export class FixtureVisual {
   readonly x: number;
   readonly y: number;
   readonly type: string;
+  readonly width: number;
+  readonly height: number;
   readonly radius: number;
 
   currentColor: { r: number; g: number; b: number } = { r: 0, g: 0, b: 0 };
 
-  constructor(id: number, x: number, y: number, type: string = "spot") {
+  constructor(
+    id: number,
+    x: number,
+    y: number,
+    type: string = "spot",
+    width?: number,
+    height?: number,
+  ) {
     this.id = id;
     this.x = x;
     this.y = y;
     this.type = type;
 
-    // Determine size based on fixture type
-    if (this.type === "pixel") {
-      this.radius = 4;
-    } else {
-      // spot and default
-      this.radius = 8;
-    }
+    const defaultDiameter = this.type === "pixel" ? 8 : 16;
+    this.width = width ?? defaultDiameter;
+    this.height = height ?? defaultDiameter;
+    this.radius = Math.max(this.width, this.height) / 2;
   }
 
   applyOutput(r: number, g: number, b: number, dimmer: number): void {

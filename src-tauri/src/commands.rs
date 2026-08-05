@@ -1,8 +1,11 @@
-use crate::compiler::diagnostic::{Diagnostic, PROJECT_REFERENCE_NOT_FOUND};
+use crate::compiler::diagnostic::{
+    Diagnostic, PROJECT_REFERENCE_NOT_FOUND, PROJECT_SCHEMA_INVALID,
+};
 use crate::compiler::{CompiledProjectSnapshot, Compiler, LayoutCoord};
 use crate::document::{
-    load_document, load_project_bundle, migrate_project_bundle, AssetRef, MigrationReport,
-    ShowDocumentV4,
+    layout_fixture_size_for_fixture, layout_to_legacy, load_document, load_project_bundle,
+    migrate_project_bundle, validate_layout_geometry, AssetRef, LayoutDefinition, MetaDSL,
+    MigrationReport, ShowDocumentV4, StageDocument,
 };
 use crate::engine::attribute::FixtureFramePayload;
 use crate::engine::effect::{EffectCatalog, EffectCatalogQuery, EffectSource, SPEED_PARAMETER_ID};
@@ -723,6 +726,45 @@ pub async fn get_layout_coords(
 }
 
 #[tauri::command]
+pub fn preview_layout(
+    layout: LayoutDefinition,
+    stage: StageDocument,
+) -> Result<Vec<LayoutCoord>, Vec<Diagnostic>> {
+    validate_layout_geometry(&layout).map_err(|message| {
+        vec![Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            "layout.geometry",
+            message,
+            "Enter valid integer fixture size and gap values, then retry this Layout Draft preview.",
+        )]
+    })?;
+    let fixture_ids: Vec<_> = stage
+        .patch
+        .iter()
+        .flat_map(|item| item.id_range.0..=item.id_range.1)
+        .collect();
+    let document = ShowDocumentV4 {
+        schema_version: 4,
+        meta: MetaDSL {
+            name: format!("{} · Layout Draft", layout.name),
+        },
+        patch: stage.patch,
+        layout: layout_to_legacy(&layout, &fixture_ids),
+        groups: Vec::new(),
+        effect_definitions: Vec::new(),
+        effect_instances: Vec::new(),
+        timeline: None,
+    };
+    let mut show = Compiler::compile_document(document)?;
+    for coord in &mut show.coords {
+        let fixture_size = layout_fixture_size_for_fixture(&layout, coord.id);
+        coord.width = Some(fixture_size.width);
+        coord.height = Some(fixture_size.height);
+    }
+    Ok(show.coords)
+}
+
+#[tauri::command]
 pub async fn request_full_frame(state: State<'_, Arc<EngineState>>) -> Result<(), String> {
     state
         .runtime
@@ -876,9 +918,12 @@ async fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), String> {
 mod tests {
     use super::{
         atomic_write, compile_dsl, is_live_catalog_instance, live_effect_catalog, load_project,
-        preview_dsl, preview_effect_loop, save_project, SAVE_SEQUENCE,
+        preview_dsl, preview_effect_loop, preview_layout, save_project, SAVE_SEQUENCE,
     };
-    use crate::document::{valid_bundle, AssetRef, TempoPointDSL};
+    use crate::document::{
+        valid_bundle, AssetRef, LayoutFixtureSizeOverride, LayoutGeometry, LayoutSize,
+        TempoPointDSL,
+    };
     use crate::state::ShowSnapshot;
     use std::sync::atomic::Ordering;
     use std::sync::Arc;
@@ -1012,6 +1057,38 @@ mod tests {
         assert_eq!(result.show_revision, None);
         assert_eq!(result.fixture_count, 4);
         assert_eq!(result.layout_coords.len(), 4);
+    }
+
+    #[test]
+    fn layout_draft_preview_is_independent_from_stage_patch_capacity() {
+        let mut bundle = valid_bundle();
+        let layout = &mut bundle.layouts[0];
+        let LayoutGeometry::Matrix { rows, columns, .. } = &mut layout.geometry else {
+            panic!("matrix fixture");
+        };
+        *rows = 1;
+        *columns = 2;
+        layout
+            .fixture_size_overrides
+            .push(LayoutFixtureSizeOverride {
+                fixture_id: 1,
+                size: LayoutSize {
+                    width: 24.0,
+                    height: 10.0,
+                },
+            });
+
+        let coords = preview_layout(layout.clone(), bundle.stages[0].clone())
+            .expect("smaller Layout still previews");
+        assert_eq!(coords.len(), 2);
+        assert_eq!(coords[0].width, Some(24.0));
+        assert_eq!(coords[0].height, Some(10.0));
+        assert!(coords
+            .iter()
+            .all(|coord| coord.width.is_some_and(|width| width > 0.0)));
+        assert!(coords
+            .iter()
+            .all(|coord| coord.height.is_some_and(|height| height > 0.0)));
     }
 
     #[tokio::test]

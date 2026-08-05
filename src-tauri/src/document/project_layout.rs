@@ -1,9 +1,32 @@
 use super::{
     CustomFixturePos, GeneratorDSL, LayoutAlgorithm, LayoutDSL, LayoutDefinition, LayoutGeometry,
-    LayoutOrientation, LayoutType,
+    LayoutOrientation, LayoutSize, LayoutType,
 };
 
 const METRIC_EPSILON: f64 = 0.000_001;
+
+pub fn layout_fixture_size(layout: &LayoutDefinition) -> LayoutSize {
+    match &layout.geometry {
+        LayoutGeometry::Matrix { fixture_size, .. }
+        | LayoutGeometry::Circle { fixture_size, .. }
+        | LayoutGeometry::Strip { fixture_size, .. }
+        | LayoutGeometry::Wall { fixture_size, .. }
+        | LayoutGeometry::Frame { fixture_size, .. }
+        | LayoutGeometry::Formula { fixture_size, .. }
+        | LayoutGeometry::SvgPath { fixture_size, .. }
+        | LayoutGeometry::Custom { fixture_size, .. }
+        | LayoutGeometry::Algorithm { fixture_size, .. } => *fixture_size,
+    }
+}
+
+pub fn layout_fixture_size_for_fixture(layout: &LayoutDefinition, fixture_id: u32) -> LayoutSize {
+    layout
+        .fixture_size_overrides
+        .iter()
+        .find(|item| item.fixture_id == fixture_id)
+        .map(|item| item.size)
+        .unwrap_or_else(|| layout_fixture_size(layout))
+}
 
 pub fn layout_grid_dimensions(layout: &LayoutDefinition) -> Option<(u32, u32)> {
     match layout.geometry {
@@ -201,6 +224,16 @@ pub fn validate_layout_geometry(layout: &LayoutDefinition) -> Result<(), String>
             {
                 return Err("Algorithm origin and parameters must be finite.".to_string());
             }
+        }
+    }
+    let mut fixture_ids = std::collections::BTreeSet::new();
+    for item in &layout.fixture_size_overrides {
+        validate_fixture_size(item.size.width, item.size.height)?;
+        if !fixture_ids.insert(item.fixture_id) {
+            return Err(format!(
+                "Fixture size override {} is duplicated.",
+                item.fixture_id
+            ));
         }
     }
     Ok(())
@@ -551,5 +584,6 @@ pub fn migrated_layout_definition(
         category,
         editor,
         geometry,
+        fixture_size_overrides: Vec::new(),
     }
 }
