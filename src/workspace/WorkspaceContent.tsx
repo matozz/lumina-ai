@@ -8,6 +8,7 @@ import type { WorkspaceId } from "@/stores/workspace";
 import { EffectLabPreview } from "./effect-lab/EffectLabPreview";
 import { CuePreview } from "./cues/CuePreview";
 import { ArrangementTimeline } from "./arrange/ArrangementTimeline";
+import { WorkspacePanelHeader } from "./WorkspacePanelHeader";
 
 export function WorkspaceContent({ workspace }: { workspace: WorkspaceId }) {
   if (workspace === "arrange") {
@@ -40,14 +41,14 @@ function WorkspaceSurface({ workspace }: { workspace: WorkspaceId }) {
 
   return (
     <section className="bg-background relative flex h-full min-h-0 flex-col">
-      <div className="border-border bg-card/70 flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
-        <Icon className="text-muted-foreground size-3.5" aria-hidden="true" />
-        <span className="text-xs font-medium">{meta.title}</span>
-        <span className="text-muted-foreground truncate text-[10px]">{meta.description}</span>
+      <WorkspacePanelHeader icon={Icon} title={meta.title}>
+        <span className="text-muted-foreground min-w-0 truncate text-[10px]">
+          {meta.description}
+        </span>
         <span className="text-muted-foreground ml-auto font-mono text-[10px] tabular-nums">
           {arrangement?.tempo_map.points.length ?? 0} tempo points · TimeSignatureMap
         </span>
-      </div>
+      </WorkspacePanelHeader>
       {workspace === "arrange" && arrangement && (
         <AuthoringTransportBar
           scope="arrangement"

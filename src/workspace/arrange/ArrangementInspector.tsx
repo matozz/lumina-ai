@@ -11,6 +11,7 @@ import { authoringSessionKey, useAuthoringTransportStore } from "@/authoring/tra
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import { workspaceActions } from "@/stores/workspace";
 import { ArrangementLoopEditor } from "./ArrangementLoopEditor";
+import { WorkspacePanelHeader } from "../WorkspacePanelHeader";
 
 interface TempoDraftPoint {
   time_tick: number;
@@ -141,13 +142,11 @@ export function ArrangementInspector() {
 
   return (
     <aside className="bg-card flex h-full min-h-0 flex-col" aria-label="Arrangement inspector">
-      <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
-        <Gauge className="text-primary" aria-hidden="true" />
-        <span className="text-xs font-medium">Arrangement clock</span>
+      <WorkspacePanelHeader icon={Gauge} title="Arrangement clock" iconClassName="text-primary">
         <Badge variant="outline" className="ml-auto">
           Editing
         </Badge>
-      </div>
+      </WorkspacePanelHeader>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-3 p-3">
           <FieldGroup>

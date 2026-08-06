@@ -39,6 +39,7 @@ import {
 } from "./StageCollectionEditorDialog";
 import { StageLayoutImpactPanel } from "./StageLayoutImpactPanel";
 import { StagePatchDialog } from "./StagePatchDialog";
+import { WorkspacePanelHeader } from "../WorkspacePanelHeader";
 import { TargetingSceneEditor } from "./TargetingSceneEditor";
 
 type SaveAsState = "closed" | "open";
@@ -153,16 +154,14 @@ export function ProjectStageInspector() {
 
   return (
     <aside className="bg-card flex h-full min-h-0 flex-col" aria-label="Stage inspector">
-      <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
-        <LayoutTemplate className="text-primary size-3.5" aria-hidden="true" />
-        <span className="text-xs font-medium">Stage setup</span>
+      <WorkspacePanelHeader icon={LayoutTemplate} title="Stage setup" iconClassName="text-primary">
         {dirty && <Badge variant="secondary">Unsaved</Badge>}
         {!dirty && (
           <Badge variant="outline" className="ml-auto">
             Ready
           </Badge>
         )}
-      </div>
+      </WorkspacePanelHeader>
       {advancedMode && (
         <div className="border-border flex shrink-0 items-center border-b px-2 py-1.5">
           <ToggleGroup

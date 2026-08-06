@@ -34,8 +34,8 @@ interface AuthoringTransportState {
   sessions: Record<string, AuthoringTransportSession>;
 }
 
-const DEFAULT_LOCAL_TIMING: LocalPreviewTiming = {
-  bpm: 120,
+export const DEFAULT_AUTHORING_LOCAL_TIMING: Readonly<LocalPreviewTiming> = {
+  bpm: 128,
   numerator: 4,
   denominator: 4,
   loopBars: 1,
@@ -216,7 +216,7 @@ export function authoringSessionKey(scope: AuthoringScope, assetKey: string) {
 
 export function createSession(defaults: AuthoringSessionDefaults): AuthoringTransportSession {
   const durationTicks = positiveInteger(defaults.durationTicks);
-  const localTiming = { ...DEFAULT_LOCAL_TIMING, ...defaults.localTiming };
+  const localTiming = { ...DEFAULT_AUTHORING_LOCAL_TIMING, ...defaults.localTiming };
   validateLocalTiming(localTiming);
   return {
     key: defaults.key,

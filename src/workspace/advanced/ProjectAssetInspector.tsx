@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { assetKey, exactAsset } from "@/document/projectModel";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import type { WorkspaceId } from "@/stores/workspace";
+import { WorkspacePanelHeader } from "../WorkspacePanelHeader";
 
 type AssetKind = "manifest" | "stage" | "effects" | "cues" | "arrangements";
 
@@ -69,9 +70,11 @@ export function ProjectAssetInspector({ workspace }: { workspace: WorkspaceId })
 
   return (
     <section className="bg-background flex h-full min-h-0 flex-col" aria-label="Advanced assets">
-      <div className="border-border bg-card flex h-10 shrink-0 items-center gap-2 border-b px-3">
-        <Braces className="text-muted-foreground" aria-hidden="true" />
-        <span className="text-xs font-medium">Independent asset inspector</span>
+      <WorkspacePanelHeader
+        icon={Braces}
+        title="Independent asset inspector"
+        className="bg-card h-10 px-3"
+      >
         <Badge variant="outline">JSON read-only</Badge>
         {workspace === "arrange" && (
           <Button size="xs" variant="outline" disabled={!effect} onClick={placeSingleEffect}>
@@ -97,7 +100,7 @@ export function ProjectAssetInspector({ workspace }: { workspace: WorkspaceId })
             </SelectGroup>
           </SelectContent>
         </Select>
-      </div>
+      </WorkspacePanelHeader>
       <ScrollArea className="min-h-0 flex-1">
         <pre className="text-foreground overflow-x-auto p-4 font-mono text-xs leading-relaxed">
           {JSON.stringify(value, null, 2)}

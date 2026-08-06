@@ -68,6 +68,7 @@ import {
 } from "@/stores/workspace";
 import { createCueDraftFromEffect } from "./cues/cueAuthoring";
 import { StageCollectionEditorDialog } from "./stage/StageCollectionEditorDialog";
+import { WorkspacePanelHeader } from "./WorkspacePanelHeader";
 
 export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   const bundle = useProjectStore(projectSelectors.bundle);
@@ -206,9 +207,11 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
 
   return (
     <aside className="bg-card flex h-full min-h-0 flex-col" aria-label={`${workspace} library`}>
-      <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
-        <LibraryIcon workspace={workspace} />
-        <span className="truncate text-xs font-medium">{libraryTitle(workspace)}</span>
+      <WorkspacePanelHeader
+        icon={libraryIcon(workspace)}
+        title={libraryTitle(workspace)}
+        iconClassName="text-muted-foreground"
+      >
         {workspace === "effect-lab" && (
           <Button
             size="icon-xs"
@@ -243,7 +246,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
             <Plus aria-hidden="true" />
           </Button>
         )}
-      </div>
+      </WorkspacePanelHeader>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1.5 p-2">
           {workspace === "stage" && (
@@ -678,15 +681,14 @@ function EffectLibraryButton({
   );
 }
 
-function LibraryIcon({ workspace }: { workspace: WorkspaceId }) {
-  const Icon = {
+function libraryIcon(workspace: WorkspaceId) {
+  return {
     stage: Lightbulb,
     "effect-lab": Boxes,
     cues: Layers2,
     arrange: Layers3,
     live: RadioTower,
   }[workspace];
-  return <Icon className="text-muted-foreground" aria-hidden="true" />;
 }
 
 function libraryTitle(workspace: WorkspaceId) {

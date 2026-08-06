@@ -11,6 +11,22 @@ describe("AuthoringTransport session state", () => {
 
   beforeEach(() => authoringTransportActions.reset());
 
+  it("starts Effect and Cue previews at 128 BPM", () => {
+    const effect = authoringTransportActions.ensureSession({
+      key,
+      scope: "effect",
+      durationTicks: 3_840,
+    });
+    const cue = authoringTransportActions.ensureSession({
+      key: authoringSessionKey("cue", "drop@1"),
+      scope: "cue",
+      durationTicks: 3_840,
+    });
+
+    expect(effect.localTiming.bpm).toBe(128);
+    expect(cue.localTiming.bpm).toBe(128);
+  });
+
   it("uses explicit Play, Pause, Stop and Seek transitions", () => {
     authoringTransportActions.ensureSession({ key, scope: "effect", durationTicks: 3_840 });
     authoringTransportActions.seek(key, 1_200, 10);

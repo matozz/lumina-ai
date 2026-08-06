@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { assetKey, exactAsset } from "@/document/projectModel";
+import { cn } from "@/lib/utils";
 import {
   authoringDraftActions,
   authoringDraftSelectors,
@@ -45,6 +46,7 @@ import {
   type CueLayerUpdate,
 } from "./cueAuthoring";
 import { CueLayerEditor } from "./CueLayerEditor";
+import { WorkspacePanelHeader } from "../WorkspacePanelHeader";
 import { CueLayerList } from "./CueLayerList";
 import { useCueDraftValidation } from "./useCueDraftValidation";
 
@@ -161,13 +163,11 @@ export function CueBuilderInspector() {
         className="bg-card flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
         aria-label="Cue Builder"
       >
-        <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
-          <Layers2 className="text-primary" aria-hidden="true" />
-          <span className="text-xs font-medium">Cue Builder</span>
+        <WorkspacePanelHeader icon={Layers2} title="Cue Builder" iconClassName="text-primary">
           <Badge variant="outline" className="ml-auto">
             {session.mode === "new" ? "New Cue" : "Editing"}
           </Badge>
-        </div>
+        </WorkspacePanelHeader>
         <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
           <div className="flex min-w-0 flex-col gap-3 p-3">
             {advancedMode && (
@@ -496,16 +496,22 @@ function DeleteCueButton({ reference }: { reference: { id: string; revision: num
 
 function CueBuilderEmpty({ error }: { error?: string }) {
   return (
-    <aside className="bg-card flex h-full items-center justify-center p-4" aria-label="Cue Builder">
-      <p
-        className={
-          error
-            ? "text-destructive text-center text-xs"
-            : "text-muted-foreground text-center text-xs"
-        }
-      >
-        {error ?? "Choose a Production recipe or create a Cue from the selected Effect."}
-      </p>
+    <aside className="bg-card flex h-full min-h-0 flex-col" aria-label="Cue Builder">
+      <WorkspacePanelHeader icon={Layers2} title="Cue Builder" iconClassName="text-primary">
+        <Badge variant="outline" className="ml-auto">
+          Ready
+        </Badge>
+      </WorkspacePanelHeader>
+      <div className="flex min-h-0 flex-1 items-center justify-center p-4">
+        <p
+          className={cn(
+            "max-w-48 text-center text-xs leading-relaxed",
+            error ? "text-destructive" : "text-muted-foreground",
+          )}
+        >
+          {error ?? "Choose a Production recipe or create a Cue from the selected Effect."}
+        </p>
+      </div>
     </aside>
   );
 }

@@ -56,6 +56,7 @@ import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/store
 import { AuthoringSignalSpine } from "../AuthoringSignalSpine";
 import { createCueDraftFromEffect } from "../cues/cueAuthoring";
 import { StageCollectionEditorDialog } from "../stage/StageCollectionEditorDialog";
+import { WorkspacePanelHeader } from "../WorkspacePanelHeader";
 import { EffectParameterControls } from "./EffectParameterControls";
 
 export function EffectLabInspector() {
@@ -231,16 +232,18 @@ export function EffectLabInspector() {
   return (
     <>
       <aside className="bg-card flex h-full min-h-0 flex-col" aria-label="Effect Lab inspector">
-        <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
-          <FlaskConical className="text-primary" aria-hidden="true" />
-          <span className="text-xs font-medium">Effect controls</span>
+        <WorkspacePanelHeader
+          icon={FlaskConical}
+          title="Effect controls"
+          iconClassName="text-primary"
+        >
           <Badge
             variant={effect.source === "built_in" ? "secondary" : "outline"}
             className="ml-auto"
           >
             {effect.source === "built_in" ? "Ready to use" : "Custom"}
           </Badge>
-        </div>
+        </WorkspacePanelHeader>
         <ScrollArea className="min-h-0 flex-1">
           <div className="flex flex-col gap-3 p-3">
             {advancedMode && (

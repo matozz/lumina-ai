@@ -11,6 +11,7 @@ import {
   useProjectStore,
 } from "@/stores/project";
 import { materializeAuthoringPreview } from "../authoringPreviewBundle";
+import { WorkspacePanelHeader } from "../WorkspacePanelHeader";
 
 export function EffectLabPreview() {
   const bundle = useProjectStore(projectSelectors.bundle);
@@ -42,9 +43,11 @@ export function EffectLabPreview() {
 
   return (
     <section className="bg-background relative flex h-full min-h-0 flex-col">
-      <div className="border-border bg-card/70 flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
-        <RotateCw className="text-primary" aria-hidden="true" />
-        <span className="text-xs font-medium">Effect loop preview</span>
+      <WorkspacePanelHeader
+        icon={RotateCw}
+        title="Effect loop preview"
+        iconClassName="text-primary"
+      >
         <Badge variant="outline">Authoring Preview</Badge>
         {showIntensityWithoutColor && <Badge variant="outline">Intensity visualization</Badge>}
         {noVisibleOutput && <Badge variant="secondary">No visible output</Badge>}
@@ -52,7 +55,7 @@ export function EffectLabPreview() {
         <span className="text-muted-foreground ml-auto truncate text-[10px]">
           {effect ? `${effect.name} · ${stage.name}` : "No Effect selected"}
         </span>
-      </div>
+      </WorkspacePanelHeader>
       {materialized.effectRef && arrangement && (
         <AuthoringTransportBar
           scope="effect"

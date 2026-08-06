@@ -17,6 +17,7 @@ import {
   authoringSessionKey,
   authoringTransportActions,
   createSession,
+  DEFAULT_AUTHORING_LOCAL_TIMING,
   type AuthoringScope,
   useAuthoringTransportStore,
 } from "./transport";
@@ -260,10 +261,7 @@ export function AuthoringTransportBar({
             run(() => {
               if (scope !== "arrangement") {
                 authoringTransportActions.setLocalTiming(key, {
-                  bpm: 120,
-                  numerator: 4,
-                  denominator: 4,
-                  loopBars: 1,
+                  ...DEFAULT_AUTHORING_LOCAL_TIMING,
                 });
               }
               authoringTransportActions.setLoop(key, {

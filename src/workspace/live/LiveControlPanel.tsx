@@ -7,6 +7,7 @@ import { LiveDiagnostics } from "./LiveDiagnostics";
 import { LivePadGrid } from "./LivePadGrid";
 import { LivePadSettings } from "./LivePadSettings";
 import { LiveTransportControls } from "./LiveTransportControls";
+import { WorkspacePanelHeader } from "../WorkspacePanelHeader";
 
 export function LiveControlPanel({ embedded = false }: { embedded?: boolean }) {
   const effects = useEngineStore(engineSelectors.liveEffects);
@@ -25,13 +26,15 @@ export function LiveControlPanel({ embedded = false }: { embedded?: boolean }) {
       aria-label="Live and rehearsal controls"
       data-layout-region={embedded ? "inspector" : "live-control"}
     >
-      <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
-        <RadioTower className="size-3.5 text-amber-400" aria-hidden="true" />
-        <span className="text-xs font-medium">Live / Rehearse</span>
+      <WorkspacePanelHeader
+        icon={RadioTower}
+        title="Live / Rehearse"
+        iconClassName="text-amber-400"
+      >
         <span className="text-muted-foreground ml-auto text-[10px]">
           {liveRevision === null ? "Not live" : "Live"}
         </span>
-      </div>
+      </WorkspacePanelHeader>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-2.5 p-2.5">
           <LiveTransportControls />

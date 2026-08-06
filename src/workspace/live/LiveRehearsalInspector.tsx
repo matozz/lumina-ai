@@ -7,27 +7,23 @@ import { exactAsset } from "@/document/projectModel";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import { useWorkspaceStore, workspaceSelectors } from "@/stores/workspace";
 import { LiveControlPanel } from "./LiveControlPanel";
+import { WorkspacePanelHeader } from "../WorkspacePanelHeader";
 
 export function LiveRehearsalInspector() {
   const viewMode = useProjectStore(projectSelectors.liveViewMode);
   const previewSource = useProjectStore(projectSelectors.previewSource);
   const publishedRevision = useWorkspaceStore(workspaceSelectors.publishedRevision);
   const liveRevision = useWorkspaceStore(workspaceSelectors.liveRevision);
+  const SourceIcon = viewMode === "live" ? RadioTower : FlaskConical;
 
   return (
     <div className="bg-card flex h-full min-h-0 flex-col" aria-label="Live and rehearsal boundary">
+      <WorkspacePanelHeader icon={SourceIcon} title="Output source" iconClassName="text-primary">
+        <Badge variant={viewMode === "live" ? "destructive" : "secondary"} className="ml-auto">
+          {viewMode === "live" ? (liveRevision === null ? "Not live" : "Live") : "Rehearsal"}
+        </Badge>
+      </WorkspacePanelHeader>
       <div className="border-border flex shrink-0 flex-col gap-2 border-b p-2.5">
-        <div className="flex items-center gap-2">
-          {viewMode === "live" ? (
-            <RadioTower className="text-primary" aria-hidden="true" />
-          ) : (
-            <FlaskConical className="text-primary" aria-hidden="true" />
-          )}
-          <span className="text-xs font-medium">Output source</span>
-          <Badge variant={viewMode === "live" ? "destructive" : "secondary"} className="ml-auto">
-            {viewMode === "live" ? (liveRevision === null ? "Not live" : "Live") : "Rehearsal"}
-          </Badge>
-        </div>
         <div className="grid grid-cols-3 gap-1">
           <Button
             size="xs"

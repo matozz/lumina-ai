@@ -11,6 +11,7 @@ import {
   useProjectStore,
 } from "@/stores/project";
 import { materializeAuthoringPreview } from "../authoringPreviewBundle";
+import { WorkspacePanelHeader } from "../WorkspacePanelHeader";
 
 export function CuePreview() {
   const bundle = useProjectStore(projectSelectors.bundle);
@@ -41,9 +42,7 @@ export function CuePreview() {
 
   return (
     <section className="bg-background relative flex h-full min-h-0 flex-col">
-      <div className="border-border bg-card/70 flex h-8 shrink-0 items-center gap-2 border-b px-2.5">
-        <Layers2 className="text-primary" aria-hidden="true" />
-        <span className="text-xs font-medium">Cue loop preview</span>
+      <WorkspacePanelHeader icon={Layers2} title="Cue loop preview" iconClassName="text-primary">
         <Badge variant="outline">Authoring Preview</Badge>
         {showIntensityWithoutColor && <Badge variant="outline">Intensity visualization</Badge>}
         {noVisibleOutput && <Badge variant="secondary">No visible output</Badge>}
@@ -54,7 +53,7 @@ export function CuePreview() {
         <span className="text-muted-foreground ml-auto truncate text-[10px]">
           {cue ? `${cue.name} · ${cue.layers.length} effects` : "No Cue selected"}
         </span>
-      </div>
+      </WorkspacePanelHeader>
       {materialized.cueRef && arrangement && (
         <AuthoringTransportBar
           scope="cue"
