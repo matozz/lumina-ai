@@ -44,6 +44,7 @@ import {
   assetKey,
   exactAsset,
   latestRefsById,
+  normalizeProjectAssetRefs,
   uniqueId,
 } from "@/document/projectModel";
 import { effectTargetCompatibility, friendlyEffectAttribute } from "@/document/effectCompatibility";
@@ -173,7 +174,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
           );
     try {
       const cue = await engine.resolveProductionCueRecipe({
-        project: bundle,
+        project: normalizeProjectAssetRefs(structuredClone(bundle)),
         recipeRef: { id: recipeId, revision },
         stageRef: { id: stage.id, revision: stage.revision },
         cueId,

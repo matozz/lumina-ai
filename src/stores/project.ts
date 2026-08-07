@@ -27,6 +27,8 @@ import {
   duplicateArrangementAsset,
   exactAsset,
   forkAssetRevision,
+  normalizeProjectAssetRefs,
+  toAssetRef,
   uniqueId,
 } from "@/document/projectModel";
 import { migrateProjectBundle } from "@/document/projectMigration";
@@ -76,7 +78,7 @@ export interface ProjectState {
 }
 
 const starter = createStarterProjectBundle();
-const LOCAL_WORKSPACE_STORAGE_VERSION = 5;
+const LOCAL_WORKSPACE_STORAGE_VERSION = 6;
 const LEGACY_LOCAL_EFFECT_NAMES = new Set([
   "Breathe Custom",
   "Gradient 2",
@@ -123,7 +125,9 @@ export const useProjectStore = create<ProjectState>()(
     version: LOCAL_WORKSPACE_STORAGE_VERSION,
     migrate: (persistedState, version) => {
       const state = persistedState as Partial<ProjectState>;
-      let bundle = migrateProjectBundle(state.bundle ?? starter).bundle;
+      const persistedBundle = structuredClone(state.bundle ?? starter);
+      if (persistedBundle.schema_version === 2) normalizeProjectAssetRefs(persistedBundle);
+      let bundle = migrateProjectBundle(persistedBundle).bundle;
       const refreshed =
         version < LOCAL_WORKSPACE_STORAGE_VERSION && isLegacyAcceptanceWorkspace(bundle);
       if (refreshed) bundle = createStarterProjectBundle();
@@ -141,20 +145,24 @@ export const useProjectStore = create<ProjectState>()(
         bundle,
         selectedLayoutRef: refreshed
           ? bundle.manifest.layout_refs[0]
-          : (state.selectedLayoutRef ?? bundle.manifest.layout_refs[0]),
+          : toAssetRef(state.selectedLayoutRef ?? bundle.manifest.layout_refs[0]),
         selectedEffectRef:
           refreshed ||
           (cleanedArrangeCopies && !exactAsset(bundle.effects, state.selectedEffectRef ?? null))
             ? null
-            : (state.selectedEffectRef ?? null),
+            : state.selectedEffectRef
+              ? toAssetRef(state.selectedEffectRef)
+              : null,
         selectedCueRef:
           refreshed ||
           (cleanedArrangeCopies && !exactAsset(bundle.cues, state.selectedCueRef ?? null))
             ? null
-            : (state.selectedCueRef ?? null),
+            : state.selectedCueRef
+              ? toAssetRef(state.selectedCueRef)
+              : null,
         selectedArrangementRef: refreshed
           ? activeArrangementRef(bundle)
-          : (state.selectedArrangementRef ?? activeArrangementRef(bundle)),
+          : toAssetRef(state.selectedArrangementRef ?? activeArrangementRef(bundle)),
         selectedTargetSetId: refreshed ? "all" : (state.selectedTargetSetId ?? "all"),
       } satisfies ProjectState;
     },
@@ -1161,9 +1169,10 @@ function transact(
   mutate: (bundle: ProjectBundle, published: ProjectBundle | null) => void,
 ) {
   const state = useProjectStore.getState();
-  const before = structuredClone(state.bundle);
-  const after = structuredClone(state.bundle);
+  const before = normalizeProjectAssetRefs(structuredClone(state.bundle));
+  const after = structuredClone(before);
   mutate(after, state.publishedBundle);
+  normalizeProjectAssetRefs(after);
   if (JSON.stringify(before) === JSON.stringify(after)) return;
   const history = state.history.slice(0, state.historyCursor);
   history.push({ label, before, after: structuredClone(after) });

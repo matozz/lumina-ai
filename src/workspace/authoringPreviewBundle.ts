@@ -5,7 +5,12 @@ import type {
   ProductionCatalog,
   ProjectBundle,
 } from "@/bridge/types";
-import { appendExactRef, assetKey, exactAsset } from "@/document/projectModel";
+import {
+  appendExactRef,
+  assetKey,
+  exactAsset,
+  normalizeProjectAssetRefs,
+} from "@/document/projectModel";
 
 interface PreviewDraftState {
   effect: {
@@ -70,7 +75,7 @@ export function materializeAuthoringPreview(
     }
   }
 
-  const next = structuredClone(bundle);
+  const next = normalizeProjectAssetRefs(structuredClone(bundle));
   if (effect) upsertEffect(next, effect);
   if (cue) {
     for (const layer of cue.layers) {
@@ -102,7 +107,7 @@ export function materializeCueDraftBundle(
   catalog: ProductionCatalog | null,
   arrangementRef?: AssetRef | null,
 ) {
-  const next = structuredClone(bundle);
+  const next = normalizeProjectAssetRefs(structuredClone(bundle));
   for (const layer of cue.layers) {
     const productionEffect = exactAsset(catalog?.effects ?? [], layer.effect_ref);
     if (productionEffect) upsertEffect(next, productionEffect);
@@ -130,7 +135,7 @@ function isolateAuthoringBundle(
   cue: CueDefinition | null,
   arrangementRef?: AssetRef | null,
 ) {
-  const next = structuredClone(bundle);
+  const next = normalizeProjectAssetRefs(structuredClone(bundle));
   const stageRef = cue?.compatible_stage_ref ?? next.manifest.stage_ref;
   const stage = exactAsset(next.stages, stageRef);
   const layout = stage ? exactAsset(next.layouts, stage.layout_ref) : null;

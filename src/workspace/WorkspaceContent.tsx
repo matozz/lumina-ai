@@ -1,6 +1,7 @@
-import { FlaskConical, Layers2, Layers3, Lightbulb, RadioTower } from "lucide-react";
+import { FlaskConical, Layers2, Layers3, Lightbulb, RadioTower, TriangleAlert } from "lucide-react";
 import { AuthoringTransportBar } from "@/authoring/AuthoringTransportBar";
 import { CanvasView } from "@/canvas/CanvasView";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { exactAsset } from "@/document/projectModel";
 import { projectSelectors, useProjectStore } from "@/stores/project";
@@ -35,6 +36,7 @@ function WorkspaceSurface({ workspace }: { workspace: WorkspaceId }) {
   const bundle = useProjectStore(projectSelectors.bundle);
   const arrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
   const liveViewMode = useProjectStore(projectSelectors.liveViewMode);
+  const previewError = useProjectStore(projectSelectors.previewError);
   const arrangement = exactAsset(bundle.arrangements, arrangementRef);
   const meta = surfaceMeta(workspace, liveViewMode);
   const Icon = meta.icon;
@@ -61,6 +63,15 @@ function WorkspaceSurface({ workspace }: { workspace: WorkspaceId }) {
           frameSource={workspace === "live" && liveViewMode === "live" ? "live" : "preview"}
           showIntensityWithoutColor={workspace === "arrange"}
         />
+        {workspace === "arrange" && previewError && (
+          <div className="bg-background/80 absolute inset-0 flex items-center justify-center p-6 backdrop-blur-sm">
+            <Alert variant="destructive" className="max-w-md">
+              <TriangleAlert aria-hidden="true" />
+              <AlertTitle>Arrangement preview unavailable</AlertTitle>
+              <AlertDescription>{previewError}</AlertDescription>
+            </Alert>
+          </div>
+        )}
       </div>
     </section>
   );

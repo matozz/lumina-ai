@@ -26,4 +26,15 @@ describe("WorkspaceContent", () => {
 
     expect(screen.getByTestId("canvas").dataset.intensityVisualization).toBe("true");
   });
+
+  it("shows Arrange preview failures instead of leaving a silent blank canvas", () => {
+    projectActions.setPreviewError("The selected Cue revision could not be compiled.");
+
+    render(<WorkspaceContent workspace="arrange" />);
+
+    expect(screen.getByRole("alert").textContent).toContain("Arrangement preview unavailable");
+    expect(screen.getByRole("alert").textContent).toContain(
+      "The selected Cue revision could not be compiled.",
+    );
+  });
 });

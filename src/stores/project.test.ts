@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { ProjectPreviewFrame } from "@/bridge/types";
+import type { AssetRef, ProjectPreviewFrame } from "@/bridge/types";
 import {
   authoringSessionKey,
   authoringTransportActions,
@@ -125,6 +125,52 @@ describe("Stage 7 Project state", () => {
     expect(migratedClip.cue_ref).toEqual({ id: migratedCue.id, revision: migratedCue.revision });
     expect(migrated.bundle.manifest.cue_refs).toContainEqual(migratedClip.cue_ref);
     expect(migrated.selectedCueRef).toBeNull();
+  });
+
+  it("repairs full assets accidentally persisted where exact references belong", async () => {
+    const effectRef = projectActions.createEffect("Reference repair")!;
+    const cueRef = projectActions.createCue([effectRef], "Reference repair Cue")!;
+    const bundle = structuredClone(useProjectStore.getState().bundle);
+    const effect = exactAsset(bundle.effects, effectRef)!;
+    const cue = exactAsset(bundle.cues, cueRef)!;
+    const arrangement = bundle.arrangements[0]!;
+    const corruptEffectRef = structuredClone(effect) as unknown as AssetRef;
+    const corruptCueRef = structuredClone(cue) as unknown as AssetRef;
+    bundle.manifest.effect_refs = [corruptEffectRef];
+    bundle.manifest.cue_refs = [corruptCueRef];
+    cue.layers[0]!.effect_ref = corruptEffectRef;
+    arrangement.tracks[0]!.clips = [
+      {
+        id: "corrupt-ref-clip",
+        cue_ref: corruptCueRef,
+        start_tick: 0,
+        duration_tick: cue.nominal_length_ticks,
+      },
+    ];
+
+    const migrate = useProjectStore.persist.getOptions().migrate;
+    const migrated = (await Promise.resolve(
+      migrate?.(
+        {
+          bundle,
+          selectedEffectRef: corruptEffectRef,
+          selectedCueRef: corruptCueRef,
+          selectedArrangementRef: structuredClone(arrangement) as unknown as AssetRef,
+        },
+        5,
+      ),
+    )) as ReturnType<typeof useProjectStore.getState>;
+
+    expect(migrated.bundle.manifest.effect_refs).toEqual([effectRef]);
+    expect(migrated.bundle.manifest.cue_refs).toEqual([cueRef]);
+    expect(migrated.bundle.cues[0]!.layers[0]!.effect_ref).toEqual(effectRef);
+    expect(migrated.bundle.arrangements[0]!.tracks[0]!.clips![0]!.cue_ref).toEqual(cueRef);
+    expect(migrated.selectedEffectRef).toEqual(effectRef);
+    expect(migrated.selectedCueRef).toEqual(cueRef);
+    expect(migrated.selectedArrangementRef).toEqual({
+      id: arrangement.id,
+      revision: arrangement.revision,
+    });
   });
 
   it("pauses the current preview before selecting another Effect", () => {

@@ -110,7 +110,10 @@ export function ArrangementTimeline() {
             if (!exactAsset(workingBundle.effects, effect)) {
               workingBundle.effects.push(structuredClone(effect));
             }
-            appendExactRef(workingBundle.manifest.effect_refs, effect);
+            appendExactRef(workingBundle.manifest.effect_refs, {
+              id: effect.id,
+              revision: effect.revision,
+            });
           }
           if (!exactAsset(workingBundle.cues, cueRef)) {
             workingBundle.cues.push(structuredClone(cue));

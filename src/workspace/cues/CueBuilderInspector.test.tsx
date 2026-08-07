@@ -63,6 +63,13 @@ describe("Cue Builder safe authoring", () => {
   });
 
   it("resolves a Production recipe into a session-only draft before save", async () => {
+    const state = useProjectStore.getState();
+    const bundle = structuredClone(state.bundle);
+    bundle.manifest.layout_refs = [
+      structuredClone(bundle.layouts[0]) as unknown as (typeof bundle.manifest.layout_refs)[number],
+    ];
+    useProjectStore.setState({ bundle });
+
     render(<Harness />);
 
     fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
@@ -71,6 +78,9 @@ describe("Cue Builder safe authoring", () => {
     expect(useProjectStore.getState().bundle.cues).toHaveLength(0);
     expect(useAuthoringDraftStore.getState().cue?.mode).toBe("new");
     expect(screen.getByText("Production Recipes")).toBeTruthy();
+    expect(
+      bridge.resolveProductionCueRecipe.mock.calls[0]![0].project.manifest.layout_refs[0],
+    ).toEqual({ id: bundle.layouts[0]!.id, revision: bundle.layouts[0]!.revision });
     const selected = useProjectStore.getState().selectedCueRef!;
     await waitFor(() =>
       expect(

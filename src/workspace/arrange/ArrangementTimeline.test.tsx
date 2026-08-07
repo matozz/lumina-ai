@@ -44,8 +44,25 @@ describe("ArrangementTimeline workflow", () => {
 
     const state = useProjectStore.getState();
     const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
-    expect(state.bundle.cues).toContainEqual(cue);
+    const savedCue = exactAsset(state.bundle.cues, { id: cue.id, revision: cue.revision });
+    expect(savedCue).toMatchObject({
+      id: cue.id,
+      revision: cue.revision,
+      layers: [
+        expect.objectContaining({
+          effect_ref: { id: effect.id, revision: effect.revision },
+        }),
+      ],
+    });
     expect(state.bundle.effects).toContainEqual(effect);
+    expect(state.bundle.manifest.effect_refs).toContainEqual({
+      id: effect.id,
+      revision: effect.revision,
+    });
+    expect(
+      state.bundle.manifest.effect_refs.every((reference) => !("schema_version" in reference)),
+    ).toBe(true);
+    expect(savedCue?.layers.every((layer) => !("schema_version" in layer.effect_ref))).toBe(true);
     expect(arrangement.tracks[0].clips).toContainEqual(
       expect.objectContaining({ cue_ref: { id: cue.id, revision: cue.revision } }),
     );
