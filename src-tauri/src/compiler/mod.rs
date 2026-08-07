@@ -349,6 +349,23 @@ fn circle_ring_fixture_counts(fixture_count: usize, rings: u32, increment: u32) 
     allocations.into_iter().map(|(_, count, _)| count).collect()
 }
 
+fn circle_ring_radii(ring_counts: &[usize], minimum_center_gap: f64) -> Vec<f64> {
+    let mut previous_radius = 0.0;
+    ring_counts
+        .iter()
+        .map(|count| {
+            let tangential_radius = if *count > 1 {
+                minimum_center_gap / (2.0 * (std::f64::consts::PI / *count as f64).sin())
+            } else {
+                0.0
+            };
+            let radius = (previous_radius + minimum_center_gap).max(tangential_radius);
+            previous_radius = radius;
+            radius
+        })
+        .collect()
+}
+
 pub struct Compiler;
 
 impl Compiler {
@@ -495,12 +512,10 @@ impl Compiler {
                         patched: None,
                     });
                     let mut current_idx = 1;
-                    for (ring_index, count) in
-                        circle_ring_fixture_counts(fix_ids.len(), *rings, *increment)
-                            .into_iter()
-                            .enumerate()
-                    {
-                        let radius = gap * (ring_index + 1) as f64;
+                    let ring_counts = circle_ring_fixture_counts(fix_ids.len(), *rings, *increment);
+                    let ring_radii = circle_ring_radii(&ring_counts, *gap);
+                    for (ring_index, count) in ring_counts.into_iter().enumerate() {
+                        let radius = ring_radii[ring_index];
                         for step in 0..count {
                             let angle = (2.0 * std::f64::consts::PI / count as f64) * step as f64;
                             coords.push(LayoutCoord {
@@ -1869,7 +1884,7 @@ fn non_finite_formula_diagnostic(path: &str) -> Diagnostic {
 #[cfg(test)]
 mod tests {
     use super::{
-        circle_ring_fixture_counts,
+        circle_ring_fixture_counts, circle_ring_radii,
         diagnostic::{
             DOC_ATTRIBUTE_NOT_SUPPORTED, DOC_ATTRIBUTE_OUT_OF_RANGE, DSL_DUPLICATE_FIXTURE_ID,
             DSL_TARGET_GROUP_NOT_FOUND,
@@ -1922,6 +1937,17 @@ mod tests {
         assert_eq!(circle_ring_fixture_counts(80, 3, 14), vec![13, 26, 40]);
         assert_eq!(circle_ring_fixture_counts(86, 3, 14), vec![14, 28, 42]);
         assert_eq!(circle_ring_fixture_counts(5, 3, 14), vec![1, 1, 2]);
+    }
+
+    #[test]
+    fn circle_gap_is_respected_radially_and_around_each_ring() {
+        let counts = [13, 26, 40];
+        let radii = circle_ring_radii(&counts, 22.0);
+        assert!(radii.windows(2).all(|pair| pair[1] - pair[0] >= 22.0));
+        for (count, radius) in counts.into_iter().zip(radii) {
+            let chord = 2.0 * radius * (std::f64::consts::PI / count as f64).sin();
+            assert!(chord >= 22.0 - f64::EPSILON);
+        }
     }
 
     #[test]

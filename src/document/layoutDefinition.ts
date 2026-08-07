@@ -227,8 +227,8 @@ function geometryDiagnostic(geometry: LayoutGeometry): LayoutDiagnostic | null {
       return diagnostic(
         "LAYOUT_RING_METRICS_INVALID",
         "layout.geometry.ring_pitch",
-        "Ring pitch must equal fixture diameter plus a non-negative ring gap.",
-        "Adjust fixture size or ring gap; zero ring gap is supported.",
+        "Circle spacing must equal fixture diameter plus a non-negative fixture gap.",
+        "Adjust fixture size or fixture gap; zero gap is supported.",
       );
     }
   }
@@ -286,14 +286,15 @@ function circlePositions(
     : [];
   let index = 1;
   const ringCounts = circleRingFixtureCounts(fixtureIds.length, geometry.rings, geometry.increment);
+  const ringRadii = circleRingRadii(ringCounts, geometry.ring_pitch);
   for (let ring = 1; ring <= ringCounts.length && index < fixtureIds.length; ring += 1) {
     const count = ringCounts[ring - 1];
     for (let step = 0; step < count && index < fixtureIds.length; step += 1) {
       const angle = (step / count) * Math.PI * 2;
       positions.push({
         id: fixtureIds[index],
-        x: geometry.center.x + Math.cos(angle) * geometry.ring_pitch * ring,
-        y: geometry.center.y + Math.sin(angle) * geometry.ring_pitch * ring,
+        x: geometry.center.x + Math.cos(angle) * ringRadii[ring - 1],
+        y: geometry.center.y + Math.sin(angle) * ringRadii[ring - 1],
       });
       index += 1;
     }
@@ -324,6 +325,16 @@ export function circleRingFixtureCounts(fixtureCount: number, rings: number, inc
     priority[index % priority.length].count += 1;
   }
   return allocations.map((allocation) => allocation.count);
+}
+
+export function circleRingRadii(ringCounts: number[], minimumCenterGap: number) {
+  let previousRadius = 0;
+  return ringCounts.map((count) => {
+    const tangentialRadius = count > 1 ? minimumCenterGap / (2 * Math.sin(Math.PI / count)) : 0;
+    const radius = Math.max(previousRadius + minimumCenterGap, tangentialRadius);
+    previousRadius = radius;
+    return radius;
+  });
 }
 
 function framePositions(

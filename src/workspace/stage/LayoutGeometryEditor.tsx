@@ -196,7 +196,7 @@ function CircleGeometryFields({
           }
         />
         <NumberField
-          label="Ring gap"
+          label="Fixture gap"
           value={geometry.ring_gap}
           min={0}
           integer
@@ -206,8 +206,8 @@ function CircleGeometryFields({
         />
       </div>
       <FieldDescription>
-        Rings distribute the patched fixtures automatically. Gap is measured edge-to-edge and may be
-        zero; radial pitch is derived from fixture size + gap.
+        Minimum edge-to-edge gap between fixtures. Lumina expands each ring as needed so dense
+        circles do not overlap; zero is supported.
       </FieldDescription>
     </>
   );

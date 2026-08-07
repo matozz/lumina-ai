@@ -155,7 +155,7 @@ describe("ProjectStageInspector Layout workflow", () => {
     expect(screen.getByLabelText("Fixture count")).toHaveProperty("value", "80");
   });
 
-  it("edits circles through rings, ring gap, and shared fixture size", async () => {
+  it("edits circles through rings, fixture gap, and shared fixture size", async () => {
     const circleRef = useProjectStore
       .getState()
       .bundle.manifest.layout_refs.find((reference) => reference.id === "circle-16");
@@ -166,7 +166,7 @@ describe("ProjectStageInspector Layout workflow", () => {
     await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
 
     expect(screen.getByLabelText("Rings")).toBeTruthy();
-    expect(screen.getByLabelText("Ring gap")).toBeTruthy();
+    expect(screen.getByLabelText("Fixture gap")).toBeTruthy();
     expect(screen.getByLabelText("Fixture width")).toBeTruthy();
     expect(screen.getByLabelText("Fixture height")).toBeTruthy();
     expect(screen.queryByLabelText("Ring increment")).toBeNull();

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { activeLayout, activeStage } from "./projectModel";
 import {
   circleRingFixtureCounts,
+  circleRingRadii,
   diagnoseLayoutDefinition,
   fixtureIdsForStage,
   layoutCapacity,
@@ -49,6 +50,8 @@ describe("LayoutDefinition geometry", () => {
     const positions = layoutPositions(circle, fixtureIdsForStage(activeStage(bundle))).slice(1);
 
     expect(counts).toEqual([13, 26, 40]);
+    const radii = circleRingRadii(counts, circle.geometry.ring_pitch);
+    expect(radii.slice(1).every((radius, index) => radius - radii[index] >= 22)).toBe(true);
     expect(positions).toHaveLength(79);
     let offset = 0;
     for (const count of counts) {
@@ -57,6 +60,19 @@ describe("LayoutDefinition geometry", () => {
       expect(ring.reduce((sum, point) => sum + point.y, 0) / count).toBeCloseTo(0, 10);
       offset += count;
     }
+
+    const allPositions = layoutPositions(circle, fixtureIdsForStage(activeStage(bundle)));
+    const nearestDistance = allPositions.reduce(
+      (minimum, point, index) =>
+        Math.min(
+          minimum,
+          ...allPositions
+            .slice(index + 1)
+            .map((candidate) => Math.hypot(candidate.x - point.x, candidate.y - point.y)),
+        ),
+      Number.POSITIVE_INFINITY,
+    );
+    expect(nearestDistance).toBeGreaterThanOrEqual(circle.geometry.ring_pitch - 0.000_001);
   });
 
   it("previews a Layout on a cloned Stage without mutating its saved reference", () => {
