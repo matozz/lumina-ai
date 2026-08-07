@@ -2,8 +2,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { engineActions, useEngineStore } from "@/stores/engine";
-import { projectActions } from "@/stores/project";
-import { workspaceActions } from "@/stores/workspace";
+import { projectActions, useProjectStore } from "@/stores/project";
+import { useWorkspaceStore, workspaceActions } from "@/stores/workspace";
 import { createStarterProject } from "./defaultProject";
 import { WorkspaceHeader } from "./WorkspaceHeader";
 
@@ -24,7 +24,7 @@ const commandMocks = vi.hoisted(() => ({
 
 vi.mock("@/bridge/commands", () => ({ engine: commandMocks }));
 
-describe("WorkspaceHeader revision boundary", () => {
+describe("WorkspaceHeader live workflow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -35,34 +35,44 @@ describe("WorkspaceHeader revision boundary", () => {
     useEngineStore.setState({ compileStatus: "success" });
   });
 
-  it("publishes a Draft without changing Live until Take live is explicit", async () => {
+  it("publishes and activates the current Arrangement through one Live action", async () => {
     render(
       <TooltipProvider>
         <WorkspaceHeader />
       </TooltipProvider>,
     );
 
-    expect(screen.getByText("Published")).toBeTruthy();
-    expect(screen.getByText("Live")).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Take live" }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Publish" }));
+    expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Take live" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Live" }));
 
     await waitFor(() => expect(commandMocks.publishProject).toHaveBeenCalledOnce());
-    expect(screen.getByText("Published")).toBeTruthy();
-    expect(screen.getByText("Live")).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Take live" }) as HTMLButtonElement).disabled).toBe(
-      false,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Take live" }));
-
     await waitFor(() => expect(commandMocks.activateShowRevision).toHaveBeenCalledWith(2));
-    expect(screen.getByText("Live")).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Take live" }) as HTMLButtonElement).disabled).toBe(
-      true,
+    expect(commandMocks.getLiveEffects).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "Live" })).toBeTruthy();
+    expect(useWorkspaceStore.getState().statusMessage).toBe("The current Arrangement is live.");
+  });
+
+  it("restores local authoring defaults without replacing current live output", () => {
+    projectActions.createEffect("Accidental local effect");
+    render(
+      <TooltipProvider>
+        <WorkspaceHeader />
+      </TooltipProvider>,
     );
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    expect(screen.getByText("Restore default configuration?")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Restore defaults" }));
+
+    const state = useProjectStore.getState();
+    expect(state.bundle.effects).toEqual([]);
+    expect(state.bundle.stages[0].patch[0].id_range).toEqual([1, 80]);
+    expect(useWorkspaceStore.getState()).toMatchObject({
+      activeWorkspace: "stage",
+      publishedRevision: 1,
+      liveRevision: 1,
+    });
+    expect(commandMocks.publishProject).not.toHaveBeenCalled();
   });
 });

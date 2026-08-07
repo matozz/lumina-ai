@@ -45,7 +45,7 @@ describe("Effect Lab safe authoring", () => {
     render(<EffectLabHarness />);
 
     expect(screen.getByText("Production Catalog")).toBeTruthy();
-    expect(screen.getByText("Project Drafts")).toBeTruthy();
+    expect(screen.getByText("My Effects")).toBeTruthy();
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /Pulse.*intensity/ })).toBeTruthy(),
     );
@@ -71,7 +71,7 @@ describe("Effect Lab safe authoring", () => {
 
     await waitFor(() => expect(useProjectStore.getState().selectedTargetSetId).toBe("all"));
     expect(screen.getByText("Previewing Main Stage")).toBeTruthy();
-    expect(screen.getByText("All fixtures · 16")).toBeTruthy();
+    expect(screen.getByText("All fixtures · 80")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Edit areas" }));
     expect(screen.getByRole("dialog")).toBeTruthy();

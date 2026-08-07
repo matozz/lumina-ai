@@ -191,7 +191,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
       } else {
         authoringDraftActions.beginNewCue(cue);
         projectActions.setSelectedCueRef({ id: cue.id, revision: cue.revision });
-        workspaceActions.setPublishStatus("idle", `${cue.name} opened as a safe Cue draft.`);
+        workspaceActions.setPublishStatus("idle", `${cue.name} opened for editing.`);
       }
     } catch (error) {
       const message = Array.isArray(error)
@@ -312,7 +312,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                 <p className="text-destructive px-1 text-[10px]">{productionCatalogError}</p>
               )}
 
-              <LibrarySectionLabel>Project Drafts</LibrarySectionLabel>
+              <LibrarySectionLabel>My Effects</LibrarySectionLabel>
               {latestRefsById(bundle.manifest.effect_refs).map((reference) => {
                 const effect = exactAsset(bundle.effects, reference);
                 if (!effect || effect.source === "built_in") return null;
@@ -507,8 +507,8 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
           {workspace === "live" && liveEffects.length === 0 && (
             <CompactEmpty
               icon={Boxes}
-              title="No Live snapshot"
-              description="Publish your show, then explicitly Take live."
+              title="Nothing is live yet"
+              description="Choose an Arrangement, then click Live in the top bar."
             />
           )}
         </div>

@@ -226,7 +226,7 @@ export function EffectLabInspector() {
     fork.source = "project_local";
     const saved = projectActions.saveEffectWorkingDraft(fork);
     authoringDraftActions.commitEffect(saved);
-    workspaceActions.setPublishStatus("idle", `${saved.name} saved as a new Project Draft.`);
+    workspaceActions.setPublishStatus("idle", `${saved.name} saved as a copy.`);
   };
 
   return (
@@ -414,7 +414,7 @@ export function EffectLabInspector() {
                 </p>
                 {!readOnly && (
                   <Button size="xs" variant="ghost" disabled={!canSave} onClick={saveAsNewDraft}>
-                    Save As new Draft
+                    Save as copy
                   </Button>
                 )}
               </div>
@@ -436,7 +436,7 @@ export function EffectLabInspector() {
                   variant="outline"
                   onClick={authoringDraftActions.revertEffectToLastKnownGood}
                 >
-                  Revert to Last Known Good
+                  Revert changes
                 </Button>
               </div>
             ))}

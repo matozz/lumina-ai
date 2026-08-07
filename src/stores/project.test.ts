@@ -288,7 +288,7 @@ describe("Stage 7 Project state", () => {
     const layoutRef = state.selectedLayoutRef;
     const layout = structuredClone(exactAsset(state.bundle.layouts, layoutRef)!);
     if (layout.geometry.shape !== "matrix") throw new Error("starter matrix missing");
-    layout.geometry.rows = 5;
+    layout.geometry.rows = 9;
     layout.geometry.pitch.y = layout.geometry.fixture_size.height + layout.geometry.gap.y;
     const largerLayoutRef = projectActions.saveLayoutDraft(layoutRef, layout);
     const targetMappings = Object.fromEntries(
@@ -307,16 +307,16 @@ describe("Stage 7 Project state", () => {
     projectActions.markPublished();
 
     projectActions.setSelectedTargetSetId("rows");
-    projectActions.resizeActiveStagePatch(20);
+    projectActions.resizeActiveStagePatch(85);
     const next = useProjectStore.getState();
     expect(next.selectedTargetSetId).toBe("all");
     expect(activeStage(next.bundle).patch).toEqual([
-      { profile_id: "generic-rgb", id_range: [1, 20] },
+      { profile_id: "generic-rgb", id_range: [1, 85] },
     ]);
-    expect(activeStage(next.bundle).groups[0].fixtures).toEqual({ range: [1, 20] });
-    expect(activeStage(next.publishedBundle!).patch[0].id_range).toEqual([1, 16]);
+    expect(activeStage(next.bundle).groups[0].fixtures).toEqual({ range: [1, 85] });
+    expect(activeStage(next.publishedBundle!).patch[0].id_range).toEqual([1, 80]);
 
-    expect(() => projectActions.resizeActiveStagePatch(21)).toThrow(/provides 20 positions/);
+    expect(() => projectActions.resizeActiveStagePatch(91)).toThrow(/provides 90 positions/);
   });
 
   it("upgrades compatible Stage, Cue, and Arrangement revisions as one explicit transaction", () => {

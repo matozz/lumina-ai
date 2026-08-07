@@ -302,7 +302,7 @@ export function ProjectStageInspector() {
         <div className="text-muted-foreground flex items-center gap-1.5 text-[9px]">
           <Eye className="text-primary size-3" aria-hidden="true" />
           <span>
-            {previewing ? "Compiling Canvas preview…" : "Canvas follows this isolated Draft"}
+            {previewing ? "Compiling Canvas preview…" : "Canvas follows your current layout edits"}
           </span>
         </div>
         <Button
@@ -418,7 +418,7 @@ export function ProjectStageInspector() {
                 onChange={(event) => setDraft({ ...draft, name: event.target.value })}
               />
               <FieldDescription>
-                Changes stay in Draft until you use this layout on Stage.
+                Save the layout, then use it on Stage when you are ready.
               </FieldDescription>
             </Field>
 
@@ -455,7 +455,7 @@ export function ProjectStageInspector() {
                 code={diagnostic.code}
                 path={diagnostic.path}
                 message={diagnostic.message}
-                recovery={diagnostic.hint ?? "Repair the Draft parameters and retry preview."}
+                recovery={diagnostic.hint ?? "Repair the layout parameters and retry preview."}
               />
             ))}
           </div>

@@ -1,5 +1,10 @@
 import type { ProjectBundle } from "@/bridge/types";
 
+export const DEFAULT_STAGE_ROWS = 8;
+export const DEFAULT_STAGE_COLUMNS = 10;
+export const DEFAULT_STAGE_FIXTURE_COUNT = DEFAULT_STAGE_ROWS * DEFAULT_STAGE_COLUMNS;
+export const DEFAULT_LAYOUT_GAP = 10;
+
 export function createStarterProjectBundle(): ProjectBundle {
   return {
     schema_version: 2,
@@ -29,23 +34,33 @@ export function createStarterProjectBundle(): ProjectBundle {
         id: "main-stage",
         revision: 1,
         name: "Main Stage",
-        patch: [{ profile_id: "generic-rgb", id_range: [1, 16] }],
+        patch: [{ profile_id: "generic-rgb", id_range: [1, DEFAULT_STAGE_FIXTURE_COUNT] }],
         layout_ref: { id: "matrix-4x4", revision: 1 },
         groups: [
           {
             id: "all-fixtures",
             name: "All fixtures",
-            fixtures: { range: [1, 16] },
+            fixtures: { range: [1, DEFAULT_STAGE_FIXTURE_COUNT] },
             sort_by: "none",
           },
         ],
         target_sets: [
           { id: "all", name: "All", selector: { type: "all" } },
-          { id: "rows", name: "Rows", selector: { type: "rows", indices: [0, 1, 2, 3] } },
+          {
+            id: "rows",
+            name: "Rows",
+            selector: {
+              type: "rows",
+              indices: Array.from({ length: DEFAULT_STAGE_ROWS }, (_, index) => index),
+            },
+          },
           {
             id: "columns",
             name: "Columns",
-            selector: { type: "columns", indices: [0, 1, 2, 3] },
+            selector: {
+              type: "columns",
+              indices: Array.from({ length: DEFAULT_STAGE_COLUMNS }, (_, index) => index),
+            },
           },
           {
             id: "zones-3x3",
@@ -142,21 +157,24 @@ export function createStarterProjectBundle(): ProjectBundle {
 
 function starterLayouts(): ProjectBundle["layouts"] {
   const fixtureSize = { width: 12, height: 12 };
-  const gap = { x: 52, y: 52 };
-  const pitch = { x: 64, y: 64 };
+  const gap = { x: DEFAULT_LAYOUT_GAP, y: DEFAULT_LAYOUT_GAP };
+  const pitch = {
+    x: fixtureSize.width + gap.x,
+    y: fixtureSize.height + gap.y,
+  };
   const origin = { x: 0, y: 0 };
   return [
     {
       schema_version: 1,
       id: "matrix-4x4",
       revision: 1,
-      name: "Matrix 4×4",
+      name: "Matrix 8×10",
       category: "basic",
       editor: { mode: "form" },
       geometry: {
         shape: "matrix",
-        rows: 4,
-        columns: 4,
+        rows: DEFAULT_STAGE_ROWS,
+        columns: DEFAULT_STAGE_COLUMNS,
         fixture_size: fixtureSize,
         gap,
         pitch,
@@ -167,16 +185,16 @@ function starterLayouts(): ProjectBundle["layouts"] {
       schema_version: 1,
       id: "circle-16",
       revision: 1,
-      name: "Circle 16",
+      name: "Circle 80",
       category: "basic",
       editor: { mode: "form" },
       geometry: {
         shape: "circle",
-        rings: 1,
-        increment: 15,
+        rings: 3,
+        increment: 14,
         fixture_size: fixtureSize,
-        ring_gap: 52,
-        ring_pitch: 64,
+        ring_gap: DEFAULT_LAYOUT_GAP,
+        ring_pitch: Math.max(fixtureSize.width, fixtureSize.height) + DEFAULT_LAYOUT_GAP,
         center: origin,
       },
     },
@@ -184,12 +202,12 @@ function starterLayouts(): ProjectBundle["layouts"] {
       schema_version: 1,
       id: "strip-16",
       revision: 1,
-      name: "Strip 16",
+      name: "Strip 80",
       category: "basic",
       editor: { mode: "form" },
       geometry: {
         shape: "strip",
-        count: 16,
+        count: DEFAULT_STAGE_FIXTURE_COUNT,
         orientation: "horizontal",
         fixture_size: fixtureSize,
         gap,
@@ -201,13 +219,13 @@ function starterLayouts(): ProjectBundle["layouts"] {
       schema_version: 1,
       id: "wall-4x4",
       revision: 1,
-      name: "Wall 4×4",
+      name: "Wall 8×10",
       category: "basic",
       editor: { mode: "form" },
       geometry: {
         shape: "wall",
-        rows: 4,
-        columns: 4,
+        rows: DEFAULT_STAGE_ROWS,
+        columns: DEFAULT_STAGE_COLUMNS,
         fixture_size: fixtureSize,
         gap,
         pitch,
@@ -218,13 +236,13 @@ function starterLayouts(): ProjectBundle["layouts"] {
       schema_version: 1,
       id: "frame-5x5",
       revision: 1,
-      name: "Frame 5×5",
+      name: "Frame 12×30",
       category: "basic",
       editor: { mode: "form" },
       geometry: {
         shape: "frame",
-        rows: 5,
-        columns: 5,
+        rows: 12,
+        columns: 30,
         fixture_size: fixtureSize,
         gap,
         pitch,
@@ -235,7 +253,7 @@ function starterLayouts(): ProjectBundle["layouts"] {
       schema_version: 1,
       id: "lissajous-16",
       revision: 1,
-      name: "Lissajous 16",
+      name: "Lissajous 80",
       category: "generated_advanced",
       editor: {
         mode: "parameter_schema",
@@ -277,7 +295,7 @@ function starterLayouts(): ProjectBundle["layouts"] {
       geometry: {
         shape: "algorithm",
         algorithm: "lissajous",
-        count: 16,
+        count: DEFAULT_STAGE_FIXTURE_COUNT,
         fixture_size: fixtureSize,
         origin,
         parameters: { a: 3, b: 2, delta: Math.PI / 2, scale_x: 160, scale_y: 120 },
@@ -287,16 +305,16 @@ function starterLayouts(): ProjectBundle["layouts"] {
       schema_version: 1,
       id: "custom-16",
       revision: 1,
-      name: "Custom 16",
+      name: "Custom 80",
       category: "generated_advanced",
       editor: { mode: "advanced_only" },
       geometry: {
         shape: "custom",
         fixture_size: fixtureSize,
-        fixtures: Array.from({ length: 16 }, (_, index) => ({
+        fixtures: Array.from({ length: DEFAULT_STAGE_FIXTURE_COUNT }, (_, index) => ({
           id: index + 1,
-          x: (index % 4) * 64,
-          y: Math.floor(index / 4) * 64,
+          x: (index % DEFAULT_STAGE_COLUMNS) * pitch.x,
+          y: Math.floor(index / DEFAULT_STAGE_COLUMNS) * pitch.y,
         })),
       },
     },

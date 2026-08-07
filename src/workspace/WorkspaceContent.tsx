@@ -35,10 +35,9 @@ export function WorkspaceContent({ workspace }: { workspace: WorkspaceId }) {
 function WorkspaceSurface({ workspace }: { workspace: WorkspaceId }) {
   const bundle = useProjectStore(projectSelectors.bundle);
   const arrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
-  const liveViewMode = useProjectStore(projectSelectors.liveViewMode);
   const previewError = useProjectStore(projectSelectors.previewError);
   const arrangement = exactAsset(bundle.arrangements, arrangementRef);
-  const meta = surfaceMeta(workspace, liveViewMode);
+  const meta = surfaceMeta(workspace);
   const Icon = meta.icon;
 
   return (
@@ -60,7 +59,7 @@ function WorkspaceSurface({ workspace }: { workspace: WorkspaceId }) {
       )}
       <div className="relative min-h-0 flex-1">
         <CanvasView
-          frameSource={workspace === "live" && liveViewMode === "live" ? "live" : "preview"}
+          frameSource={workspace === "live" ? "live" : "preview"}
           showIntensityWithoutColor={workspace === "arrange"}
         />
         {workspace === "arrange" && previewError && (
@@ -77,7 +76,7 @@ function WorkspaceSurface({ workspace }: { workspace: WorkspaceId }) {
   );
 }
 
-function surfaceMeta(workspace: WorkspaceId, liveViewMode: "live" | "rehearsal") {
+function surfaceMeta(workspace: WorkspaceId) {
   return {
     stage: {
       icon: Lightbulb,
@@ -87,7 +86,7 @@ function surfaceMeta(workspace: WorkspaceId, liveViewMode: "live" | "rehearsal")
     "effect-lab": {
       icon: FlaskConical,
       title: "Effect loop preview",
-      description: "One bar · draft preview",
+      description: "One-bar effect preview",
     },
     cues: {
       icon: Layers2,
@@ -101,11 +100,8 @@ function surfaceMeta(workspace: WorkspaceId, liveViewMode: "live" | "rehearsal")
     },
     live: {
       icon: RadioTower,
-      title: liveViewMode === "live" ? "Live stage" : "Rehearsal stage",
-      description:
-        liveViewMode === "live"
-          ? "Immutable Take Live snapshot"
-          : "Explicit Draft or Published preview sink",
+      title: "Live stage",
+      description: "Output from the current Arrangement",
     },
   }[workspace];
 }

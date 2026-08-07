@@ -83,7 +83,7 @@ export function StagePatchDialog({
         <ScrollArea className="min-h-0">
           <div className="flex flex-col gap-4 p-4">
             <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border">
-              <PatchMetric label="Draft positions" value={String(draftCapacity)} />
+              <PatchMetric label="Edited layout" value={String(draftCapacity)} />
               <PatchMetric label="Active Layout" value={String(capacity)} />
               <PatchMetric label="Patched fixtures" value={String(currentCount)} />
               {advanced && <PatchMetric label="Internal version" value={String(stage.revision)} />}
@@ -91,9 +91,9 @@ export function StagePatchDialog({
 
             {draftCapacity !== capacity && (
               <Alert>
-                <AlertTitle>Draft is not on Stage yet</AlertTitle>
+                <AlertTitle>Layout changes are not on Stage yet</AlertTitle>
                 <AlertDescription>
-                  This Draft has {draftCapacity} positions, while the active Stage Layout has{" "}
+                  The edited layout has {draftCapacity} positions, while the active Stage Layout has{" "}
                   {capacity}. Save the Layout and complete Use on Stage impact/remap first; then
                   reopen this dialog to expand the Stage up to {draftCapacity} fixtures.
                 </AlertDescription>
@@ -155,8 +155,8 @@ export function StagePatchDialog({
               </div>
               <p className="text-muted-foreground text-[10px] leading-relaxed">
                 {advanced
-                  ? `Saving updates ${cueRefs.size} Draft Cues and ${arrangementCount} arrangements that use this Stage.`
-                  : "Lumina will keep Draft Cues aligned with the new fixture count. Your published and live show stay unchanged."}
+                  ? `Saving updates ${cueRefs.size} Cues and ${arrangementCount} arrangements that use this Stage.`
+                  : "Lumina will keep Cues aligned with the new fixture count. Current live output stays unchanged."}
               </p>
               {advanced && (
                 <p className="text-muted-foreground font-mono text-[9px]">

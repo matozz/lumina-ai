@@ -50,8 +50,8 @@ describe("Live workspace library", () => {
   it("keeps layout selection simple until Advanced is enabled", () => {
     render(<WorkspaceLibrary workspace="stage" />);
 
-    expect(screen.getByRole("button", { name: /Matrix 4×4/ })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Duplicate Matrix 4×4/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /Matrix 8×10/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Duplicate Matrix 8×10/ })).toBeNull();
     expect(screen.queryByText("Generated / Advanced")).toBeNull();
   });
 

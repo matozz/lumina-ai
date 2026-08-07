@@ -261,7 +261,7 @@ export function ArrangementInspector() {
           </FieldDescription>
           <Button size="sm" disabled={!valid} onClick={save}>
             <Save data-icon="inline-start" aria-hidden="true" />
-            Save Arrangement Draft
+            Save Arrangement
           </Button>
 
           <Separator />

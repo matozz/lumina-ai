@@ -293,16 +293,18 @@ export function StageLayoutImpactPanel({
         </Alert>
       )}
 
-      <div className="border-border flex items-center gap-2 rounded-md border p-2">
-        <ShieldCheck className="size-3.5 text-emerald-400" aria-hidden="true" />
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-medium">Revision isolation</p>
-          <p className="text-muted-foreground text-[9px]">
-            Published revisions and Live Snapshot: 0 changes. Old Stage, Cue, and Arrangement
-            revisions remain addressable.
-          </p>
+      {advanced && (
+        <div className="border-border flex items-center gap-2 rounded-md border p-2">
+          <ShieldCheck className="size-3.5 text-emerald-400" aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-medium">Revision isolation</p>
+            <p className="text-muted-foreground text-[9px]">
+              Published revisions and Live Snapshot: 0 changes. Old Stage, Cue, and Arrangement
+              revisions remain addressable.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex flex-col gap-1.5">
         {impact.compatible ? (

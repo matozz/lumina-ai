@@ -51,7 +51,7 @@ export function EffectLabPreview() {
         <Badge variant="outline">Authoring Preview</Badge>
         {showIntensityWithoutColor && <Badge variant="outline">Intensity visualization</Badge>}
         {noVisibleOutput && <Badge variant="secondary">No visible output</Badge>}
-        {effectDraft?.status === "invalid" && <Badge variant="destructive">Held at LKG</Badge>}
+        {effectDraft?.status === "invalid" && <Badge variant="destructive">Preview paused</Badge>}
         <span className="text-muted-foreground ml-auto truncate text-[10px]">
           {effect ? `${effect.name} · ${stage.name}` : "No Effect selected"}
         </span>

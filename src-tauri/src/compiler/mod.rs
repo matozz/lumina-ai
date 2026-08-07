@@ -320,6 +320,35 @@ pub enum CompiledAutomationTarget {
     },
 }
 
+fn circle_ring_fixture_counts(fixture_count: usize, rings: u32, increment: u32) -> Vec<usize> {
+    let ring_count = rings as usize;
+    if ring_count == 0 || fixture_count <= 1 {
+        return vec![0; ring_count];
+    }
+
+    let ring_weight = ring_count * (ring_count + 1) / 2;
+    let capacity = increment as usize * ring_weight;
+    let remaining = fixture_count.saturating_sub(1).min(capacity);
+    let mut allocations: Vec<(usize, usize, usize)> = (0..ring_count)
+        .map(|index| {
+            let weighted = remaining * (index + 1);
+            (index, weighted / ring_weight, weighted % ring_weight)
+        })
+        .collect();
+    let assigned: usize = allocations.iter().map(|(_, count, _)| count).sum();
+    let mut priority: Vec<usize> = (0..ring_count).collect();
+    priority.sort_by(|left, right| {
+        allocations[*right]
+            .2
+            .cmp(&allocations[*left].2)
+            .then_with(|| right.cmp(left))
+    });
+    for index in 0..remaining.saturating_sub(assigned) {
+        allocations[priority[index % priority.len()]].1 += 1;
+    }
+    allocations.into_iter().map(|(_, count, _)| count).collect()
+}
+
 pub struct Compiler;
 
 impl Compiler {
@@ -466,23 +495,24 @@ impl Compiler {
                         patched: None,
                     });
                     let mut current_idx = 1;
-                    for ring in 1..=*rings {
-                        let count = increment * ring;
-                        let radius = gap * ring as f64;
-                        for i in 0..count {
-                            if current_idx < fix_ids.len() {
-                                let angle = (2.0 * std::f64::consts::PI / count as f64) * i as f64;
-                                coords.push(LayoutCoord {
-                                    id: fix_ids[current_idx],
-                                    x: cx + angle.cos() * radius,
-                                    y: cy + angle.sin() * radius,
-                                    type_: get_type(fix_ids[current_idx]),
-                                    width: None,
-                                    height: None,
-                                    patched: None,
-                                });
-                                current_idx += 1;
-                            }
+                    for (ring_index, count) in
+                        circle_ring_fixture_counts(fix_ids.len(), *rings, *increment)
+                            .into_iter()
+                            .enumerate()
+                    {
+                        let radius = gap * (ring_index + 1) as f64;
+                        for step in 0..count {
+                            let angle = (2.0 * std::f64::consts::PI / count as f64) * step as f64;
+                            coords.push(LayoutCoord {
+                                id: fix_ids[current_idx],
+                                x: cx + angle.cos() * radius,
+                                y: cy + angle.sin() * radius,
+                                type_: get_type(fix_ids[current_idx]),
+                                width: None,
+                                height: None,
+                                patched: None,
+                            });
+                            current_idx += 1;
                         }
                     }
                 }
@@ -1839,6 +1869,7 @@ fn non_finite_formula_diagnostic(path: &str) -> Diagnostic {
 #[cfg(test)]
 mod tests {
     use super::{
+        circle_ring_fixture_counts,
         diagnostic::{
             DOC_ATTRIBUTE_NOT_SUPPORTED, DOC_ATTRIBUTE_OUT_OF_RANGE, DSL_DUPLICATE_FIXTURE_ID,
             DSL_TARGET_GROUP_NOT_FOUND,
@@ -1885,6 +1916,13 @@ mod tests {
       }
     }
     "##;
+
+    #[test]
+    fn circle_rings_distribute_every_ring_as_a_complete_symmetric_set() {
+        assert_eq!(circle_ring_fixture_counts(80, 3, 14), vec![13, 26, 40]);
+        assert_eq!(circle_ring_fixture_counts(86, 3, 14), vec![14, 28, 42]);
+        assert_eq!(circle_ring_fixture_counts(5, 3, 14), vec![1, 1, 2]);
+    }
 
     #[test]
     fn compiles_fixture_group_phaser_and_timeline_outputs() {

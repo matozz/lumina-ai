@@ -46,7 +46,7 @@ export function CuePreview() {
         <Badge variant="outline">Authoring Preview</Badge>
         {showIntensityWithoutColor && <Badge variant="outline">Intensity visualization</Badge>}
         {noVisibleOutput && <Badge variant="secondary">No visible output</Badge>}
-        {cueDraft?.status === "invalid" && <Badge variant="destructive">Held at LKG</Badge>}
+        {cueDraft?.status === "invalid" && <Badge variant="destructive">Preview paused</Badge>}
         {cueDraft && (cueDraft.soloLayerId || cueDraft.mutedLayerIds.length > 0) && (
           <Badge variant="secondary">Audition filter</Badge>
         )}

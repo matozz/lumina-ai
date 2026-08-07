@@ -1,103 +1,28 @@
-import { FlaskConical, RadioTower } from "lucide-react";
-import { AuthoringTransportBar } from "@/authoring/AuthoringTransportBar";
+import { RadioTower } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { exactAsset } from "@/document/projectModel";
-import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import { useWorkspaceStore, workspaceSelectors } from "@/stores/workspace";
 import { LiveControlPanel } from "./LiveControlPanel";
 import { WorkspacePanelHeader } from "../WorkspacePanelHeader";
 
 export function LiveRehearsalInspector() {
-  const viewMode = useProjectStore(projectSelectors.liveViewMode);
-  const previewSource = useProjectStore(projectSelectors.previewSource);
-  const publishedRevision = useWorkspaceStore(workspaceSelectors.publishedRevision);
   const liveRevision = useWorkspaceStore(workspaceSelectors.liveRevision);
-  const SourceIcon = viewMode === "live" ? RadioTower : FlaskConical;
 
   return (
-    <div className="bg-card flex h-full min-h-0 flex-col" aria-label="Live and rehearsal boundary">
-      <WorkspacePanelHeader icon={SourceIcon} title="Output source" iconClassName="text-primary">
-        <Badge variant={viewMode === "live" ? "destructive" : "secondary"} className="ml-auto">
-          {viewMode === "live" ? (liveRevision === null ? "Not live" : "Live") : "Rehearsal"}
+    <div className="bg-card flex h-full min-h-0 flex-col" aria-label="Live controls">
+      <WorkspacePanelHeader icon={RadioTower} title="Live controls" iconClassName="text-primary">
+        <Badge variant={liveRevision === null ? "outline" : "secondary"} className="ml-auto">
+          {liveRevision === null ? "Offline" : "Live"}
         </Badge>
       </WorkspacePanelHeader>
       <div className="border-border flex shrink-0 flex-col gap-2 border-b p-2.5">
-        <div className="grid grid-cols-3 gap-1">
-          <Button
-            size="xs"
-            variant={viewMode === "live" ? "default" : "outline"}
-            onClick={() => projectActions.setLiveViewMode("live")}
-          >
-            Live
-          </Button>
-          <Button
-            size="xs"
-            variant={
-              viewMode === "rehearsal" && previewSource === "rehearsal_draft"
-                ? "secondary"
-                : "outline"
-            }
-            onClick={() => {
-              projectActions.setPreviewSource("rehearsal_draft");
-              projectActions.setLiveViewMode("rehearsal");
-            }}
-          >
-            Draft
-          </Button>
-          <Button
-            size="xs"
-            variant={
-              viewMode === "rehearsal" && previewSource === "rehearsal_published"
-                ? "secondary"
-                : "outline"
-            }
-            disabled={publishedRevision === null}
-            onClick={() => {
-              if (publishedRevision === null) return;
-              projectActions.setPreviewSource("rehearsal_published", publishedRevision);
-              projectActions.setLiveViewMode("rehearsal");
-            }}
-          >
-            Published
-          </Button>
-        </div>
         <p className="text-muted-foreground text-[10px] leading-relaxed">
-          Rehearsal renders through a preview sink. Live reads only the immutable snapshot created
-          by explicit Take live.
+          Live runs the Arrangement selected in Arrange. Use the Live button in the top bar to send
+          the latest changes to output.
         </p>
       </div>
       <div className="min-h-0 flex-1">
-        {viewMode === "live" ? <LiveControlPanel embedded /> : <RehearsalControls />}
+        <LiveControlPanel embedded />
       </div>
     </div>
-  );
-}
-
-function RehearsalControls() {
-  const bundle = useProjectStore(projectSelectors.bundle);
-  const reference = useProjectStore(projectSelectors.selectedArrangementRef);
-  const arrangement = exactAsset(bundle.arrangements, reference);
-  if (!arrangement) return null;
-
-  return (
-    <ScrollArea className="h-full">
-      <div className="flex flex-col gap-3 p-3" aria-label="Isolated rehearsal controls">
-        <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-xs font-medium">{arrangement.name}</span>
-          <Badge variant="outline">{arrangement.tempo_map.points.length} tempo points</Badge>
-        </div>
-        <AuthoringTransportBar
-          scope="arrangement"
-          reference={reference}
-          arrangement={arrangement}
-          className="rounded-md border"
-        />
-        <p className="text-muted-foreground text-[10px] leading-relaxed">
-          Seek and loop stay inside PreviewSession and never mutate Live transport.
-        </p>
-      </div>
-    </ScrollArea>
   );
 }

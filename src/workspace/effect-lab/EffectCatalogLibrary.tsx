@@ -42,7 +42,7 @@ export function EffectCatalogLibrary({ document }: { document: FullDSL }) {
       commands: [{ type: "create_effect", ...pair }],
     });
     workspaceActions.setSelectedEffectId(pair.definition.id);
-    workspaceActions.setPublishStatus("idle", `${pair.definition.name} created in Draft.`);
+    workspaceActions.setPublishStatus("idle", `${pair.definition.name} created.`);
   };
 
   const duplicateEffect = (definition: EffectDefinitionDSL) => {
@@ -55,7 +55,7 @@ export function EffectCatalogLibrary({ document }: { document: FullDSL }) {
       commands: [{ type: "create_effect", ...pair }],
     });
     workspaceActions.setSelectedEffectId(pair.definition.id);
-    workspaceActions.setPublishStatus("idle", `${pair.definition.name} created in Draft.`);
+    workspaceActions.setPublishStatus("idle", `${pair.definition.name} created.`);
   };
 
   const deleteEffect = (definition: EffectDefinitionDSL) => {
@@ -68,7 +68,7 @@ export function EffectCatalogLibrary({ document }: { document: FullDSL }) {
       if (favorites.includes(definition.id)) workspaceActions.toggleFavoriteEffect(definition.id);
       const next = useEngineStore.getState().parsedDsl?.effect_definitions[0]?.id ?? null;
       workspaceActions.setSelectedEffectId(next);
-      workspaceActions.setPublishStatus("idle", `${definition.name} removed from Draft.`);
+      workspaceActions.setPublishStatus("idle", `${definition.name} removed.`);
     } catch (error) {
       workspaceActions.setPublishStatus(
         "error",

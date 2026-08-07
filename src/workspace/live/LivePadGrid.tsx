@@ -146,9 +146,9 @@ export function LivePadGrid({ effects }: { effects: LiveEffectInfo[] }) {
         {effects.length === 0 && (
           <div className="col-span-2 flex min-h-24 flex-col items-center justify-center rounded-md border border-dashed border-zinc-800 p-3 text-center">
             <RadioTower className="text-muted-foreground size-4" aria-hidden="true" />
-            <p className="mt-2 text-xs font-medium">No effects in Live Snapshot</p>
+            <p className="mt-2 text-xs font-medium">No live effects yet</p>
             <p className="text-muted-foreground mt-1 text-[10px] leading-relaxed">
-              Publish the Draft, then explicitly Take live.
+              Choose an Arrangement, then click Live in the top bar.
             </p>
           </div>
         )}

@@ -141,6 +141,13 @@ export const workspaceActions = {
     useWorkspaceStore.setState({ publishedRevision }),
   setPublishStatus: (publishStatus: PublishStatus, statusMessage: string | null = null) =>
     useWorkspaceStore.setState({ publishStatus, statusMessage }),
+  resetAuthoringDefaults: () =>
+    useWorkspaceStore.setState((state) => ({
+      ...initialState,
+      publishedRevision: state.publishedRevision,
+      liveRevision: state.liveRevision,
+      statusMessage: "Defaults restored. Click Live when you are ready to update output.",
+    })),
   reset: () => useWorkspaceStore.setState(initialState, true),
 };
 

@@ -154,7 +154,7 @@ export function CueBuilderInspector() {
     );
     const saved = projectActions.saveCueWorkingDraft(fork, productionEffects ?? []);
     authoringDraftActions.commitCue(saved);
-    workspaceActions.setPublishStatus("idle", `${saved.name} saved as a new Cue Draft.`);
+    workspaceActions.setPublishStatus("idle", `${saved.name} saved as a copy.`);
   };
 
   return (
@@ -267,7 +267,7 @@ export function CueBuilderInspector() {
             {advancedMode && (
               <Button size="xs" variant="ghost" onClick={authoringDraftActions.discardCue}>
                 <Undo2 data-icon="inline-start" aria-hidden="true" />
-                Discard working draft
+                Discard changes
               </Button>
             )}
             {advancedMode && session.mode === "edit" && (
@@ -277,7 +277,7 @@ export function CueBuilderInspector() {
                 disabled={session.status !== "valid"}
                 onClick={saveAsNewDraft}
               >
-                Save As new Draft
+                Save as copy
               </Button>
             )}
             {advancedMode && session.mode === "edit" && <DeleteCueButton reference={reference} />}

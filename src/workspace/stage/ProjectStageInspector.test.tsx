@@ -133,7 +133,7 @@ describe("ProjectStageInspector Layout workflow", () => {
       expect(previewLayout.geometry).toMatchObject({ rows: 2, columns: 2 });
     });
     expect(
-      screen.getByText(/previews 4 positions while this Stage patches 16 fixtures/),
+      screen.getByText(/previews 4 positions while this Stage patches 80 fixtures/),
     ).toBeTruthy();
     expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(
       false,
@@ -144,15 +144,15 @@ describe("ProjectStageInspector Layout workflow", () => {
     render(<ProjectStageInspector />);
     await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
 
-    fireEvent.change(screen.getByLabelText("Rows"), { target: { value: "5" } });
-    expect(screen.getByText(/4 unpatched positions use dashed Canvas borders/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /Stage patch: 16 fixtures/ }));
+    fireEvent.change(screen.getByLabelText("Rows"), { target: { value: "9" } });
+    expect(screen.getByText(/10 unpatched positions use dashed Canvas borders/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Stage patch: 80 fixtures/ }));
 
     expect(screen.getByText("Configure Stage patch")).toBeTruthy();
     expect(screen.getByText(/A 21×45 Layout contains 945 positions/)).toBeTruthy();
-    expect(screen.getByText("Draft is not on Stage yet")).toBeTruthy();
-    expect(screen.getByText(/This Draft has 20 positions/)).toBeTruthy();
-    expect(screen.getByLabelText("Fixture count")).toHaveProperty("value", "16");
+    expect(screen.getByText("Layout changes are not on Stage yet")).toBeTruthy();
+    expect(screen.getByText(/edited layout has 90 positions/)).toBeTruthy();
+    expect(screen.getByLabelText("Fixture count")).toHaveProperty("value", "80");
   });
 
   it("edits circles through rings, ring gap, and shared fixture size", async () => {
@@ -179,7 +179,7 @@ describe("ProjectStageInspector Layout workflow", () => {
       expect(previewLayout.geometry).toMatchObject({
         shape: "circle",
         rings: 2,
-        increment: 5,
+        increment: 27,
       });
     });
   });

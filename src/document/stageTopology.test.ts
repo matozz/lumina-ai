@@ -35,7 +35,7 @@ describe("Stage topology impact", () => {
 
     expect(impact.compatible).toBe(true);
     expect(impact.groups).toEqual([
-      expect.objectContaining({ id: "all-fixtures", fixtureCount: 16 }),
+      expect.objectContaining({ id: "all-fixtures", fixtureCount: 80 }),
     ]);
     expect(impact.targetSets).toHaveLength(stage.target_sets.length);
     expect(impact.targetSets.every((target) => target.valid && !target.membershipChanged)).toBe(
@@ -60,7 +60,7 @@ describe("Stage topology impact", () => {
       valid: false,
     });
     expect(resolveTargetSet(stage, circleLayout, stage.target_sets[0])?.fixtureIds).toHaveLength(
-      16,
+      80,
     );
   });
 });

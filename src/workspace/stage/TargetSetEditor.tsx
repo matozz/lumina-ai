@@ -100,7 +100,7 @@ export function TargetSetEditor() {
               {resolved?.partitions.length ?? 0} partitions
             </p>
           </div>
-          {dirty && <Badge variant="secondary">Draft</Badge>}
+          {dirty && <Badge variant="secondary">Unsaved</Badge>}
         </div>
 
         <Field>

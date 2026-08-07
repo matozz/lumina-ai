@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { activeLayout, activeStage } from "./projectModel";
 import {
+  circleRingFixtureCounts,
   diagnoseLayoutDefinition,
   fixtureIdsForStage,
   layoutCapacity,
@@ -21,7 +22,11 @@ describe("LayoutDefinition geometry", () => {
     layout.geometry.pitch = { x: 12, y: 18 };
 
     expect(diagnoseLayoutDefinition(layout, fixtureIdsForStage(stage))).toEqual([]);
-    expect(layoutPositions(layout, fixtureIdsForStage(stage))[5]).toEqual({ id: 6, x: 12, y: 18 });
+    expect(layoutPositions(layout, fixtureIdsForStage(stage))[11]).toEqual({
+      id: 12,
+      x: 12,
+      y: 18,
+    });
 
     layout.geometry.pitch.x = 13;
     expect(diagnoseLayoutDefinition(layout, fixtureIdsForStage(stage))).toEqual(
@@ -31,9 +36,27 @@ describe("LayoutDefinition geometry", () => {
 
   it("covers matrix, strip, wall, frame, circle, and generated capacities", () => {
     const bundle = createStarterProjectBundle();
-    expect(bundle.layouts.map(layoutCapacity)).toEqual([16, 16, 16, 16, 16, 16, 16]);
+    expect(bundle.layouts.map(layoutCapacity)).toEqual([80, 85, 80, 80, 80, 80, 80]);
     const frame = bundle.layouts.find((layout) => layout.geometry.shape === "frame")!;
-    expect(layoutPositions(frame, fixtureIdsForStage(activeStage(bundle)))).toHaveLength(16);
+    expect(layoutPositions(frame, fixtureIdsForStage(activeStage(bundle)))).toHaveLength(80);
+  });
+
+  it("fills every circle ring symmetrically instead of leaving a partial outer arc", () => {
+    const bundle = createStarterProjectBundle();
+    const circle = bundle.layouts.find((layout) => layout.geometry.shape === "circle")!;
+    if (circle.geometry.shape !== "circle") throw new Error("starter circle missing");
+    const counts = circleRingFixtureCounts(80, circle.geometry.rings, circle.geometry.increment);
+    const positions = layoutPositions(circle, fixtureIdsForStage(activeStage(bundle))).slice(1);
+
+    expect(counts).toEqual([13, 26, 40]);
+    expect(positions).toHaveLength(79);
+    let offset = 0;
+    for (const count of counts) {
+      const ring = positions.slice(offset, offset + count);
+      expect(ring.reduce((sum, point) => sum + point.x, 0) / count).toBeCloseTo(0, 10);
+      expect(ring.reduce((sum, point) => sum + point.y, 0) / count).toBeCloseTo(0, 10);
+      offset += count;
+    }
   });
 
   it("previews a Layout on a cloned Stage without mutating its saved reference", () => {

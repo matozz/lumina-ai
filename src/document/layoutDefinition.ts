@@ -29,7 +29,7 @@ export function layoutStageCapacityDiagnostic(
     path: "layout.geometry",
     message: `${layout.geometry.shape} previews ${capacity} positions while this Stage patches ${fixtureIds.length} fixtures.`,
     recovery:
-      "The Layout Draft can still be saved. Increase its rows, columns, rings, samples, or fixture count before Use on Stage.",
+      "The Layout can still be saved. Increase its rows, columns, rings, samples, or fixture count before Use on Stage.",
   };
 }
 
@@ -285,8 +285,9 @@ function circlePositions(
     ? [{ id: fixtureIds[0], x: geometry.center.x, y: geometry.center.y }]
     : [];
   let index = 1;
-  for (let ring = 1; ring <= geometry.rings && index < fixtureIds.length; ring += 1) {
-    const count = geometry.increment * ring;
+  const ringCounts = circleRingFixtureCounts(fixtureIds.length, geometry.rings, geometry.increment);
+  for (let ring = 1; ring <= ringCounts.length && index < fixtureIds.length; ring += 1) {
+    const count = ringCounts[ring - 1];
     for (let step = 0; step < count && index < fixtureIds.length; step += 1) {
       const angle = (step / count) * Math.PI * 2;
       positions.push({
@@ -298,6 +299,31 @@ function circlePositions(
     }
   }
   return positions;
+}
+
+export function circleRingFixtureCounts(fixtureCount: number, rings: number, increment: number) {
+  const ringCount = Math.max(0, Math.floor(rings));
+  if (ringCount === 0 || fixtureCount <= 1) return Array.from({ length: ringCount }, () => 0);
+
+  const ringWeight = (ringCount * (ringCount + 1)) / 2;
+  const capacity = Math.max(0, Math.floor(increment)) * ringWeight;
+  const remaining = Math.min(Math.max(0, Math.floor(fixtureCount) - 1), capacity);
+  const allocations = Array.from({ length: ringCount }, (_, index) => {
+    const weighted = remaining * (index + 1);
+    return {
+      index,
+      count: Math.floor(weighted / ringWeight),
+      remainder: weighted % ringWeight,
+    };
+  });
+  let unassigned = remaining - allocations.reduce((sum, allocation) => sum + allocation.count, 0);
+  const priority = [...allocations].sort(
+    (left, right) => right.remainder - left.remainder || right.index - left.index,
+  );
+  for (let index = 0; index < unassigned; index += 1) {
+    priority[index % priority.length].count += 1;
+  }
+  return allocations.map((allocation) => allocation.count);
 }
 
 function framePositions(
