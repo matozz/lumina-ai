@@ -13,21 +13,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { fixtureIdsForStage } from "@/document/layoutDefinition";
-import type { StageDocument } from "@/bridge/types";
+import {
+  circleRingDensity,
+  fixtureIdsForLayout,
+  MAX_CIRCLE_RING_DENSITY,
+} from "@/document/layoutDefinition";
 
 export function LayoutGeometryEditor({
   layout,
-  stage,
   advanced = false,
   onChange,
 }: {
   layout: LayoutDefinition;
-  stage: StageDocument;
   advanced?: boolean;
   onChange: (layout: LayoutDefinition) => void;
 }) {
-  const fixtureIds = fixtureIdsForStage(stage);
+  const fixtureIds = fixtureIdsForLayout(layout);
   const updateGeometry = (geometry: LayoutGeometry) => onChange({ ...layout, geometry });
 
   if (layout.editor.mode === "read_only") {
@@ -56,11 +57,7 @@ export function LayoutGeometryEditor({
         <StripGeometryFields geometry={geometry} onChange={updateGeometry} />
       )}
       {geometry.shape === "circle" && (
-        <CircleGeometryFields
-          geometry={geometry}
-          fixtureCount={fixtureIds.length}
-          onChange={updateGeometry}
-        />
+        <CircleGeometryFields geometry={geometry} onChange={updateGeometry} />
       )}
       {geometry.shape === "formula" && (
         <FormulaGeometryFields geometry={geometry} onChange={updateGeometry} />
@@ -171,14 +168,13 @@ function StripGeometryFields({
 
 function CircleGeometryFields({
   geometry,
-  fixtureCount,
   onChange,
 }: {
   geometry: Extract<LayoutGeometry, { shape: "circle" }>;
-  fixtureCount: number;
   onChange: (geometry: Extract<LayoutGeometry, { shape: "circle" }>) => void;
 }) {
   const diameter = Math.max(geometry.fixture_size.width, geometry.fixture_size.height);
+  const density = circleRingDensity(geometry.increment);
   return (
     <>
       <div className="grid grid-cols-2 gap-2">
@@ -187,27 +183,37 @@ function CircleGeometryFields({
           value={geometry.rings}
           min={1}
           integer
-          onChange={(rings) =>
-            onChange({
-              ...geometry,
-              rings,
-              increment: circleIncrementForFixtureCount(fixtureCount, rings),
-            })
-          }
+          onChange={(rings) => onChange({ ...geometry, rings, increment: density })}
         />
         <NumberField
-          label="Fixture gap"
-          value={geometry.ring_gap}
-          min={0}
+          label="Fixtures per ring step"
+          shortLabel="Ring density"
+          value={density}
+          min={1}
+          max={MAX_CIRCLE_RING_DENSITY}
           integer
-          onChange={(ring_gap) =>
-            onChange({ ...geometry, ring_gap, ring_pitch: diameter + ring_gap })
+          onChange={(increment) =>
+            onChange({ ...geometry, increment: circleRingDensity(increment) })
           }
         />
       </div>
+      <NumberField
+        label="Fixture gap"
+        value={geometry.ring_gap}
+        min={0}
+        integer
+        onChange={(ring_gap) =>
+          onChange({
+            ...geometry,
+            increment: density,
+            ring_gap,
+            ring_pitch: diameter + ring_gap,
+          })
+        }
+      />
       <FieldDescription>
-        Minimum edge-to-edge gap between fixtures. Lumina expands each ring as needed so dense
-        circles do not overlap; zero is supported.
+        Rings change how many fixtures the Layout creates, never the spacing. Fixture gap stays
+        edge-to-edge on every ring; ring density controls how many fixtures each new ring adds.
       </FieldDescription>
     </>
   );
@@ -622,11 +628,6 @@ function FixtureSizeFields({
       )}
     </>
   );
-}
-
-function circleIncrementForFixtureCount(fixtureCount: number, rings: number) {
-  const ringWeight = (rings * (rings + 1)) / 2;
-  return Math.max(1, Math.ceil(Math.max(0, fixtureCount - 1) / ringWeight));
 }
 
 function NumberField({

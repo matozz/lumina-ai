@@ -7,6 +7,7 @@ import type {
   TargetSetDefinition,
 } from "@/bridge/types";
 import {
+  fixtureIdsForLayout,
   fixtureIdsForStage,
   layoutCapacity,
   layoutGridDimensions,
@@ -33,7 +34,6 @@ export interface TargetSetTopologyImpact {
 
 export interface StageTopologyImpact {
   compatible: boolean;
-  capacityFits: boolean;
   currentLayoutRef: AssetRef;
   candidateLayoutRef: AssetRef;
   fixtureCount: number;
@@ -47,6 +47,51 @@ export interface StageTopologyImpact {
   validTargetSetIds: string[];
 }
 
+export function stageForLayout(stage: StageDocument, layout: LayoutDefinition): StageDocument {
+  const next = structuredClone(stage);
+  const currentFixtureIds = fixtureIdsForStage(stage);
+  const firstFixtureId = currentFixtureIds[0] ?? 1;
+  const layoutFixtureIds = fixtureIdsForLayout(layout, firstFixtureId);
+  if (
+    layoutFixtureIds.length === 0 ||
+    layoutFixtureIds.some(
+      (fixtureId) => !Number.isSafeInteger(fixtureId) || fixtureId < 1 || fixtureId > 0xffff_ffff,
+    ) ||
+    new Set(layoutFixtureIds).size !== layoutFixtureIds.length
+  ) {
+    throw new Error("Layout fixture IDs must be unique positive 32-bit integers");
+  }
+
+  next.layout_ref = { id: layout.id, revision: layout.revision };
+  next.patch = patchForFixtureIds(stage, layoutFixtureIds);
+  const validFixtureIds = new Set(layoutFixtureIds);
+  next.groups = next.groups.map((group) => {
+    if (group.id === "all-fixtures") {
+      return { ...group, fixtures: compactFixtureMembership(layoutFixtureIds) };
+    }
+    return {
+      ...group,
+      fixtures: groupFixtureIds(group.fixtures).filter((fixtureId) =>
+        validFixtureIds.has(fixtureId),
+      ),
+    };
+  });
+  next.target_sets = next.target_sets.map((target) => ({
+    ...target,
+    selector:
+      target.selector.type === "fixture_ids"
+        ? {
+            ...target.selector,
+            fixture_ids: target.selector.fixture_ids.filter((fixtureId) =>
+              validFixtureIds.has(fixtureId),
+            ),
+          }
+        : target.selector,
+    weights: (target.weights ?? []).filter((weight) => validFixtureIds.has(weight.fixture_id)),
+  }));
+  return next;
+}
+
 export function analyzeStageTopology(
   bundle: ProjectBundle,
   candidateLayoutRef: AssetRef,
@@ -57,8 +102,10 @@ export function analyzeStageTopology(
   const candidateLayout = exactAsset(bundle.layouts, candidateLayoutRef);
   if (!currentLayout || !candidateLayout) throw new Error("Layout revision is missing");
   const fixtureIds = fixtureIdsForStage(stage);
+  const candidateStage = stageForLayout(stage, candidateLayout);
+  const candidateFixtureIds = fixtureIdsForStage(candidateStage);
   const targetSets = stage.target_sets.map((target) =>
-    targetSetImpact(stage, currentLayout, candidateLayout, target),
+    targetSetImpact(stage, candidateStage, currentLayout, candidateLayout, target),
   );
   const cues = bundle.manifest.cue_refs.flatMap((reference) => {
     const cue = exactAsset(bundle.cues, reference);
@@ -75,12 +122,14 @@ export function analyzeStageTopology(
     ).length;
     return clipCount > 0 ? [{ reference, name: arrangement.name, clipCount }] : [];
   });
-  const movedFixtureCount = countMovedFixtures(currentLayout, candidateLayout, fixtureIds);
-  const capacityFits = layoutCapacity(candidateLayout) >= fixtureIds.length;
+  const movedFixtureCount = countMovedFixtures(
+    currentLayout,
+    candidateLayout,
+    fixtureIds,
+    candidateFixtureIds,
+  );
   return {
-    compatible:
-      capacityFits && targetSets.every((target) => target.valid && !target.membershipChanged),
-    capacityFits,
+    compatible: targetSets.every((target) => target.valid && !target.membershipChanged),
     currentLayoutRef: stage.layout_ref,
     candidateLayoutRef,
     fixtureCount: fixtureIds.length,
@@ -202,13 +251,16 @@ export function resolveTargetSet(
 }
 
 function targetSetImpact(
-  stage: StageDocument,
+  currentStage: StageDocument,
+  candidateStage: StageDocument,
   currentLayout: LayoutDefinition,
   candidateLayout: LayoutDefinition,
   target: TargetSetDefinition,
 ): TargetSetTopologyImpact {
-  const before = resolveTargetSet(stage, currentLayout, target);
-  const after = resolveTargetSet(stage, candidateLayout, target);
+  const before = resolveTargetSet(currentStage, currentLayout, target);
+  const candidateTarget =
+    candidateStage.target_sets.find((item) => item.id === target.id) ?? target;
+  const after = resolveTargetSet(candidateStage, candidateLayout, candidateTarget);
   return {
     id: target.id,
     name: target.name,
@@ -233,16 +285,56 @@ function samePartitions(left: ResolvedTargetSet, right: ResolvedTargetSet) {
 function countMovedFixtures(
   currentLayout: LayoutDefinition,
   candidateLayout: LayoutDefinition,
-  fixtureIds: number[],
+  currentFixtureIds: number[],
+  candidateFixtureIds: number[],
 ) {
-  const before = layoutPositions(currentLayout, fixtureIds);
-  const after = layoutPositions(candidateLayout, fixtureIds);
-  if (before.length !== fixtureIds.length || after.length !== fixtureIds.length) return null;
+  const before = layoutPositions(currentLayout, currentFixtureIds);
+  const after = layoutPositions(candidateLayout, candidateFixtureIds);
   const current = new Map(before.map((fixture) => [fixture.id, fixture]));
-  return after.filter((fixture) => {
-    const previous = current.get(fixture.id);
-    return !previous || previous.x !== fixture.x || previous.y !== fixture.y;
-  }).length;
+  return after
+    .filter((fixture) => current.has(fixture.id))
+    .filter((fixture) => {
+      const previous = current.get(fixture.id);
+      return !previous || previous.x !== fixture.x || previous.y !== fixture.y;
+    }).length;
+}
+
+function patchForFixtureIds(stage: StageDocument, fixtureIds: number[]): StageDocument["patch"] {
+  const profileForFixture = (fixtureId: number) =>
+    stage.patch.find((item) => fixtureId >= item.id_range[0] && fixtureId <= item.id_range[1])
+      ?.profile_id ??
+    stage.patch[0]?.profile_id ??
+    "generic-rgb";
+  const sortedFixtureIds = [...fixtureIds].sort((left, right) => left - right);
+  const patch: StageDocument["patch"] = [];
+  for (const fixtureId of sortedFixtureIds) {
+    const profileId = profileForFixture(fixtureId);
+    const previous = patch[patch.length - 1];
+    if (previous && previous.profile_id === profileId && previous.id_range[1] + 1 === fixtureId) {
+      previous.id_range[1] = fixtureId;
+    } else {
+      patch.push({ profile_id: profileId, id_range: [fixtureId, fixtureId] });
+    }
+  }
+  return patch;
+}
+
+function compactFixtureMembership(
+  fixtureIds: number[],
+): StageDocument["groups"][number]["fixtures"] {
+  const sorted = [...fixtureIds].sort((left, right) => left - right);
+  if (sorted.every((fixtureId, index) => fixtureId === sorted[0] + index)) {
+    return { range: [sorted[0], sorted[sorted.length - 1]] };
+  }
+  return sorted;
+}
+
+function groupFixtureIds(fixtures: StageDocument["groups"][number]["fixtures"]) {
+  if (Array.isArray(fixtures)) return fixtures;
+  return Array.from(
+    { length: fixtures.range[1] - fixtures.range[0] + 1 },
+    (_, index) => fixtures.range[0] + index,
+  );
 }
 
 function groupFixtureCount(fixtures: StageDocument["groups"][number]["fixtures"]) {

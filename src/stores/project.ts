@@ -34,7 +34,7 @@ import {
 import { migrateProjectBundle } from "@/document/projectMigration";
 import { INTERNAL_PRODUCTION_CUE_PREFIX } from "@/document/productionCue";
 import { layoutCapacity } from "@/document/layoutDefinition";
-import { analyzeStageTopology, resolveTargetSet } from "@/document/stageTopology";
+import { analyzeStageTopology, resolveTargetSet, stageForLayout } from "@/document/stageTopology";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
 
 export const PREVIEW_DARK_FRAME_NOTICE_THRESHOLD = 45;
@@ -380,11 +380,6 @@ export const projectActions = {
   useLayoutOnStage: (request: StageLayoutUpgradeRequest) => {
     const current = useProjectStore.getState();
     const impact = analyzeStageTopology(current.bundle, request.layoutRef);
-    if (!impact.capacityFits) {
-      throw new Error(
-        `Layout provides ${impact.candidateCapacity} positions for ${impact.fixtureCount} patched fixtures`,
-      );
-    }
     if (request.mode === "upgrade" && !impact.compatible) {
       throw new Error("Topology changed; choose an explicit TargetSet remap or create a new Stage");
     }
@@ -398,18 +393,6 @@ export const projectActions = {
       const layout = exactAsset(bundle.layouts, request.layoutRef);
       if (!sourceStage || !layout) throw new Error("Stage or Layout revision is missing");
       const targetMappings = request.targetMappings ?? {};
-      const validTargets = sourceStage.target_sets.filter(
-        (target) => resolveTargetSet(sourceStage, layout, target) !== null,
-      );
-      if (validTargets.length === 0) throw new Error("Candidate Layout has no valid TargetSet");
-      const validIds = new Set(validTargets.map((target) => target.id));
-      for (const target of sourceStage.target_sets) {
-        if (validIds.has(target.id)) continue;
-        const mapped = targetMappings[target.id];
-        if (!mapped || !validIds.has(mapped)) {
-          throw new Error(`TargetSet ${target.name} requires an explicit valid remap`);
-        }
-      }
 
       if (request.mode === "create_stage") {
         const name = uniqueStageName(
@@ -456,7 +439,23 @@ export const projectActions = {
 
       const nextStage = exactAsset(bundle.stages, nextStageRef);
       if (!nextStage) throw new Error("Upgraded Stage revision is missing");
-      nextStage.layout_ref = structuredClone(request.layoutRef);
+      const materializedStage = stageForLayout(nextStage, layout);
+      nextStage.layout_ref = materializedStage.layout_ref;
+      nextStage.patch = materializedStage.patch;
+      nextStage.groups = materializedStage.groups;
+      nextStage.target_sets = materializedStage.target_sets;
+      const validTargets = nextStage.target_sets.filter(
+        (target) => resolveTargetSet(nextStage, layout, target) !== null,
+      );
+      if (validTargets.length === 0) throw new Error("Candidate Layout has no valid TargetSet");
+      const validIds = new Set(validTargets.map((target) => target.id));
+      for (const target of nextStage.target_sets) {
+        if (validIds.has(target.id)) continue;
+        const mapped = targetMappings[target.id];
+        if (!mapped || !validIds.has(mapped)) {
+          throw new Error(`TargetSet ${target.name} requires an explicit valid remap`);
+        }
+      }
       nextStage.target_sets = validTargets.map((target) => {
         const nextTarget = structuredClone(target);
         const selected = new Set(resolveTargetSet(nextStage, layout, nextTarget)?.fixtureIds ?? []);

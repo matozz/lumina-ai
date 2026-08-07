@@ -3,11 +3,12 @@ use crate::compiler::diagnostic::{
 };
 use crate::compiler::{CompiledProjectSnapshot, Compiler, LayoutCoord};
 use crate::document::{
-    builtin_production_catalog, layout_capacity, layout_fixture_size_for_fixture, layout_to_legacy,
-    load_document, load_project_bundle, recover_project_bundle, resolve_cue_recipe,
-    validate_effect_draft, validate_layout_geometry, validate_production_catalog, AssetRef,
-    CueDefinition, CueRecipeRef, EffectDefinitionDocument, LayoutDefinition, MetaDSL,
-    MigrationReport, PatchDSL, ProductionCatalog, ProjectBundle, ShowDocumentV4, StageDocument,
+    builtin_production_catalog, layout_authoring_capacity, layout_fixture_size_for_fixture,
+    layout_to_legacy, load_document, load_project_bundle, recover_project_bundle,
+    resolve_cue_recipe, validate_effect_draft, validate_layout_geometry,
+    validate_production_catalog, AssetRef, CueDefinition, CueRecipeRef, EffectDefinitionDocument,
+    LayoutDefinition, LayoutGeometry, MetaDSL, MigrationReport, PatchDSL, ProductionCatalog,
+    ProjectBundle, ShowDocumentV4, StageDocument,
 };
 use crate::engine::attribute::FixtureFramePayload;
 use crate::engine::effect::{
@@ -800,60 +801,47 @@ pub fn preview_layout(
             "Enter valid integer fixture size and gap values, then retry this Layout Draft preview.",
         )]
     })?;
-    let patched_fixture_ids: Vec<_> = stage
+    let stage_fixture_ids: Vec<_> = stage
         .patch
         .iter()
         .flat_map(|item| item.id_range.0..=item.id_range.1)
         .collect();
-    let patched_fixture_set: std::collections::BTreeSet<_> =
-        patched_fixture_ids.iter().copied().collect();
-    let mut preview_patch = stage.patch;
-    let capacity = layout_capacity(&layout);
-    if capacity > patched_fixture_ids.len() {
-        let extra = u32::try_from(capacity - patched_fixture_ids.len()).map_err(|_| {
-            vec![Diagnostic::error(
-                PROJECT_SCHEMA_INVALID,
-                "layout.geometry",
-                "Layout preview capacity exceeds the supported fixture ID range.",
-                "Reduce the Layout position count and retry preview.",
-            )]
-        })?;
-        let first_id = patched_fixture_ids
+    let capacity = layout_authoring_capacity(&layout);
+    let first_id = stage_fixture_ids.iter().min().copied().unwrap_or(1);
+    let preview_fixture_ids = match &layout.geometry {
+        LayoutGeometry::Custom { fixtures, .. } => fixtures
             .iter()
-            .max()
-            .copied()
-            .unwrap_or(0)
-            .checked_add(1)
-            .ok_or_else(|| {
-                vec![Diagnostic::error(
-                    PROJECT_SCHEMA_INVALID,
-                    "stage.patch",
-                    "No fixture IDs remain for unpatched Layout preview positions.",
-                    "Use a lower Stage fixture ID range or reduce the Layout capacity.",
-                )]
-            })?;
-        let last_id = first_id
-            .checked_add(extra.saturating_sub(1))
-            .ok_or_else(|| {
-                vec![Diagnostic::error(
-                    PROJECT_SCHEMA_INVALID,
-                    "stage.patch",
-                    "Unpatched Layout preview positions overflow the fixture ID range.",
-                    "Use a lower Stage fixture ID range or reduce the Layout capacity.",
-                )]
-            })?;
-        preview_patch.push(PatchDSL {
-            profile_id: preview_patch
-                .first()
-                .map(|item| item.profile_id.clone())
-                .unwrap_or_else(|| "generic-rgb".to_string()),
-            id_range: (first_id, last_id),
-        });
-    }
-    let preview_fixture_ids: Vec<_> = preview_patch
-        .iter()
-        .flat_map(|item| item.id_range.0..=item.id_range.1)
-        .collect();
+            .map(|fixture| fixture.id)
+            .collect::<Vec<_>>(),
+        _ => (0..capacity)
+            .map(|index| {
+                let offset = u32::try_from(index).map_err(|_| {
+                    vec![Diagnostic::error(
+                        PROJECT_SCHEMA_INVALID,
+                        "layout.geometry",
+                        "Layout preview capacity exceeds the supported fixture ID range.",
+                        "Reduce the Layout position count and retry preview.",
+                    )]
+                })?;
+                first_id.checked_add(offset).ok_or_else(|| {
+                    vec![Diagnostic::error(
+                        PROJECT_SCHEMA_INVALID,
+                        "layout.geometry",
+                        "Layout preview fixture IDs overflow the supported range.",
+                        "Use a lower fixture ID range or reduce the Layout position count.",
+                    )]
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+    };
+    let preview_patch = preview_patch_for_fixture_ids(
+        &preview_fixture_ids,
+        stage
+            .patch
+            .first()
+            .map(|item| item.profile_id.as_str())
+            .unwrap_or("generic-rgb"),
+    );
     let document = ShowDocumentV4 {
         schema_version: 4,
         meta: MetaDSL {
@@ -871,9 +859,29 @@ pub fn preview_layout(
         let fixture_size = layout_fixture_size_for_fixture(&layout, coord.id);
         coord.width = Some(fixture_size.width);
         coord.height = Some(fixture_size.height);
-        coord.patched = Some(patched_fixture_set.contains(&coord.id));
+        coord.patched = Some(true);
     }
     Ok(show.coords)
+}
+
+fn preview_patch_for_fixture_ids(fixture_ids: &[u32], profile_id: &str) -> Vec<PatchDSL> {
+    let mut sorted = fixture_ids.to_vec();
+    sorted.sort_unstable();
+    sorted.dedup();
+    let mut patch: Vec<PatchDSL> = Vec::new();
+    for fixture_id in sorted {
+        if let Some(previous) = patch.last_mut() {
+            if previous.id_range.1.checked_add(1) == Some(fixture_id) {
+                previous.id_range.1 = fixture_id;
+                continue;
+            }
+        }
+        patch.push(PatchDSL {
+            profile_id: profile_id.to_string(),
+            id_range: (fixture_id, fixture_id),
+        });
+    }
+    patch
 }
 
 #[tauri::command]
@@ -1285,7 +1293,7 @@ mod tests {
     }
 
     #[test]
-    fn layout_draft_preview_marks_positions_beyond_the_stage_patch() {
+    fn layout_draft_preview_materializes_every_layout_position() {
         let mut bundle = valid_bundle();
         let layout = &mut bundle.layouts[0];
         let LayoutGeometry::Matrix { rows, columns, .. } = &mut layout.geometry else {
@@ -1302,15 +1310,41 @@ mod tests {
                 .iter()
                 .filter(|coord| coord.patched == Some(true))
                 .count(),
-            4
+            20
         );
         assert_eq!(
             coords
                 .iter()
                 .filter(|coord| coord.patched == Some(false))
                 .count(),
-            16
+            0
         );
+    }
+
+    #[test]
+    fn circle_authoring_preview_converts_legacy_density_and_keeps_fixed_ring_gap() {
+        let mut bundle = valid_bundle();
+        let layout = &mut bundle.layouts[0];
+        layout.geometry = LayoutGeometry::Circle {
+            rings: 3,
+            increment: 14,
+            fixture_size: LayoutSize {
+                width: 12.0,
+                height: 12.0,
+            },
+            ring_gap: 10.0,
+            ring_pitch: 22.0,
+            center: crate::document::LayoutPoint { x: 0.0, y: 0.0 },
+        };
+
+        let coords = preview_layout(layout.clone(), bundle.stages[0].clone())
+            .expect("legacy dense Circle previews safely");
+        assert_eq!(coords.len(), 37);
+        let radii: std::collections::BTreeSet<_> = coords
+            .iter()
+            .map(|coord| (coord.x.hypot(coord.y)).round() as i64)
+            .collect();
+        assert_eq!(radii, [0, 22, 44, 66].into_iter().collect());
     }
 
     #[tokio::test]

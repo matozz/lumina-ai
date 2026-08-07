@@ -283,7 +283,7 @@ describe("Stage 7 Project state", () => {
     );
   });
 
-  it("resizes a contiguous Stage patch only after the active Layout has enough positions", () => {
+  it("materializes the active Stage fixture count from the selected Layout capacity", () => {
     const state = useProjectStore.getState();
     const layoutRef = state.selectedLayoutRef;
     const layout = structuredClone(exactAsset(state.bundle.layouts, layoutRef)!);
@@ -304,6 +304,12 @@ describe("Stage 7 Project state", () => {
       upgradeDependents: true,
     });
     expect(useProjectStore.getState().selectedTargetSetId).toBe("all");
+    expect(activeStage(useProjectStore.getState().bundle).patch).toEqual([
+      { profile_id: "generic-rgb", id_range: [1, 90] },
+    ]);
+    expect(activeStage(useProjectStore.getState().bundle).groups[0].fixtures).toEqual({
+      range: [1, 90],
+    });
     projectActions.markPublished();
 
     projectActions.setSelectedTargetSetId("rows");
@@ -314,7 +320,7 @@ describe("Stage 7 Project state", () => {
       { profile_id: "generic-rgb", id_range: [1, 85] },
     ]);
     expect(activeStage(next.bundle).groups[0].fixtures).toEqual({ range: [1, 85] });
-    expect(activeStage(next.publishedBundle!).patch[0].id_range).toEqual([1, 80]);
+    expect(activeStage(next.publishedBundle!).patch[0].id_range).toEqual([1, 90]);
 
     expect(() => projectActions.resizeActiveStagePatch(91)).toThrow(/provides 90 positions/);
   });
@@ -391,6 +397,7 @@ describe("Stage 7 Project state", () => {
       partition_index: 0,
     });
     expect(upgradedStage.target_sets.map((target) => target.id)).toEqual(["all"]);
+    expect(upgradedStage.patch).toEqual([{ profile_id: "generic-rgb", id_range: [1, 37] }]);
     expect(upgradedStage.targeting_scenes?.[0].steps[1].selection).toEqual({
       target_set_id: "all",
       partition_index: null,

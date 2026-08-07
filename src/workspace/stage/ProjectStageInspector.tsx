@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
-  Cable,
   Copy,
   Eye,
   LayoutTemplate,
@@ -23,7 +22,6 @@ import {
   diagnoseLayoutDefinition,
   fixtureIdsForStage,
   layoutCapacity,
-  layoutStageCapacityDiagnostic,
 } from "@/document/layoutDefinition";
 import { activeLayout, activeStage, assetKey, exactAsset } from "@/document/projectModel";
 import { analyzeStageTopology } from "@/document/stageTopology";
@@ -38,7 +36,6 @@ import {
   type StageCollectionEditorKind,
 } from "./StageCollectionEditorDialog";
 import { StageLayoutImpactPanel } from "./StageLayoutImpactPanel";
-import { StagePatchDialog } from "./StagePatchDialog";
 import { WorkspacePanelHeader } from "../WorkspacePanelHeader";
 import { TargetingSceneEditor } from "./TargetingSceneEditor";
 
@@ -59,25 +56,18 @@ export function ProjectStageInspector() {
   const [saveAsName, setSaveAsName] = useState(`${selectedLayout.name} Copy`);
   const [actionDiagnostic, setActionDiagnostic] = useState<Diagnostic | null>(null);
   const [impactOpen, setImpactOpen] = useState(false);
-  const [patchOpen, setPatchOpen] = useState(false);
   const [collectionEditorOpen, setCollectionEditorOpen] = useState(false);
   const [collectionEditorKind, setCollectionEditorKind] =
     useState<StageCollectionEditorKind>("groups");
   const [view, setView] = useState<"layout" | "groups" | "targets" | "scenes">("layout");
   const fixtureIds = useMemo(() => fixtureIdsForStage(stage), [stage]);
-  const localDiagnostics = useMemo(
-    () => diagnoseLayoutDefinition(draft, fixtureIds),
-    [draft, fixtureIds],
-  );
+  const localDiagnostics = useMemo(() => diagnoseLayoutDefinition(draft), [draft]);
   const blockingDiagnostics = localDiagnostics.filter(
     (diagnostic) => diagnostic.severity === "error",
   );
-  const capacityDiagnostic = useMemo(
-    () => layoutStageCapacityDiagnostic(draft, fixtureIds),
-    [draft, fixtureIds],
-  );
   const selectedLayoutFingerprint = JSON.stringify(selectedLayout);
-  const usedOnStage = assetKey(stage.layout_ref) === assetKey(selectedLayoutRef);
+  const pinnedOnStage = assetKey(stage.layout_ref) === assetKey(selectedLayoutRef);
+  const usedOnStage = pinnedOnStage && fixtureIds.length === layoutCapacity(selectedLayout);
   const dirty = JSON.stringify(draft) !== JSON.stringify(selectedLayout);
   const editable = draft.editor.mode !== "read_only";
 
@@ -214,12 +204,13 @@ export function ProjectStageInspector() {
             <p className="text-muted-foreground text-[9px]">Fixture layout</p>
           </div>
           {usedOnStage && <Badge variant="secondary">On Stage</Badge>}
+          {pinnedOnStage && !usedOnStage && <Badge variant="outline">Needs sync</Badge>}
           {advancedMode && <Badge variant="outline">{draft.editor.mode}</Badge>}
         </div>
         <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border">
           <Metric label="Shape" value={draft.geometry.shape} />
           <Metric label="Positions" value={String(layoutCapacity(draft))} />
-          <Metric label="Patched" value={String(fixtureIds.length)} />
+          <Metric label="Stage fixtures" value={String(fixtureIds.length)} />
         </div>
         <div className={cn("grid gap-1.5", advancedMode ? "grid-cols-3" : "grid-cols-2")}>
           <Button
@@ -274,8 +265,8 @@ export function ProjectStageInspector() {
                 size="xs"
                 variant="outline"
                 className="text-destructive hover:text-destructive"
-                disabled={usedOnStage}
-                title={usedOnStage ? "The current Stage pins this Layout revision." : undefined}
+                disabled={pinnedOnStage}
+                title={pinnedOnStage ? "The current Stage pins this Layout revision." : undefined}
                 onClick={() =>
                   runAction("layout.delete", () => projectActions.deleteLayout(selectedLayoutRef))
                 }
@@ -305,21 +296,6 @@ export function ProjectStageInspector() {
             {previewing ? "Compiling Canvas preview…" : "Canvas follows your current layout edits"}
           </span>
         </div>
-        <Button
-          size="xs"
-          variant="ghost"
-          className="justify-start"
-          onClick={() => setPatchOpen(true)}
-        >
-          <Cable data-icon="inline-start" aria-hidden="true" />
-          Stage patch: {fixtureIds.length} fixtures · Configure
-        </Button>
-        {layoutCapacity(draft) > fixtureIds.length && (
-          <FieldDescription>
-            {layoutCapacity(draft) - fixtureIds.length} unpatched positions use dashed Canvas
-            borders.
-          </FieldDescription>
-        )}
         {saveAsState === "open" && (
           <div className="border-border bg-background/40 flex flex-col gap-2 rounded-md border p-2">
             <Field>
@@ -422,12 +398,7 @@ export function ProjectStageInspector() {
               </FieldDescription>
             </Field>
 
-            <LayoutGeometryEditor
-              layout={draft}
-              stage={stage}
-              advanced={advancedMode}
-              onChange={setDraft}
-            />
+            <LayoutGeometryEditor layout={draft} advanced={advancedMode} onChange={setDraft} />
 
             {localDiagnostics.map((diagnostic) => (
               <LayoutDiagnosticAlert
@@ -439,15 +410,6 @@ export function ProjectStageInspector() {
                 recovery={diagnostic.recovery}
               />
             ))}
-            {capacityDiagnostic && (
-              <LayoutDiagnosticAlert
-                severity={capacityDiagnostic.severity}
-                code={capacityDiagnostic.code}
-                path={capacityDiagnostic.path}
-                message={capacityDiagnostic.message}
-                recovery={capacityDiagnostic.recovery}
-              />
-            )}
             {previewDiagnostics.map((diagnostic) => (
               <LayoutDiagnosticAlert
                 key={`${diagnostic.code}:${diagnostic.path}`}
@@ -461,12 +423,6 @@ export function ProjectStageInspector() {
           </div>
         </ScrollArea>
       )}
-      <StagePatchDialog
-        draftCapacity={layoutCapacity(draft)}
-        advanced={advancedMode}
-        open={patchOpen}
-        onOpenChange={setPatchOpen}
-      />
       <StageCollectionEditorDialog
         kind={collectionEditorKind}
         open={collectionEditorOpen}
