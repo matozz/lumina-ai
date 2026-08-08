@@ -135,7 +135,9 @@ export const engineActions = {
     const after = applyDocumentTransaction(before, transaction);
     if (after === before || JSON.stringify(after) === JSON.stringify(before)) return;
     const validation = validateShowDocument(after);
-    if (!validation.success) throw new Error("DocumentCommand produced an invalid V4 document");
+    if (!validation.success) {
+      throw new Error("DocumentCommand produced an invalid current V1 document");
+    }
     const retainedHistory = state.documentHistory.slice(0, state.historyCursor);
     const savedHistoryCursor =
       state.savedHistoryCursor !== null && state.savedHistoryCursor > state.historyCursor
