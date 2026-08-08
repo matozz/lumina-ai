@@ -61,17 +61,18 @@ fn built_in_arrangement_examples_keep_targeting_in_resolved_cue_layers() {
                 .map(|layer| layer.target_set_ref.target_set_id.as_str())
         })
         .collect::<Vec<_>>();
-    for target_id in [
-        "zone-2x2-1",
-        "zone-2x2-2",
-        "zone-2x2-3",
-        "zone-2x2-4",
-        "zone-4x4-1",
-        "zone-4x4-4",
-        "zone-4x4-13",
-        "zone-4x4-16",
-    ] {
+    for target_id in ["zone-2x2-1", "zone-2x2-2", "zone-2x2-3", "zone-2x2-4"] {
         assert!(target_ids.contains(&target_id), "missing {target_id}");
+    }
+    for target_id in ["zone-4x4-1", "zone-4x4-4", "zone-4x4-13", "zone-4x4-16"] {
+        assert!(
+            template
+                .stage
+                .target_sets
+                .iter()
+                .any(|target_set| target_set.id == target_id),
+            "missing selectable {target_id}"
+        );
     }
     let quadrant = catalog
         .arrangements
@@ -87,6 +88,7 @@ fn built_in_arrangement_examples_keep_targeting_in_resolved_cue_layers() {
     assert_eq!(corners.tempo_map.points[0].bpm, 128.0);
     assert_eq!(quadrant.tracks[0].clips.len(), 2);
     assert_eq!(corners.tracks[0].clips.len(), 5);
+    assert_eq!(corners.tracks[0].name, "2×2 Corner Cues");
 }
 
 #[test]

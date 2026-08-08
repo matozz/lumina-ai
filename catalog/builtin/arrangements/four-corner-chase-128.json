@@ -10,7 +10,7 @@
   "tracks": [
     {
       "id": "corners",
-      "name": "4×4 Corner Cues",
+      "name": "2×2 Corner Cues",
       "overlap_policy": "layer",
       "clips": [
         {

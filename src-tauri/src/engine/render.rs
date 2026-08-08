@@ -211,9 +211,11 @@ pub(crate) fn render_resolved(
                 ) {
                     values[handle.index()] = Some(AttributeValue::Color([red, green, blue]));
                 }
+                let intensity_handle =
+                    super::attribute::resolve_attribute(fixture.profile, INTENSITY_ATTRIBUTE);
                 apply_intensity_control(
                     &mut values,
-                    super::attribute::resolve_attribute(fixture.profile, INTENSITY_ATTRIBUTE),
+                    intensity_handle,
                     resolve_effect_scalar(
                         definition,
                         instance,
@@ -229,6 +231,9 @@ pub(crate) fn render_resolved(
                         parameters,
                         INTENSITY_PARAMETER_ID,
                     ),
+                    intensity_handle.is_some_and(|handle| {
+                        effect_graph_writes_attribute(definition, fixture.profile, handle)
+                    }),
                 );
                 apply_scalar_override(
                     &mut values,
@@ -362,19 +367,52 @@ fn apply_intensity_control(
     handle: Option<AttributeHandle>,
     scale: f64,
     explicit_override: Option<f64>,
+    graph_writes_intensity: bool,
 ) {
     let Some(handle) = handle else {
         return;
     };
     match values.get_mut(handle.index()) {
         Some(Some(AttributeValue::Scalar(value))) => *value *= scale as f32,
-        Some(slot @ None) => {
+        Some(slot @ None) if !graph_writes_intensity => {
             if let Some(value) = explicit_override {
                 *slot = Some(AttributeValue::Scalar(value as f32));
             }
         }
         _ => {}
     }
+}
+
+fn effect_graph_writes_attribute(
+    definition: &crate::engine::effect::EffectDefinition,
+    profile: crate::engine::profile::FixtureProfileHandle,
+    attribute: AttributeHandle,
+) -> bool {
+    definition.graph.writers.iter().any(|writer| {
+        let Some(crate::engine::effect::CompiledEffectNode::AttributeWriter {
+            input,
+            attributes,
+            ..
+        }) = definition.graph.nodes.get(writer.index())
+        else {
+            return false;
+        };
+        if attributes.get(&profile).copied().flatten() == Some(attribute) {
+            return true;
+        }
+        let Some(crate::engine::effect::CompiledEffectNode::StepSequence { profiles, .. }) =
+            definition.graph.nodes.get(input.index())
+        else {
+            return false;
+        };
+        profiles.get(&profile).is_some_and(|sequence| {
+            sequence.steps.iter().any(|step| {
+                step.values
+                    .get(attribute.index())
+                    .is_some_and(Option::is_some)
+            })
+        })
+    })
 }
 
 fn resolve_timeline_at(

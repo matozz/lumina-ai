@@ -37,6 +37,8 @@ render 中的每个 node 都是 tick 与 fixture context 的确定性函数。�
 
 `random_x` 是 SpatialPhase 的确定性空间 basis，只随机化列相位，不使用共享可变 RNG，也不按 fixture 逐个制造噪点。
 
+Intensity parameter override 缩放 EffectGraph 已写出的 intensity；当 FixtureMask 关闭某个 fixture 时，override 不能绕过 mask 为它补写亮度。只在 EffectGraph 本身不拥有 intensity writer 时，显式 intensity override 才作为独立 dimmer 输出。
+
 ## Mix 与安全
 
 Effect 写入 typed fixture attributes。Profile 提供默认 HTP/LTP policy，但当多个 Cue Layer 或重叠 CueClip 在同一 fixture 上写同一属性时，作者必须在 Cue Layer 明确选择 MixPolicy；Add、Multiply 和 Mask 永不因重叠自动启用。

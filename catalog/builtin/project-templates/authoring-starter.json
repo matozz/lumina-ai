@@ -328,7 +328,7 @@
           "target_set_ref": {
             "stage_id": "main-stage",
             "stage_revision": 1,
-            "target_set_id": "zone-4x4-1"
+            "target_set_id": "zone-2x2-1"
           },
           "parameter_overrides": {
             "speed": { "type": "scalar", "value": 1 },
@@ -359,7 +359,7 @@
           "target_set_ref": {
             "stage_id": "main-stage",
             "stage_revision": 1,
-            "target_set_id": "zone-4x4-4"
+            "target_set_id": "zone-2x2-2"
           },
           "parameter_overrides": {
             "speed": { "type": "scalar", "value": 1 },
@@ -390,7 +390,7 @@
           "target_set_ref": {
             "stage_id": "main-stage",
             "stage_revision": 1,
-            "target_set_id": "zone-4x4-13"
+            "target_set_id": "zone-2x2-3"
           },
           "parameter_overrides": {
             "speed": { "type": "scalar", "value": 1 },
@@ -421,7 +421,7 @@
           "target_set_ref": {
             "stage_id": "main-stage",
             "stage_revision": 1,
-            "target_set_id": "zone-4x4-16"
+            "target_set_id": "zone-2x2-4"
           },
           "parameter_overrides": {
             "speed": { "type": "scalar", "value": 1 },

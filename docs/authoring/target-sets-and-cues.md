@@ -48,5 +48,5 @@ TargetingScene 是 Stage 内一组有序 selection steps，可表达 All → par
 
 - TargetSet 新建、复制、保存和删除保护都形成单次可撤销 transaction。
 - 多 Layer Cue 同时点亮四个 10×10 quadrant。
-- 四个 5×5 corner Cues 可顺序或重叠调度，并在重叠写同一属性时要求明确 MixPolicy。
+- 四个 5×5 corner TargetSet 可独立选择并正确解析；内置空间运动示例使用四个 10×10 quadrant，避免为极小空间采样改变 Effect 定义。多个 Cue 顺序或重叠调度时，相交区域写同一属性仍要求明确 MixPolicy。
 - Cue Layer 的 Effect/TargetSet/scene 引用在保存与重开后保持精确。

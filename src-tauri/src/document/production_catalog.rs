@@ -1570,6 +1570,75 @@ mod tests {
     }
 
     #[test]
+    fn corner_spatial_effects_keep_visible_output_on_authored_target_sizes() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        let template = catalog
+            .project_templates
+            .iter()
+            .find(|template| template.id == "builtin.project-template.authoring-starter")
+            .expect("authoring starter template");
+        let mut bundle = materialize_project_template(&catalog, template);
+        bundle.manifest.active_arrangement_id =
+            "builtin.arrangement.four-corner-chase-128".to_string();
+        let snapshot = Compiler::compile_active_project(
+            ValidatedProject::validate(bundle).expect("corner project validates"),
+        )
+        .expect("corner project compiles");
+        let top_left = (0..10)
+            .flat_map(|row| (0..10).map(move |column| row * 20 + column + 1))
+            .collect::<BTreeSet<_>>();
+        let top_right = (0..10)
+            .flat_map(|row| (10..20).map(move |column| row * 20 + column + 1))
+            .collect::<BTreeSet<_>>();
+        let visible_target = |beat: f64, fixture_ids: &BTreeSet<u32>| {
+            render_at(&snapshot.show, RenderTime { beat }, RenderSource::Timeline)
+                .iter()
+                .filter(|frame| fixture_ids.contains(&frame.id))
+                .filter(|frame| frame_intensity(frame).is_some_and(|value| value > 0.01))
+                .map(|frame| frame.id)
+                .collect::<BTreeSet<_>>()
+        };
+
+        let mut ping_patterns = BTreeSet::new();
+        for tick in (0..7_680).step_by(10) {
+            let beat = f64::from(tick) / 960.0;
+            let visible = visible_target(beat, &top_left);
+            assert!(
+                !visible.is_empty(),
+                "top-left Ping-Pong dropped all output at beat {beat}"
+            );
+            assert!(
+                visible.len() < top_left.len(),
+                "top-left Ping-Pong bypassed its fixture mask at beat {beat}"
+            );
+            ping_patterns.insert(visible);
+        }
+        assert!(
+            ping_patterns.len() >= 10,
+            "Ping-Pong must travel across columns"
+        );
+
+        let mut rain_patterns = BTreeSet::new();
+        for tick in (3_840..11_520).step_by(10) {
+            let beat = f64::from(tick) / 960.0;
+            let visible = visible_target(beat, &top_right);
+            assert!(
+                !visible.is_empty(),
+                "top-right Rain dropped all output at beat {beat}"
+            );
+            assert!(
+                visible.len() < top_right.len(),
+                "top-right Rain bypassed its fixture mask at beat {beat}"
+            );
+            rain_patterns.insert(visible);
+        }
+        assert!(
+            rain_patterns.len() >= 10,
+            "Rain must move through seeded rows"
+        );
+    }
+
+    #[test]
     fn production_recipes_reject_implicit_shared_attribute_writers() {
         let mut catalog = builtin_production_catalog().expect("catalog");
         let mut overlapping = catalog.cue_recipes[2].layers[0].clone();
