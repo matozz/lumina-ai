@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "id": "builtin.layout.strip-vertical-tower-120",
+  "id": "builtin.layout.strip-vertical-tower-30",
   "revision": 1,
-  "name": "Vertical Tower Strip 120",
+  "name": "Vertical Tower Strip 30",
   "category": "basic",
   "editor": { "mode": "form" },
   "geometry": {
     "shape": "strip",
-    "count": 120,
+    "count": 30,
     "orientation": "vertical",
     "fixture_size": { "width": 14, "height": 8 },
     "gap": { "x": 6, "y": 6 },

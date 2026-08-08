@@ -340,7 +340,7 @@ describe("Stage 7 Project state", () => {
       partition_index: 0,
     });
     expect(upgradedStage.target_sets.map((target) => target.id)).toEqual(["all"]);
-    expect(upgradedStage.patch).toEqual([{ profile_id: "generic-rgb", id_range: [1, 433] }]);
+    expect(upgradedStage.patch).toEqual([{ profile_id: "generic-rgb", id_range: [1, 649] }]);
     expect(upgradedStage.targeting_scenes?.[0].steps[1].selection).toEqual({
       target_set_id: "all",
       partition_index: null,

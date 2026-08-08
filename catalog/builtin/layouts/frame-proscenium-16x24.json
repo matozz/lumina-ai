@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "id": "builtin.layout.frame-arena-24x40",
+  "id": "builtin.layout.frame-proscenium-16x24",
   "revision": 1,
-  "name": "Arena Perimeter 24×40",
+  "name": "Proscenium Frame 16×24",
   "category": "basic",
   "editor": { "mode": "form" },
   "geometry": {
     "shape": "frame",
-    "rows": 24,
-    "columns": 40,
+    "rows": 16,
+    "columns": 24,
     "fixture_size": { "width": 10, "height": 10 },
-    "gap": { "x": 10, "y": 10 },
-    "pitch": { "x": 20, "y": 20 },
+    "gap": { "x": 8, "y": 6 },
+    "pitch": { "x": 18, "y": 16 },
     "origin": { "x": 0, "y": 0 }
   }
 }

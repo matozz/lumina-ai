@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "id": "builtin.layout.circle-club-rings-5",
+  "id": "builtin.layout.circle-club-rings-6",
   "revision": 1,
   "name": "Club Ceiling Rings",
   "category": "basic",
   "editor": { "mode": "form" },
   "geometry": {
     "shape": "circle",
-    "rings": 5,
-    "increment": 10,
-    "fixture_size": { "width": 10, "height": 10 },
-    "ring_gap": 12,
-    "ring_pitch": 22,
+    "rings": 6,
+    "increment": 6,
+    "fixture_size": { "width": 12, "height": 6 },
+    "ring_gap": 8,
+    "ring_pitch": 20,
     "center": { "x": 0, "y": 0 }
   }
 }

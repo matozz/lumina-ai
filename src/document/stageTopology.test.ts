@@ -101,10 +101,10 @@ describe("Stage topology impact", () => {
     expect(impact.compatible).toBe(false);
     expect(impact.validTargetSetIds).toEqual(["all"]);
     expect(impact.fixtureCount).toBe(400);
-    expect(impact.candidateCapacity).toBe(433);
+    expect(impact.candidateCapacity).toBe(649);
     expect(impact.targetSets.find((target) => target.id === "all")).toMatchObject({
       beforeCount: 400,
-      afterCount: 433,
+      afterCount: 649,
     });
     expect(impact.targetSets.find((target) => target.id === "zones-3x3")).toMatchObject({
       valid: false,
@@ -112,6 +112,6 @@ describe("Stage topology impact", () => {
     expect(resolveTargetSet(stage, circleLayout, stage.target_sets[0])?.fixtureIds).toHaveLength(
       400,
     );
-    expect(fixtureIdsForStage(stageForLayout(stage, circleLayout))).toHaveLength(433);
+    expect(fixtureIdsForStage(stageForLayout(stage, circleLayout))).toHaveLength(649);
   });
 });

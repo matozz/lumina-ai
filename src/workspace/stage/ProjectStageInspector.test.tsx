@@ -117,7 +117,7 @@ describe("ProjectStageInspector Layout workflow", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Update Stage & choose an Effect" }));
     expect(activeStage(useProjectStore.getState().bundle).patch).toEqual([
-      { profile_id: "generic-rgb", id_range: [1, 433] },
+      { profile_id: "generic-rgb", id_range: [1, 649] },
     ]);
     expect(useWorkspaceStore.getState().activeWorkspace).toBe("effect-lab");
   });
@@ -214,7 +214,7 @@ describe("ProjectStageInspector Layout workflow", () => {
     await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
 
     expect(screen.getByLabelText("Rings")).toBeTruthy();
-    expect(screen.getByLabelText("Fixtures per ring step")).toHaveProperty("value", "12");
+    expect(screen.getByLabelText("Fixtures per ring step")).toHaveProperty("value", "18");
     expect(screen.getByLabelText("Fixture gap")).toBeTruthy();
     expect(screen.getByLabelText("Fixture width")).toBeTruthy();
     expect(screen.getByLabelText("Fixture height")).toBeTruthy();
@@ -228,7 +228,7 @@ describe("ProjectStageInspector Layout workflow", () => {
       expect(previewLayout.geometry).toMatchObject({
         shape: "circle",
         rings: 2,
-        increment: 12,
+        increment: 18,
       });
     });
   });

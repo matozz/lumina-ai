@@ -7,11 +7,11 @@
   "editor": { "mode": "form" },
   "geometry": {
     "shape": "sector",
-    "rings": 7,
-    "segments": 6,
+    "rings": 9,
+    "segments": 3,
     "fixture_size": { "width": 9, "height": 9 },
-    "ring_gap": 15,
-    "ring_pitch": 24,
+    "ring_gap": 10,
+    "ring_pitch": 19,
     "start_angle_degrees": 195,
     "sweep_angle_degrees": 150,
     "center": { "x": 0, "y": 0 }

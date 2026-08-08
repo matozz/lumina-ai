@@ -43,21 +43,21 @@ describe("LayoutDefinition geometry", () => {
     ).toMatchObject({
       "builtin.layout.matrix-main-20x20": 400,
       "builtin.layout.wall-main-20x20": 400,
-      "builtin.layout.strip-runway-160": 160,
-      "builtin.layout.frame-arena-24x40": 124,
-      "builtin.layout.circle-rings-8": 433,
-      "builtin.layout.sector-fan-8": 288,
-      "builtin.layout.polygon-hex-144": 144,
+      "builtin.layout.strip-runway-30": 30,
+      "builtin.layout.frame-arena-12x24": 68,
+      "builtin.layout.circle-rings-8": 649,
+      "builtin.layout.sector-fan-8": 216,
+      "builtin.layout.polygon-hex-96": 96,
       "builtin.layout.honeycomb-18x24": 432,
       "builtin.layout.formula-sine-160": 160,
       "builtin.layout.algorithm-lissajous-240": 240,
-      "builtin.layout.strip-vertical-tower-120": 120,
-      "builtin.layout.frame-proscenium-16x36": 100,
-      "builtin.layout.frame-portrait-32x16": 92,
-      "builtin.layout.circle-club-rings-5": 151,
-      "builtin.layout.circle-festival-halo-10": 661,
-      "builtin.layout.sector-front-wash-90": 144,
-      "builtin.layout.sector-stage-wing-150": 168,
+      "builtin.layout.strip-vertical-tower-30": 30,
+      "builtin.layout.frame-proscenium-16x24": 76,
+      "builtin.layout.frame-portrait-18x12": 56,
+      "builtin.layout.circle-club-rings-6": 127,
+      "builtin.layout.circle-festival-halo-10": 441,
+      "builtin.layout.sector-front-wash-90": 110,
+      "builtin.layout.sector-stage-wing-150": 135,
       "builtin.layout.polygon-triangle-84": 84,
       "builtin.layout.polygon-square-96": 96,
       "builtin.layout.polygon-pentagon-110": 110,
@@ -66,7 +66,7 @@ describe("LayoutDefinition geometry", () => {
       "builtin.layout.formula-arch-160": 160,
     });
     const frame = bundle.layouts.find((layout) => layout.geometry.shape === "frame")!;
-    expect(layoutPositions(frame, fixtureIdsForLayout(frame))).toHaveLength(124);
+    expect(layoutPositions(frame, fixtureIdsForLayout(frame))).toHaveLength(68);
   });
 
   it("fills every circle ring symmetrically instead of leaving a partial outer arc", () => {
@@ -82,8 +82,8 @@ describe("LayoutDefinition geometry", () => {
     );
     const positions = layoutPositions(circle, fixtureIds).slice(1);
 
-    expect(counts).toEqual([12, 24, 36, 48, 60, 72, 84, 96]);
-    expect(positions).toHaveLength(432);
+    expect(counts).toEqual([18, 36, 54, 72, 90, 108, 126, 144]);
+    expect(positions).toHaveLength(648);
     let offset = 0;
     for (const [ringIndex, count] of counts.entries()) {
       const ring = positions.slice(offset, offset + count);
@@ -125,7 +125,7 @@ describe("LayoutDefinition geometry", () => {
     expect([circle.geometry.ring_gap, circle.geometry.ring_pitch]).toEqual(spacing);
     const positions = layoutPositions(circle, fixtureIdsForLayout(circle));
     const radii = [...new Set(positions.map((point) => Math.round(Math.hypot(point.x, point.y))))];
-    expect(radii).toEqual([0, 20, 40, 60]);
+    expect(radii).toEqual([0, 30, 60, 90]);
   });
 
   it("previews a Layout on a cloned Stage without mutating its saved reference", () => {

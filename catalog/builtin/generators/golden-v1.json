@@ -45,8 +45,8 @@
       "shape": "algorithm"
     },
     {
-      "capacity": 151,
-      "id": "builtin.layout.circle-club-rings-5",
+      "capacity": 127,
+      "id": "builtin.layout.circle-club-rings-6",
       "samples": [
         {
           "id": 1,
@@ -54,20 +54,20 @@
           "y": 0.0
         },
         {
-          "id": 76,
-          "x": -51.725102,
-          "y": 71.193496
+          "id": 64,
+          "x": 91.354546,
+          "y": 40.673664
         },
         {
-          "id": 151,
-          "x": 109.132617,
-          "y": -13.786656
+          "id": 127,
+          "x": 118.17693,
+          "y": -20.837781
         }
       ],
       "shape": "circle"
     },
     {
-      "capacity": 661,
+      "capacity": 441,
       "id": "builtin.layout.circle-festival-halo-10",
       "samples": [
         {
@@ -76,20 +76,20 @@
           "y": 0.0
         },
         {
-          "id": 331,
-          "x": 145.492268,
-          "y": -84.0
+          "id": 221,
+          "x": 112.614318,
+          "y": -70.760266
         },
         {
-          "id": 661,
-          "x": 239.671088,
-          "y": -12.560629
+          "id": 441,
+          "x": 189.414293,
+          "y": -14.907228
         }
       ],
       "shape": "circle"
     },
     {
-      "capacity": 433,
+      "capacity": 649,
       "id": "builtin.layout.circle-rings-8",
       "samples": [
         {
@@ -98,14 +98,14 @@
           "y": 0.0
         },
         {
-          "id": 217,
-          "x": -119.543364,
-          "y": 10.458689
+          "id": 325,
+          "x": -179.695468,
+          "y": 10.466069
         },
         {
-          "id": 433,
-          "x": 159.657428,
-          "y": -10.464501
+          "id": 649,
+          "x": 239.771573,
+          "y": -10.468653
         }
       ],
       "shape": "circle"
@@ -155,8 +155,8 @@
       "shape": "formula"
     },
     {
-      "capacity": 124,
-      "id": "builtin.layout.frame-arena-24x40",
+      "capacity": 68,
+      "id": "builtin.layout.frame-arena-12x24",
       "samples": [
         {
           "id": 1,
@@ -164,21 +164,21 @@
           "y": 0.0
         },
         {
-          "id": 63,
-          "x": 780.0,
-          "y": 460.0
+          "id": 35,
+          "x": 414.0,
+          "y": 176.0
         },
         {
-          "id": 124,
+          "id": 68,
           "x": 0.0,
-          "y": 20.0
+          "y": 16.0
         }
       ],
       "shape": "frame"
     },
     {
-      "capacity": 92,
-      "id": "builtin.layout.frame-portrait-32x16",
+      "capacity": 56,
+      "id": "builtin.layout.frame-portrait-18x12",
       "samples": [
         {
           "id": 1,
@@ -186,21 +186,21 @@
           "y": 0.0
         },
         {
-          "id": 47,
-          "x": 270.0,
-          "y": 558.0
+          "id": 29,
+          "x": 176.0,
+          "y": 272.0
         },
         {
-          "id": 92,
+          "id": 56,
           "x": 0.0,
-          "y": 18.0
+          "y": 16.0
         }
       ],
       "shape": "frame"
     },
     {
-      "capacity": 100,
-      "id": "builtin.layout.frame-proscenium-16x36",
+      "capacity": 76,
+      "id": "builtin.layout.frame-proscenium-16x24",
       "samples": [
         {
           "id": 1,
@@ -208,14 +208,14 @@
           "y": 0.0
         },
         {
-          "id": 51,
-          "x": 700.0,
-          "y": 300.0
+          "id": 39,
+          "x": 414.0,
+          "y": 240.0
         },
         {
-          "id": 100,
+          "id": 76,
           "x": 0.0,
-          "y": 20.0
+          "y": 16.0
         }
       ],
       "shape": "frame"
@@ -331,8 +331,8 @@
       "shape": "matrix"
     },
     {
-      "capacity": 144,
-      "id": "builtin.layout.polygon-hex-144",
+      "capacity": 96,
+      "id": "builtin.layout.polygon-hex-96",
       "samples": [
         {
           "id": 1,
@@ -340,14 +340,14 @@
           "y": -270.0
         },
         {
-          "id": 73,
+          "id": 49,
           "x": 0.0,
           "y": 270.0
         },
         {
-          "id": 144,
-          "x": -9.742786,
-          "y": -264.375
+          "id": 96,
+          "x": -14.614179,
+          "y": -261.5625
         }
       ],
       "shape": "polygon"
@@ -419,7 +419,7 @@
       "shape": "polygon"
     },
     {
-      "capacity": 288,
+      "capacity": 216,
       "id": "builtin.layout.sector-fan-8",
       "samples": [
         {
@@ -428,12 +428,12 @@
           "y": 5.694019
         },
         {
-          "id": 145,
-          "x": 5.145561,
-          "y": -131.899671
+          "id": 109,
+          "x": 6.908346,
+          "y": -131.819099
         },
         {
-          "id": 288,
+          "id": 216,
           "x": 170.002945,
           "y": 45.552152
         }
@@ -441,7 +441,7 @@
       "shape": "sector"
     },
     {
-      "capacity": 144,
+      "capacity": 110,
       "id": "builtin.layout.sector-front-wash-90",
       "samples": [
         {
@@ -450,43 +450,43 @@
           "y": -16.970563
         },
         {
-          "id": 73,
-          "x": 4.91632,
-          "y": -143.916051
+          "id": 56,
+          "x": 118.793939,
+          "y": -118.793939
         },
         {
-          "id": 144,
-          "x": 135.764502,
-          "y": -135.764502
+          "id": 110,
+          "x": 169.705627,
+          "y": -169.705627
         }
       ],
       "shape": "sector"
     },
     {
-      "capacity": 168,
+      "capacity": 135,
       "id": "builtin.layout.sector-stage-wing-150",
       "samples": [
         {
           "id": 1,
-          "x": -23.18222,
-          "y": -6.211657
+          "x": -18.352591,
+          "y": -4.917562
         },
         {
-          "id": 85,
-          "x": 90.754411,
-          "y": -78.508833
+          "id": 68,
+          "x": -94.045202,
+          "y": -94.045202
         },
         {
-          "id": 168,
-          "x": 162.275539,
-          "y": -43.4816
+          "id": 135,
+          "x": 165.173316,
+          "y": -44.258057
         }
       ],
       "shape": "sector"
     },
     {
-      "capacity": 160,
-      "id": "builtin.layout.strip-runway-160",
+      "capacity": 30,
+      "id": "builtin.layout.strip-runway-30",
       "samples": [
         {
           "id": 1,
@@ -494,21 +494,21 @@
           "y": 0.0
         },
         {
-          "id": 81,
-          "x": 1120.0,
+          "id": 16,
+          "x": 180.0,
           "y": 0.0
         },
         {
-          "id": 160,
-          "x": 2226.0,
+          "id": 30,
+          "x": 348.0,
           "y": 0.0
         }
       ],
       "shape": "strip"
     },
     {
-      "capacity": 120,
-      "id": "builtin.layout.strip-vertical-tower-120",
+      "capacity": 30,
+      "id": "builtin.layout.strip-vertical-tower-30",
       "samples": [
         {
           "id": 1,
@@ -516,14 +516,14 @@
           "y": 0.0
         },
         {
-          "id": 61,
+          "id": 16,
           "x": 0.0,
-          "y": 840.0
+          "y": 210.0
         },
         {
-          "id": 120,
+          "id": 30,
           "x": 0.0,
-          "y": 1666.0
+          "y": 406.0
         }
       ],
       "shape": "strip"

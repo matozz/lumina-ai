@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "id": "builtin.layout.polygon-hex-144",
+  "id": "builtin.layout.polygon-hex-96",
   "revision": 1,
-  "name": "Hexagonal Truss 144",
+  "name": "Hexagonal Truss 96",
   "category": "basic",
   "editor": { "mode": "form" },
   "geometry": {
     "shape": "polygon",
     "sides": 6,
-    "fixtures_per_side": 24,
+    "fixtures_per_side": 16,
     "fixture_size": { "width": 9, "height": 9 },
     "radius": 270,
     "rotation_degrees": -90,

@@ -7,8 +7,8 @@
   "editor": { "mode": "form" },
   "geometry": {
     "shape": "sector",
-    "rings": 8,
-    "segments": 4,
+    "rings": 10,
+    "segments": 2,
     "fixture_size": { "width": 10, "height": 10 },
     "ring_gap": 14,
     "ring_pitch": 24,

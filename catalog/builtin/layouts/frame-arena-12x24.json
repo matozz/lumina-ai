@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.frame-arena-12x24",
+  "revision": 1,
+  "name": "Arena Perimeter 12×24",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "frame",
+    "rows": 12,
+    "columns": 24,
+    "fixture_size": { "width": 12, "height": 8 },
+    "gap": { "x": 6, "y": 8 },
+    "pitch": { "x": 18, "y": 16 },
+    "origin": { "x": 0, "y": 0 }
+  }
+}
