@@ -1,4 +1,6 @@
-# Authoring V1 consolidation evidence
+# Authoring V1 consolidation baseline evidence
+
+> This directory records the original consolidation pass. The later built-in Layout adjustments, Generator spacing changes, Effect review and multi-region Arrangement examples are documented in the [follow-up evidence](../authoring-v1-followup/README.md).
 
 - Date: 2026-08-08
 - Build: macOS debug application from `codex/authoring-v1-consolidation`
