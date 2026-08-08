@@ -8,6 +8,7 @@ import {
   type AuthoringScope,
 } from "@/authoring/transport";
 import { engine } from "@/bridge/commands";
+import { publishProjectPreview } from "@/canvas/previewBus";
 import type {
   ArrangementDocument,
   AssetRef,
@@ -247,7 +248,7 @@ function authoringDescriptor(
 }
 
 function dispatchPreviewFrame(frame: ProjectPreviewFrame) {
-  window.dispatchEvent(new CustomEvent("engine:project-preview-frame", { detail: frame }));
+  publishProjectPreview(frame);
   projectActions.setPreviewResult(frame);
 }
 

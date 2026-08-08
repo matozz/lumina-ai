@@ -86,6 +86,20 @@ describe("ProjectStageInspector Layout workflow", () => {
     expect(useWorkspaceStore.getState().activeWorkspace).toBe("effect-lab");
   });
 
+  it("replays the selected Layout preview when leaving the Advanced asset inspector", async () => {
+    const previewEvent = vi.fn();
+    window.addEventListener("engine:layout-draft-coords", previewEvent);
+    render(<ProjectStageInspector />);
+    await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(previewEvent).toHaveBeenCalledTimes(1));
+
+    act(() => workspaceActions.setAdvancedMode(false));
+
+    await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(previewEvent).toHaveBeenCalledTimes(2));
+    window.removeEventListener("engine:layout-draft-coords", previewEvent);
+  });
+
   it("automatically materializes Layout fixtures without exposing remap configuration", async () => {
     workspaceActions.setAdvancedMode(false);
     const circleRef = useProjectStore

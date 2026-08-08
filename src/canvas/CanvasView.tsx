@@ -6,6 +6,7 @@ import { assessFrame, type FrameCursor } from "../bridge/frameSync";
 import type { FixtureFramePayload, LayoutCoord } from "../bridge/types";
 import type { ProjectPreviewFrame } from "../bridge/types";
 import { cn } from "../lib/utils";
+import { latestAuthoringPreview } from "./previewBus";
 
 const INTENSITY_PREVIEW_COLOR: [number, number, number] = [139, 119, 255];
 
@@ -57,6 +58,20 @@ export const CanvasView = ({
     };
     window.addEventListener("engine:project-preview-frame", handleProjectPreview);
     window.addEventListener("engine:layout-draft-coords", handleLayoutDraft);
+
+    if (frameSource === "preview") {
+      const snapshot = latestAuthoringPreview();
+      if (snapshot?.type === "layout") {
+        renderer.initFromLayout(snapshot.coords);
+      } else if (snapshot?.type === "project") {
+        renderer.initFromLayout(snapshot.frame.layout_coords);
+        renderer.applyFrame(
+          snapshot.frame.outputs,
+          true,
+          showIntensityWithoutColor ? INTENSITY_PREVIEW_COLOR : undefined,
+        );
+      }
+    }
 
     return () => {
       renderer.stopRenderLoop();

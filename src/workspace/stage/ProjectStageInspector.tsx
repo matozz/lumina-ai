@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { engine } from "@/bridge/commands";
 import type { Diagnostic, LayoutDefinition } from "@/bridge/types";
+import { publishLayoutPreview } from "@/canvas/previewBus";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -95,7 +96,7 @@ export function ProjectStageInspector() {
         .then((coords) => {
           if (request.signal.aborted) return;
           setPreviewDiagnostics([]);
-          window.dispatchEvent(new CustomEvent("engine:layout-draft-coords", { detail: coords }));
+          publishLayoutPreview(coords);
         })
         .catch((error) => {
           if (request.signal.aborted) return;
@@ -109,7 +110,7 @@ export function ProjectStageInspector() {
       request.abort();
       window.clearTimeout(timer);
     };
-  }, [blockingDiagnostics.length, draft, stage, view]);
+  }, [advancedMode, blockingDiagnostics.length, draft, stage, view]);
 
   useEffect(() => {
     if (view === "layout") return;

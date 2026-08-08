@@ -1,8 +1,8 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { EffectDefinitionDocument, ProductionCatalog } from "@/bridge/types";
 import { createEffectAsset, exactAsset } from "@/document/projectModel";
-import { authoringDraftActions } from "@/stores/authoringDraft";
+import { authoringDraftActions, useAuthoringDraftStore } from "@/stores/authoringDraft";
 import { productionCatalogActions } from "@/stores/productionCatalog";
 import { projectActions, useProjectStore } from "@/stores/project";
 import { useWorkspaceStore, workspaceActions } from "@/stores/workspace";
@@ -58,10 +58,17 @@ describe("Effect Lab safe authoring", () => {
     render(<EffectLabHarness />);
 
     const useInCue = await screen.findByRole("button", { name: "Use in Cue" });
+    act(() => projectActions.setSelectedTargetSetId("zone-2x2-1"));
+    await waitFor(() =>
+      expect(screen.getAllByText("2×2 · Top left · 100 of 400").length).toBeGreaterThan(0),
+    );
     fireEvent.click(useInCue);
 
     expect(useWorkspaceStore.getState().activeWorkspace).toBe("cues");
     expect(useProjectStore.getState().selectedCueRef).toBeTruthy();
+    expect(useAuthoringDraftStore.getState().cue?.working.layers[0].target_set_ref).toMatchObject({
+      target_set_id: "zone-2x2-1",
+    });
   });
 
   it("starts on all Stage fixtures and opens the reusable fixture-area editor", async () => {

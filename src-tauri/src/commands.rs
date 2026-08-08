@@ -1331,6 +1331,37 @@ mod tests {
         assert_eq!(radii, [0, 22, 44, 66].into_iter().collect());
     }
 
+    #[test]
+    fn formula_and_algorithm_authoring_previews_materialize_every_position() {
+        let bundle = valid_bundle();
+        let catalog = crate::document::builtin_production_catalog().expect("catalog");
+        for layout_id in [
+            "builtin.layout.formula-sine-160",
+            "builtin.layout.formula-arch-160",
+            "builtin.layout.algorithm-lissajous-240",
+            "builtin.layout.algorithm-spiral-200",
+        ] {
+            let layout = catalog
+                .layouts
+                .iter()
+                .find(|layout| layout.id == layout_id)
+                .unwrap_or_else(|| panic!("missing {layout_id}"));
+            let coords = preview_layout(layout.clone(), bundle.stages[0].clone())
+                .unwrap_or_else(|diagnostics| panic!("{layout_id}: {diagnostics:?}"));
+            assert_eq!(
+                coords.len(),
+                crate::document::layout_authoring_capacity(layout),
+                "{layout_id}"
+            );
+            assert!(
+                coords
+                    .iter()
+                    .all(|coord| coord.x.is_finite() && coord.y.is_finite()),
+                "{layout_id}"
+            );
+        }
+    }
+
     #[tokio::test]
     async fn effect_loop_preview_renders_without_publishing() {
         let source = r##"{

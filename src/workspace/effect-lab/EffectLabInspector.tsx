@@ -198,6 +198,7 @@ export function EffectLabInspector() {
       currentBundle,
       { id: saved.id, revision: saved.revision },
       catalog,
+      targetSetId,
     );
     authoringDraftActions.beginNewCue(cue);
     projectActions.setSelectedEffectRef({ id: saved.id, revision: saved.revision });
