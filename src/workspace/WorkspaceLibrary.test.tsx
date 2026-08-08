@@ -47,12 +47,18 @@ describe("Live workspace library", () => {
     expect(screen.queryByText(/r2/)).toBeNull();
   });
 
-  it("keeps layout selection simple until Advanced is enabled", () => {
+  it("keeps generated Layout previews available without exposing advanced asset actions", () => {
     render(<WorkspaceLibrary workspace="stage" />);
 
     expect(screen.getByRole("button", { name: /Main Matrix 20×20/ })).toBeTruthy();
+    expect(screen.getByText("Generated")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Sine Ribbon 160 Formula/ }));
+    expect(useProjectStore.getState().selectedLayoutRef).toEqual({
+      id: "builtin.layout.formula-sine-160",
+      revision: 1,
+    });
     expect(screen.queryByRole("button", { name: /Duplicate Main Matrix 20×20/ })).toBeNull();
-    expect(screen.queryByText("Generated / Advanced")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Duplicate Sine Ribbon 160/ })).toBeNull();
   });
 
   it("opens an Effect preview stopped until the user presses Play", () => {

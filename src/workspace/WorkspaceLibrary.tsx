@@ -262,18 +262,16 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                 selected={selectedLayoutRef}
                 advanced={advancedMode}
               />
-              {advancedMode && (
-                <LayoutLibrarySection
-                  title="Generated / Advanced"
-                  refs={latestRefsById(bundle.manifest.layout_refs).filter(
-                    (reference) =>
-                      exactAsset(bundle.layouts, reference)?.category === "generated_advanced",
-                  )}
-                  bundle={bundle}
-                  selected={selectedLayoutRef}
-                  advanced={advancedMode}
-                />
-              )}
+              <LayoutLibrarySection
+                title="Generated"
+                refs={latestRefsById(bundle.manifest.layout_refs).filter(
+                  (reference) =>
+                    exactAsset(bundle.layouts, reference)?.category === "generated_advanced",
+                )}
+                bundle={bundle}
+                selected={selectedLayoutRef}
+                advanced={advancedMode}
+              />
             </>
           )}
 
