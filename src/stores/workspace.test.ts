@@ -37,7 +37,7 @@ describe("workspace state", () => {
     const migrate = useWorkspaceStore.persist.getOptions().migrate;
 
     expect(migrate).toBeDefined();
-    const migrated = await Promise.resolve(migrate?.({ activeWorkspace: "song" }, 1));
+    const migrated = await Promise.resolve(migrate?.({ activeWorkspace: "arrange" }, 4));
 
     expect(migrated).toMatchObject({
       activeWorkspace: "stage",

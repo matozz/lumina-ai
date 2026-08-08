@@ -39,7 +39,7 @@ Layout 预览总是生成完整容量，不受当前 Stage fixture 数量限制�
 
 ## 内置预设原则
 
-内置目录覆盖中大型 Matrix/Wall、横竖 Strip、多比例 Frame、不同 rings/gap 的 Circle、多个角度/密度 Sector、三至六边形 Polygon、紧凑/宽松 Honeycomb，以及稳定 Formula/Algorithm 示例。每个 JSON 应表达不同的舞台用途，而不是仅用微小参数差异堆数量。
+内置目录覆盖中大型 Matrix/Wall、横竖 Strip、多比例 Frame、不同 rings/gap 的 Circle、多个角度/密度 Sector、三至六边形 Polygon、紧凑/宽松 Honeycomb，以及稳定 Formula/Algorithm 示例。Authoring Starter 引用完整内置 Layout 集，因此每个预设都可直接预览或复制成项目资产。每个 JSON 应表达不同的舞台用途，而不是仅用微小参数差异堆数量。
 
 ## 新增或修改 Generator
 

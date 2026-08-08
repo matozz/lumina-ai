@@ -26,6 +26,9 @@ describe("built-in declarative Catalog", () => {
     const template = builtinProjectTemplate();
     expect(template.stage.patch).toEqual([{ profile_id: "generic-rgb", id_range: [1, 400] }]);
     expect(template.stage.layout_ref).toEqual(template.layout_refs[0]);
+    expect(new Set(template.layout_refs.map((reference) => reference.id))).toEqual(
+      new Set(builtinLayouts.map((layout) => layout.id)),
+    );
 
     const arrangement = builtinArrangements.find(
       (candidate) => candidate.id === template.arrangement_ref.id,

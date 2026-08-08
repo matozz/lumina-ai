@@ -70,7 +70,7 @@ describe("Stage 7 Project state", () => {
     const cachedBundle = structuredClone(useProjectStore.getState().bundle);
     const migrate = useProjectStore.persist.getOptions().migrate;
     const migrated = (await Promise.resolve(
-      migrate?.({ bundle: cachedBundle, selectedEffectRef: effect }, 6),
+      migrate?.({ bundle: cachedBundle, selectedEffectRef: effect }, 9),
     )) as ReturnType<typeof useProjectStore.getState>;
 
     expect(migrated.bundle.schema_version).toBe(1);
@@ -79,6 +79,8 @@ describe("Stage 7 Project state", () => {
     expect(activeStage(migrated.bundle).target_sets.map((target) => target.id)).toEqual(
       expect.arrayContaining(["rows", "columns", "zones-3x3", "center", "edges"]),
     );
+    expect(migrated.bundle.layouts).toHaveLength(26);
+    expect(migrated.bundle.manifest.layout_refs).toHaveLength(26);
   });
 
   it("pauses the current preview before selecting another Effect", () => {

@@ -79,7 +79,7 @@ export interface ProjectState {
 }
 
 const starter = createStarterProjectBundle();
-const LOCAL_WORKSPACE_STORAGE_VERSION = 7;
+const LOCAL_WORKSPACE_STORAGE_VERSION = 10;
 
 const initialState: ProjectState = {
   bundle: starter,

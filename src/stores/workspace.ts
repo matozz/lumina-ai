@@ -60,12 +60,14 @@ const initialState: WorkspaceState = {
   statusMessage: null,
 };
 
+const LOCAL_WORKSPACE_PREFERENCES_VERSION = 5;
+
 export const useWorkspaceStore = create<WorkspaceState>()(
   persist(() => initialState, {
     name: "lumina-workspace-v1",
-    version: 3,
+    version: LOCAL_WORKSPACE_PREFERENCES_VERSION,
     migrate: (persistedState, version) => {
-      if (version < 3) return structuredClone(initialState);
+      if (version < LOCAL_WORKSPACE_PREFERENCES_VERSION) return structuredClone(initialState);
       const state = persistedState as Omit<Partial<WorkspaceState>, "activeWorkspace"> & {
         activeWorkspace?: string;
       };
