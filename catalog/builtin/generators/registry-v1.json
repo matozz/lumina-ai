@@ -417,8 +417,8 @@
       "status": "supported",
       "editor_mode": "parameter_schema",
       "capacity_model": "count",
-      "coordinate_model": "named deterministic algorithm evaluated over normalized progress",
-      "validation_model": "supported algorithm, positive count, finite parameters and origin",
+      "coordinate_model": "named deterministic path resampled by physical spacing: equal chord for open spirals and equal arc for closed Lissajous curves",
+      "validation_model": "supported algorithm, positive count and shape parameters, finite origin",
       "grid_targeting": false,
       "parameter_schema": [
         {

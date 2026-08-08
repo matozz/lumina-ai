@@ -283,6 +283,8 @@ pub fn validate_layout_geometry(layout: &LayoutDefinition) -> Result<(), String>
         }
         LayoutGeometry::Algorithm {
             fixture_size,
+            algorithm,
+            count,
             origin,
             parameters,
             ..
@@ -293,6 +295,26 @@ pub fn validate_layout_geometry(layout: &LayoutDefinition) -> Result<(), String>
                 || parameters.values().any(|value| !value.is_finite())
             {
                 return Err("Algorithm origin and parameters must be finite.".to_string());
+            }
+            if *count == 0 {
+                return Err("Algorithm fixture count must be positive.".to_string());
+            }
+            let positive = match algorithm {
+                LayoutAlgorithm::Spiral => {
+                    parameter(parameters, "turns", 3.0) > 0.0
+                        && parameter(parameters, "radius", 180.0) > 0.0
+                }
+                LayoutAlgorithm::Lissajous => {
+                    parameter(parameters, "a", 3.0) > 0.0
+                        && parameter(parameters, "b", 2.0) > 0.0
+                        && parameter(parameters, "scale_x", 160.0) > 0.0
+                        && parameter(parameters, "scale_y", 120.0) > 0.0
+                }
+            };
+            if !positive {
+                return Err(
+                    "Algorithm frequencies, turns, radius, and scale must be positive.".to_string(),
+                );
             }
         }
     }
@@ -482,10 +504,17 @@ pub fn layout_positions(layout: &LayoutDefinition, fixture_ids: &[u32]) -> Vec<C
         LayoutGeometry::Custom { fixtures, .. } => fixtures.clone(),
         LayoutGeometry::Algorithm {
             algorithm,
+            count,
             origin,
             parameters,
             ..
-        } => algorithm_positions(*algorithm, origin.x, origin.y, parameters, fixture_ids),
+        } => algorithm_positions(
+            *algorithm,
+            origin.x,
+            origin.y,
+            parameters,
+            &fixture_ids[..fixture_ids.len().min(*count as usize)],
+        ),
         LayoutGeometry::Formula { formula, .. } => {
             evaluate_formula_positions(formula, fixture_ids).unwrap_or_default()
         }
@@ -667,37 +696,162 @@ fn algorithm_positions(
     parameters: &std::collections::BTreeMap<String, f64>,
     fixture_ids: &[u32],
 ) -> Vec<CustomFixturePos> {
-    let divisor = fixture_ids.len().saturating_sub(1).max(1) as f64;
+    let points = match algorithm {
+        LayoutAlgorithm::Spiral => {
+            resample_open_path_by_chord_length(fixture_ids.len(), |progress| {
+                let turns = parameter(parameters, "turns", 3.0);
+                let radius = parameter(parameters, "radius", 180.0) * progress;
+                let angle = progress * turns * std::f64::consts::TAU;
+                (angle.cos() * radius, angle.sin() * radius)
+            })
+        }
+        LayoutAlgorithm::Lissajous => {
+            resample_path_by_arc_length(fixture_ids.len(), true, |progress| {
+                let a = parameter(parameters, "a", 3.0);
+                let b = parameter(parameters, "b", 2.0);
+                let delta = parameter(parameters, "delta", std::f64::consts::FRAC_PI_2);
+                let scale_x = parameter(parameters, "scale_x", 160.0);
+                let scale_y = parameter(parameters, "scale_y", 120.0);
+                let angle = progress * std::f64::consts::TAU;
+                (
+                    (a * angle + delta).sin() * scale_x,
+                    (b * angle).sin() * scale_y,
+                )
+            })
+        }
+    };
     fixture_ids
         .iter()
         .enumerate()
-        .map(|(index, id)| {
-            let progress = index as f64 / divisor;
-            let (x, y) = match algorithm {
-                LayoutAlgorithm::Lissajous => {
-                    let a = parameter(parameters, "a", 3.0);
-                    let b = parameter(parameters, "b", 2.0);
-                    let delta = parameter(parameters, "delta", std::f64::consts::FRAC_PI_2);
-                    let scale_x = parameter(parameters, "scale_x", 160.0);
-                    let scale_y = parameter(parameters, "scale_y", 120.0);
-                    let angle = progress * std::f64::consts::TAU;
-                    (
-                        (a * angle + delta).sin() * scale_x,
-                        (b * angle).sin() * scale_y,
-                    )
-                }
-                LayoutAlgorithm::Spiral => {
-                    let turns = parameter(parameters, "turns", 3.0);
-                    let radius = parameter(parameters, "radius", 180.0) * progress;
-                    let angle = progress * turns * std::f64::consts::TAU;
-                    (angle.cos() * radius, angle.sin() * radius)
-                }
-            };
-            CustomFixturePos {
-                id: *id,
-                x: origin_x + x,
-                y: origin_y + y,
+        .zip(points)
+        .map(|((_, id), (x, y))| CustomFixturePos {
+            id: *id,
+            x: origin_x + x,
+            y: origin_y + y,
+        })
+        .collect()
+}
+
+fn resample_open_path_by_chord_length(
+    count: usize,
+    point_at: impl Fn(f64) -> (f64, f64),
+) -> Vec<(f64, f64)> {
+    if count == 0 {
+        return Vec::new();
+    }
+    if count == 1 {
+        return vec![point_at(0.0)];
+    }
+
+    let segment_count = 8192_usize.max(count.saturating_mul(48));
+    let sampled = (0..=segment_count)
+        .map(|index| point_at(index as f64 / segment_count as f64))
+        .collect::<Vec<_>>();
+    let total_length = sampled
+        .windows(2)
+        .map(|pair| (pair[1].0 - pair[0].0).hypot(pair[1].1 - pair[0].1))
+        .sum::<f64>();
+
+    let walk = |spacing: f64| {
+        let mut points = vec![sampled[0]];
+        let mut sample_index = 1;
+        while points.len() < count {
+            let previous = *points.last().expect("path point");
+            while sample_index < sampled.len()
+                && (sampled[sample_index].0 - previous.0)
+                    .hypot(sampled[sample_index].1 - previous.1)
+                    < spacing
+            {
+                sample_index += 1;
             }
+            if sample_index >= sampled.len() {
+                return (false, points);
+            }
+            let start = sampled[sample_index - 1];
+            let end = sampled[sample_index];
+            let mut low = 0.0;
+            let mut high = 1.0;
+            for _ in 0..32 {
+                let middle = (low + high) / 2.0;
+                let x = start.0 + (end.0 - start.0) * middle;
+                let y = start.1 + (end.1 - start.1) * middle;
+                if (x - previous.0).hypot(y - previous.1) < spacing {
+                    low = middle;
+                } else {
+                    high = middle;
+                }
+            }
+            points.push((
+                start.0 + (end.0 - start.0) * high,
+                start.1 + (end.1 - start.1) * high,
+            ));
+        }
+        (true, points)
+    };
+
+    let mut low = 0.0;
+    let mut high = total_length / (count - 1) as f64 * 2.0;
+    let mut best = resample_path_by_arc_length(count, false, &point_at);
+    for _ in 0..48 {
+        let middle = (low + high) / 2.0;
+        let (complete, candidate) = walk(middle);
+        if complete {
+            low = middle;
+            best = candidate;
+        } else {
+            high = middle;
+        }
+    }
+    best
+}
+
+fn resample_path_by_arc_length(
+    count: usize,
+    closed: bool,
+    point_at: impl Fn(f64) -> (f64, f64),
+) -> Vec<(f64, f64)> {
+    if count == 0 {
+        return Vec::new();
+    }
+    if count == 1 {
+        return vec![point_at(0.0)];
+    }
+
+    let segment_count = 4096_usize.max(count.saturating_mul(24));
+    let sampled = (0..=segment_count)
+        .map(|index| point_at(index as f64 / segment_count as f64))
+        .collect::<Vec<_>>();
+    let mut cumulative = Vec::with_capacity(sampled.len());
+    cumulative.push(0.0);
+    for index in 1..sampled.len() {
+        let distance = (sampled[index].0 - sampled[index - 1].0)
+            .hypot(sampled[index].1 - sampled[index - 1].1);
+        cumulative.push(cumulative[index - 1] + distance);
+    }
+    let total_length = *cumulative.last().unwrap_or(&0.0);
+    if total_length <= METRIC_EPSILON {
+        return vec![sampled[0]; count];
+    }
+
+    let divisor = (if closed { count } else { count - 1 }) as f64;
+    let mut segment = 1;
+    (0..count)
+        .map(|index| {
+            let target = total_length * index as f64 / divisor;
+            while segment < cumulative.len() - 1 && cumulative[segment] < target {
+                segment += 1;
+            }
+            let previous_length = cumulative[segment - 1];
+            let segment_length = cumulative[segment] - previous_length;
+            let progress = if segment_length <= METRIC_EPSILON {
+                0.0
+            } else {
+                (target - previous_length) / segment_length
+            };
+            (
+                sampled[segment - 1].0 + (sampled[segment].0 - sampled[segment - 1].0) * progress,
+                sampled[segment - 1].1 + (sampled[segment].1 - sampled[segment - 1].1) * progress,
+            )
         })
         .collect()
 }
@@ -890,6 +1044,44 @@ mod tests {
                 })
                 .fold(f64::INFINITY, f64::min);
             assert!(minimum >= 8.9, "{} minimum center gap {minimum}", layout.id);
+        }
+    }
+
+    #[test]
+    fn algorithms_use_nearly_uniform_physical_spacing() {
+        let catalog = builtin_production_catalog().expect("built-in Catalog");
+        for layout in catalog
+            .layouts
+            .iter()
+            .filter(|layout| matches!(layout.geometry, LayoutGeometry::Algorithm { .. }))
+        {
+            let capacity = layout_capacity(layout);
+            let fixture_ids = (1..=capacity as u32).collect::<Vec<_>>();
+            let positions = layout_positions(layout, &fixture_ids);
+            let mut distances = positions
+                .windows(2)
+                .map(|pair| (pair[1].x - pair[0].x).hypot(pair[1].y - pair[0].y))
+                .collect::<Vec<_>>();
+            if matches!(
+                layout.geometry,
+                LayoutGeometry::Algorithm {
+                    algorithm: crate::document::LayoutAlgorithm::Lissajous,
+                    ..
+                }
+            ) {
+                let first = &positions[0];
+                let last = positions.last().expect("Algorithm position");
+                distances.push((first.x - last.x).hypot(first.y - last.y));
+            }
+            let minimum = distances.iter().copied().fold(f64::INFINITY, f64::min);
+            let maximum = distances.iter().copied().fold(0.0, f64::max);
+            assert!(minimum > 0.0, "{} positive spacing", layout.id);
+            assert!(
+                maximum / minimum < 1.08,
+                "{} spacing ratio {}",
+                layout.id,
+                maximum / minimum
+            );
         }
     }
 }

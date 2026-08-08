@@ -54,7 +54,7 @@ export const CanvasView = ({
     };
     const handleLayoutDraft = (event: Event) => {
       if (frameSource !== "preview") return;
-      renderer.initFromLayout((event as CustomEvent<LayoutCoord[]>).detail);
+      renderer.initFromLayout((event as CustomEvent<LayoutCoord[]>).detail, "layout-draft");
     };
     window.addEventListener("engine:project-preview-frame", handleProjectPreview);
     window.addEventListener("engine:layout-draft-coords", handleLayoutDraft);
@@ -62,7 +62,7 @@ export const CanvasView = ({
     if (frameSource === "preview") {
       const snapshot = latestAuthoringPreview();
       if (snapshot?.type === "layout") {
-        renderer.initFromLayout(snapshot.coords);
+        renderer.initFromLayout(snapshot.coords, "layout-draft");
       } else if (snapshot?.type === "project") {
         renderer.initFromLayout(snapshot.frame.layout_coords);
         renderer.applyFrame(

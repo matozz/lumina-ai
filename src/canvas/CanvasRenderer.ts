@@ -2,6 +2,9 @@ import type { FixtureFramePayload, LayoutCoord } from "../bridge/types";
 import { Camera } from "./Camera";
 import { FixtureVisual } from "./FixtureVisual";
 import { toPreviewOutput } from "./previewFrame";
+import { CANVAS_VISUAL_CONFIG } from "./visualConfig";
+
+export type CanvasLayoutAppearance = "output" | "layout-draft";
 
 export class CanvasRenderer {
   private canvas: HTMLCanvasElement;
@@ -19,10 +22,15 @@ export class CanvasRenderer {
     this.camera = new Camera(canvas);
   }
 
-  initFromLayout(coords: LayoutCoord[]): void {
+  initFromLayout(coords: LayoutCoord[], appearance: CanvasLayoutAppearance = "output"): void {
     this.fixtures.clear();
     for (const { id, x, y, type, width, height, patched } of coords) {
-      this.fixtures.set(id, new FixtureVisual(id, x, y, type, width, height, patched));
+      const visual = new FixtureVisual(id, x, y, type, width, height, patched);
+      if (appearance === "layout-draft") {
+        const [r, g, b] = CANVAS_VISUAL_CONFIG.layoutDraft.color;
+        visual.applyOutput(r, g, b, CANVAS_VISUAL_CONFIG.layoutDraft.intensity);
+      }
+      this.fixtures.set(id, visual);
     }
     this.camera.fitToContent(coords);
     this.dirty = true;
@@ -124,14 +132,20 @@ export class CanvasRenderer {
     ctx.setLineDash([]);
 
     // Draw glow
-    if (this.glowEnabled && this.fixtures.size <= 400) {
+    if (this.glowEnabled && this.fixtures.size <= CANVAS_VISUAL_CONFIG.glow.fixtureLimit) {
       ctx.globalCompositeOperation = "lighter";
       for (const visual of this.fixtures.values()) {
-        if (visual.brightness > 0.05) {
+        if (visual.brightness > CANVAS_VISUAL_CONFIG.glow.minimumBrightness) {
           const { r, g, b } = visual.currentColor;
-          ctx.fillStyle = `rgba(${r},${g},${b},${visual.brightness * 0.4})`;
+          ctx.fillStyle = `rgba(${r},${g},${b},${visual.brightness * CANVAS_VISUAL_CONFIG.glow.opacityMultiplier})`;
           ctx.beginPath();
-          ctx.arc(visual.x, visual.y, visual.radius * 2.5, 0, Math.PI * 2);
+          ctx.arc(
+            visual.x,
+            visual.y,
+            visual.radius * CANVAS_VISUAL_CONFIG.glow.radiusMultiplier,
+            0,
+            Math.PI * 2,
+          );
           ctx.fill();
         }
       }

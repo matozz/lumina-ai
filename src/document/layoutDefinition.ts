@@ -295,6 +295,29 @@ function geometryDiagnostic(geometry: LayoutGeometry): LayoutDiagnostic | null {
       );
     }
   }
+  if (geometry.shape === "algorithm") {
+    const parameters = geometry.parameters;
+    const commonInvalid =
+      geometry.count < 1 ||
+      !Number.isFinite(geometry.origin.x) ||
+      !Number.isFinite(geometry.origin.y) ||
+      Object.values(parameters).some((value) => !Number.isFinite(value));
+    const algorithmInvalid =
+      geometry.algorithm === "spiral"
+        ? (parameters.turns ?? 3) <= 0 || (parameters.radius ?? 180) <= 0
+        : (parameters.a ?? 3) <= 0 ||
+          (parameters.b ?? 2) <= 0 ||
+          (parameters.scale_x ?? 160) <= 0 ||
+          (parameters.scale_y ?? 120) <= 0;
+    if (commonInvalid || algorithmInvalid) {
+      return diagnostic(
+        "LAYOUT_ALGORITHM_INVALID",
+        "layout.geometry.algorithm",
+        "Algorithm count, origin, frequencies, turns, radius, and scale must be finite and positive.",
+        "Use a positive fixture count and positive shape parameters before previewing the Algorithm.",
+      );
+    }
+  }
   if (geometry.shape === "svg_path" && !geometry.svg_path.d.trim()) {
     return diagnostic(
       "LAYOUT_SVG_PATH_EMPTY",
@@ -506,32 +529,133 @@ function algorithmPositions(
   geometry: Extract<LayoutGeometry, { shape: "algorithm" }>,
   fixtureIds: number[],
 ) {
-  const divisor = Math.max(1, Math.min(geometry.count, fixtureIds.length) - 1);
-  return fixtureIds.slice(0, geometry.count).map((id, index) => {
-    const progress = index / divisor;
-    if (geometry.algorithm === "spiral") {
-      const turns = geometry.parameters.turns ?? 3;
-      const radius = (geometry.parameters.radius ?? 180) * progress;
-      const angle = progress * turns * Math.PI * 2;
-      return {
-        id,
-        x: geometry.origin.x + Math.cos(angle) * radius,
-        y: geometry.origin.y + Math.sin(angle) * radius,
-      };
+  const ids = fixtureIds.slice(0, geometry.count);
+  const points =
+    geometry.algorithm === "spiral"
+      ? resampleOpenPathByChordLength(ids.length, (progress) => {
+          const turns = geometry.parameters.turns ?? 3;
+          const radius = (geometry.parameters.radius ?? 180) * progress;
+          const angle = progress * turns * Math.PI * 2;
+          return [Math.cos(angle) * radius, Math.sin(angle) * radius];
+        })
+      : resamplePathByArcLength(ids.length, true, (progress) => {
+          const angle = progress * Math.PI * 2;
+          return [
+            Math.sin(
+              (geometry.parameters.a ?? 3) * angle + (geometry.parameters.delta ?? Math.PI / 2),
+            ) * (geometry.parameters.scale_x ?? 160),
+            Math.sin((geometry.parameters.b ?? 2) * angle) * (geometry.parameters.scale_y ?? 120),
+          ];
+        });
+  return ids.map((id, index) => ({
+    id,
+    x: geometry.origin.x + points[index][0],
+    y: geometry.origin.y + points[index][1],
+  }));
+}
+
+function resampleOpenPathByChordLength(
+  count: number,
+  pointAt: (progress: number) => [number, number],
+) {
+  if (count <= 0) return [];
+  if (count === 1) return [pointAt(0)];
+
+  const segmentCount = Math.max(8192, count * 48);
+  const sampled = Array.from({ length: segmentCount + 1 }, (_, index) =>
+    pointAt(index / segmentCount),
+  );
+  let totalLength = 0;
+  for (let index = 1; index < sampled.length; index += 1) {
+    totalLength += Math.hypot(
+      sampled[index][0] - sampled[index - 1][0],
+      sampled[index][1] - sampled[index - 1][1],
+    );
+  }
+
+  const walk = (spacing: number) => {
+    const points: Array<[number, number]> = [sampled[0]];
+    let sampleIndex = 1;
+    while (points.length < count) {
+      const previous = points[points.length - 1];
+      while (
+        sampleIndex < sampled.length &&
+        Math.hypot(sampled[sampleIndex][0] - previous[0], sampled[sampleIndex][1] - previous[1]) <
+          spacing
+      ) {
+        sampleIndex += 1;
+      }
+      if (sampleIndex >= sampled.length) return { complete: false, points };
+      const start = sampled[sampleIndex - 1];
+      const end = sampled[sampleIndex];
+      let low = 0;
+      let high = 1;
+      for (let iteration = 0; iteration < 32; iteration += 1) {
+        const middle = (low + high) / 2;
+        const x = start[0] + (end[0] - start[0]) * middle;
+        const y = start[1] + (end[1] - start[1]) * middle;
+        if (Math.hypot(x - previous[0], y - previous[1]) < spacing) low = middle;
+        else high = middle;
+      }
+      points.push([start[0] + (end[0] - start[0]) * high, start[1] + (end[1] - start[1]) * high]);
     }
-    const angle = progress * Math.PI * 2;
-    return {
-      id,
-      x:
-        geometry.origin.x +
-        Math.sin(
-          (geometry.parameters.a ?? 3) * angle + (geometry.parameters.delta ?? Math.PI / 2),
-        ) *
-          (geometry.parameters.scale_x ?? 160),
-      y:
-        geometry.origin.y +
-        Math.sin((geometry.parameters.b ?? 2) * angle) * (geometry.parameters.scale_y ?? 120),
-    };
+    return { complete: true, points };
+  };
+
+  let low = 0;
+  let high = (totalLength / (count - 1)) * 2;
+  let best = resamplePathByArcLength(count, false, pointAt);
+  for (let iteration = 0; iteration < 48; iteration += 1) {
+    const middle = (low + high) / 2;
+    const candidate = walk(middle);
+    if (candidate.complete) {
+      low = middle;
+      best = candidate.points;
+    } else {
+      high = middle;
+    }
+  }
+  return best;
+}
+
+function resamplePathByArcLength(
+  count: number,
+  closed: boolean,
+  pointAt: (progress: number) => [number, number],
+) {
+  if (count <= 0) return [];
+  if (count === 1) return [pointAt(0)];
+
+  const segmentCount = Math.max(4096, count * 24);
+  const sampled = Array.from({ length: segmentCount + 1 }, (_, index) =>
+    pointAt(index / segmentCount),
+  );
+  const cumulative = [0];
+  for (let index = 1; index < sampled.length; index += 1) {
+    cumulative.push(
+      cumulative[index - 1] +
+        Math.hypot(
+          sampled[index][0] - sampled[index - 1][0],
+          sampled[index][1] - sampled[index - 1][1],
+        ),
+    );
+  }
+  const totalLength = cumulative[cumulative.length - 1];
+  if (totalLength <= METRIC_EPSILON) return Array.from({ length: count }, () => sampled[0]);
+
+  const divisor = closed ? count : count - 1;
+  let segment = 1;
+  return Array.from({ length: count }, (_, index) => {
+    const target = (totalLength * index) / divisor;
+    while (segment < cumulative.length - 1 && cumulative[segment] < target) segment += 1;
+    const previousLength = cumulative[segment - 1];
+    const segmentLength = cumulative[segment] - previousLength;
+    const progress =
+      segmentLength <= METRIC_EPSILON ? 0 : (target - previousLength) / segmentLength;
+    return [
+      sampled[segment - 1][0] + (sampled[segment][0] - sampled[segment - 1][0]) * progress,
+      sampled[segment - 1][1] + (sampled[segment][1] - sampled[segment - 1][1]) * progress,
+    ] as [number, number];
   });
 }
 

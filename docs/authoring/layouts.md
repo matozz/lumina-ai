@@ -12,6 +12,8 @@ V1 正式支持 Matrix、Wall、Strip、Frame、Circle、Sector、Polygon、Hone
 
 坐标实现位于 `src/document/layoutDefinition.ts` 与 `src-tauri/src/document/project_layout.rs`。`catalog/builtin/generators/golden-v1.json` 锁定每个内置 Layout 的容量和坐标样本，防止两端语义漂移。
 
+Algorithm 路径按物理距离重采样：开放式 Spiral 直接求相邻灯中心的等弦长位置，避免中心拥挤；闭合 Lissajous 按等弧长分布并省略重复终点。Formula 保持对保存表达式与 `t_range` 的确定性求值。Layout-only Canvas 使用统一的可见 Draft tint，因此未播放 Effect 时仍能辨认 Formula/Algorithm 的完整几何。
+
 ## 数量与空间参数
 
 数量参数只决定点数：
@@ -55,3 +57,7 @@ Layout 预览总是生成完整容量，不受当前 Stage fixture 数量限制�
 - Circle/Sector/Polygon/Honeycomb 在小量和大量配置下无明显重叠、畸变、过密或过散。
 - 20×20 Matrix 应生成 400 个 fixtures，2×2 分区为四个 10×10，4×4 分区中的单区为 5×5。
 - Custom 与 SVG 入口不会静默改写已保存数据。
+
+## Canvas 灯块与眩光
+
+单灯块的几何半径来自 Layout `fixture_size`：圆形灯取 `max(width, height) / 2`，矩形 Pixel 使用保存的宽高。Canvas 眩光参数统一位于 `src/canvas/visualConfig.ts`；`glow.radiusMultiplier` 控制眩光圆相对于灯块半径的倍数，默认 `2.5`，同时集中管理透明度、亮度阈值和大数量关闭阈值。该设置只影响 Canvas 可视化，不改变 Layout 坐标、Patch 或真实灯光输出。

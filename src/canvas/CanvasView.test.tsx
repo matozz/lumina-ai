@@ -34,6 +34,6 @@ describe("CanvasView authoring preview replay", () => {
 
     render(<CanvasView frameSource="preview" />);
 
-    expect(rendererMocks.initFromLayout).toHaveBeenCalledWith(coords);
+    expect(rendererMocks.initFromLayout).toHaveBeenCalledWith(coords, "layout-draft");
   });
 });

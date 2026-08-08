@@ -151,4 +151,32 @@ describe("LayoutDefinition geometry", () => {
     expect(fixtureIdsForLayout(layout)).toEqual([1, 2, 3, 4]);
     expect(layoutPositions(layout, fixtureIdsForLayout(layout))).toHaveLength(4);
   });
+
+  it("resamples Algorithm paths by physical arc length", () => {
+    const bundle = createStarterProjectBundle();
+    for (const id of [
+      "builtin.layout.algorithm-spiral-200",
+      "builtin.layout.algorithm-lissajous-240",
+    ]) {
+      const layout = bundle.layouts.find((candidate) => candidate.id === id)!;
+      const positions = layoutPositions(layout, fixtureIdsForLayout(layout));
+      const distances = positions
+        .slice(1)
+        .map((position, index) =>
+          Math.hypot(position.x - positions[index].x, position.y - positions[index].y),
+        );
+      if (layout.geometry.shape === "algorithm" && layout.geometry.algorithm === "lissajous") {
+        distances.push(
+          Math.hypot(
+            positions[0].x - positions[positions.length - 1].x,
+            positions[0].y - positions[positions.length - 1].y,
+          ),
+        );
+      }
+      const minimum = Math.min(...distances);
+      const maximum = Math.max(...distances);
+      expect(minimum).toBeGreaterThan(0);
+      expect(maximum / minimum, id).toBeLessThan(1.08);
+    }
+  });
 });
