@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "builtin.arrangement.four-corner-chase-128",
+  "revision": 1,
+  "name": "Four Corner Chase · 128",
+  "ppq": 960,
+  "tempo_map": { "points": [{ "time_tick": 0, "bpm": 128 }] },
+  "time_signatures": [{ "time_tick": 0, "numerator": 4, "denominator": 4 }],
+  "length_ticks": 30720,
+  "tracks": [
+    {
+      "id": "corners",
+      "name": "4×4 Corner Cues",
+      "overlap_policy": "layer",
+      "clips": [
+        {
+          "id": "corner-top-left",
+          "cue_ref": { "id": "starter.cue.corner-top-left", "revision": 1 },
+          "start_tick": 0,
+          "duration_tick": 7680,
+          "layer": 0
+        },
+        {
+          "id": "corner-top-right",
+          "cue_ref": { "id": "starter.cue.corner-top-right", "revision": 1 },
+          "start_tick": 3840,
+          "duration_tick": 7680,
+          "layer": 1
+        },
+        {
+          "id": "corner-bottom-left",
+          "cue_ref": { "id": "starter.cue.corner-bottom-left", "revision": 1 },
+          "start_tick": 7680,
+          "duration_tick": 7680,
+          "layer": 2
+        },
+        {
+          "id": "corner-bottom-right",
+          "cue_ref": { "id": "starter.cue.corner-bottom-right", "revision": 1 },
+          "start_tick": 11520,
+          "duration_tick": 7680,
+          "layer": 3
+        },
+        {
+          "id": "corner-top-left-return",
+          "cue_ref": { "id": "starter.cue.corner-top-left", "revision": 1 },
+          "start_tick": 19200,
+          "duration_tick": 7680,
+          "layer": 0,
+          "layer_overrides": [
+            {
+              "layer_id": "corner-top-left",
+              "parameter_overrides": { "speed": { "type": "scalar", "value": 2 } }
+            }
+          ]
+        }
+      ],
+      "automation_lanes": []
+    }
+  ],
+  "markers": [
+    { "id": "corner-chase-start", "time_tick": 0, "name": "Clockwise corners" },
+    { "id": "corner-chase-return", "time_tick": 19200, "name": "Return faster" }
+  ]
+}

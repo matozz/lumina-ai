@@ -1,5 +1,6 @@
 import type {
   ArrangementDocument,
+  EffectDefinitionDocument,
   LayoutDefinition,
   ProjectTemplateDefinition,
 } from "@/bridge/types";
@@ -12,12 +13,20 @@ const arrangementModules = import.meta.glob("../../catalog/builtin/arrangements/
   eager: true,
   import: "default",
 });
+const effectModules = import.meta.glob(
+  ["../../catalog/builtin/effects/*.json", "!../../catalog/builtin/effects/_order.json"],
+  {
+    eager: true,
+    import: "default",
+  },
+);
 const projectTemplateModules = import.meta.glob("../../catalog/builtin/project-templates/*.json", {
   eager: true,
   import: "default",
 });
 
 export const builtinLayouts = loadAssetGroup<LayoutDefinition>(layoutModules, "Layout");
+export const builtinEffects = loadAssetGroup<EffectDefinitionDocument>(effectModules, "Effect");
 export const builtinArrangements = loadAssetGroup<ArrangementDocument>(
   arrangementModules,
   "Arrangement",

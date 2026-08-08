@@ -244,6 +244,50 @@
       "additionalProperties": false,
       "required": ["position", "color"]
     },
+    "CueAutomationLane": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "keyframes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/KeyframeDSL"
+          }
+        },
+        "target": {
+          "$ref": "#/$defs/CueAutomationTarget"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "target", "keyframes"]
+    },
+    "CueAutomationTarget": {
+      "type": "object",
+      "properties": {
+        "layer_id": {
+          "type": "string"
+        },
+        "parameter_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["layer_id", "parameter_id"]
+    },
+    "CueCapabilitySummary": {
+      "type": "object",
+      "properties": {
+        "required_attributes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "CueClip": {
       "type": "object",
       "properties": {
@@ -287,6 +331,128 @@
       },
       "additionalProperties": false,
       "required": ["id", "cue_ref", "start_tick", "duration_tick"]
+    },
+    "CueDefinition": {
+      "type": "object",
+      "properties": {
+        "automation_lanes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CueAutomationLane"
+          }
+        },
+        "capability_summary": {
+          "$ref": "#/$defs/CueCapabilitySummary"
+        },
+        "compatible_stage_ref": {
+          "$ref": "#/$defs/AssetRef"
+        },
+        "id": {
+          "type": "string"
+        },
+        "layers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CueLayer"
+          }
+        },
+        "name": {
+          "type": "string"
+        },
+        "nominal_length_ticks": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        },
+        "risk_summary": {
+          "$ref": "#/$defs/CueRiskSummary"
+        },
+        "schema_version": {
+          "type": "integer",
+          "format": "uint32",
+          "maximum": 1,
+          "minimum": 1
+        },
+        "trigger_policy": {
+          "$ref": "#/$defs/CueTriggerPolicy"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "id",
+        "revision",
+        "name",
+        "compatible_stage_ref",
+        "nominal_length_ticks",
+        "layers",
+        "trigger_policy",
+        "capability_summary",
+        "risk_summary"
+      ]
+    },
+    "CueLayer": {
+      "type": "object",
+      "properties": {
+        "effect_ref": {
+          "$ref": "#/$defs/AssetRef"
+        },
+        "id": {
+          "type": "string"
+        },
+        "layer": {
+          "type": "integer",
+          "format": "int32",
+          "default": 0
+        },
+        "mix_overrides": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CueMixOverride"
+          }
+        },
+        "parameter_overrides": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/ParameterValueDSL"
+          }
+        },
+        "phase": {
+          "type": "number",
+          "format": "double"
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int32",
+          "default": 0
+        },
+        "seed": {
+          "type": "string"
+        },
+        "target_set_ref": {
+          "$ref": "#/$defs/TargetSetRef"
+        },
+        "targeting_scene_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TargetingSceneRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trigger_policy": {
+          "$ref": "#/$defs/CueTriggerPolicy"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "effect_ref", "target_set_ref", "phase", "seed", "trigger_policy"]
     },
     "CueLayerOverride": {
       "type": "object",
@@ -537,6 +703,16 @@
           "required": ["type"]
         }
       ]
+    },
+    "CueRiskSummary": {
+      "type": "object",
+      "properties": {
+        "strobe_risk": {
+          "$ref": "#/$defs/StrobeRiskDSL"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["strobe_risk"]
     },
     "CueTrack": {
       "type": "object",
@@ -2238,6 +2414,12 @@
         "arrangement_ref": {
           "$ref": "#/$defs/AssetRef"
         },
+        "cues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CueDefinition"
+          }
+        },
         "id": {
           "type": "string"
         },
@@ -2443,6 +2625,24 @@
       "additionalProperties": false,
       "required": ["id", "name", "selector"]
     },
+    "TargetSetRef": {
+      "type": "object",
+      "properties": {
+        "stage_id": {
+          "type": "string"
+        },
+        "stage_revision": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        },
+        "target_set_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["stage_id", "stage_revision", "target_set_id"]
+    },
     "TargetSetSelector": {
       "oneOf": [
         {
@@ -2638,6 +2838,24 @@
       },
       "additionalProperties": false,
       "required": ["id", "name", "steps"]
+    },
+    "TargetingSceneRef": {
+      "type": "object",
+      "properties": {
+        "stage_id": {
+          "type": "string"
+        },
+        "stage_revision": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        },
+        "targeting_scene_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["stage_id", "stage_revision", "targeting_scene_id"]
     },
     "TargetingSceneStep": {
       "type": "object",

@@ -21,6 +21,7 @@ describe("ArrangementTimeline workflow", () => {
 
   it("materializes a selected built-in Cue only when placing it", () => {
     const scratch = useProjectStore.getState().bundle;
+    const initialCueCount = scratch.cues.length;
     const effect = createEffectAsset(scratch, "Pulse");
     effect.id = "builtin.intensity.pulse";
     effect.source = "built_in";
@@ -42,12 +43,13 @@ describe("ArrangementTimeline workflow", () => {
 
     render(<ArrangementTimeline />);
 
-    expect(useProjectStore.getState().bundle.cues).toHaveLength(0);
+    expect(useProjectStore.getState().bundle.cues).toHaveLength(initialCueCount);
     fireEvent.click(screen.getByRole("button", { name: "Place Cue at playhead" }));
 
     const state = useProjectStore.getState();
     const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
     const savedCue = exactAsset(state.bundle.cues, { id: cue.id, revision: cue.revision });
+    expect(state.bundle.cues).toHaveLength(initialCueCount + 1);
     expect(savedCue).toMatchObject({
       id: cue.id,
       revision: cue.revision,

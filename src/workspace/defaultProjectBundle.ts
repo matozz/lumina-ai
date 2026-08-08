@@ -1,6 +1,7 @@
 import type { ProjectBundle } from "@/bridge/types";
 import {
   builtinArrangements,
+  builtinEffects,
   builtinLayouts,
   builtinProjectTemplate,
 } from "@/catalog/builtinCatalog";
@@ -14,6 +15,18 @@ export function createStarterProjectBundle(): ProjectBundle {
   const template = structuredClone(builtinProjectTemplate());
   const layouts = structuredClone(builtinLayouts);
   const arrangements = structuredClone(builtinArrangements);
+  const cues = structuredClone(template.cues ?? []);
+  const effectRefs = new Map(
+    cues.flatMap((cue) =>
+      cue.layers.map(
+        (layer) =>
+          [`${layer.effect_ref.id}@${layer.effect_ref.revision}`, layer.effect_ref] as const,
+      ),
+    ),
+  );
+  const effects = structuredClone(
+    builtinEffects.filter((effect) => effectRefs.has(`${effect.id}@${effect.revision}`)),
+  );
   const arrangement = arrangements.find(
     (candidate) =>
       candidate.id === template.arrangement_ref.id &&
@@ -31,6 +44,21 @@ export function createStarterProjectBundle(): ProjectBundle {
   ) {
     throw new Error("Authoring Starter references a missing built-in Layout");
   }
+  if (effects.length !== effectRefs.size) {
+    throw new Error("Authoring Starter Cue references a missing built-in Effect");
+  }
+  const cueRefs = new Set(cues.map((cue) => `${cue.id}@${cue.revision}`));
+  if (
+    arrangements.some((candidate) =>
+      candidate.tracks.some((track) =>
+        (track.clips ?? []).some(
+          (clip) => !cueRefs.has(`${clip.cue_ref.id}@${clip.cue_ref.revision}`),
+        ),
+      ),
+    )
+  ) {
+    throw new Error("Built-in Arrangement references a missing Authoring Starter Cue");
+  }
 
   return {
     schema_version: 1,
@@ -41,15 +69,15 @@ export function createStarterProjectBundle(): ProjectBundle {
       name: "Untitled Lighting Project",
       stage_ref: { id: template.stage.id, revision: template.stage.revision },
       layout_refs: structuredClone(template.layout_refs),
-      effect_refs: [],
-      cue_refs: [],
+      effect_refs: [...effectRefs.values()].map((reference) => structuredClone(reference)),
+      cue_refs: cues.map(({ id, revision }) => ({ id, revision })),
       arrangement_refs: arrangements.map(({ id, revision }) => ({ id, revision })),
       active_arrangement_id: arrangement.id,
     },
     stages: [template.stage],
     layouts,
-    effects: [],
-    cues: [],
+    effects,
+    cues,
     arrangements,
   };
 }

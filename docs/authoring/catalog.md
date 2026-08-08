@@ -14,7 +14,7 @@ catalog/builtin/
   project-templates/
 ```
 
-每个 Layout、Effect、Cue recipe、Arrangement 和 Project Template 使用独立 JSON 文件。`src-tauri/build.rs` 在构建时聚合运行时 Catalog；前端通过 `src/catalog/builtinCatalog.ts` 加载布局、编排和模板。Effect/Cue 的 `_order.json` 只控制稳定展示顺序。
+每个 Layout、Effect、Cue recipe、Arrangement 和 Project Template 使用独立 JSON 文件。Project Template 可声明 starter Cue，用于把 Arrangement 示例依赖完整物化到新 ProjectBundle；这些 Cue 仍遵守 Effect → Cue Layer → TargetSet 的引用方向。`src-tauri/build.rs` 在构建时聚合运行时 Catalog；前端通过 `src/catalog/builtinCatalog.ts` 加载布局、效果、编排和模板。Effect/Cue 的 `_order.json` 只控制稳定展示顺序。
 
 内置资产默认只读。用户 Save/Customize/Duplicate 时生成 ProjectBundle 内的新资产和独立 ID，不覆盖 Catalog 源文件。
 
@@ -26,8 +26,9 @@ catalog/builtin/
 2. identity、exact reference 和 Generator Registry 校验；
 3. Effect parameter/graph/capability/risk 校验；
 4. Cue recipe 解析和共享属性 writer 检查；
-5. runtime sampled output 与 determinism 检查；
-6. Production render、compatibility 和 Generator coordinate Golden 比对。
+5. 将 Project Template、starter Cue、Effect 依赖和所有内置 Arrangement 组装成完整 ProjectBundle，再执行 exact-ref、TargetSet、MixPolicy 和 automation 语义校验；
+6. runtime sampled output 与 determinism 检查；
+7. Production render、compatibility 和 Generator coordinate Golden 比对。
 
 修改经过审查后运行 `pnpm catalog:golden:update`，并提交 `catalog/production-compatibility-v1.json`、Generator Golden 和 Rust production Golden 的有意差异。
 
@@ -47,6 +48,8 @@ Header 的 **Assets** 菜单支持导出项目资产依赖闭包和导入 `user-
 ## Reset defaults
 
 Reset defaults 恢复 starter Project Template、工作区选择和 Authoring transport 默认值。它不会删除浏览器下载目录中的资产包，也不会执行 origin-wide `localStorage.clear()` 或文件系统宽泛删除。
+
+当受源码管理的 starter 资产集合发生身份或依赖变化时，只提升 `lumina-project-v1` 的作用域缓存版本；旧开发缓存会在该 Zustand storage boundary 重建为当前模板，不触碰其他 origin storage 或用户显式导出的文件。
 
 ## 关键实现
 

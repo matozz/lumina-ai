@@ -21,7 +21,9 @@ describe("Arrangement timeline model", () => {
 
   beforeEach(() => {
     bundle = createStarterProjectBundle();
-    arrangement = bundle.arrangements[0];
+    arrangement = bundle.arrangements.find(
+      (candidate) => candidate.id === bundle.manifest.active_arrangement_id,
+    )!;
     arrangement.tracks[0].clips = [
       {
         id: "clip-a",

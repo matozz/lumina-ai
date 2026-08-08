@@ -58,6 +58,21 @@ export interface ColorStopDSL {
   position: number;
 }
 
+export interface CueAutomationLane {
+  id: string;
+  keyframes: Array<KeyframeDSL>;
+  target: CueAutomationTarget;
+}
+
+export interface CueAutomationTarget {
+  layer_id: string;
+  parameter_id: string;
+}
+
+export interface CueCapabilitySummary {
+  required_attributes?: Array<string>;
+}
+
 export interface CueClip {
   cue_ref: AssetRef;
   duration_tick: number;
@@ -67,6 +82,34 @@ export interface CueClip {
   playback?: ClipPlaybackDSL;
   source_offset_tick?: number;
   start_tick: number;
+}
+
+export interface CueDefinition {
+  automation_lanes?: Array<CueAutomationLane>;
+  capability_summary: CueCapabilitySummary;
+  compatible_stage_ref: AssetRef;
+  id: string;
+  layers: Array<CueLayer>;
+  name: string;
+  nominal_length_ticks: number;
+  revision: number;
+  risk_summary: CueRiskSummary;
+  schema_version: 1;
+  trigger_policy: CueTriggerPolicy;
+}
+
+export interface CueLayer {
+  effect_ref: AssetRef;
+  id: string;
+  layer?: number;
+  mix_overrides?: Array<CueMixOverride>;
+  parameter_overrides?: Record<string, ParameterValueDSL>;
+  phase: number;
+  priority?: number;
+  seed: string;
+  target_set_ref: TargetSetRef;
+  targeting_scene_ref?: TargetingSceneRef | null;
+  trigger_policy: CueTriggerPolicy;
 }
 
 export interface CueLayerOverride {
@@ -136,6 +179,10 @@ export type CueRecipeTargetDSL =
   | {
       type: "edges";
     };
+
+export interface CueRiskSummary {
+  strobe_risk: StrobeRiskDSL;
+}
 
 export interface CueTrack {
   automation_lanes?: Array<ArrangementAutomationLane>;
@@ -631,6 +678,7 @@ export interface PatchDSL {
 
 export interface ProjectTemplateDefinition {
   arrangement_ref: AssetRef;
+  cues?: Array<CueDefinition>;
   id: string;
   layout_refs: Array<AssetRef>;
   name: string;
@@ -696,6 +744,12 @@ export interface TargetSetDefinition {
   weights?: Array<TargetSetWeight>;
 }
 
+export interface TargetSetRef {
+  stage_id: string;
+  stage_revision: number;
+  target_set_id: string;
+}
+
 export type TargetSetSelector =
   | {
       type: "all";
@@ -746,6 +800,12 @@ export interface TargetingSceneDefinition {
   name: string;
   phase_continuity?: boolean;
   steps: Array<TargetingSceneStep>;
+}
+
+export interface TargetingSceneRef {
+  stage_id: string;
+  stage_revision: number;
+  targeting_scene_id: string;
 }
 
 export interface TargetingSceneStep {

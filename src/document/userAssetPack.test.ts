@@ -41,7 +41,7 @@ describe("UserAssetPack V1", () => {
   });
 
   it("reports conflicts and can rename every conflicting dependency as one closure", () => {
-    const { bundle: source } = projectWithPortableAssets();
+    const { bundle: source, effectRef, cueRef, arrangementRef } = projectWithPortableAssets();
     source.stages[0].name = "Tour Stage";
     source.layouts.find((layout) => layout.id === source.stages[0].layout_ref.id)!.name =
       "Tour Matrix";
@@ -61,9 +61,13 @@ describe("UserAssetPack V1", () => {
     const renamed = imported.importedPack;
     const stage = renamed.stages[0];
     const layout = renamed.layouts[0];
-    const effect = renamed.effects[0];
-    const cue = renamed.cues[0];
-    const arrangement = renamed.arrangements[0];
+    const effect = renamed.effects.find(
+      (candidate) => candidate.id === `imported-${effectRef.id}`,
+    )!;
+    const cue = renamed.cues.find((candidate) => candidate.id === `imported-${cueRef.id}`)!;
+    const arrangement = renamed.arrangements.find(
+      (candidate) => candidate.id === `imported-${arrangementRef.id}`,
+    )!;
 
     expect(stage.id).toBe(`imported-${pack.stages[0].id}`);
     expect(stage.layout_ref.id).toBe(layout.id);
@@ -125,17 +129,21 @@ function conflictingDestination(pack: ReturnType<typeof createUserAssetPack>): P
   bundle.layouts.find((layout) => layout.id === bundle.stages[0].layout_ref.id)!.name =
     "Local Matrix";
 
-  const effect = structuredClone(pack.effects[0]);
+  const effect = structuredClone(
+    pack.effects.find((candidate) => candidate.name === "Portable Pulse")!,
+  );
   effect.name = "Local Effect";
   bundle.effects.push(effect);
   appendExactRef(bundle.manifest.effect_refs, toRef(effect));
 
-  const cue = structuredClone(pack.cues[0]);
+  const cue = structuredClone(pack.cues.find((candidate) => candidate.name === "Portable Cue")!);
   cue.name = "Local Cue";
   bundle.cues.push(cue);
   appendExactRef(bundle.manifest.cue_refs, toRef(cue));
 
-  const arrangement = structuredClone(pack.arrangements[0]);
+  const arrangement = structuredClone(
+    pack.arrangements.find((candidate) => candidate.name === "Portable Sequence")!,
+  );
   arrangement.name = "Local Arrangement";
   bundle.arrangements.push(arrangement);
   appendExactRef(bundle.manifest.arrangement_refs, toRef(arrangement));

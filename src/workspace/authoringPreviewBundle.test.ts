@@ -18,6 +18,7 @@ import {
 describe("authoring preview materialization", () => {
   it("uses Last Known Good and leaves the persisted bundle untouched", () => {
     const bundle = createStarterProjectBundle();
+    const persistedEffects = structuredClone(bundle.effects);
     const pinned = createEffectAsset(bundle, "Pulse");
     pinned.id = "builtin.intensity.pulse";
     pinned.source = "built_in";
@@ -57,7 +58,7 @@ describe("authoring preview materialization", () => {
         result.bundle.manifest.effect_refs[result.bundle.manifest.effect_refs.length - 1],
       ),
     ).toEqual(["id", "revision"]);
-    expect(bundle.effects).toHaveLength(0);
+    expect(bundle.effects).toEqual(persistedEffects);
   });
 
   it("applies Cue mute and solo only to the preview copy", () => {

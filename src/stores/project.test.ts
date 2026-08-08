@@ -70,11 +70,20 @@ describe("Stage 7 Project state", () => {
     const cachedBundle = structuredClone(useProjectStore.getState().bundle);
     const migrate = useProjectStore.persist.getOptions().migrate;
     const migrated = (await Promise.resolve(
-      migrate?.({ bundle: cachedBundle, selectedEffectRef: effect }, 9),
+      migrate?.({ bundle: cachedBundle, selectedEffectRef: effect }, 10),
     )) as ReturnType<typeof useProjectStore.getState>;
 
     expect(migrated.bundle.schema_version).toBe(1);
-    expect(migrated.bundle.effects).toEqual([]);
+    expect(migrated.bundle.effects.map((candidate) => candidate.id)).toEqual(
+      expect.arrayContaining([
+        "builtin.color.dual-sweep",
+        "builtin.intensity.breathe",
+        "builtin.spatial.column-ping-pong",
+        "builtin.spatial.column-rain",
+      ]),
+    );
+    expect(migrated.bundle.cues).toHaveLength(5);
+    expect(migrated.bundle.arrangements).toHaveLength(3);
     expect(migrated.selectedEffectRef).toBeNull();
     expect(activeStage(migrated.bundle).target_sets.map((target) => target.id)).toEqual(
       expect.arrayContaining(["rows", "columns", "zones-3x3", "center", "edges"]),

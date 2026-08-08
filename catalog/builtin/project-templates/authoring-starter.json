@@ -228,6 +228,217 @@
       }
     ]
   },
+  "cues": [
+    {
+      "schema_version": 1,
+      "id": "starter.cue.quadrant-motion",
+      "revision": 1,
+      "name": "Quadrant Motion Dialogue",
+      "compatible_stage_ref": { "id": "main-stage", "revision": 1 },
+      "nominal_length_ticks": 15360,
+      "layers": [
+        {
+          "id": "top-left-ping",
+          "effect_ref": { "id": "builtin.spatial.column-ping-pong", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-1"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "intensity": { "type": "scalar", "value": 0.9 }
+          },
+          "phase": 0,
+          "seed": "2100000000000001",
+          "layer": 0,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        },
+        {
+          "id": "top-right-rain",
+          "effect_ref": { "id": "builtin.spatial.column-rain", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-2"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "intensity": { "type": "scalar", "value": 0.85 }
+          },
+          "phase": 0,
+          "seed": "2100000000000002",
+          "layer": 1,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        },
+        {
+          "id": "bottom-left-gradient",
+          "effect_ref": { "id": "builtin.color.dual-sweep", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-3"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "phase": { "type": "scalar", "value": 0 }
+          },
+          "phase": 0,
+          "seed": "2100000000000003",
+          "layer": 2,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        },
+        {
+          "id": "bottom-right-breathe",
+          "effect_ref": { "id": "builtin.intensity.breathe", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-4"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "intensity": { "type": "scalar", "value": 0.7 }
+          },
+          "phase": 0,
+          "seed": "2100000000000004",
+          "layer": 3,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "bar" },
+      "capability_summary": { "required_attributes": ["color.rgb", "intensity"] },
+      "risk_summary": { "strobe_risk": "none" }
+    },
+    {
+      "schema_version": 1,
+      "id": "starter.cue.corner-top-left",
+      "revision": 1,
+      "name": "Corner · Top Left Ping-Pong",
+      "compatible_stage_ref": { "id": "main-stage", "revision": 1 },
+      "nominal_length_ticks": 7680,
+      "layers": [
+        {
+          "id": "corner-top-left",
+          "effect_ref": { "id": "builtin.spatial.column-ping-pong", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-4x4-1"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "intensity": { "type": "scalar", "value": 0.9 }
+          },
+          "phase": 0,
+          "seed": "2200000000000001",
+          "layer": 0,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "beat" },
+      "capability_summary": { "required_attributes": ["intensity"] },
+      "risk_summary": { "strobe_risk": "none" }
+    },
+    {
+      "schema_version": 1,
+      "id": "starter.cue.corner-top-right",
+      "revision": 1,
+      "name": "Corner · Top Right Rain",
+      "compatible_stage_ref": { "id": "main-stage", "revision": 1 },
+      "nominal_length_ticks": 7680,
+      "layers": [
+        {
+          "id": "corner-top-right",
+          "effect_ref": { "id": "builtin.spatial.column-rain", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-4x4-4"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "intensity": { "type": "scalar", "value": 0.85 }
+          },
+          "phase": 0,
+          "seed": "2200000000000002",
+          "layer": 0,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "beat" },
+      "capability_summary": { "required_attributes": ["intensity"] },
+      "risk_summary": { "strobe_risk": "none" }
+    },
+    {
+      "schema_version": 1,
+      "id": "starter.cue.corner-bottom-left",
+      "revision": 1,
+      "name": "Corner · Bottom Left Gradient",
+      "compatible_stage_ref": { "id": "main-stage", "revision": 1 },
+      "nominal_length_ticks": 7680,
+      "layers": [
+        {
+          "id": "corner-bottom-left",
+          "effect_ref": { "id": "builtin.color.dual-sweep", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-4x4-13"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "phase": { "type": "scalar", "value": 0 }
+          },
+          "phase": 0,
+          "seed": "2200000000000003",
+          "layer": 0,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "beat" },
+      "capability_summary": { "required_attributes": ["color.rgb", "intensity"] },
+      "risk_summary": { "strobe_risk": "none" }
+    },
+    {
+      "schema_version": 1,
+      "id": "starter.cue.corner-bottom-right",
+      "revision": 1,
+      "name": "Corner · Bottom Right Breathe",
+      "compatible_stage_ref": { "id": "main-stage", "revision": 1 },
+      "nominal_length_ticks": 7680,
+      "layers": [
+        {
+          "id": "corner-bottom-right",
+          "effect_ref": { "id": "builtin.intensity.breathe", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-4x4-16"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "intensity": { "type": "scalar", "value": 0.7 }
+          },
+          "phase": 0,
+          "seed": "2200000000000004",
+          "layer": 0,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "beat" },
+      "capability_summary": { "required_attributes": ["intensity"] },
+      "risk_summary": { "strobe_risk": "none" }
+    }
+  ],
   "layout_refs": [
     { "id": "builtin.layout.matrix-main-20x20", "revision": 1 },
     { "id": "builtin.layout.matrix-festival-12x16", "revision": 1 },

@@ -7,9 +7,10 @@ use super::{
     EffectFamilyDSL, EffectInstanceDSL, EffectNodeDSL, GeneratorDSL, GroupDSL, GroupFixturesDSL,
     GroupRangeDSL, LayoutCapabilityDSL, LayoutDSL, LayoutDefinition, LayoutGeometry, LayoutType,
     MetaDSL, OscillatorWaveformDSL, ParameterOverridePolicyDSL, ParameterValueDSL, PatchDSL,
-    ProjectBundle, ShowDocumentV1, StageDocument, StrobeRiskDSL, TargetSetDefinition, TargetSetRef,
-    TargetSetSelector, TargetingSceneDefinition, TargetingSceneRef, TargetingTransition,
-    CUE_DEFINITION_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION,
+    ProjectBundle, ProjectManifest, ShowDocumentV1, StageDocument, StrobeRiskDSL,
+    TargetSetDefinition, TargetSetRef, TargetSetSelector, TargetingSceneDefinition,
+    TargetingSceneRef, TargetingTransition, ValidatedProject, CUE_DEFINITION_SCHEMA_VERSION,
+    CURRENT_SCHEMA_VERSION,
 };
 use crate::compiler::diagnostic::{
     Diagnostic, CATALOG_METADATA_INVALID, CATALOG_OUTPUT_INVALID, CATALOG_PARAMETER_INVALID,
@@ -50,6 +51,8 @@ pub struct ProjectTemplateDefinition {
     pub id: String,
     pub name: String,
     pub stage: StageDocument,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cues: Vec<CueDefinition>,
     pub layout_refs: Vec<AssetRef>,
     pub arrangement_ref: AssetRef,
 }
@@ -326,10 +329,18 @@ pub fn validate_production_catalog(catalog: &ProductionCatalog) -> Vec<Diagnosti
         {
             diagnostics.push(Diagnostic::error(
                 CATALOG_METADATA_INVALID,
-                path,
+                &path,
                 "Project Template must reference existing built-in V1 Layout and Arrangement assets.",
                 "Repair the exact refs in catalog/builtin/project-templates.",
             ));
+        }
+        if let Err(mut template_diagnostics) =
+            ValidatedProject::validate(materialize_project_template(catalog, template))
+        {
+            for diagnostic in &mut template_diagnostics {
+                diagnostic.path = format!("{path}.materialized_project.{}", diagnostic.path);
+            }
+            diagnostics.extend(template_diagnostics);
         }
     }
     diagnostics.sort_by(|left, right| {
@@ -347,6 +358,68 @@ pub fn validate_production_catalog(catalog: &ProductionCatalog) -> Vec<Diagnosti
             ))
     });
     diagnostics
+}
+
+fn materialize_project_template(
+    catalog: &ProductionCatalog,
+    template: &ProjectTemplateDefinition,
+) -> ProjectBundle {
+    let effect_refs = template
+        .cues
+        .iter()
+        .flat_map(|cue| {
+            cue.layers
+                .iter()
+                .map(|layer| (layer.effect_ref.id.clone(), layer.effect_ref.revision))
+        })
+        .collect::<BTreeSet<_>>();
+    let effects = catalog
+        .effects
+        .iter()
+        .filter(|effect| effect_refs.contains(&(effect.id.clone(), effect.revision)))
+        .cloned()
+        .collect::<Vec<_>>();
+
+    ProjectBundle {
+        schema_version: CURRENT_SCHEMA_VERSION,
+        manifest: ProjectManifest {
+            schema_version: CURRENT_SCHEMA_VERSION,
+            project_id: template.id.clone(),
+            revision: 1,
+            name: template.name.clone(),
+            stage_ref: AssetRef {
+                id: template.stage.id.clone(),
+                revision: template.stage.revision,
+            },
+            layout_refs: template.layout_refs.clone(),
+            effect_refs: effect_refs
+                .into_iter()
+                .map(|(id, revision)| AssetRef { id, revision })
+                .collect(),
+            cue_refs: template
+                .cues
+                .iter()
+                .map(|cue| AssetRef {
+                    id: cue.id.clone(),
+                    revision: cue.revision,
+                })
+                .collect(),
+            arrangement_refs: catalog
+                .arrangements
+                .iter()
+                .map(|arrangement| AssetRef {
+                    id: arrangement.id.clone(),
+                    revision: arrangement.revision,
+                })
+                .collect(),
+            active_arrangement_id: template.arrangement_ref.id.clone(),
+        },
+        stages: vec![template.stage.clone()],
+        layouts: catalog.layouts.clone(),
+        effects,
+        cues: template.cues.clone(),
+        arrangements: catalog.arrangements.clone(),
+    }
 }
 
 pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<Diagnostic> {

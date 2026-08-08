@@ -79,7 +79,7 @@ export interface ProjectState {
 }
 
 const starter = createStarterProjectBundle();
-const LOCAL_WORKSPACE_STORAGE_VERSION = 10;
+const LOCAL_WORKSPACE_STORAGE_VERSION = 11;
 
 const initialState: ProjectState = {
   bundle: starter,
@@ -170,7 +170,9 @@ export const projectActions = {
     const result = imported as ReturnType<typeof importUserAssetPack>;
     const updates: Partial<ProjectState> = {};
     const layout = result.importedPack.layouts[result.importedPack.layouts.length - 1];
-    const effect = result.importedPack.effects[result.importedPack.effects.length - 1];
+    const effect = [...result.importedPack.effects]
+      .reverse()
+      .find((candidate) => candidate.source === "project_local");
     const cue = result.importedPack.cues[result.importedPack.cues.length - 1];
     const arrangement =
       result.importedPack.arrangements[result.importedPack.arrangements.length - 1];

@@ -61,7 +61,9 @@ describe("Stage topology impact", () => {
       risk_summary: { strobe_risk: "none" },
     });
     bundle.manifest.cue_refs.push({ id: "cue", revision: 1 });
-    bundle.arrangements[0].tracks[0].clips = [
+    bundle.arrangements.find(
+      (arrangement) => arrangement.id === bundle.manifest.active_arrangement_id,
+    )!.tracks[0].clips = [
       {
         id: "clip",
         cue_ref: { id: "cue", revision: 1 },
@@ -83,10 +85,20 @@ describe("Stage topology impact", () => {
     expect(impact.targetSets.every((target) => target.valid && !target.membershipChanged)).toBe(
       true,
     );
-    expect(impact.cues).toEqual([expect.objectContaining({ name: "Cue" })]);
-    expect(impact.arrangements).toEqual([
-      expect.objectContaining({ name: "House 128", clipCount: 1 }),
-    ]);
+    expect(impact.cues).toHaveLength(bundle.cues.length);
+    expect(impact.cues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "Cue" }),
+        expect.objectContaining({ name: "Quadrant Motion Dialogue", layers: 4 }),
+      ]),
+    );
+    expect(impact.arrangements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "House 128", clipCount: 1 }),
+        expect.objectContaining({ name: "Quadrant Motion · 128", clipCount: 2 }),
+        expect.objectContaining({ name: "Four Corner Chase · 128", clipCount: 5 }),
+      ]),
+    );
   });
 
   it("requires remap when a grid TargetSet is applied to a circle", () => {

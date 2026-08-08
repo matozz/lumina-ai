@@ -66,7 +66,17 @@ describe("WorkspaceHeader live workflow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Restore defaults" }));
 
     const state = useProjectStore.getState();
-    expect(state.bundle.effects).toEqual([]);
+    expect(state.bundle.effects.map((effect) => effect.id)).toEqual(
+      expect.arrayContaining([
+        "builtin.color.dual-sweep",
+        "builtin.intensity.breathe",
+        "builtin.spatial.column-ping-pong",
+        "builtin.spatial.column-rain",
+      ]),
+    );
+    expect(state.bundle.effects.some((effect) => effect.name === "Accidental local effect")).toBe(
+      false,
+    );
     expect(state.bundle.stages[0].patch[0].id_range).toEqual([1, 400]);
     expect(useWorkspaceStore.getState()).toMatchObject({
       activeWorkspace: "stage",
