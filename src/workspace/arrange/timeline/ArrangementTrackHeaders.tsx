@@ -1,7 +1,7 @@
 import type { ArrangementDocument, ProjectBundle } from "@/bridge/types";
 import { Badge } from "@/components/ui/badge";
 import type { ArrangementAutomationOption } from "./arrangementTimelineModel";
-import { resolveAutomationOption } from "./arrangementTimelineModel";
+import { cueTrackVisualLayout, resolveAutomationOption } from "./arrangementTimelineModel";
 import { ArrangementAutomationMenu } from "./ArrangementAutomationMenu";
 
 interface ArrangementTrackHeadersProps {
@@ -31,29 +31,47 @@ export function ArrangementTrackHeaders({
       <div className="border-border flex h-8 items-center border-b px-2 text-[10px] font-medium">
         TRACKS
       </div>
-      {arrangement.tracks.map((track) => (
-        <div key={track.id}>
-          <div className="border-border flex h-16 flex-col justify-center gap-1 border-b px-2">
-            <div className="flex items-center gap-1">
-              <span className="truncate text-xs font-medium">{track.name}</span>
-              <Badge variant="outline" className="ml-auto text-[9px]">
-                {track.overlap_policy}
-              </Badge>
+      {arrangement.tracks.map((track) => {
+        const clips = track.clips ?? [];
+        const layout = cueTrackVisualLayout(clips);
+        return (
+          <div key={track.id}>
+            <div
+              className="border-border flex flex-col gap-1 border-b px-2 py-2"
+              style={{ height: layout.height }}
+            >
+              <div className="flex items-center gap-1">
+                <span className="truncate text-xs font-medium">{track.name}</span>
+                <Badge variant="outline" className="ml-auto text-[9px]">
+                  {track.overlap_policy === "layer" ? "Layered overlap" : "No overlap"}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-muted-foreground min-w-0 flex-1 truncate text-[10px]">
+                  {countLabel(clips.length, "CueClip")} ·{" "}
+                  {countLabel(layout.layerCount, "clip layer")} ·{" "}
+                  {countLabel(layout.rowCount, "visual row")}
+                </span>
+                <ArrangementAutomationMenu
+                  options={options}
+                  onSelect={(option) => onAddAutomation(track.id, option)}
+                />
+              </div>
             </div>
-            <ArrangementAutomationMenu
-              options={options}
-              onSelect={(option) => onAddAutomation(track.id, option)}
-            />
+            {track.automation_lanes?.map((lane) => (
+              <div key={lane.id} className="border-border/60 flex h-10 items-center border-b px-2">
+                <span className="truncate text-[10px]">
+                  {resolveAutomationOption(bundle, arrangement, lane.target)?.label ?? lane.id}
+                </span>
+              </div>
+            ))}
           </div>
-          {track.automation_lanes?.map((lane) => (
-            <div key={lane.id} className="border-border/60 flex h-10 items-center border-b px-2">
-              <span className="truncate text-[10px]">
-                {resolveAutomationOption(bundle, arrangement, lane.target)?.label ?? lane.id}
-              </span>
-            </div>
-          ))}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
+}
+
+function countLabel(count: number, label: string) {
+  return `${count} ${label}${count === 1 ? "" : "s"}`;
 }

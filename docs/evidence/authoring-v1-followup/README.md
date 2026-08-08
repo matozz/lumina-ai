@@ -1,5 +1,7 @@
 # Authoring V1 follow-up evidence
 
+This directory records the initial 5×5 corner-example review. The later example-size, spatial-mask and Arrange geometry follow-up is captured in [`../authoring-v1-followup-2/`](../authoring-v1-followup-2/README.md).
+
 - Date: 2026-08-08
 - Build: macOS debug application from `codex/authoring-v1-consolidation` at `a95ad9b`
 - Windows checked: 1302×768 for the workflow pass and 1103×768 for the revised Arrange minimum-width pass

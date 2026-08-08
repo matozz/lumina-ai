@@ -146,6 +146,43 @@ describe("ArrangementTimeline workflow", () => {
     expect(screen.getByRole("button", { name: "Reset selection" })).toBeTruthy();
   });
 
+  it("renders layered and overlapping CueClips on distinct visual rows", () => {
+    const effect = projectActions.createEffect("Layered")!;
+    const cue = projectActions.createCue([effect], "Corner Cue")!;
+    const reference = useProjectStore.getState().selectedArrangementRef;
+    projectActions.updateArrangement(reference, "Seed layered clips", (arrangement) => {
+      arrangement.tracks[0].overlap_policy = "layer";
+      arrangement.tracks[0].clips = [
+        { id: "top-left", cue_ref: cue, start_tick: 0, duration_tick: 1_920, layer: 0 },
+        { id: "top-right", cue_ref: cue, start_tick: 960, duration_tick: 1_920, layer: 1 },
+        { id: "bottom-left", cue_ref: cue, start_tick: 1_920, duration_tick: 1_920, layer: 2 },
+        { id: "bottom-right", cue_ref: cue, start_tick: 2_880, duration_tick: 1_920, layer: 3 },
+        { id: "top-left-return", cue_ref: cue, start_tick: 4_800, duration_tick: 1_920, layer: 0 },
+      ];
+    });
+
+    const { container } = render(<ArrangementTimeline />);
+    expect(screen.getByText("5 CueClips · 4 clip layers · 4 visual rows")).toBeTruthy();
+    expect(
+      container.querySelector('[data-track-id="cues"]')?.getAttribute("data-cue-row-count"),
+    ).toBe("4");
+    expect(container.querySelector<HTMLElement>('[data-clip-id="top-left"]')?.style.top).toBe(
+      "8px",
+    );
+    expect(container.querySelector<HTMLElement>('[data-clip-id="top-right"]')?.style.top).toBe(
+      "52px",
+    );
+    expect(container.querySelector<HTMLElement>('[data-clip-id="bottom-left"]')?.style.top).toBe(
+      "96px",
+    );
+    expect(container.querySelector<HTMLElement>('[data-clip-id="bottom-right"]')?.style.top).toBe(
+      "140px",
+    );
+    expect(
+      container.querySelector<HTMLElement>('[data-clip-id="top-left-return"]')?.style.top,
+    ).toBe("8px");
+  });
+
   it("renders typed automation curves and adds a keyframe as one transaction", async () => {
     const reference = useProjectStore.getState().selectedArrangementRef;
     projectActions.updateArrangement(reference, "Seed typed automation", (arrangement) => {
@@ -161,7 +198,14 @@ describe("ArrangementTimeline workflow", () => {
     const { container } = render(<ArrangementTimeline />);
     const lane = screen.getByRole("group", { name: /Master dimmer automation lane/ });
 
-    expect(container.querySelector("svg path")).toBeTruthy();
+    const curve = container.querySelector<SVGElement>("[data-automation-curve]")!;
+    const curvePath = curve.querySelector("path")!;
+    const firstKeyframe = screen.getAllByRole("button", {
+      name: /Master dimmer keyframe at tick/,
+    })[0];
+    expect(curve.getAttribute("viewBox")?.endsWith(" 40")).toBe(true);
+    expect(curvePath.getAttribute("d")).toContain("M 0 8");
+    expect(firstKeyframe.style.top).toBe("8px");
     fireEvent.doubleClick(lane, { clientX: 96 });
 
     await waitFor(() => {

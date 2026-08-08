@@ -5,29 +5,34 @@ interface AutomationCurveSegmentProps {
   beatWidth: number;
   definition: ParameterDefinitionDSL;
   end: KeyframeDSL;
+  height?: number;
   ppq: number;
   start: KeyframeDSL;
+  valueInset?: number;
 }
 
-const ROW_HEIGHT = 32;
+const DEFAULT_ROW_HEIGHT = 32;
 
 export const AutomationCurveSegment = ({
   start,
   end,
   definition,
+  height = DEFAULT_ROW_HEIGHT,
   ppq,
   beatWidth,
+  valueInset = 4,
 }: AutomationCurveSegmentProps) => {
   const left = (start.time_tick / ppq) * beatWidth;
   const width = ((end.time_tick - start.time_tick) / ppq) * beatWidth;
-  const startY = keyframeValueY(start.value, definition, ROW_HEIGHT);
-  const endY = keyframeValueY(end.value, definition, ROW_HEIGHT);
+  const startY = keyframeValueY(start.value, definition, height, valueInset);
+  const endY = keyframeValueY(end.value, definition, height, valueInset);
   return (
     <svg
-      className="pointer-events-none absolute top-0 h-8 overflow-visible text-amber-400/70"
-      style={{ left, width }}
-      viewBox={`0 0 ${Math.max(1, width)} ${ROW_HEIGHT}`}
+      className="text-primary/80 pointer-events-none absolute top-0 overflow-visible"
+      style={{ left, width, height }}
+      viewBox={`0 0 ${Math.max(1, width)} ${height}`}
       preserveAspectRatio="none"
+      data-automation-curve
       aria-hidden="true"
     >
       <path

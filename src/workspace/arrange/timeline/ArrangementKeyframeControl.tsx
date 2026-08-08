@@ -17,11 +17,11 @@ interface ArrangementKeyframeControlProps {
   onInspectorOpenChange: (open: boolean) => void;
   onStartMove: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onUpdate: (changes: Partial<Pick<KeyframeDSL, "time_tick" | "value" | "interpolation">>) => void;
+  rowHeight: number;
   selected: boolean;
+  valueInset: number;
   geometry: TimelineGeometry;
 }
-
-const ROW_HEIGHT = 40;
 
 export function ArrangementKeyframeControl({
   arrangement,
@@ -35,7 +35,9 @@ export function ArrangementKeyframeControl({
   onInspectorOpenChange,
   onStartMove,
   onUpdate,
+  rowHeight,
   selected,
+  valueInset,
 }: ArrangementKeyframeControlProps) {
   const bounds = keyframeMoveBounds(keyframes, new Set([keyframe.id]));
   return (
@@ -45,14 +47,15 @@ export function ArrangementKeyframeControl({
           <Button
             ref={onElement}
             size="icon-xs"
-            variant={selected ? "default" : "secondary"}
+            variant="default"
             className={cn(
-              "absolute z-10 size-4 touch-none rounded-sm border shadow-sm will-change-transform",
+              "border-primary-foreground/20 absolute z-10 size-4 touch-none rounded-full border shadow-sm will-change-transform",
+              !selected && "bg-primary/80 hover:bg-primary",
               selected && "ring-primary/40 ring-2",
             )}
             style={{
               left: ticksToPixels(keyframe.time_tick, geometry),
-              top: keyframeValueY(keyframe.value, definition, ROW_HEIGHT),
+              top: keyframeValueY(keyframe.value, definition, rowHeight, valueInset),
               transform: keyframeTransform(0),
             }}
             aria-label={`${definition.name} keyframe at tick ${keyframe.time_tick}`}
