@@ -50,8 +50,8 @@ describe("Live workspace library", () => {
   it("keeps layout selection simple until Advanced is enabled", () => {
     render(<WorkspaceLibrary workspace="stage" />);
 
-    expect(screen.getByRole("button", { name: /Matrix 8×10/ })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Duplicate Matrix 8×10/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /Main Matrix 20×20/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Duplicate Main Matrix 20×20/ })).toBeNull();
     expect(screen.queryByText("Generated / Advanced")).toBeNull();
   });
 
@@ -79,6 +79,9 @@ describe("Live workspace library", () => {
     effect.catalog.required_attributes = ["intensity"];
     const catalog: ProductionCatalog = {
       schema_version: 1,
+      layouts: [],
+      arrangements: [],
+      project_templates: [],
       effects: [effect],
       cue_recipes: [
         {

@@ -21,6 +21,12 @@
         "$ref": "#/$defs/EffectDefinitionDocument"
       }
     },
+    "layouts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/LayoutDefinition"
+      }
+    },
     "manifest": {
       "$ref": "#/$defs/ProjectManifest"
     },
@@ -38,7 +44,15 @@
     }
   },
   "additionalProperties": false,
-  "required": ["schema_version", "manifest", "stages", "effects", "cues", "arrangements"],
+  "required": [
+    "schema_version",
+    "manifest",
+    "stages",
+    "layouts",
+    "effects",
+    "cues",
+    "arrangements"
+  ],
   "$defs": {
     "ArrangementAutomationLane": {
       "type": "object",
@@ -200,7 +214,15 @@
     },
     "AutomationPolicyDSL": {
       "type": "string",
-      "enum": ["continuous", "discrete"]
+      "enum": ["continuous", "discrete", "disabled"]
+    },
+    "CatalogVisibilityDSL": {
+      "type": "string",
+      "enum": ["standard", "advanced", "hidden"]
+    },
+    "CenterEdgesRegion": {
+      "type": "string",
+      "enum": ["center", "edges"]
     },
     "CheckerboardParity": {
       "type": "string",
@@ -419,6 +441,16 @@
         "target_set_ref": {
           "$ref": "#/$defs/TargetSetRef"
         },
+        "targeting_scene_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TargetingSceneRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "trigger_policy": {
           "$ref": "#/$defs/CueTriggerPolicy"
         }
@@ -556,6 +588,9 @@
     "EffectCatalogDSL": {
       "type": "object",
       "properties": {
+        "category": {
+          "type": ["string", "null"]
+        },
         "colorfulness": {
           "type": "number",
           "format": "float",
@@ -568,11 +603,31 @@
           "maximum": 1.0,
           "minimum": 0.0
         },
+        "deprecated": {
+          "type": "boolean",
+          "default": false
+        },
         "energy": {
           "type": "number",
           "format": "float",
           "maximum": 1.0,
           "minimum": 0.0
+        },
+        "family": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EffectFamilyDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "layout_capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LayoutCapabilityDSL"
+          }
         },
         "mood": {
           "type": "array",
@@ -583,6 +638,22 @@
         "motion": {
           "$ref": "#/$defs/MotionTagDSL"
         },
+        "parameter_summary": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "replacement": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EffectReplacementDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "required_attributes": {
           "type": "array",
           "items": {
@@ -591,6 +662,10 @@
         },
         "strobe_risk": {
           "$ref": "#/$defs/StrobeRiskDSL"
+        },
+        "visibility": {
+          "$ref": "#/$defs/CatalogVisibilityDSL",
+          "default": "standard"
         }
       },
       "additionalProperties": false,
@@ -643,6 +718,10 @@
         "graph",
         "catalog"
       ]
+    },
+    "EffectFamilyDSL": {
+      "type": "string",
+      "enum": ["intensity", "color", "movement", "spatial", "strobe", "utility"]
     },
     "EffectGraphDSL": {
       "type": "object",
@@ -716,7 +795,7 @@
             "steps": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/PhaserStepDSL"
+                "$ref": "#/$defs/SequenceStepDSL"
               }
             },
             "type": {
@@ -995,9 +1074,23 @@
         }
       ]
     },
+    "EffectNodePropertyDSL": {
+      "type": "string",
+      "enum": ["waveform", "attack", "release", "color_stops"]
+    },
     "EffectPortDSL": {
       "type": "string",
-      "enum": ["scalar", "color", "direction", "mask", "attribute_set", "writes"]
+      "enum": [
+        "scalar",
+        "color",
+        "direction",
+        "boolean",
+        "enum",
+        "color_stops",
+        "mask",
+        "attribute_set",
+        "writes"
+      ]
     },
     "EffectPortRefDSL": {
       "type": "object",
@@ -1011,6 +1104,21 @@
       },
       "additionalProperties": false,
       "required": ["node_id", "port"]
+    },
+    "EffectReplacementDSL": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "revision"]
     },
     "EffectSourceDSL": {
       "type": "string",
@@ -1053,137 +1161,6 @@
       },
       "additionalProperties": false,
       "required": ["x", "y", "t_range", "count"]
-    },
-    "GeneratorDSL": {
-      "oneOf": [
-        {
-          "type": "object",
-          "properties": {
-            "columns": {
-              "type": "integer",
-              "format": "uint32",
-              "minimum": 1
-            },
-            "origin": {
-              "type": ["array", "null"],
-              "maxItems": 2,
-              "minItems": 2,
-              "prefixItems": [
-                {
-                  "type": "number",
-                  "format": "double"
-                },
-                {
-                  "type": "number",
-                  "format": "double"
-                }
-              ]
-            },
-            "rows": {
-              "type": "integer",
-              "format": "uint32",
-              "minimum": 1
-            },
-            "shape": {
-              "type": "string",
-              "const": "matrix"
-            },
-            "spacing": {
-              "type": "number",
-              "format": "double",
-              "minimum": 1e-6
-            }
-          },
-          "additionalProperties": false,
-          "required": ["shape", "rows", "columns", "spacing"]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "center": {
-              "type": ["array", "null"],
-              "maxItems": 2,
-              "minItems": 2,
-              "prefixItems": [
-                {
-                  "type": "number",
-                  "format": "double"
-                },
-                {
-                  "type": "number",
-                  "format": "double"
-                }
-              ]
-            },
-            "gap": {
-              "type": "number",
-              "format": "double",
-              "minimum": 1e-6
-            },
-            "increment": {
-              "type": "integer",
-              "format": "uint32",
-              "minimum": 1
-            },
-            "rings": {
-              "type": "integer",
-              "format": "uint32",
-              "minimum": 1
-            },
-            "shape": {
-              "type": "string",
-              "const": "circle"
-            }
-          },
-          "additionalProperties": false,
-          "required": ["shape", "rings", "increment", "gap"]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "formula": {
-              "$ref": "#/$defs/FormulaDef"
-            },
-            "shape": {
-              "type": "string",
-              "const": "formula"
-            }
-          },
-          "additionalProperties": false,
-          "required": ["shape", "formula"]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "shape": {
-              "type": "string",
-              "const": "svg_path"
-            },
-            "svgPath": {
-              "$ref": "#/$defs/SvgPathDef"
-            }
-          },
-          "additionalProperties": false,
-          "required": ["shape", "svgPath"]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "fixtures": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/CustomFixturePos"
-              }
-            },
-            "shape": {
-              "type": "string",
-              "const": "custom"
-            }
-          },
-          "additionalProperties": false,
-          "required": ["shape", "fixtures"]
-        }
-      ]
     },
     "GlobalParameterDSL": {
       "type": "string",
@@ -1331,22 +1308,630 @@
       "additionalProperties": false,
       "required": ["time", "value"]
     },
-    "LayoutDSL": {
+    "LayoutAlgorithm": {
+      "type": "string",
+      "enum": ["lissajous", "spiral"]
+    },
+    "LayoutCapabilityDSL": {
+      "type": "string",
+      "enum": ["any", "linear", "matrix", "radial", "coordinates", "targeting_scene"]
+    },
+    "LayoutCategory": {
+      "type": "string",
+      "enum": ["basic", "generated_advanced"]
+    },
+    "LayoutDefinition": {
       "type": "object",
       "properties": {
-        "generator": {
-          "$ref": "#/$defs/GeneratorDSL"
+        "category": {
+          "$ref": "#/$defs/LayoutCategory"
         },
-        "type": {
-          "$ref": "#/$defs/LayoutType"
+        "editor": {
+          "$ref": "#/$defs/LayoutEditorCapability"
+        },
+        "fixture_size_overrides": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LayoutFixtureSizeOverride"
+          }
+        },
+        "geometry": {
+          "$ref": "#/$defs/LayoutGeometry"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        },
+        "schema_version": {
+          "type": "integer",
+          "format": "uint32",
+          "maximum": 1,
+          "minimum": 1
         }
       },
       "additionalProperties": false,
-      "required": ["type", "generator"]
+      "required": ["schema_version", "id", "revision", "name", "category", "editor", "geometry"]
     },
-    "LayoutType": {
+    "LayoutEditorCapability": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "form"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["mode"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "parameter_schema"
+            },
+            "parameters": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/LayoutParameterDefinition"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": ["mode", "parameters"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "advanced_only"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["mode"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "read_only"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["mode", "reason"]
+        }
+      ]
+    },
+    "LayoutFixtureSizeOverride": {
+      "type": "object",
+      "properties": {
+        "fixture_id": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "size": {
+          "$ref": "#/$defs/LayoutSize"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["fixture_id", "size"]
+    },
+    "LayoutGap": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "format": "double",
+          "minimum": 0.0
+        },
+        "y": {
+          "type": "number",
+          "format": "double",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false,
+      "required": ["x", "y"]
+    },
+    "LayoutGeometry": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "columns": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "fixture_size": {
+              "$ref": "#/$defs/LayoutSize"
+            },
+            "gap": {
+              "$ref": "#/$defs/LayoutGap"
+            },
+            "origin": {
+              "$ref": "#/$defs/LayoutPoint"
+            },
+            "pitch": {
+              "$ref": "#/$defs/LayoutPitch"
+            },
+            "rows": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "shape": {
+              "type": "string",
+              "const": "matrix"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["shape", "rows", "columns", "fixture_size", "gap", "pitch", "origin"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "center": {
+              "$ref": "#/$defs/LayoutPoint"
+            },
+            "fixture_size": {
+              "$ref": "#/$defs/LayoutSize"
+            },
+            "increment": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "ring_gap": {
+              "type": "number",
+              "format": "double",
+              "minimum": 0.0
+            },
+            "ring_pitch": {
+              "type": "number",
+              "format": "double",
+              "minimum": 1e-6
+            },
+            "rings": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "shape": {
+              "type": "string",
+              "const": "circle"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "shape",
+            "rings",
+            "increment",
+            "fixture_size",
+            "ring_gap",
+            "ring_pitch",
+            "center"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "center": {
+              "$ref": "#/$defs/LayoutPoint"
+            },
+            "fixture_size": {
+              "$ref": "#/$defs/LayoutSize"
+            },
+            "ring_gap": {
+              "type": "number",
+              "format": "double",
+              "minimum": 0.0
+            },
+            "ring_pitch": {
+              "type": "number",
+              "format": "double",
+              "minimum": 1e-6
+            },
+            "rings": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "segments": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "shape": {
+              "type": "string",
+              "const": "sector"
+            },
+            "start_angle_degrees": {
+              "type": "number",
+              "format": "double"
+            },
+            "sweep_angle_degrees": {
+              "type": "number",
+              "format": "double",
+              "maximum": 360.0,
+              "minimum": 1e-6
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "shape",
+            "rings",
+            "segments",
+            "fixture_size",
+            "ring_gap",
+            "ring_pitch",
+            "start_angle_degrees",
+            "sweep_angle_degrees",
+            "center"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "center": {
+              "$ref": "#/$defs/LayoutPoint"
+            },
+            "fixture_size": {
+              "$ref": "#/$defs/LayoutSize"
+            },
+            "fixtures_per_side": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "radius": {
+              "type": "number",
+              "format": "double",
+              "minimum": 1e-6
+            },
+            "rotation_degrees": {
+              "type": "number",
+              "format": "double"
+            },
+            "shape": {
+              "type": "string",
+              "const": "polygon"
+            },
+            "sides": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 3
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "shape",
+            "sides",
+            "fixtures_per_side",
+            "fixture_size",
+            "radius",
+            "rotation_degrees",
+            "center"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "columns": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "fixture_size": {
+              "$ref": "#/$defs/LayoutSize"
+            },
+            "gap": {
+              "$ref": "#/$defs/LayoutGap"
+            },
+            "origin": {
+              "$ref": "#/$defs/LayoutPoint"
+            },
+            "pitch": {
+              "$ref": "#/$defs/LayoutPitch"
+            },
+            "rows": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "shape": {
+              "type": "string",
+              "const": "honeycomb"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["shape", "rows", "columns", "fixture_size", "gap", "pitch", "origin"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "count": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "fixture_size": {
+              "$ref": "#/$defs/LayoutSize"
+            },
+            "gap": {
+              "$ref": "#/$defs/LayoutGap"
+            },
+            "orientation": {
+              "$ref": "#/$defs/LayoutOrientation"
+            },
+            "origin": {
+              "$ref": "#/$defs/LayoutPoint"
+            },
+            "pitch": {
+              "$ref": "#/$defs/LayoutPitch"
+            },
+            "shape": {
+              "type": "string",
+              "const": "strip"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["shape", "count", "orientation", "fixture_size", "gap", "pitch", "origin"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "columns": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "fixture_size": {
+              "$ref": "#/$defs/LayoutSize"
+            },
+            "gap": {
+              "$ref": "#/$defs/LayoutGap"
+            },
+            "origin": {
+              "$ref": "#/$defs/LayoutPoint"
+            },
+            "pitch": {
+              "$ref": "#/$defs/LayoutPitch"
+            },
+            "rows": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "shape": {
+              "type": "string",
+              "const": "wall"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["shape", "rows", "columns", "fixture_size", "gap", "pitch", "origin"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "columns": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 2
+            },
+            "fixture_size": {
+              "$ref": "#/$defs/LayoutSize"
+            },
+            "gap": {
+              "$ref": "#/$defs/LayoutGap"
+            },
+            "origin": {
+              "$ref": "#/$defs/LayoutPoint"
+            },
+            "pitch": {
+              "$ref": "#/$defs/LayoutPitch"
+            },
+            "rows": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 2
+            },
+            "shape": {
+              "type": "string",
+              "const": "frame"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["shape", "rows", "columns", "fixture_size", "gap", "pitch", "origin"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "fixture_size": {
+              "$ref": "#/$defs/LayoutSize"
+            },
+            "formula": {
+              "$ref": "#/$defs/FormulaDef"
+            },
+            "shape": {
+              "type": "string",
+              "const": "formula"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["shape", "formula", "fixture_size"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "fixture_size": {
+              "$ref": "#/$defs/LayoutSize"
+            },
+            "shape": {
+              "type": "string",
+              "const": "svg_path"
+            },
+            "svg_path": {
+              "$ref": "#/$defs/SvgPathDef"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["shape", "svg_path", "fixture_size"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "fixture_size": {
+              "$ref": "#/$defs/LayoutSize"
+            },
+            "fixtures": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/CustomFixturePos"
+              }
+            },
+            "shape": {
+              "type": "string",
+              "const": "custom"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["shape", "fixtures", "fixture_size"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "algorithm": {
+              "$ref": "#/$defs/LayoutAlgorithm"
+            },
+            "count": {
+              "type": "integer",
+              "format": "uint32",
+              "maximum": 1000000,
+              "minimum": 1
+            },
+            "fixture_size": {
+              "$ref": "#/$defs/LayoutSize"
+            },
+            "origin": {
+              "$ref": "#/$defs/LayoutPoint"
+            },
+            "parameters": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number",
+                "format": "double"
+              }
+            },
+            "shape": {
+              "type": "string",
+              "const": "algorithm"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["shape", "algorithm", "count", "fixture_size", "origin", "parameters"]
+        }
+      ]
+    },
+    "LayoutOrientation": {
       "type": "string",
-      "enum": ["generator"]
+      "enum": ["horizontal", "vertical"]
+    },
+    "LayoutParameterDefinition": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "maximum": {
+          "type": ["number", "null"],
+          "format": "double"
+        },
+        "minimum": {
+          "type": ["number", "null"],
+          "format": "double"
+        },
+        "step": {
+          "type": ["number", "null"],
+          "format": "double"
+        },
+        "value_type": {
+          "$ref": "#/$defs/LayoutParameterValueType"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "label", "value_type"]
+    },
+    "LayoutParameterValueType": {
+      "type": "string",
+      "enum": ["number", "integer", "text"]
+    },
+    "LayoutPitch": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "format": "double",
+          "minimum": 1e-6
+        },
+        "y": {
+          "type": "number",
+          "format": "double",
+          "minimum": 1e-6
+        }
+      },
+      "additionalProperties": false,
+      "required": ["x", "y"]
+    },
+    "LayoutPoint": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "format": "double"
+        },
+        "y": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["x", "y"]
+    },
+    "LayoutSize": {
+      "type": "object",
+      "properties": {
+        "height": {
+          "type": "number",
+          "format": "double",
+          "minimum": 1e-6
+        },
+        "width": {
+          "type": "number",
+          "format": "double",
+          "minimum": 1e-6
+        }
+      },
+      "additionalProperties": false,
+      "required": ["width", "height"]
     },
     "MathOperationDSL": {
       "type": "string",
@@ -1371,17 +1956,49 @@
     "ParameterDefinitionDSL": {
       "type": "object",
       "properties": {
+        "advanced": {
+          "type": ["boolean", "null"]
+        },
         "automation": {
           "$ref": "#/$defs/AutomationPolicyDSL"
         },
         "default_value": {
           "$ref": "#/$defs/ParameterValueDSL"
         },
+        "enum_values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "graph_binding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParameterGraphBindingDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "help": {
+          "type": ["string", "null"]
+        },
         "id": {
           "type": "string"
         },
         "name": {
           "type": "string"
+        },
+        "override_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParameterOverridePolicyDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "range": {
           "type": ["array", "null"],
@@ -1398,6 +2015,23 @@
             }
           ]
         },
+        "required": {
+          "type": ["boolean", "null"]
+        },
+        "safe_fallback": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParameterValueDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "step": {
+          "type": ["number", "null"],
+          "format": "double"
+        },
         "ui_hint": {
           "$ref": "#/$defs/ParameterUiHintDSL"
         },
@@ -1411,13 +2045,42 @@
       "additionalProperties": false,
       "required": ["id", "name", "value_type", "default_value", "unit", "ui_hint", "automation"]
     },
+    "ParameterGraphBindingDSL": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "type": "string"
+        },
+        "property": {
+          "$ref": "#/$defs/EffectNodePropertyDSL"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["node_id", "property"]
+    },
+    "ParameterOverridePolicyDSL": {
+      "type": "string",
+      "enum": ["cue_override", "effect_only", "locked"]
+    },
     "ParameterUiHintDSL": {
       "type": "string",
-      "enum": ["slider", "color", "segmented", "angle"]
+      "enum": ["slider", "color", "segmented", "angle", "toggle", "select", "color_stops"]
     },
     "ParameterUnitDSL": {
       "type": "string",
-      "enum": ["multiplier", "cycles", "percent", "normalized", "color", "direction", "degrees"]
+      "enum": [
+        "none",
+        "multiplier",
+        "cycles",
+        "percent",
+        "normalized",
+        "color",
+        "direction",
+        "degrees",
+        "boolean",
+        "choice",
+        "color_stops"
+      ]
     },
     "ParameterValueDSL": {
       "oneOf": [
@@ -1463,12 +2126,57 @@
           },
           "additionalProperties": false,
           "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "enum"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "color_stops"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ColorStopDSL"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
         }
       ]
     },
     "ParameterValueTypeDSL": {
       "type": "string",
-      "enum": ["scalar", "color", "direction"]
+      "enum": ["scalar", "color", "direction", "boolean", "enum", "color_stops"]
     },
     "PatchDSL": {
       "type": "object",
@@ -1497,36 +2205,6 @@
       "additionalProperties": false,
       "required": ["profile_id", "id_range"]
     },
-    "PhaserStepDSL": {
-      "type": "object",
-      "properties": {
-        "accel": {
-          "type": ["integer", "null"],
-          "format": "int32"
-        },
-        "decel": {
-          "type": ["integer", "null"],
-          "format": "int32"
-        },
-        "transition": {
-          "type": ["number", "null"],
-          "format": "double",
-          "maximum": 100.0,
-          "minimum": 0.0
-        },
-        "values": {
-          "$ref": "#/$defs/StepValuesDSL"
-        },
-        "width": {
-          "type": ["number", "null"],
-          "format": "double",
-          "maximum": 100.0,
-          "minimum": 0.0
-        }
-      },
-      "additionalProperties": false,
-      "required": ["values"]
-    },
     "ProjectManifest": {
       "type": "object",
       "properties": {
@@ -1546,6 +2224,12 @@
           }
         },
         "effect_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AssetRef"
+          }
+        },
+        "layout_refs": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/AssetRef"
@@ -1579,11 +2263,42 @@
         "revision",
         "name",
         "stage_ref",
+        "layout_refs",
         "effect_refs",
         "cue_refs",
         "arrangement_refs",
         "active_arrangement_id"
       ]
+    },
+    "SequenceStepDSL": {
+      "type": "object",
+      "properties": {
+        "accel": {
+          "type": ["integer", "null"],
+          "format": "int32"
+        },
+        "decel": {
+          "type": ["integer", "null"],
+          "format": "int32"
+        },
+        "transition": {
+          "type": ["number", "null"],
+          "format": "double",
+          "maximum": 100.0,
+          "minimum": 0.0
+        },
+        "values": {
+          "$ref": "#/$defs/StepValuesDSL"
+        },
+        "width": {
+          "type": ["number", "null"],
+          "format": "double",
+          "maximum": 100.0,
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false,
+      "required": ["values"]
     },
     "SortByDSL": {
       "type": "string",
@@ -1618,8 +2333,8 @@
         "id": {
           "type": "string"
         },
-        "layout": {
-          "$ref": "#/$defs/LayoutDSL"
+        "layout_ref": {
+          "$ref": "#/$defs/AssetRef"
         },
         "name": {
           "type": "string"
@@ -1646,6 +2361,12 @@
           "items": {
             "$ref": "#/$defs/TargetSetDefinition"
           }
+        },
+        "targeting_scenes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TargetingSceneDefinition"
+          }
         }
       },
       "additionalProperties": false,
@@ -1655,7 +2376,7 @@
         "revision",
         "name",
         "patch",
-        "layout",
+        "layout_ref",
         "groups",
         "target_sets"
       ]
@@ -1842,6 +2563,25 @@
         {
           "type": "object",
           "properties": {
+            "region": {
+              "$ref": "#/$defs/CenterEdgesRegion"
+            },
+            "thickness": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "type": {
+              "type": "string",
+              "const": "center_edges"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "region", "thickness"]
+        },
+        {
+          "type": "object",
+          "properties": {
             "fixture_ids": {
               "type": "array",
               "items": {
@@ -1877,6 +2617,133 @@
       },
       "additionalProperties": false,
       "required": ["fixture_id", "weight"]
+    },
+    "TargetingDuration": {
+      "type": "object",
+      "properties": {
+        "unit": {
+          "$ref": "#/$defs/TargetingDurationUnit"
+        },
+        "value": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": ["value", "unit"]
+    },
+    "TargetingDurationUnit": {
+      "type": "string",
+      "enum": ["beat", "bar"]
+    },
+    "TargetingSceneDefinition": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "looped": {
+          "type": "boolean",
+          "default": false
+        },
+        "name": {
+          "type": "string"
+        },
+        "phase_continuity": {
+          "type": "boolean",
+          "default": true
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TargetingSceneStep"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "name", "steps"]
+    },
+    "TargetingSceneRef": {
+      "type": "object",
+      "properties": {
+        "stage_id": {
+          "type": "string"
+        },
+        "stage_revision": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        },
+        "targeting_scene_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["stage_id", "stage_revision", "targeting_scene_id"]
+    },
+    "TargetingSceneStep": {
+      "type": "object",
+      "properties": {
+        "duration": {
+          "$ref": "#/$defs/TargetingDuration"
+        },
+        "id": {
+          "type": "string"
+        },
+        "selection": {
+          "$ref": "#/$defs/TargetingSelection"
+        },
+        "transition": {
+          "$ref": "#/$defs/TargetingTransition"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "selection", "duration", "transition"]
+    },
+    "TargetingSelection": {
+      "type": "object",
+      "properties": {
+        "partition_index": {
+          "type": ["integer", "null"],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "target_set_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["target_set_id"]
+    },
+    "TargetingTransition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "hard"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "duration": {
+              "$ref": "#/$defs/TargetingDuration"
+            },
+            "type": {
+              "type": "string",
+              "const": "weighted"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "duration"]
+        }
+      ]
     },
     "TempoMapDSL": {
       "type": "object",

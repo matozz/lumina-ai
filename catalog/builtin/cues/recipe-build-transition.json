@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "recipe.build-transition",
+  "revision": 2,
+  "name": "Blackout-safe Build / Transition",
+  "description": "A single full-stage transition with blackout-safe intensity handling.",
+  "nominal_length_ticks": 15360,
+  "layers": [
+    {
+      "id": "blackout-safe",
+      "effect_ref": {
+        "id": "builtin.transition.blackout-safe",
+        "revision": 1
+      },
+      "target": {
+        "type": "all"
+      },
+      "parameter_overrides": {
+        "speed": {
+          "type": "scalar",
+          "value": 0.5
+        },
+        "intensity": {
+          "type": "scalar",
+          "value": 0.8
+        }
+      },
+      "phase": 0,
+      "seed": "8000000000000008",
+      "layer": 0,
+      "priority": 0
+    }
+  ],
+  "trigger_policy": {
+    "mode": "timeline",
+    "quantize": "bar"
+  }
+}

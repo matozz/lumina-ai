@@ -67,7 +67,7 @@ describe("WorkspaceHeader live workflow", () => {
 
     const state = useProjectStore.getState();
     expect(state.bundle.effects).toEqual([]);
-    expect(state.bundle.stages[0].patch[0].id_range).toEqual([1, 80]);
+    expect(state.bundle.stages[0].patch[0].id_range).toEqual([1, 400]);
     expect(useWorkspaceStore.getState()).toMatchObject({
       activeWorkspace: "stage",
       publishedRevision: 1,

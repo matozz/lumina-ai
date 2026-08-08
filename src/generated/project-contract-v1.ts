@@ -43,7 +43,11 @@ export interface AssetRef {
   revision: number;
 }
 
-export type AutomationPolicyDSL = "continuous" | "discrete";
+export type AutomationPolicyDSL = "continuous" | "discrete" | "disabled";
+
+export type CatalogVisibilityDSL = "standard" | "advanced" | "hidden";
+
+export type CenterEdgesRegion = "center" | "edges";
 
 export type CheckerboardParity = "even" | "odd";
 
@@ -104,6 +108,7 @@ export interface CueLayer {
   priority?: number;
   seed: string;
   target_set_ref: TargetSetRef;
+  targeting_scene_ref?: TargetingSceneRef | null;
   trigger_policy: CueTriggerPolicy;
 }
 
@@ -150,13 +155,20 @@ export interface CustomFixturePos {
 export type DirectionDSL = "forward" | "reverse";
 
 export interface EffectCatalogDSL {
+  category?: string | null;
   colorfulness: number;
   density: number;
+  deprecated?: boolean;
   energy: number;
+  family?: EffectFamilyDSL | null;
+  layout_capabilities?: Array<LayoutCapabilityDSL>;
   mood?: Array<string>;
   motion: MotionTagDSL;
+  parameter_summary?: Array<string>;
+  replacement?: EffectReplacementDSL | null;
   required_attributes?: Array<string>;
   strobe_risk: StrobeRiskDSL;
+  visibility?: CatalogVisibilityDSL;
 }
 
 export interface EffectDefinitionDocument {
@@ -169,6 +181,8 @@ export interface EffectDefinitionDocument {
   schema_version: 1;
   source: EffectSourceDSL;
 }
+
+export type EffectFamilyDSL = "intensity" | "color" | "movement" | "spatial" | "strobe" | "utility";
 
 export interface EffectGraphDSL {
   nodes: Array<EffectNodeDSL>;
@@ -191,7 +205,7 @@ export type EffectNodeDSL =
   | {
       id: string;
       phase: EffectPortRefDSL;
-      steps: Array<PhaserStepDSL>;
+      steps: Array<SequenceStepDSL>;
       type: "step_sequence";
     }
   | {
@@ -260,11 +274,27 @@ export type EffectNodeDSL =
       type: "attribute_writer";
     };
 
-export type EffectPortDSL = "scalar" | "color" | "direction" | "mask" | "attribute_set" | "writes";
+export type EffectNodePropertyDSL = "waveform" | "attack" | "release" | "color_stops";
+
+export type EffectPortDSL =
+  | "scalar"
+  | "color"
+  | "direction"
+  | "boolean"
+  | "enum"
+  | "color_stops"
+  | "mask"
+  | "attribute_set"
+  | "writes";
 
 export interface EffectPortRefDSL {
   node_id: string;
   port: EffectPortDSL;
+}
+
+export interface EffectReplacementDSL {
+  id: string;
+  revision: number;
 }
 
 export type EffectSourceDSL = "built_in" | "project_local" | "user_library";
@@ -276,34 +306,6 @@ export interface FormulaDef {
   x: string;
   y: string;
 }
-
-export type GeneratorDSL =
-  | {
-      columns: number;
-      origin?: [number, number] | null;
-      rows: number;
-      shape: "matrix";
-      spacing: number;
-    }
-  | {
-      center?: [number, number] | null;
-      gap: number;
-      increment: number;
-      rings: number;
-      shape: "circle";
-    }
-  | {
-      formula: FormulaDef;
-      shape: "formula";
-    }
-  | {
-      shape: "svg_path";
-      svgPath: SvgPathDef;
-    }
-  | {
-      fixtures: Array<CustomFixturePos>;
-      shape: "custom";
-    };
 
 export type GlobalParameterDSL = "master_dimmer";
 
@@ -347,12 +349,181 @@ export interface KeyframeTangentDSL {
   value: number;
 }
 
-export interface LayoutDSL {
-  generator: GeneratorDSL;
-  type: LayoutType;
+export type LayoutAlgorithm = "lissajous" | "spiral";
+
+export type LayoutCapabilityDSL =
+  | "any"
+  | "linear"
+  | "matrix"
+  | "radial"
+  | "coordinates"
+  | "targeting_scene";
+
+export type LayoutCategory = "basic" | "generated_advanced";
+
+export interface LayoutDefinition {
+  category: LayoutCategory;
+  editor: LayoutEditorCapability;
+  fixture_size_overrides?: Array<LayoutFixtureSizeOverride>;
+  geometry: LayoutGeometry;
+  id: string;
+  name: string;
+  revision: number;
+  schema_version: 1;
 }
 
-export type LayoutType = "generator";
+export type LayoutEditorCapability =
+  | {
+      mode: "form";
+    }
+  | {
+      mode: "parameter_schema";
+      parameters: Array<LayoutParameterDefinition>;
+    }
+  | {
+      mode: "advanced_only";
+    }
+  | {
+      mode: "read_only";
+      reason: string;
+    };
+
+export interface LayoutFixtureSizeOverride {
+  fixture_id: number;
+  size: LayoutSize;
+}
+
+export interface LayoutGap {
+  x: number;
+  y: number;
+}
+
+export type LayoutGeometry =
+  | {
+      columns: number;
+      fixture_size: LayoutSize;
+      gap: LayoutGap;
+      origin: LayoutPoint;
+      pitch: LayoutPitch;
+      rows: number;
+      shape: "matrix";
+    }
+  | {
+      center: LayoutPoint;
+      fixture_size: LayoutSize;
+      increment: number;
+      ring_gap: number;
+      ring_pitch: number;
+      rings: number;
+      shape: "circle";
+    }
+  | {
+      center: LayoutPoint;
+      fixture_size: LayoutSize;
+      ring_gap: number;
+      ring_pitch: number;
+      rings: number;
+      segments: number;
+      shape: "sector";
+      start_angle_degrees: number;
+      sweep_angle_degrees: number;
+    }
+  | {
+      center: LayoutPoint;
+      fixture_size: LayoutSize;
+      fixtures_per_side: number;
+      radius: number;
+      rotation_degrees: number;
+      shape: "polygon";
+      sides: number;
+    }
+  | {
+      columns: number;
+      fixture_size: LayoutSize;
+      gap: LayoutGap;
+      origin: LayoutPoint;
+      pitch: LayoutPitch;
+      rows: number;
+      shape: "honeycomb";
+    }
+  | {
+      count: number;
+      fixture_size: LayoutSize;
+      gap: LayoutGap;
+      orientation: LayoutOrientation;
+      origin: LayoutPoint;
+      pitch: LayoutPitch;
+      shape: "strip";
+    }
+  | {
+      columns: number;
+      fixture_size: LayoutSize;
+      gap: LayoutGap;
+      origin: LayoutPoint;
+      pitch: LayoutPitch;
+      rows: number;
+      shape: "wall";
+    }
+  | {
+      columns: number;
+      fixture_size: LayoutSize;
+      gap: LayoutGap;
+      origin: LayoutPoint;
+      pitch: LayoutPitch;
+      rows: number;
+      shape: "frame";
+    }
+  | {
+      fixture_size: LayoutSize;
+      formula: FormulaDef;
+      shape: "formula";
+    }
+  | {
+      fixture_size: LayoutSize;
+      shape: "svg_path";
+      svg_path: SvgPathDef;
+    }
+  | {
+      fixture_size: LayoutSize;
+      fixtures: Array<CustomFixturePos>;
+      shape: "custom";
+    }
+  | {
+      algorithm: LayoutAlgorithm;
+      count: number;
+      fixture_size: LayoutSize;
+      origin: LayoutPoint;
+      parameters: Record<string, number>;
+      shape: "algorithm";
+    };
+
+export type LayoutOrientation = "horizontal" | "vertical";
+
+export interface LayoutParameterDefinition {
+  id: string;
+  label: string;
+  maximum?: number | null;
+  minimum?: number | null;
+  step?: number | null;
+  value_type: LayoutParameterValueType;
+}
+
+export type LayoutParameterValueType = "number" | "integer" | "text";
+
+export interface LayoutPitch {
+  x: number;
+  y: number;
+}
+
+export interface LayoutPoint {
+  x: number;
+  y: number;
+}
+
+export interface LayoutSize {
+  height: number;
+  width: number;
+}
 
 export type MathOperationDSL = "add" | "subtract" | "multiply" | "divide" | "min" | "max";
 
@@ -365,26 +536,52 @@ export type OscillatorWaveformDSL = "sine" | "triangle" | "saw" | "pulse";
 export type OverlapPolicyDSL = "layer" | "replace" | "reject" | "crossfade";
 
 export interface ParameterDefinitionDSL {
+  advanced?: boolean | null;
   automation: AutomationPolicyDSL;
   default_value: ParameterValueDSL;
+  enum_values?: Array<string>;
+  graph_binding?: ParameterGraphBindingDSL | null;
+  help?: string | null;
   id: string;
   name: string;
+  override_policy?: ParameterOverridePolicyDSL | null;
   range?: [number, number] | null;
+  required?: boolean | null;
+  safe_fallback?: ParameterValueDSL | null;
+  step?: number | null;
   ui_hint: ParameterUiHintDSL;
   unit: ParameterUnitDSL;
   value_type: ParameterValueTypeDSL;
 }
 
-export type ParameterUiHintDSL = "slider" | "color" | "segmented" | "angle";
+export interface ParameterGraphBindingDSL {
+  node_id: string;
+  property: EffectNodePropertyDSL;
+}
+
+export type ParameterOverridePolicyDSL = "cue_override" | "effect_only" | "locked";
+
+export type ParameterUiHintDSL =
+  | "slider"
+  | "color"
+  | "segmented"
+  | "angle"
+  | "toggle"
+  | "select"
+  | "color_stops";
 
 export type ParameterUnitDSL =
+  | "none"
   | "multiplier"
   | "cycles"
   | "percent"
   | "normalized"
   | "color"
   | "direction"
-  | "degrees";
+  | "degrees"
+  | "boolean"
+  | "choice"
+  | "color_stops";
 
 export type ParameterValueDSL =
   | {
@@ -398,21 +595,31 @@ export type ParameterValueDSL =
   | {
       type: "direction";
       value: DirectionDSL;
+    }
+  | {
+      type: "boolean";
+      value: boolean;
+    }
+  | {
+      type: "enum";
+      value: string;
+    }
+  | {
+      type: "color_stops";
+      value: Array<ColorStopDSL>;
     };
 
-export type ParameterValueTypeDSL = "scalar" | "color" | "direction";
+export type ParameterValueTypeDSL =
+  | "scalar"
+  | "color"
+  | "direction"
+  | "boolean"
+  | "enum"
+  | "color_stops";
 
 export interface PatchDSL {
   id_range: [number, number];
   profile_id: string;
-}
-
-export interface PhaserStepDSL {
-  accel?: number | null;
-  decel?: number | null;
-  transition?: number | null;
-  values: StepValuesDSL;
-  width?: number | null;
 }
 
 export interface ProjectManifest {
@@ -420,11 +627,20 @@ export interface ProjectManifest {
   arrangement_refs: Array<AssetRef>;
   cue_refs: Array<AssetRef>;
   effect_refs: Array<AssetRef>;
+  layout_refs: Array<AssetRef>;
   name: string;
   project_id: string;
   revision: number;
   schema_version: 1;
   stage_ref: AssetRef;
+}
+
+export interface SequenceStepDSL {
+  accel?: number | null;
+  decel?: number | null;
+  transition?: number | null;
+  values: StepValuesDSL;
+  width?: number | null;
 }
 
 export type SortByDSL =
@@ -446,12 +662,13 @@ export type SpatialBasisDSL = "index" | "x" | "y" | "distance" | "angle" | "cust
 export interface StageDocument {
   groups: Array<GroupDSL>;
   id: string;
-  layout: LayoutDSL;
+  layout_ref: AssetRef;
   name: string;
   patch: Array<PatchDSL>;
   revision: number;
   schema_version: 1;
   target_sets: Array<TargetSetDefinition>;
+  targeting_scenes?: Array<TargetingSceneDefinition>;
 }
 
 export interface StepValuesDSL {
@@ -505,6 +722,11 @@ export type TargetSetSelector =
       type: "checkerboard";
     }
   | {
+      region: CenterEdgesRegion;
+      thickness: number;
+      type: "center_edges";
+    }
+  | {
       fixture_ids: Array<number>;
       type: "fixture_ids";
     };
@@ -513,6 +735,48 @@ export interface TargetSetWeight {
   fixture_id: number;
   weight: number;
 }
+
+export interface TargetingDuration {
+  unit: TargetingDurationUnit;
+  value: number;
+}
+
+export type TargetingDurationUnit = "beat" | "bar";
+
+export interface TargetingSceneDefinition {
+  id: string;
+  looped?: boolean;
+  name: string;
+  phase_continuity?: boolean;
+  steps: Array<TargetingSceneStep>;
+}
+
+export interface TargetingSceneRef {
+  stage_id: string;
+  stage_revision: number;
+  targeting_scene_id: string;
+}
+
+export interface TargetingSceneStep {
+  duration: TargetingDuration;
+  id: string;
+  selection: TargetingSelection;
+  transition: TargetingTransition;
+}
+
+export interface TargetingSelection {
+  partition_index?: number | null;
+  target_set_id: string;
+}
+
+export type TargetingTransition =
+  | {
+      type: "hard";
+    }
+  | {
+      duration: TargetingDuration;
+      type: "weighted";
+    };
 
 export interface TempoMapDSL {
   points: Array<TempoPointDSL>;
@@ -533,6 +797,7 @@ export interface ProjectBundle {
   arrangements: Array<ArrangementDocument>;
   cues: Array<CueDefinition>;
   effects: Array<EffectDefinitionDocument>;
+  layouts: Array<LayoutDefinition>;
   manifest: ProjectManifest;
   schema_version: 1;
   stages: Array<StageDocument>;

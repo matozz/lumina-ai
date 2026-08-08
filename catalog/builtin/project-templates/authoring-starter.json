@@ -1,0 +1,247 @@
+{
+  "schema_version": 1,
+  "id": "builtin.project-template.authoring-starter",
+  "name": "Authoring Starter",
+  "stage": {
+    "schema_version": 1,
+    "id": "main-stage",
+    "revision": 1,
+    "name": "Main Stage",
+    "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 400] }],
+    "layout_ref": { "id": "builtin.layout.matrix-main-20x20", "revision": 1 },
+    "groups": [
+      {
+        "id": "all-fixtures",
+        "name": "All fixtures",
+        "fixtures": { "range": [1, 400] },
+        "sort_by": "none"
+      }
+    ],
+    "target_sets": [
+      { "id": "all", "name": "All", "selector": { "type": "all" } },
+      {
+        "id": "rows",
+        "name": "Rows",
+        "selector": {
+          "type": "rows",
+          "indices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+        }
+      },
+      {
+        "id": "columns",
+        "name": "Columns",
+        "selector": {
+          "type": "columns",
+          "indices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+        }
+      },
+      {
+        "id": "zone-2x2-1",
+        "name": "2×2 · Top left",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 2,
+          "columns": 2,
+          "zones": [{ "row": 0, "column": 0 }]
+        }
+      },
+      {
+        "id": "zone-2x2-2",
+        "name": "2×2 · Top right",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 2,
+          "columns": 2,
+          "zones": [{ "row": 0, "column": 1 }]
+        }
+      },
+      {
+        "id": "zone-2x2-3",
+        "name": "2×2 · Bottom left",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 2,
+          "columns": 2,
+          "zones": [{ "row": 1, "column": 0 }]
+        }
+      },
+      {
+        "id": "zone-2x2-4",
+        "name": "2×2 · Bottom right",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 2,
+          "columns": 2,
+          "zones": [{ "row": 1, "column": 1 }]
+        }
+      },
+      {
+        "id": "zone-4x4-1",
+        "name": "4×4 · Top left",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 4,
+          "columns": 4,
+          "zones": [{ "row": 0, "column": 0 }]
+        }
+      },
+      {
+        "id": "zone-4x4-4",
+        "name": "4×4 · Top right",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 4,
+          "columns": 4,
+          "zones": [{ "row": 0, "column": 3 }]
+        }
+      },
+      {
+        "id": "zone-4x4-13",
+        "name": "4×4 · Bottom left",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 4,
+          "columns": 4,
+          "zones": [{ "row": 3, "column": 0 }]
+        }
+      },
+      {
+        "id": "zone-4x4-16",
+        "name": "4×4 · Bottom right",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 4,
+          "columns": 4,
+          "zones": [{ "row": 3, "column": 3 }]
+        }
+      },
+      {
+        "id": "zones-3x3",
+        "name": "3×3 Sequence Zones",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 3,
+          "columns": 3,
+          "zones": [
+            { "row": 0, "column": 0 },
+            { "row": 0, "column": 1 },
+            { "row": 0, "column": 2 },
+            { "row": 1, "column": 0 },
+            { "row": 1, "column": 1 },
+            { "row": 1, "column": 2 },
+            { "row": 2, "column": 0 },
+            { "row": 2, "column": 1 },
+            { "row": 2, "column": 2 }
+          ]
+        }
+      },
+      {
+        "id": "checkerboard",
+        "name": "Checkerboard",
+        "selector": { "type": "checkerboard", "parity": "even" }
+      },
+      {
+        "id": "center",
+        "name": "Center",
+        "selector": { "type": "center_edges", "region": "center", "thickness": 5 }
+      },
+      {
+        "id": "edges",
+        "name": "Edges",
+        "selector": { "type": "center_edges", "region": "edges", "thickness": 2 }
+      }
+    ],
+    "targeting_scenes": [
+      {
+        "id": "all-zones-all",
+        "name": "All → 3×3 Zones → All",
+        "looped": false,
+        "phase_continuity": true,
+        "steps": [
+          {
+            "id": "all-in",
+            "selection": { "target_set_id": "all" },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-1",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 0 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-2",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 1 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-3",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 2 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-4",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 3 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-5",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 4 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-6",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 5 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-7",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 6 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-8",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 7 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-9",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 8 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "all-out",
+            "selection": { "target_set_id": "all" },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "weighted", "duration": { "value": 1, "unit": "beat" } }
+          }
+        ]
+      }
+    ]
+  },
+  "layout_refs": [
+    { "id": "builtin.layout.matrix-main-20x20", "revision": 1 },
+    { "id": "builtin.layout.matrix-festival-12x16", "revision": 1 },
+    { "id": "builtin.layout.wall-video-12x24", "revision": 1 },
+    { "id": "builtin.layout.wall-main-20x20", "revision": 1 },
+    { "id": "builtin.layout.strip-runway-160", "revision": 1 },
+    { "id": "builtin.layout.frame-arena-24x40", "revision": 1 },
+    { "id": "builtin.layout.circle-rings-8", "revision": 1 },
+    { "id": "builtin.layout.sector-fan-8", "revision": 1 },
+    { "id": "builtin.layout.polygon-hex-144", "revision": 1 },
+    { "id": "builtin.layout.honeycomb-18x24", "revision": 1 },
+    { "id": "builtin.layout.formula-sine-160", "revision": 1 },
+    { "id": "builtin.layout.algorithm-lissajous-240", "revision": 1 },
+    { "id": "builtin.layout.algorithm-spiral-200", "revision": 1 }
+  ],
+  "arrangement_ref": { "id": "builtin.arrangement.house-128", "revision": 1 }
+}

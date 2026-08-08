@@ -21,6 +21,7 @@ describe("LayoutDefinition geometry", () => {
     layout.geometry.fixture_size = { width: 12, height: 18 };
     layout.geometry.gap = { x: 0, y: 0 };
     layout.geometry.pitch = { x: 12, y: 18 };
+    layout.geometry.columns = 10;
 
     expect(diagnoseLayoutDefinition(layout)).toEqual([]);
     expect(layoutPositions(layout, fixtureIdsForStage(stage))[11]).toEqual({
@@ -35,16 +36,42 @@ describe("LayoutDefinition geometry", () => {
     );
   });
 
-  it("covers matrix, strip, wall, frame, circle, and generated capacities", () => {
+  it("covers every supported Generator with practical built-in capacities", () => {
     const bundle = createStarterProjectBundle();
-    expect(bundle.layouts.map(layoutCapacity)).toEqual([80, 37, 80, 80, 80, 80, 80]);
+    expect(
+      Object.fromEntries(bundle.layouts.map((layout) => [layout.id, layoutCapacity(layout)])),
+    ).toMatchObject({
+      "builtin.layout.matrix-main-20x20": 400,
+      "builtin.layout.wall-main-20x20": 400,
+      "builtin.layout.strip-runway-160": 160,
+      "builtin.layout.frame-arena-24x40": 124,
+      "builtin.layout.circle-rings-8": 433,
+      "builtin.layout.sector-fan-8": 288,
+      "builtin.layout.polygon-hex-144": 144,
+      "builtin.layout.honeycomb-18x24": 432,
+      "builtin.layout.formula-sine-160": 160,
+      "builtin.layout.algorithm-lissajous-240": 240,
+      "builtin.layout.strip-vertical-tower-120": 120,
+      "builtin.layout.frame-proscenium-16x36": 100,
+      "builtin.layout.frame-portrait-32x16": 92,
+      "builtin.layout.circle-club-rings-5": 151,
+      "builtin.layout.circle-festival-halo-10": 661,
+      "builtin.layout.sector-front-wash-90": 144,
+      "builtin.layout.sector-stage-wing-150": 168,
+      "builtin.layout.polygon-triangle-84": 84,
+      "builtin.layout.polygon-square-96": 96,
+      "builtin.layout.polygon-pentagon-110": 110,
+      "builtin.layout.honeycomb-compact-16x20": 320,
+      "builtin.layout.honeycomb-loose-12x18": 216,
+      "builtin.layout.formula-arch-160": 160,
+    });
     const frame = bundle.layouts.find((layout) => layout.geometry.shape === "frame")!;
-    expect(layoutPositions(frame, fixtureIdsForLayout(frame))).toHaveLength(80);
+    expect(layoutPositions(frame, fixtureIdsForLayout(frame))).toHaveLength(124);
   });
 
   it("fills every circle ring symmetrically instead of leaving a partial outer arc", () => {
     const bundle = createStarterProjectBundle();
-    const circle = bundle.layouts.find((layout) => layout.geometry.shape === "circle")!;
+    const circle = bundle.layouts.find((layout) => layout.id === "builtin.layout.circle-rings-8")!;
     if (circle.geometry.shape !== "circle") throw new Error("starter circle missing");
     const ringPitch = circle.geometry.ring_pitch;
     const fixtureIds = fixtureIdsForLayout(circle);
@@ -55,8 +82,8 @@ describe("LayoutDefinition geometry", () => {
     );
     const positions = layoutPositions(circle, fixtureIds).slice(1);
 
-    expect(counts).toEqual([6, 12, 18]);
-    expect(positions).toHaveLength(36);
+    expect(counts).toEqual([12, 24, 36, 48, 60, 72, 84, 96]);
+    expect(positions).toHaveLength(432);
     let offset = 0;
     for (const [ringIndex, count] of counts.entries()) {
       const ring = positions.slice(offset, offset + count);
@@ -82,26 +109,29 @@ describe("LayoutDefinition geometry", () => {
         ),
       Number.POSITIVE_INFINITY,
     );
-    expect(nearestDistance).toBeGreaterThanOrEqual(ringPitch - 0.000_001);
+    expect(nearestDistance).toBeGreaterThanOrEqual(circle.geometry.fixture_size.width - 0.000_001);
   });
 
-  it("safely converts legacy dense circles without making Rings change the gap", () => {
+  it("keeps dense Circle quantity independent from the saved ring gap", () => {
     const bundle = createStarterProjectBundle();
-    const circle = bundle.layouts.find((layout) => layout.geometry.shape === "circle")!;
+    const circle = bundle.layouts.find((layout) => layout.id === "builtin.layout.circle-rings-8")!;
     if (circle.geometry.shape !== "circle") throw new Error("starter circle missing");
+    circle.geometry.rings = 3;
     circle.geometry.increment = 14;
+    const spacing = [circle.geometry.ring_gap, circle.geometry.ring_pitch];
 
-    expect(circleRingDensity(circle.geometry.increment)).toBe(6);
-    expect(layoutCapacity(circle)).toBe(37);
+    expect(circleRingDensity(circle.geometry.increment)).toBe(14);
+    expect(layoutCapacity(circle)).toBe(85);
+    expect([circle.geometry.ring_gap, circle.geometry.ring_pitch]).toEqual(spacing);
     const positions = layoutPositions(circle, fixtureIdsForLayout(circle));
     const radii = [...new Set(positions.map((point) => Math.round(Math.hypot(point.x, point.y))))];
-    expect(radii).toEqual([0, 22, 44, 66]);
+    expect(radii).toEqual([0, 20, 40, 60]);
   });
 
   it("previews a Layout on a cloned Stage without mutating its saved reference", () => {
     const bundle = createStarterProjectBundle();
     const sourceStageRef = structuredClone(activeStage(bundle).layout_ref);
-    const circle = bundle.layouts.find((layout) => layout.geometry.shape === "circle")!;
+    const circle = bundle.layouts.find((layout) => layout.id === "builtin.layout.circle-rings-8")!;
     const preview = previewBundleForLayout(bundle, circle);
 
     expect(activeStage(preview).layout_ref).toEqual({ id: circle.id, revision: circle.revision });
@@ -117,7 +147,7 @@ describe("LayoutDefinition geometry", () => {
     layout.geometry.columns = 2;
 
     expect(diagnoseLayoutDefinition(layout)).toEqual([]);
-    expect(fixtureIdsForStage(stage)).toHaveLength(80);
+    expect(fixtureIdsForStage(stage)).toHaveLength(400);
     expect(fixtureIdsForLayout(layout)).toEqual([1, 2, 3, 4]);
     expect(layoutPositions(layout, fixtureIdsForLayout(layout))).toHaveLength(4);
   });

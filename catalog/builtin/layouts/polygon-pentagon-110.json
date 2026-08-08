@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.polygon-pentagon-110",
+  "revision": 1,
+  "name": "Pentagon Truss 110",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "polygon",
+    "sides": 5,
+    "fixtures_per_side": 22,
+    "fixture_size": { "width": 9, "height": 9 },
+    "radius": 260,
+    "rotation_degrees": -90,
+    "center": { "x": 0, "y": 0 }
+  }
+}

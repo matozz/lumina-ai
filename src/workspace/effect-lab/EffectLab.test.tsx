@@ -71,7 +71,7 @@ describe("Effect Lab safe authoring", () => {
 
     await waitFor(() => expect(useProjectStore.getState().selectedTargetSetId).toBe("all"));
     expect(screen.getByText("Previewing Main Stage")).toBeTruthy();
-    expect(screen.getByText("All fixtures · 80")).toBeTruthy();
+    expect(screen.getByText("All fixtures · 400")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Edit areas" }));
     expect(screen.getByRole("dialog")).toBeTruthy();
@@ -152,7 +152,14 @@ function productionCatalog(): ProductionCatalog {
     "builtin.color.gradient",
     "color",
   );
-  return { schema_version: 1, effects: [pulse, gradient], cue_recipes: [] };
+  return {
+    schema_version: 1,
+    effects: [pulse, gradient],
+    cue_recipes: [],
+    layouts: [],
+    arrangements: [],
+    project_templates: [],
+  };
 }
 
 function asBuiltin(

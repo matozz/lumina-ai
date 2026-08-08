@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.frame-portrait-32x16",
+  "revision": 1,
+  "name": "Portrait Portal Frame 32×16",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "frame",
+    "rows": 32,
+    "columns": 16,
+    "fixture_size": { "width": 9, "height": 9 },
+    "gap": { "x": 9, "y": 9 },
+    "pitch": { "x": 18, "y": 18 },
+    "origin": { "x": 0, "y": 0 }
+  }
+}

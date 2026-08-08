@@ -1,6 +1,7 @@
 use lumina_ai_lib::document::{
-    builtin_production_catalog, production_catalog_compatibility, production_catalog_golden,
-    validate_production_catalog, validate_production_catalog_runtime, ProductionCatalog,
+    builtin_production_catalog, layout_capacity, layout_geometry_shape, layout_positions,
+    production_catalog_compatibility, production_catalog_golden, validate_production_catalog,
+    validate_production_catalog_runtime, ProductionCatalog,
 };
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -52,6 +53,8 @@ fn main() {
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let golden_path = manifest_dir.join("tests/fixtures/production_catalog_golden_v1.json");
         let compatibility_path = manifest_dir.join("../catalog/production-compatibility-v1.json");
+        let generator_golden_path =
+            manifest_dir.join("../catalog/builtin/generators/golden-v1.json");
         let golden = production_catalog_golden(&catalog).unwrap_or_else(|errors| {
             println!(
                 "{}",
@@ -60,13 +63,16 @@ fn main() {
             std::process::exit(1);
         });
         let compatibility = production_catalog_compatibility(&catalog);
+        let generator_golden = generator_golden(&catalog);
         if update_golden {
             write_artifact(&golden_path, &golden);
             write_artifact(&compatibility_path, &compatibility);
+            write_artifact(&generator_golden_path, &generator_golden);
             println!(
-                "Updated {} and {}",
+                "Updated {}, {}, and {}",
                 golden_path.display(),
-                compatibility_path.display()
+                compatibility_path.display(),
+                generator_golden_path.display()
             );
         } else {
             check_artifact("multi-tick golden", &golden_path, &golden);
@@ -75,6 +81,11 @@ fn main() {
                 &compatibility_path,
                 &compatibility,
             );
+            check_artifact(
+                "Generator coordinate golden",
+                &generator_golden_path,
+                &generator_golden,
+            );
         }
     }
     println!(
@@ -82,6 +93,32 @@ fn main() {
         catalog.effects.len(),
         catalog.cue_recipes.len()
     );
+}
+
+fn generator_golden(catalog: &ProductionCatalog) -> serde_json::Value {
+    serde_json::json!({
+        "schema_version": 1,
+        "layouts": catalog.layouts.iter().map(|layout| {
+            let capacity = layout_capacity(layout);
+            let fixture_ids = (1..=capacity as u32).collect::<Vec<_>>();
+            let positions = layout_positions(layout, &fixture_ids);
+            let sample_indices = [0, capacity / 2, capacity.saturating_sub(1)];
+            serde_json::json!({
+                "id": layout.id,
+                "shape": layout_geometry_shape(&layout.geometry),
+                "capacity": capacity,
+                "samples": sample_indices.into_iter().filter_map(|index| positions.get(index)).map(|position| serde_json::json!({
+                    "id": position.id,
+                    "x": round_six(position.x),
+                    "y": round_six(position.y),
+                })).collect::<Vec<_>>(),
+            })
+        }).collect::<Vec<_>>()
+    })
+}
+
+fn round_six(value: f64) -> f64 {
+    (value * 1_000_000.0).round() / 1_000_000.0
 }
 
 fn write_artifact(path: &Path, value: &serde_json::Value) {

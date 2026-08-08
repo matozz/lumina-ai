@@ -1,18 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { AssetRef, ProjectPreviewFrame } from "@/bridge/types";
+import type { ProjectPreviewFrame } from "@/bridge/types";
 import {
   authoringSessionKey,
   authoringTransportActions,
   useAuthoringTransportStore,
 } from "@/authoring/transport";
 import { activeStage, assetKey, exactAsset } from "@/document/projectModel";
-import {
-  PREVIEW_DARK_FRAME_NOTICE_THRESHOLD,
-  isLegacyAcceptanceWorkspace,
-  projectActions,
-  simplifyLegacyCueNames,
-  useProjectStore,
-} from "./project";
+import { PREVIEW_DARK_FRAME_NOTICE_THRESHOLD, projectActions, useProjectStore } from "./project";
 
 describe("Stage 7 Project state", () => {
   beforeEach(() => projectActions.reset());
@@ -71,106 +65,20 @@ describe("Stage 7 Project state", () => {
     });
   });
 
-  it("refreshes only the known local acceptance workspace on the storage upgrade", async () => {
-    const effect = projectActions.createEffect("Breathe Custom")!;
-    projectActions.createCue([effect], "New Cue");
-    const legacyBundle = structuredClone(useProjectStore.getState().bundle);
-    expect(isLegacyAcceptanceWorkspace(legacyBundle)).toBe(true);
-
+  it("resets an older development cache at the scoped Zustand storage boundary", async () => {
+    const effect = projectActions.createEffect("Unsaved cached Effect")!;
+    const cachedBundle = structuredClone(useProjectStore.getState().bundle);
     const migrate = useProjectStore.persist.getOptions().migrate;
-    expect(migrate).toBeDefined();
-    const migrated = (await Promise.resolve(migrate?.({ bundle: legacyBundle }, 3))) as
-      | ReturnType<typeof useProjectStore.getState>
-      | undefined;
+    const migrated = (await Promise.resolve(
+      migrate?.({ bundle: cachedBundle, selectedEffectRef: effect }, 6),
+    )) as ReturnType<typeof useProjectStore.getState>;
 
-    expect(migrated?.bundle.effects).toEqual([]);
-    expect(migrated?.bundle.cues).toEqual([]);
-    expect(migrated?.bundle.arrangements[0].tracks[0].clips).toEqual([]);
-    expect(migrated?.selectedEffectRef).toBeNull();
-    expect(migrated?.selectedCueRef).toBeNull();
-    expect(activeStage(migrated!.bundle).target_sets.map((target) => target.id)).toEqual(
+    expect(migrated.bundle.schema_version).toBe(1);
+    expect(migrated.bundle.effects).toEqual([]);
+    expect(migrated.selectedEffectRef).toBeNull();
+    expect(activeStage(migrated.bundle).target_sets.map((target) => target.id)).toEqual(
       expect.arrayContaining(["rows", "columns", "zones-3x3", "center", "edges"]),
     );
-
-    legacyBundle.manifest.name = "My Tour";
-    expect(isLegacyAcceptanceWorkspace(legacyBundle)).toBe(false);
-  });
-
-  it("moves legacy Arrange recipe copies behind the internal Cue boundary", async () => {
-    const effectRef = projectActions.createEffect("Pulse")!;
-    const originalCueRef = projectActions.createCue([effectRef], "Full-stage Drop Pulse")!;
-    const legacyBundle = structuredClone(useProjectStore.getState().bundle);
-    const cue = exactAsset(legacyBundle.cues, originalCueRef)!;
-    cue.id = "cue-four-on-floor";
-    const legacyCueRef = { id: cue.id, revision: cue.revision };
-    legacyBundle.manifest.cue_refs = [legacyCueRef];
-    legacyBundle.arrangements[0].tracks[0].clips = [
-      {
-        id: "drop-pulse-clip",
-        cue_ref: legacyCueRef,
-        start_tick: 0,
-        duration_tick: cue.nominal_length_ticks,
-        playback: "loop",
-      },
-    ];
-
-    const migrate = useProjectStore.persist.getOptions().migrate;
-    const migrated = (await Promise.resolve(
-      migrate?.({ bundle: legacyBundle, selectedCueRef: legacyCueRef }, 4),
-    )) as ReturnType<typeof useProjectStore.getState>;
-    const migratedCue = migrated.bundle.cues[0]!;
-    const migratedClip = migrated.bundle.arrangements[0].tracks[0].clips![0]!;
-
-    expect(migratedCue.id).toMatch(/^__builtin-cue-four-on-floor/);
-    expect(migratedClip.cue_ref).toEqual({ id: migratedCue.id, revision: migratedCue.revision });
-    expect(migrated.bundle.manifest.cue_refs).toContainEqual(migratedClip.cue_ref);
-    expect(migrated.selectedCueRef).toBeNull();
-  });
-
-  it("repairs full assets accidentally persisted where exact references belong", async () => {
-    const effectRef = projectActions.createEffect("Reference repair")!;
-    const cueRef = projectActions.createCue([effectRef], "Reference repair Cue")!;
-    const bundle = structuredClone(useProjectStore.getState().bundle);
-    const effect = exactAsset(bundle.effects, effectRef)!;
-    const cue = exactAsset(bundle.cues, cueRef)!;
-    const arrangement = bundle.arrangements[0]!;
-    const corruptEffectRef = structuredClone(effect) as unknown as AssetRef;
-    const corruptCueRef = structuredClone(cue) as unknown as AssetRef;
-    bundle.manifest.effect_refs = [corruptEffectRef];
-    bundle.manifest.cue_refs = [corruptCueRef];
-    cue.layers[0]!.effect_ref = corruptEffectRef;
-    arrangement.tracks[0]!.clips = [
-      {
-        id: "corrupt-ref-clip",
-        cue_ref: corruptCueRef,
-        start_tick: 0,
-        duration_tick: cue.nominal_length_ticks,
-      },
-    ];
-
-    const migrate = useProjectStore.persist.getOptions().migrate;
-    const migrated = (await Promise.resolve(
-      migrate?.(
-        {
-          bundle,
-          selectedEffectRef: corruptEffectRef,
-          selectedCueRef: corruptCueRef,
-          selectedArrangementRef: structuredClone(arrangement) as unknown as AssetRef,
-        },
-        5,
-      ),
-    )) as ReturnType<typeof useProjectStore.getState>;
-
-    expect(migrated.bundle.manifest.effect_refs).toEqual([effectRef]);
-    expect(migrated.bundle.manifest.cue_refs).toEqual([cueRef]);
-    expect(migrated.bundle.cues[0]!.layers[0]!.effect_ref).toEqual(effectRef);
-    expect(migrated.bundle.arrangements[0]!.tracks[0]!.clips![0]!.cue_ref).toEqual(cueRef);
-    expect(migrated.selectedEffectRef).toEqual(effectRef);
-    expect(migrated.selectedCueRef).toEqual(cueRef);
-    expect(migrated.selectedArrangementRef).toEqual({
-      id: arrangement.id,
-      revision: arrangement.revision,
-    });
   });
 
   it("pauses the current preview before selecting another Effect", () => {
@@ -184,6 +92,34 @@ describe("Stage 7 Project state", () => {
     projectActions.setSelectedEffectRef(second);
 
     expect(useAuthoringTransportStore.getState().sessions[key].playback).toBe("paused");
+  });
+
+  it("exports and reimports a project asset closure without starting playback", () => {
+    const effect = projectActions.createEffect("Tour Pulse")!;
+    const cue = projectActions.createCue([effect], "Tour Cue")!;
+    const arrangement = projectActions.createArrangement("Tour Sequence")!;
+    projectActions.updateArrangement(arrangement, "Place Tour Cue", (document) => {
+      document.tracks[0].clips = [
+        { id: "tour-cue", cue_ref: cue, start_tick: 0, duration_tick: 3_840 },
+      ];
+    });
+    const pack = projectActions.exportAssetPack("Tour Pack");
+
+    projectActions.reset();
+    const imported = projectActions.importAssetPack(pack);
+    const state = useProjectStore.getState();
+
+    expect(imported.importedPack.effects.map((asset) => asset.id)).toContain(effect.id);
+    expect(exactAsset(state.bundle.effects, effect)).toBeTruthy();
+    expect(exactAsset(state.bundle.cues, cue)).toBeTruthy();
+    expect(exactAsset(state.bundle.arrangements, arrangement)).toBeTruthy();
+    expect(state.selectedEffectRef).toEqual(effect);
+    expect(state.selectedCueRef).toEqual(cue);
+    expect(
+      Object.values(useAuthoringTransportStore.getState().sessions).every(
+        (session) => session.playback !== "playing",
+      ),
+    ).toBe(true);
   });
 
   it("duplicates a multi-tempo Arrangement without moving clip or keyframe ticks", () => {
@@ -237,6 +173,7 @@ describe("Stage 7 Project state", () => {
         { id: "clip", cue_ref: cue, start_tick: 0, duration_tick: 3_840 },
       ];
     });
+    const workingArrangement = useProjectStore.getState().selectedArrangementRef;
     projectActions.markPublished();
 
     projectActions.renameEffect(pulse, "Pulse v2");
@@ -249,12 +186,12 @@ describe("Stage 7 Project state", () => {
     projectActions.renameCue(cue, "Pulse Cue v2");
     const cueV2 = useProjectStore.getState().selectedCueRef!;
     expect(cueV2.revision).toBe(2);
-    const clip = exactAsset(useProjectStore.getState().bundle.arrangements, arrangement)?.tracks[0]
-      .clips?.[0];
+    const clip = exactAsset(useProjectStore.getState().bundle.arrangements, workingArrangement)
+      ?.tracks[0].clips?.[0];
     expect(clip?.cue_ref).toEqual(cue);
   });
 
-  it("saves a Stage-pinned Layout as a new exact revision without changing the Stage", () => {
+  it("saves a built-in Stage Layout as an independent project asset", () => {
     const state = useProjectStore.getState();
     const stageRef = structuredClone(state.bundle.manifest.stage_ref);
     const layoutRef = structuredClone(state.selectedLayoutRef);
@@ -270,16 +207,20 @@ describe("Stage 7 Project state", () => {
     const saved = projectActions.saveLayoutDraft(layoutRef, layout);
     const next = useProjectStore.getState();
 
-    expect(saved).toEqual({ id: layoutRef.id, revision: layoutRef.revision + 1 });
+    expect(saved.id).not.toBe(layoutRef.id);
+    expect(saved.revision).toBe(1);
     expect(exactAsset(next.bundle.stages, stageRef)?.layout_ref).toEqual(layoutRef);
     expect(exactAsset(next.bundle.layouts, layoutRef)?.name).not.toBe("Matrix Zero Gap");
-    expect(exactAsset(next.bundle.layouts, saved)?.name).toBe("Matrix Zero Gap");
+    expect(exactAsset(next.bundle.layouts, saved)).toMatchObject({
+      name: "Matrix Zero Gap Copy",
+      revision: 1,
+    });
 
     projectActions.undo();
     expect(exactAsset(useProjectStore.getState().bundle.layouts, saved)).toBeUndefined();
     projectActions.redo();
     expect(exactAsset(useProjectStore.getState().bundle.layouts, saved)?.name).toBe(
-      "Matrix Zero Gap",
+      "Matrix Zero Gap Copy",
     );
   });
 
@@ -305,24 +246,24 @@ describe("Stage 7 Project state", () => {
     });
     expect(useProjectStore.getState().selectedTargetSetId).toBe("all");
     expect(activeStage(useProjectStore.getState().bundle).patch).toEqual([
-      { profile_id: "generic-rgb", id_range: [1, 90] },
+      { profile_id: "generic-rgb", id_range: [1, 180] },
     ]);
     expect(activeStage(useProjectStore.getState().bundle).groups[0].fixtures).toEqual({
-      range: [1, 90],
+      range: [1, 180],
     });
     projectActions.markPublished();
 
     projectActions.setSelectedTargetSetId("rows");
-    projectActions.resizeActiveStagePatch(85);
+    projectActions.resizeActiveStagePatch(175);
     const next = useProjectStore.getState();
     expect(next.selectedTargetSetId).toBe("all");
     expect(activeStage(next.bundle).patch).toEqual([
-      { profile_id: "generic-rgb", id_range: [1, 85] },
+      { profile_id: "generic-rgb", id_range: [1, 175] },
     ]);
-    expect(activeStage(next.bundle).groups[0].fixtures).toEqual({ range: [1, 85] });
-    expect(activeStage(next.publishedBundle!).patch[0].id_range).toEqual([1, 90]);
+    expect(activeStage(next.bundle).groups[0].fixtures).toEqual({ range: [1, 175] });
+    expect(activeStage(next.publishedBundle!).patch[0].id_range).toEqual([1, 180]);
 
-    expect(() => projectActions.resizeActiveStagePatch(91)).toThrow(/provides 90 positions/);
+    expect(() => projectActions.resizeActiveStagePatch(181)).toThrow(/provides 180 positions/);
   });
 
   it("upgrades compatible Stage, Cue, and Arrangement revisions as one explicit transaction", () => {
@@ -338,7 +279,7 @@ describe("Stage 7 Project state", () => {
     const sourceStageRef = structuredClone(source.bundle.manifest.stage_ref);
     const sourceArrangementRef = structuredClone(source.selectedArrangementRef);
     const wall = source.bundle.manifest.layout_refs.find(
-      (reference) => reference.id === "wall-4x4",
+      (reference) => reference.id === "builtin.layout.wall-main-20x20",
     )!;
     projectActions.markPublished();
 
@@ -373,7 +314,7 @@ describe("Stage 7 Project state", () => {
     const state = useProjectStore.getState();
     const sourceStageRef = structuredClone(state.bundle.manifest.stage_ref);
     const circle = state.bundle.manifest.layout_refs.find(
-      (reference) => reference.id === "circle-16",
+      (reference) => reference.id === "builtin.layout.circle-rings-8",
     )!;
     const targetMappings = Object.fromEntries(
       state.bundle.stages[0].target_sets
@@ -391,13 +332,13 @@ describe("Stage 7 Project state", () => {
     const oldStage = exactAsset(next.bundle.stages, sourceStageRef)!;
     const upgradedStage = exactAsset(next.bundle.stages, result.stageRef)!;
 
-    expect(oldStage.target_sets).toHaveLength(7);
+    expect(oldStage.target_sets).toHaveLength(15);
     expect(oldStage.targeting_scenes?.[0].steps[1].selection).toEqual({
       target_set_id: "zones-3x3",
       partition_index: 0,
     });
     expect(upgradedStage.target_sets.map((target) => target.id)).toEqual(["all"]);
-    expect(upgradedStage.patch).toEqual([{ profile_id: "generic-rgb", id_range: [1, 37] }]);
+    expect(upgradedStage.patch).toEqual([{ profile_id: "generic-rgb", id_range: [1, 433] }]);
     expect(upgradedStage.targeting_scenes?.[0].steps[1].selection).toEqual({
       target_set_id: "all",
       partition_index: null,
@@ -417,7 +358,7 @@ describe("Stage 7 Project state", () => {
     const sourceStageRef = structuredClone(source.bundle.manifest.stage_ref);
     const sourceArrangementRef = structuredClone(source.selectedArrangementRef);
     const circle = source.bundle.manifest.layout_refs.find(
-      (reference) => reference.id === "circle-16",
+      (reference) => reference.id === "builtin.layout.circle-rings-8",
     )!;
     const targetMappings = Object.fromEntries(
       activeStage(source.bundle)
@@ -521,9 +462,10 @@ describe("Stage 7 Project state", () => {
       arrangement.tempo_map.points[0].bpm = 132;
       arrangement.length_ticks = 61_440;
     });
+    const editedReference = useProjectStore.getState().selectedArrangementRef;
     expect(
-      exactAsset(useProjectStore.getState().bundle.arrangements, reference)?.tempo_map.points[0]
-        .bpm,
+      exactAsset(useProjectStore.getState().bundle.arrangements, editedReference)?.tempo_map
+        .points[0].bpm,
     ).toBe(132);
     projectActions.undo();
     expect(
@@ -532,7 +474,7 @@ describe("Stage 7 Project state", () => {
     ).toBe(128);
     projectActions.redo();
     expect(
-      exactAsset(useProjectStore.getState().bundle.arrangements, reference)?.length_ticks,
+      exactAsset(useProjectStore.getState().bundle.arrangements, editedReference)?.length_ticks,
     ).toBe(61_440);
   });
 
@@ -559,6 +501,8 @@ describe("Stage 7 Project state", () => {
   });
 
   it("preserves an Arrangement session when a Published asset forks to a new revision", () => {
+    const builtInReference = useProjectStore.getState().selectedArrangementRef;
+    projectActions.renameArrangement(builtInReference, "House 128 Working");
     const reference = useProjectStore.getState().selectedArrangementRef;
     const sourceKey = authoringSessionKey("arrangement", assetKey(reference));
     authoringTransportActions.ensureSession({
@@ -627,16 +571,6 @@ describe("Stage 7 Project state", () => {
     expect(activeStage(reopened.bundle).targeting_scenes?.[0].looped).toBe(true);
     expect(useAuthoringTransportStore.getState().sessions[sessionKey]).toBeUndefined();
     expect(persisted).not.toContain("cursorTick");
-  });
-
-  it("repairs the misleading name left by the removed Pulse plus Gradient stack", () => {
-    const effect = projectActions.createEffect("Pulse")!;
-    const cueRef = projectActions.createCue([effect], "Pulse + Gradient")!;
-    const bundle = useProjectStore.getState().bundle;
-
-    simplifyLegacyCueNames(bundle);
-
-    expect(exactAsset(bundle.cues, cueRef)?.name).toBe("Pulse Cue");
   });
 });
 

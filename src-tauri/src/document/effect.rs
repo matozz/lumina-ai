@@ -1,4 +1,4 @@
-use super::{AnimatableValueDSL, EasingDSL, GlobalParameterDSL, PhaserStepDSL};
+use super::{GlobalParameterDSL, SequenceStepDSL};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -285,7 +285,7 @@ pub enum EffectNodeDSL {
     StepSequence {
         id: String,
         phase: EffectPortRefDSL,
-        steps: Vec<PhaserStepDSL>,
+        steps: Vec<SequenceStepDSL>,
     },
     Oscillator {
         id: String,
@@ -456,41 +456,9 @@ pub struct ColorStopDSL {
     pub color: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct TimelineV3DSL {
-    pub events: Vec<TimelineEventV3DSL>,
-}
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct TimelineEventV3DSL {
-    #[schemars(range(min = 0.0))]
-    pub beat: f64,
-    #[schemars(range(min = 0.000_001))]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration: Option<f64>,
-    pub action: TimelineActionV3DSL,
-}
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
-#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
-pub enum TimelineActionV3DSL {
-    Effect {
-        instance_id: String,
-    },
-    Animate {
-        target: AutomationTargetV3DSL,
-        from: AnimatableValueDSL,
-        to: AnimatableValueDSL,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        easing: Option<EasingDSL>,
-    },
-}
-
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, Hash)]
 #[serde(tag = "scope", rename_all = "snake_case", deny_unknown_fields)]
-pub enum AutomationTargetV3DSL {
+pub enum AutomationTargetDSL {
     Global {
         parameter_id: GlobalParameterDSL,
     },

@@ -5,7 +5,7 @@ import { createEffectPair } from "@/workspace/effect-lab/effectFactory";
 import { TimelineResourcePanel } from "./TimelineResourcePanel";
 
 describe("TimelineResourcePanel", () => {
-  it("offers the current Draft effect revision for click and native drag placement", () => {
+  it("offers the current project Effect for click and native drag placement", () => {
     const document = createStarterProject();
     const pair = createEffectPair(document);
     pair.definition.revision = 3;
@@ -25,12 +25,11 @@ describe("TimelineResourcePanel", () => {
     );
 
     const effect = screen.getByRole("button", {
-      name: "Red Pulse, revision 3. Select or drag to timeline",
+      name: "Red Pulse. Select or drag to timeline",
     });
     fireEvent.click(effect);
     fireEvent.dragStart(effect, { dataTransfer });
 
-    expect(screen.getByText("r3")).toBeTruthy();
     expect(onSelectPhaser).toHaveBeenCalledWith(pair.instance.id);
     expect(setData).toHaveBeenCalledWith("application/x-lumina-effect-instance", pair.instance.id);
   });

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "recipe.moving-sweep",
+  "revision": 2,
+  "name": "Moving Sweep",
+  "description": "A coherent pan sweep for position-capable fixtures.",
+  "nominal_length_ticks": 30720,
+  "layers": [
+    {
+      "id": "pan",
+      "effect_ref": {
+        "id": "builtin.movement.pan-sweep",
+        "revision": 1
+      },
+      "target": {
+        "type": "all"
+      },
+      "parameter_overrides": {
+        "speed": {
+          "type": "scalar",
+          "value": 0.5
+        }
+      },
+      "phase": 0,
+      "seed": "5000000000000005",
+      "layer": 0,
+      "priority": 0
+    }
+  ],
+  "trigger_policy": {
+    "mode": "timeline",
+    "quantize": "bar"
+  }
+}

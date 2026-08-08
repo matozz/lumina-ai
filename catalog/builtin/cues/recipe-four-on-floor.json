@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "recipe.four-on-floor",
+  "revision": 1,
+  "name": "Full-stage Drop Pulse",
+  "description": "A steady intensity pulse across the active Stage.",
+  "nominal_length_ticks": 15360,
+  "layers": [
+    {
+      "id": "pulse",
+      "effect_ref": {
+        "id": "builtin.intensity.pulse",
+        "revision": 1
+      },
+      "target": {
+        "type": "all"
+      },
+      "parameter_overrides": {
+        "speed": {
+          "type": "scalar",
+          "value": 1
+        },
+        "intensity": {
+          "type": "scalar",
+          "value": 0.8
+        }
+      },
+      "phase": 0,
+      "seed": "1000000000000001",
+      "layer": 0,
+      "priority": 0
+    }
+  ],
+  "trigger_policy": {
+    "mode": "timeline",
+    "quantize": "beat"
+  }
+}

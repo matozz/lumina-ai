@@ -33,14 +33,14 @@ describe("workspace state", () => {
     expect(useAuthoringTransportStore.getState().sessions[key].playback).toBe("paused");
   });
 
-  it("migrates the removed Song workspace to Arrange", async () => {
+  it("resets a removed workspace from an older development cache", async () => {
     const migrate = useWorkspaceStore.persist.getOptions().migrate;
 
     expect(migrate).toBeDefined();
     const migrated = await Promise.resolve(migrate?.({ activeWorkspace: "song" }, 1));
 
     expect(migrated).toMatchObject({
-      activeWorkspace: "arrange",
+      activeWorkspace: "stage",
     });
   });
 

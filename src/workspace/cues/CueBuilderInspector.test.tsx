@@ -251,6 +251,9 @@ function cueFixture() {
   cue.layers[1].mix_overrides = [{ attribute_id: "intensity", policy: "htp" }];
   const catalog: ProductionCatalog = {
     schema_version: 1,
+    layouts: [],
+    arrangements: [],
+    project_templates: [],
     effects: [effect satisfies EffectDefinitionDocument, strobe satisfies EffectDefinitionDocument],
     cue_recipes: [
       {

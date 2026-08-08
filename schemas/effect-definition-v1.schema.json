@@ -238,7 +238,7 @@
             "steps": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/PhaserStepDSL"
+                "$ref": "#/$defs/SequenceStepDSL"
               }
             },
             "type": {
@@ -808,7 +808,7 @@
       "type": "string",
       "enum": ["scalar", "color", "direction", "boolean", "enum", "color_stops"]
     },
-    "PhaserStepDSL": {
+    "SequenceStepDSL": {
       "type": "object",
       "properties": {
         "accel": {

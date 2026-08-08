@@ -1,14 +1,15 @@
 use super::project_validation::resolve_target_set;
 use super::validation::{validate_effect_definition_document, validate_parameter_value_contract};
 use super::{
-    AssetRef, CenterEdgesRegion, CueCapabilitySummary, CueDefinition, CueLayer, CueQuantize,
-    CueRiskSummary, CueTriggerMode, CueTriggerPolicy, DirectionDSL, EffectDefinitionDSL,
-    EffectDefinitionDocument, EffectFamilyDSL, EffectInstanceDSL, EffectNodeDSL, GeneratorDSL,
-    GroupDSL, GroupFixturesDSL, GroupRangeDSL, LayoutCapabilityDSL, LayoutDSL, LayoutDefinition,
-    LayoutGeometry, LayoutType, MetaDSL, OscillatorWaveformDSL, ParameterOverridePolicyDSL,
-    ParameterValueDSL, PatchDSL, ProjectBundle, ShowDocumentV4, StageDocument, StrobeRiskDSL,
-    TargetSetDefinition, TargetSetRef, TargetSetSelector, TargetingSceneDefinition,
-    TargetingSceneRef, TargetingTransition, CUE_DEFINITION_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION,
+    builtin_generator_registry, layout_geometry_shape, ArrangementDocument, AssetRef,
+    CenterEdgesRegion, CueCapabilitySummary, CueDefinition, CueLayer, CueQuantize, CueRiskSummary,
+    CueTriggerMode, CueTriggerPolicy, DirectionDSL, EffectDefinitionDSL, EffectDefinitionDocument,
+    EffectFamilyDSL, EffectInstanceDSL, EffectNodeDSL, GeneratorDSL, GroupDSL, GroupFixturesDSL,
+    GroupRangeDSL, LayoutCapabilityDSL, LayoutDSL, LayoutDefinition, LayoutGeometry, LayoutType,
+    MetaDSL, OscillatorWaveformDSL, ParameterOverridePolicyDSL, ParameterValueDSL, PatchDSL,
+    ProjectBundle, ShowDocumentV1, StageDocument, StrobeRiskDSL, TargetSetDefinition, TargetSetRef,
+    TargetSetSelector, TargetingSceneDefinition, TargetingSceneRef, TargetingTransition,
+    CUE_DEFINITION_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION,
 };
 use crate::compiler::diagnostic::{
     Diagnostic, CATALOG_METADATA_INVALID, CATALOG_OUTPUT_INVALID, CATALOG_PARAMETER_INVALID,
@@ -36,6 +37,21 @@ pub struct ProductionCatalog {
     pub schema_version: u32,
     pub effects: Vec<EffectDefinitionDocument>,
     pub cue_recipes: Vec<CueRecipeDefinition>,
+    pub layouts: Vec<LayoutDefinition>,
+    pub arrangements: Vec<ArrangementDocument>,
+    pub project_templates: Vec<ProjectTemplateDefinition>,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ProjectTemplateDefinition {
+    #[schemars(range(min = 1, max = 1))]
+    pub schema_version: u32,
+    pub id: String,
+    pub name: String,
+    pub stage: StageDocument,
+    pub layout_refs: Vec<AssetRef>,
+    pub arrangement_ref: AssetRef,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, Hash)]
@@ -103,20 +119,34 @@ pub struct CueRecipeSceneDSL {
 }
 
 pub fn builtin_production_catalog() -> Result<ProductionCatalog, Diagnostic> {
-    serde_json::from_str(include_str!("../../../catalog/production-catalog-v1.json")).map_err(
-        |error| {
-            Diagnostic::error(
-                CATALOG_METADATA_INVALID,
-                "catalog/production-catalog-v1.json",
-                error.to_string(),
-                "Regenerate the checked-in Production Catalog from the Rust authority.",
-            )
-        },
-    )
+    serde_json::from_str(include_str!(concat!(
+        env!("OUT_DIR"),
+        "/builtin-catalog-v1.json"
+    )))
+    .map_err(|error| {
+        Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            "catalog/builtin",
+            error.to_string(),
+            "Repair the declarative built-in asset file reported by the Catalog build.",
+        )
+    })
 }
 
 pub fn validate_production_catalog(catalog: &ProductionCatalog) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
+    let generator_registry = match builtin_generator_registry() {
+        Ok(registry) => Some(registry),
+        Err(message) => {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_METADATA_INVALID,
+                "catalog/builtin/generators/registry-v1.json",
+                message,
+                "Repair the shared Generator Registry before loading built-in assets.",
+            ));
+            None
+        }
+    };
     if catalog.schema_version != PRODUCTION_CATALOG_SCHEMA_VERSION {
         diagnostics.push(Diagnostic::error(
             CATALOG_METADATA_INVALID,
@@ -175,6 +205,132 @@ pub fn validate_production_catalog(catalog: &ProductionCatalog) -> Vec<Diagnosti
             &mut recipe_identities,
             &mut diagnostics,
         );
+    }
+    let mut layout_identities = BTreeSet::new();
+    for (index, layout) in catalog.layouts.iter().enumerate() {
+        let path = format!("layouts[{index}]");
+        if !layout_identities.insert((layout.id.as_str(), layout.revision)) {
+            diagnostics.push(
+                Diagnostic::error(
+                    CATALOG_METADATA_INVALID,
+                    format!("{path}.id"),
+                    "Built-in Layout identity must be unique.",
+                    "Use one immutable declarative asset per ID and revision.",
+                )
+                .with_asset("layout", layout.id.clone(), layout.revision),
+            );
+        }
+        if !layout.id.starts_with("builtin.") {
+            diagnostics.push(
+                Diagnostic::error(
+                    CATALOG_METADATA_INVALID,
+                    format!("{path}.id"),
+                    "Built-in Layout IDs must use the builtin namespace.",
+                    "Prefix the stable Layout ID with builtin.",
+                )
+                .with_asset("layout", layout.id.clone(), layout.revision),
+            );
+        }
+        if let Some(registry) = &generator_registry {
+            let shape = layout_geometry_shape(&layout.geometry);
+            let descriptor = registry
+                .generators
+                .iter()
+                .find(|descriptor| descriptor.shape == shape);
+            if !descriptor.is_some_and(|descriptor| {
+                matches!(descriptor.status, super::GeneratorStatus::Supported)
+            }) {
+                diagnostics.push(
+                    Diagnostic::error(
+                        CATALOG_METADATA_INVALID,
+                        format!("{path}.geometry.shape"),
+                        format!("Built-in Layout uses an unavailable Generator: {shape}."),
+                        "Use a supported Generator Registry entry for built-in presets.",
+                    )
+                    .with_asset("layout", layout.id.clone(), layout.revision),
+                );
+            }
+        }
+        if let Err(message) = super::validate_layout_geometry(layout) {
+            diagnostics.push(
+                Diagnostic::error(
+                    CATALOG_METADATA_INVALID,
+                    format!("{path}.geometry"),
+                    message,
+                    "Repair the Layout parameters in catalog/builtin/layouts.",
+                )
+                .with_asset("layout", layout.id.clone(), layout.revision),
+            );
+        }
+    }
+    let mut arrangement_identities = BTreeSet::new();
+    for (index, arrangement) in catalog.arrangements.iter().enumerate() {
+        let path = format!("arrangements[{index}]");
+        if !arrangement_identities.insert((arrangement.id.as_str(), arrangement.revision)) {
+            diagnostics.push(
+                Diagnostic::error(
+                    CATALOG_METADATA_INVALID,
+                    format!("{path}.id"),
+                    "Built-in Arrangement identity must be unique.",
+                    "Use one immutable declarative asset per ID and revision.",
+                )
+                .with_asset(
+                    "arrangement",
+                    arrangement.id.clone(),
+                    arrangement.revision,
+                ),
+            );
+        }
+        if arrangement.ppq == 0
+            || arrangement.tempo_map.points.is_empty()
+            || arrangement.length_ticks == 0
+        {
+            diagnostics.push(
+                Diagnostic::error(
+                    CATALOG_METADATA_INVALID,
+                    path,
+                    "Built-in Arrangement requires PPQ, tempo, and a positive length.",
+                    "Repair the declarative Arrangement defaults.",
+                )
+                .with_asset(
+                    "arrangement",
+                    arrangement.id.clone(),
+                    arrangement.revision,
+                ),
+            );
+        }
+    }
+    for (index, template) in catalog.project_templates.iter().enumerate() {
+        let path = format!("project_templates[{index}]");
+        let known_layouts = catalog
+            .layouts
+            .iter()
+            .map(|layout| (&layout.id, layout.revision))
+            .collect::<BTreeSet<_>>();
+        let known_arrangements = catalog
+            .arrangements
+            .iter()
+            .map(|arrangement| (&arrangement.id, arrangement.revision))
+            .collect::<BTreeSet<_>>();
+        if template.schema_version != 1
+            || template.layout_refs.is_empty()
+            || !template.layout_refs.contains(&template.stage.layout_ref)
+            || template
+                .layout_refs
+                .iter()
+                .any(|reference| !known_layouts.contains(&(&reference.id, reference.revision)))
+            || !known_arrangements.contains(&(
+                &template.arrangement_ref.id,
+                template.arrangement_ref.revision,
+            ))
+        {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_METADATA_INVALID,
+                path,
+                "Project Template must reference existing built-in V1 Layout and Arrangement assets.",
+                "Repair the exact refs in catalog/builtin/project-templates.",
+            ));
+        }
     }
     diagnostics.sort_by(|left, right| {
         (
@@ -506,6 +662,9 @@ pub fn validate_effect_draft(
             schema_version: PRODUCTION_CATALOG_SCHEMA_VERSION,
             effects: vec![effect.clone()],
             cue_recipes: Vec::new(),
+            layouts: Vec::new(),
+            arrangements: Vec::new(),
+            project_templates: Vec::new(),
         }));
     }
     if diagnostics.is_empty() {
@@ -620,8 +779,8 @@ fn effect_sample_live(show: &crate::compiler::CompiledShow) -> [LivePhaser; 1] {
 fn effect_sample_document(
     effect: &EffectDefinitionDocument,
     parameter_overrides: BTreeMap<String, ParameterValueDSL>,
-) -> ShowDocumentV4 {
-    ShowDocumentV4 {
+) -> ShowDocumentV1 {
+    ShowDocumentV1 {
         schema_version: CURRENT_SCHEMA_VERSION,
         meta: MetaDSL {
             name: format!("Catalog sample · {}", effect.name),

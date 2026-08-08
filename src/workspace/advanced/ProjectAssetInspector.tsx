@@ -21,10 +21,10 @@ type AssetKind = "manifest" | "stage" | "effects" | "cues" | "arrangements";
 
 const assetKinds = [
   { value: "manifest", label: "Project Manifest" },
-  { value: "stage", label: "Stage revisions" },
-  { value: "effects", label: "Effect revisions" },
-  { value: "cues", label: "Cue revisions" },
-  { value: "arrangements", label: "Arrangement revisions" },
+  { value: "stage", label: "Stages" },
+  { value: "effects", label: "Effects" },
+  { value: "cues", label: "Cues" },
+  { value: "arrangements", label: "Arrangements" },
 ] satisfies Array<{ value: AssetKind; label: string }>;
 
 export function ProjectAssetInspector({ workspace }: { workspace: WorkspaceId }) {

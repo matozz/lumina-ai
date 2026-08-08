@@ -48,6 +48,7 @@ import {
   uniqueId,
 } from "@/document/projectModel";
 import { effectTargetCompatibility, friendlyEffectAttribute } from "@/document/effectCompatibility";
+import { generatorDescriptor } from "@/document/generatorRegistry";
 import {
   isInternalProductionCueId,
   productionRecipeCueBaseId,
@@ -598,7 +599,9 @@ function LayoutLibrarySection({
               onClick={() => projectActions.setSelectedLayoutRef(reference)}
             >
               <span className="min-w-0 flex-1 truncate text-left">{layout.name}</span>
-              <span className="text-muted-foreground text-[9px]">{layout.geometry.shape}</span>
+              <span className="text-muted-foreground text-[9px]">
+                {generatorDescriptor(layout.geometry.shape).label}
+              </span>
             </Button>
             {advanced && (
               <Button

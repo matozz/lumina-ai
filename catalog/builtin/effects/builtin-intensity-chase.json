@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "id": "builtin.intensity.chase",
+  "name": "Alternating Grid Chase",
+  "revision": 1,
+  "source": "built_in",
+  "parameters": [
+    {
+      "id": "speed",
+      "name": "Speed",
+      "value_type": "scalar",
+      "default_value": {
+        "type": "scalar",
+        "value": 1
+      },
+      "range": [0.25, 8],
+      "step": 0.25,
+      "required": true,
+      "help": "Beat-synced chase speed.",
+      "safe_fallback": {
+        "type": "scalar",
+        "value": 1
+      },
+      "override_policy": "cue_override",
+      "advanced": false,
+      "unit": "multiplier",
+      "ui_hint": "slider",
+      "automation": "continuous"
+    },
+    {
+      "id": "intensity",
+      "name": "Intensity",
+      "value_type": "scalar",
+      "default_value": {
+        "type": "scalar",
+        "value": 1
+      },
+      "range": [0, 1],
+      "step": 0.05,
+      "required": true,
+      "help": "Maximum chase output.",
+      "safe_fallback": {
+        "type": "scalar",
+        "value": 0.5
+      },
+      "override_policy": "cue_override",
+      "advanced": false,
+      "unit": "normalized",
+      "ui_hint": "slider",
+      "automation": "continuous"
+    },
+    {
+      "id": "direction",
+      "name": "Direction",
+      "value_type": "direction",
+      "default_value": {
+        "type": "direction",
+        "value": "forward"
+      },
+      "required": true,
+      "help": "Chase travel direction.",
+      "safe_fallback": {
+        "type": "direction",
+        "value": "forward"
+      },
+      "override_policy": "cue_override",
+      "advanced": false,
+      "unit": "direction",
+      "ui_hint": "segmented",
+      "automation": "discrete"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "type": "time",
+        "id": "time"
+      },
+      {
+        "type": "spatial_phase",
+        "id": "spatial",
+        "input": {
+          "node_id": "time",
+          "port": "scalar"
+        },
+        "basis": "index",
+        "from": 0,
+        "to": 1,
+        "wrap": true,
+        "custom_order": []
+      },
+      {
+        "type": "oscillator",
+        "id": "oscillator",
+        "waveform": "pulse",
+        "phase": {
+          "node_id": "spatial",
+          "port": "scalar"
+        }
+      },
+      {
+        "type": "attribute_writer",
+        "id": "writer",
+        "input": {
+          "node_id": "oscillator",
+          "port": "scalar"
+        },
+        "attribute_id": "intensity"
+      }
+    ]
+  },
+  "catalog": {
+    "family": "spatial",
+    "category": "Chases",
+    "visibility": "standard",
+    "mood": ["driving", "kinetic"],
+    "energy": 0.8,
+    "density": 0.45,
+    "motion": "chase",
+    "colorfulness": 0,
+    "strobe_risk": "low",
+    "required_attributes": ["intensity"],
+    "layout_capabilities": ["linear", "matrix", "coordinates"],
+    "parameter_summary": ["speed", "intensity", "direction"],
+    "deprecated": false
+  }
+}

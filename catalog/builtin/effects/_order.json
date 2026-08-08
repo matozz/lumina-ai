@@ -1,0 +1,18 @@
+[
+  "builtin.intensity.pulse",
+  "builtin.intensity.breathe",
+  "builtin.intensity.chase",
+  "builtin.intensity.wave",
+  "builtin.color.rainbow",
+  "builtin.color.dual-sweep",
+  "builtin.color.pulse",
+  "builtin.spatial.radial-bloom",
+  "builtin.spatial.angular-orbit",
+  "builtin.movement.pan-sweep",
+  "builtin.movement.tilt-wave",
+  "builtin.strobe.safe-pulse",
+  "builtin.transition.fade-crossfade",
+  "builtin.transition.wipe",
+  "builtin.transition.dissolve",
+  "builtin.transition.blackout-safe"
+]

@@ -6,7 +6,7 @@ import type { AutomationParameterOption } from "../automationParameters";
 import { useTimelineEvents } from "./useTimelineEvents";
 
 const documentFixture: FullDSL = {
-  schema_version: 4,
+  schema_version: 1,
   meta: { name: "Timeline interaction" },
   patch: [],
   layout: { type: "generator", generator: { shape: "custom", fixtures: [] } },

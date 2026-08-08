@@ -58,8 +58,7 @@ export function ArrangementClipInspector({
   if (!clip) {
     return (
       <aside className="border-border bg-card text-muted-foreground flex w-64 shrink-0 items-center border-l p-4 text-xs">
-        Select a CueClip to inspect its pinned Cue revision, range, source offset, playback, and
-        layer.
+        Select a CueClip to inspect its range, source offset, playback, and layer.
       </aside>
     );
   }
@@ -82,9 +81,7 @@ export function ArrangementClipInspector({
     >
       <div>
         <p className="truncate text-xs font-medium">{cueName ?? clip.cue_ref.id}</p>
-        <p className="text-muted-foreground font-mono text-[10px]">
-          {clip.cue_ref.id}@{clip.cue_ref.revision} · {clip.id}
-        </p>
+        <p className="text-muted-foreground text-[10px]">Cue scheduled in this Arrangement</p>
       </div>
       <FieldGroup>
         <Field>

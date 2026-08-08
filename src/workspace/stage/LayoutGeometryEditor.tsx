@@ -13,11 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  circleRingDensity,
-  fixtureIdsForLayout,
-  MAX_CIRCLE_RING_DENSITY,
-} from "@/document/layoutDefinition";
+import { circleRingDensity, fixtureIdsForLayout } from "@/document/layoutDefinition";
 
 export function LayoutGeometryEditor({
   layout,
@@ -50,7 +46,10 @@ export function LayoutGeometryEditor({
         advanced={advanced}
         onChange={onChange}
       />
-      {(geometry.shape === "matrix" || geometry.shape === "wall" || geometry.shape === "frame") && (
+      {(geometry.shape === "matrix" ||
+        geometry.shape === "wall" ||
+        geometry.shape === "frame" ||
+        geometry.shape === "honeycomb") && (
         <GridGeometryFields geometry={geometry} onChange={updateGeometry} />
       )}
       {geometry.shape === "strip" && (
@@ -59,6 +58,12 @@ export function LayoutGeometryEditor({
       {geometry.shape === "circle" && (
         <CircleGeometryFields geometry={geometry} onChange={updateGeometry} />
       )}
+      {geometry.shape === "sector" && (
+        <SectorGeometryFields geometry={geometry} onChange={updateGeometry} />
+      )}
+      {geometry.shape === "polygon" && (
+        <PolygonGeometryFields geometry={geometry} onChange={updateGeometry} />
+      )}
       {geometry.shape === "formula" && (
         <FormulaGeometryFields geometry={geometry} onChange={updateGeometry} />
       )}
@@ -66,11 +71,14 @@ export function LayoutGeometryEditor({
         <AlgorithmGeometryFields layout={layout} onChange={updateGeometry} />
       )}
       {geometry.shape === "custom" && (
-        <CustomGeometryFields
-          geometry={geometry}
-          fixtureIds={fixtureIds}
-          onChange={updateGeometry}
-        />
+        <Alert>
+          <LockKeyhole aria-hidden="true" />
+          <AlertTitle>Custom / Freeform is not available in V1</AlertTitle>
+          <AlertDescription>
+            Saved coordinates remain readable, but freeform drag editing is intentionally not open
+            in this release.
+          </AlertDescription>
+        </Alert>
       )}
       {geometry.shape === "svg_path" && (
         <Alert>
@@ -86,7 +94,7 @@ export function LayoutGeometryEditor({
   );
 }
 
-type GridGeometry = Extract<LayoutGeometry, { shape: "matrix" | "wall" | "frame" }>;
+type GridGeometry = Extract<LayoutGeometry, { shape: "matrix" | "wall" | "frame" | "honeycomb" }>;
 
 function GridGeometryFields({
   geometry,
@@ -117,7 +125,9 @@ function GridGeometryFields({
       <FieldDescription>
         {geometry.shape === "frame"
           ? "Rows and columns describe the outer frame; fixtures follow its perimeter clockwise."
-          : "Rows × columns define the rectangular capacity. Gap is the clear edge distance between fixture blocks and may be zero."}
+          : geometry.shape === "honeycomb"
+            ? "Rows × columns define capacity; alternating rows are offset by half the unchanged horizontal pitch."
+            : "Rows × columns define the rectangular capacity. Gap is the clear edge distance between fixture blocks and may be zero."}
       </FieldDescription>
     </>
   );
@@ -183,14 +193,13 @@ function CircleGeometryFields({
           value={geometry.rings}
           min={1}
           integer
-          onChange={(rings) => onChange({ ...geometry, rings, increment: density })}
+          onChange={(rings) => onChange({ ...geometry, rings })}
         />
         <NumberField
           label="Fixtures per ring step"
           shortLabel="Ring density"
           value={density}
           min={1}
-          max={MAX_CIRCLE_RING_DENSITY}
           integer
           onChange={(increment) =>
             onChange({ ...geometry, increment: circleRingDensity(increment) })
@@ -214,6 +223,103 @@ function CircleGeometryFields({
       <FieldDescription>
         Rings change how many fixtures the Layout creates, never the spacing. Fixture gap stays
         edge-to-edge on every ring; ring density controls how many fixtures each new ring adds.
+      </FieldDescription>
+    </>
+  );
+}
+
+function SectorGeometryFields({
+  geometry,
+  onChange,
+}: {
+  geometry: Extract<LayoutGeometry, { shape: "sector" }>;
+  onChange: (geometry: Extract<LayoutGeometry, { shape: "sector" }>) => void;
+}) {
+  const diameter = Math.max(geometry.fixture_size.width, geometry.fixture_size.height);
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2">
+        <NumberField
+          label="Rings"
+          value={geometry.rings}
+          min={1}
+          integer
+          onChange={(rings) => onChange({ ...geometry, rings })}
+        />
+        <NumberField
+          label="Segments per ring step"
+          shortLabel="Segments"
+          value={geometry.segments}
+          min={1}
+          integer
+          onChange={(segments) => onChange({ ...geometry, segments })}
+        />
+        <NumberField
+          label="Start angle"
+          value={geometry.start_angle_degrees}
+          onChange={(start_angle_degrees) => onChange({ ...geometry, start_angle_degrees })}
+        />
+        <NumberField
+          label="Sweep angle"
+          value={geometry.sweep_angle_degrees}
+          min={0.1}
+          max={360}
+          onChange={(sweep_angle_degrees) => onChange({ ...geometry, sweep_angle_degrees })}
+        />
+      </div>
+      <NumberField
+        label="Fixture gap"
+        value={geometry.ring_gap}
+        min={0}
+        onChange={(ring_gap) =>
+          onChange({ ...geometry, ring_gap, ring_pitch: diameter + ring_gap })
+        }
+      />
+      <FieldDescription>
+        Rings and segments control quantity only. Fixture gap and radial pitch stay independent.
+      </FieldDescription>
+    </>
+  );
+}
+
+function PolygonGeometryFields({
+  geometry,
+  onChange,
+}: {
+  geometry: Extract<LayoutGeometry, { shape: "polygon" }>;
+  onChange: (geometry: Extract<LayoutGeometry, { shape: "polygon" }>) => void;
+}) {
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2">
+        <NumberField
+          label="Sides"
+          value={geometry.sides}
+          min={3}
+          integer
+          onChange={(sides) => onChange({ ...geometry, sides })}
+        />
+        <NumberField
+          label="Fixtures per side"
+          value={geometry.fixtures_per_side}
+          min={1}
+          integer
+          onChange={(fixtures_per_side) => onChange({ ...geometry, fixtures_per_side })}
+        />
+        <NumberField
+          label="Radius"
+          value={geometry.radius}
+          min={0.1}
+          onChange={(radius) => onChange({ ...geometry, radius })}
+        />
+        <NumberField
+          label="Rotation"
+          value={geometry.rotation_degrees}
+          onChange={(rotation_degrees) => onChange({ ...geometry, rotation_degrees })}
+        />
+      </div>
+      <FieldDescription>
+        Side and fixture counts never rewrite the saved radius or rotation.
       </FieldDescription>
     </>
   );
@@ -274,8 +380,8 @@ function FormulaGeometryFields({
         />
       </div>
       <FieldDescription>
-        The saved Stage Setup formula path is preserved; Canvas preview is evaluated by the Rust
-        compiler, with expression errors returned at this editor.
+        The saved formula is evaluated with the same supported functions in the editor and engine;
+        expression errors are returned here without changing the saved path.
       </FieldDescription>
     </>
   );
@@ -344,69 +450,10 @@ function AlgorithmGeometryFields({
   );
 }
 
-function CustomGeometryFields({
-  geometry,
-  fixtureIds,
-  onChange,
-}: {
-  geometry: Extract<LayoutGeometry, { shape: "custom" }>;
-  fixtureIds: number[];
-  onChange: (geometry: Extract<LayoutGeometry, { shape: "custom" }>) => void;
-}) {
-  const positions = new Map(geometry.fixtures.map((fixture) => [fixture.id, fixture]));
-  const columns = Math.max(1, Math.ceil(Math.sqrt(Math.max(1, fixtureIds.length))));
-  const reconciled = fixtureIds.map(
-    (id, index) =>
-      positions.get(id) ?? { id, x: (index % columns) * 64, y: Math.floor(index / columns) * 64 },
-  );
-  const updateFixture = (id: number, changes: Partial<{ x: number; y: number }>) =>
-    onChange({
-      ...geometry,
-      fixtures: reconciled.map((fixture) =>
-        fixture.id === id ? { ...fixture, ...changes } : fixture,
-      ),
-    });
-  return (
-    <>
-      <div className="flex items-center justify-between">
-        <FieldDescription>{reconciled.length} fixture coordinates</FieldDescription>
-        <Button
-          size="xs"
-          variant="outline"
-          onClick={() => onChange({ ...geometry, fixtures: reconciled })}
-        >
-          Reconcile IDs
-        </Button>
-      </div>
-      <div className="border-border max-h-56 overflow-y-auto rounded-md border">
-        {reconciled.map((fixture) => (
-          <div
-            key={fixture.id}
-            className="border-border grid grid-cols-[2.75rem_1fr_1fr] items-end gap-1.5 border-b p-1.5 last:border-b-0"
-          >
-            <span className="text-muted-foreground pb-2 font-mono text-[9px]">#{fixture.id}</span>
-            <NumberField
-              label={`Fixture ${fixture.id} X`}
-              shortLabel="X"
-              value={fixture.x}
-              integer
-              onChange={(x) => updateFixture(fixture.id, { x })}
-            />
-            <NumberField
-              label={`Fixture ${fixture.id} Y`}
-              shortLabel="Y"
-              value={fixture.y}
-              integer
-              onChange={(y) => updateFixture(fixture.id, { y })}
-            />
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
-
-type GapGeometry = Extract<LayoutGeometry, { shape: "matrix" | "wall" | "frame" | "strip" }>;
+type GapGeometry = Extract<
+  LayoutGeometry,
+  { shape: "matrix" | "wall" | "frame" | "strip" | "honeycomb" }
+>;
 
 function GapFields<T extends GapGeometry>({
   geometry,
@@ -445,7 +492,7 @@ function GapFields<T extends GapGeometry>({
 
 type OriginGeometry = Extract<
   LayoutGeometry,
-  { shape: "matrix" | "wall" | "frame" | "strip" | "algorithm" }
+  { shape: "matrix" | "wall" | "frame" | "strip" | "honeycomb" | "algorithm" }
 >;
 
 function OriginFields<T extends OriginGeometry>({
@@ -497,7 +544,8 @@ function FixtureSizeFields({
       geometry.shape === "matrix" ||
       geometry.shape === "wall" ||
       geometry.shape === "frame" ||
-      geometry.shape === "strip"
+      geometry.shape === "strip" ||
+      geometry.shape === "honeycomb"
     ) {
       onChange({
         ...layout,
@@ -513,7 +561,7 @@ function FixtureSizeFields({
       });
       return;
     }
-    if (geometry.shape === "circle") {
+    if (geometry.shape === "circle" || geometry.shape === "sector") {
       onChange({
         ...layout,
         geometry: {

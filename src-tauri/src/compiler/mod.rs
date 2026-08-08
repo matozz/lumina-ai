@@ -4,7 +4,7 @@ mod project;
 
 pub use project::*;
 
-use crate::document::{DocumentValidator, ValidatedShow};
+use crate::document::{evaluate_formula_positions, DocumentValidator, ValidatedShow};
 use crate::engine::animation::AnimatableValue;
 use crate::engine::attribute::{resolve_attribute, AttributeHandle};
 use crate::engine::color::parse_hex_color;
@@ -27,7 +27,6 @@ use diagnostic::{
     DOC_EFFECT_GRAPH_INVALID, DOC_EFFECT_INSTANCE_NOT_FOUND, DOC_FORMULA_INVALID,
     DOC_INVALID_COLOR, DOC_PARAMETER_INVALID, DOC_PROFILE_NOT_FOUND, DSL_DUPLICATE_FIXTURE_ID,
 };
-use fasteval::{Compiler as FastevalCompiler, Evaler};
 use parser::*;
 use std::collections::HashMap;
 
@@ -446,7 +445,7 @@ impl Compiler {
                 .map(|fixture| {
                     profile_by_handle(fixture.profile)
                         .preview_kind
-                        .as_legacy_type()
+                        .canvas_type()
                         .to_string()
                 })
                 .unwrap_or_else(|| "spot".to_string())
@@ -515,92 +514,24 @@ impl Compiler {
                 }
             }
             GeneratorDSL::Formula { formula } => {
-                let t_start = formula.t_range.0;
-                let t_end = formula.t_range.1;
-                let scale = formula.scale.unwrap_or(1.0);
-
-                let mut slab_x = fasteval::Slab::new();
-                let mut slab_y = fasteval::Slab::new();
-
-                let compiled_x = match fasteval::Parser::new().parse(&formula.x, &mut slab_x.ps) {
-                    Ok(expression) => expression
-                        .from(&slab_x.ps)
-                        .compile(&slab_x.ps, &mut slab_x.cs),
-                    Err(error) => {
-                        errors.push(formula_diagnostic("layout.generator.formula.x", error));
-                        return coords;
-                    }
-                };
-                let compiled_y = match fasteval::Parser::new().parse(&formula.y, &mut slab_y.ps) {
-                    Ok(expression) => expression
-                        .from(&slab_y.ps)
-                        .compile(&slab_y.ps, &mut slab_y.cs),
-                    Err(error) => {
-                        errors.push(formula_diagnostic("layout.generator.formula.y", error));
-                        return coords;
-                    }
-                };
-
-                for i in 0..formula.count {
-                    if (i as usize) < fix_ids.len() {
-                        let t = t_start
-                            + (t_end - t_start) * (i as f64)
-                                / (formula.count as f64 - 1.0).max(1.0);
-
-                        let mut cb = |name: &str, _args: Vec<f64>| -> Option<f64> {
-                            if name == "t" {
-                                Some(t)
-                            } else if name == "sin" {
-                                Some(_args.first()?.sin())
-                            } else if name == "cos" {
-                                Some(_args.first()?.cos())
-                            } else if name == "pow" {
-                                Some(_args.first()?.powf(*_args.get(1)?))
-                            } else {
-                                None
-                            }
-                        };
-
-                        let x = match compiled_x.eval(&slab_x, &mut cb) {
-                            Ok(value) if value.is_finite() => value * scale,
-                            Ok(_) => {
-                                errors.push(non_finite_formula_diagnostic(
-                                    "layout.generator.formula.x",
-                                ));
-                                return coords;
-                            }
-                            Err(error) => {
-                                errors
-                                    .push(formula_diagnostic("layout.generator.formula.x", error));
-                                return coords;
-                            }
-                        };
-
-                        let y = match compiled_y.eval(&slab_y, &mut cb) {
-                            Ok(value) if value.is_finite() => value * scale,
-                            Ok(_) => {
-                                errors.push(non_finite_formula_diagnostic(
-                                    "layout.generator.formula.y",
-                                ));
-                                return coords;
-                            }
-                            Err(error) => {
-                                errors
-                                    .push(formula_diagnostic("layout.generator.formula.y", error));
-                                return coords;
-                            }
-                        };
-
-                        coords.push(LayoutCoord {
-                            id: fix_ids[i as usize],
-                            x,
-                            y,
-                            type_: get_type(fix_ids[i as usize]),
+                match evaluate_formula_positions(formula, &fix_ids) {
+                    Ok(positions) => {
+                        coords.extend(positions.into_iter().map(|position| LayoutCoord {
+                            id: position.id,
+                            x: position.x,
+                            y: position.y,
+                            type_: get_type(position.id),
                             width: None,
                             height: None,
                             patched: None,
-                        });
+                        }))
                     }
+                    Err(error) => errors.push(Diagnostic::error(
+                        DOC_FORMULA_INVALID,
+                        "layout.generator.formula",
+                        error,
+                        "Use t, sin, cos, and pow in a valid finite numeric expression.",
+                    )),
                 }
             }
             GeneratorDSL::Custom {
@@ -928,7 +859,7 @@ impl Compiler {
     }
 
     fn compile_timeline(
-        timeline: TimelineV4DSL,
+        timeline: TimelineV1DSL,
         definitions: &[EffectDefinition],
         instances: &HashMap<String, EffectInstance>,
         errors: &mut Vec<Diagnostic>,
@@ -1037,7 +968,7 @@ impl Compiler {
 
 fn compile_profile_sequence(
     definition_id: &str,
-    steps_dsl: &[PhaserStepDSL],
+    steps_dsl: &[SequenceStepDSL],
     profile_handle: FixtureProfileHandle,
     errors: &mut Vec<Diagnostic>,
 ) -> CompiledProfileSequence {
@@ -1167,15 +1098,15 @@ fn set_angle_value(
 }
 
 fn compile_automation_target(
-    target: AutomationTargetV3DSL,
+    target: AutomationTargetDSL,
     definitions: &[EffectDefinition],
     instances: &HashMap<String, EffectInstance>,
     path: &str,
     errors: &mut Vec<Diagnostic>,
 ) -> CompiledAutomationTarget {
     match target {
-        AutomationTargetV3DSL::Global { .. } => CompiledAutomationTarget::GlobalMasterDimmer,
-        AutomationTargetV3DSL::EffectInstance {
+        AutomationTargetDSL::Global { .. } => CompiledAutomationTarget::GlobalMasterDimmer,
+        AutomationTargetDSL::EffectInstance {
             instance_id,
             parameter_id,
         } => {
@@ -1845,24 +1776,6 @@ fn compile_parameter_value(
     }
 }
 
-fn formula_diagnostic(path: &str, error: impl std::fmt::Display) -> Diagnostic {
-    Diagnostic::error(
-        DOC_FORMULA_INVALID,
-        path,
-        format!("Formula cannot be evaluated: {error}"),
-        "Use t, sin, cos, and pow in a valid finite numeric expression.",
-    )
-}
-
-fn non_finite_formula_diagnostic(path: &str) -> Diagnostic {
-    Diagnostic::error(
-        DOC_FORMULA_INVALID,
-        path,
-        "Formula produced a non-finite coordinate.",
-        "Adjust the expression and range to produce finite coordinates.",
-    )
-}
-
 #[cfg(test)]
 mod tests {
     use super::{
@@ -1878,7 +1791,7 @@ mod tests {
 
     const VALID_SHOW: &str = r##"
     {
-      "schema_version": 2,
+      "schema_version": 1,
       "meta": { "name": "Compiler baseline" },
       "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 2] }],
       "layout": {
@@ -1892,23 +1805,78 @@ mod tests {
         }
       },
       "groups": [{ "id": "line", "name": "Line", "fixtures": { "range": [1, 2] }, "sort_by": "x" }],
-      "phasers": [{
-        "id": "pulse",
+      "effect_definitions": [{
+        "id": "project.pulse",
         "name": "Pulse",
-        "target": "line",
-        "multiplier": 2.0,
-        "steps": [{
-          "values": { "color": "#ff0000", "dimmer": 0.5 },
-          "width": 25.0,
-          "transition": 0.0
+        "revision": 1,
+        "source": "project_local",
+        "parameters": [{
+          "id": "speed",
+          "name": "Speed",
+          "value_type": "scalar",
+          "default_value": { "type": "scalar", "value": 1.0 },
+          "range": [0.25, 8.0],
+          "unit": "multiplier",
+          "ui_hint": "slider",
+          "automation": "continuous"
         }],
-        "phase": { "mode": "spread", "spread": { "from": 0.0, "to": 100.0 } }
+        "graph": { "nodes": [
+          { "type": "time", "id": "time" },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": { "node_id": "time", "port": "scalar" },
+            "basis": "index",
+            "from": 0.0,
+            "to": 1.0,
+            "wrap": true
+          },
+          {
+            "type": "step_sequence",
+            "id": "sequence",
+            "phase": { "node_id": "spatial", "port": "scalar" },
+            "steps": [{
+              "values": { "color": "#ff0000", "dimmer": 0.5 },
+              "width": 25.0,
+              "transition": 0.0
+            }]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "output",
+            "input": { "node_id": "sequence", "port": "attribute_set" }
+          }
+        ] },
+        "catalog": {
+          "energy": 0.5,
+          "density": 0.5,
+          "motion": "pulse",
+          "colorfulness": 0.5,
+          "strobe_risk": "none",
+          "required_attributes": ["intensity", "color.rgb"]
+        }
+      }],
+      "effect_instances": [{
+        "id": "pulse",
+        "definition_id": "project.pulse",
+        "definition_revision": 1,
+        "target_group_id": "line",
+        "parameter_overrides": { "speed": { "type": "scalar", "value": 2.0 } },
+        "seed": "0000000000000001"
       }],
       "timeline": {
-        "events": [{
-          "beat": 1.0,
-          "duration": 2.0,
-          "action": { "type": "phaser", "phaser": "pulse" }
+        "ppq": 960,
+        "tempo_map": { "points": [{ "time_tick": 0, "bpm": 128.0 }] },
+        "tracks": [{
+          "id": "effects",
+          "name": "Effects",
+          "overlap_policy": "layer",
+          "clips": [{
+            "id": "pulse-clip",
+            "instance_id": "pulse",
+            "start_tick": 960,
+            "duration_tick": 1920
+          }]
         }]
       }
     }
@@ -1945,7 +1913,7 @@ mod tests {
         let speed = definition
             .parameter_handle(SPEED_PARAMETER_ID)
             .expect("typed speed parameter");
-        assert_eq!(definition.id, "legacy.pulse");
+        assert_eq!(definition.id, "project.pulse");
         assert_eq!(instance.target_group_id, "line");
         assert_eq!(
             instance.resolve_parameter(definition, speed),
@@ -1986,7 +1954,10 @@ mod tests {
                 "[{ \"profile_id\": \"generic-rgb\", \"id_range\": [1, 2] }]",
                 "[{ \"profile_id\": \"generic-rgb\", \"id_range\": [1, 2] }, { \"profile_id\": \"generic-rgb\", \"id_range\": [2, 3] }]",
             )
-            .replace("\"target\": \"line\"", "\"target\": \"Missing\"");
+            .replace(
+                "\"target_group_id\": \"line\"",
+                "\"target_group_id\": \"Missing\"",
+            );
         let dsl = crate::document::load_document(&invalid_show)
             .expect("syntactically valid DSL")
             .document;

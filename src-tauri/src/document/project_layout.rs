@@ -1,19 +1,18 @@
 use super::{
-    CustomFixturePos, GeneratorDSL, LayoutAlgorithm, LayoutDSL, LayoutDefinition, LayoutGeometry,
-    LayoutOrientation, LayoutSize, LayoutType,
+    CustomFixturePos, FormulaDef, GeneratorDSL, LayoutAlgorithm, LayoutDSL, LayoutDefinition,
+    LayoutGeometry, LayoutOrientation, LayoutSize, LayoutType,
 };
+use fasteval::{Compiler as FastevalCompiler, Evaler};
 
 const METRIC_EPSILON: f64 = 0.000_001;
-const MAX_CIRCLE_RING_DENSITY: u32 = 6;
-
-fn circle_ring_density(increment: u32) -> u32 {
-    increment.clamp(1, MAX_CIRCLE_RING_DENSITY)
-}
 
 pub fn layout_fixture_size(layout: &LayoutDefinition) -> LayoutSize {
     match &layout.geometry {
         LayoutGeometry::Matrix { fixture_size, .. }
         | LayoutGeometry::Circle { fixture_size, .. }
+        | LayoutGeometry::Sector { fixture_size, .. }
+        | LayoutGeometry::Polygon { fixture_size, .. }
+        | LayoutGeometry::Honeycomb { fixture_size, .. }
         | LayoutGeometry::Strip { fixture_size, .. }
         | LayoutGeometry::Wall { fixture_size, .. }
         | LayoutGeometry::Frame { fixture_size, .. }
@@ -36,7 +35,8 @@ pub fn layout_fixture_size_for_fixture(layout: &LayoutDefinition, fixture_id: u3
 pub fn layout_grid_dimensions(layout: &LayoutDefinition) -> Option<(u32, u32)> {
     match layout.geometry {
         LayoutGeometry::Matrix { rows, columns, .. }
-        | LayoutGeometry::Wall { rows, columns, .. } => Some((rows, columns)),
+        | LayoutGeometry::Wall { rows, columns, .. }
+        | LayoutGeometry::Honeycomb { rows, columns, .. } => Some((rows, columns)),
         LayoutGeometry::Strip {
             count,
             orientation: LayoutOrientation::Horizontal,
@@ -48,6 +48,8 @@ pub fn layout_grid_dimensions(layout: &LayoutDefinition) -> Option<(u32, u32)> {
             ..
         } => Some((count, 1)),
         LayoutGeometry::Circle { .. }
+        | LayoutGeometry::Sector { .. }
+        | LayoutGeometry::Polygon { .. }
         | LayoutGeometry::Frame { .. }
         | LayoutGeometry::Formula { .. }
         | LayoutGeometry::SvgPath { .. }
@@ -63,6 +65,15 @@ pub fn layout_capacity(layout: &LayoutDefinition) -> usize {
         LayoutGeometry::Circle {
             rings, increment, ..
         } => 1 + (*increment as usize) * (*rings as usize) * ((*rings + 1) as usize) / 2,
+        LayoutGeometry::Sector {
+            rings, segments, ..
+        } => (*segments as usize) * (*rings as usize) * ((*rings + 1) as usize) / 2,
+        LayoutGeometry::Polygon {
+            sides,
+            fixtures_per_side,
+            ..
+        } => (*sides as usize) * (*fixtures_per_side as usize),
+        LayoutGeometry::Honeycomb { rows, columns, .. } => (*rows as usize) * (*columns as usize),
         LayoutGeometry::Strip { count, .. } | LayoutGeometry::Algorithm { count, .. } => {
             *count as usize
         }
@@ -76,17 +87,7 @@ pub fn layout_capacity(layout: &LayoutDefinition) -> usize {
 }
 
 pub fn layout_authoring_capacity(layout: &LayoutDefinition) -> usize {
-    match &layout.geometry {
-        LayoutGeometry::Circle {
-            rings, increment, ..
-        } => {
-            1 + (circle_ring_density(*increment) as usize)
-                * (*rings as usize)
-                * ((*rings + 1) as usize)
-                / 2
-        }
-        _ => layout_capacity(layout),
-    }
+    layout_capacity(layout)
 }
 
 pub fn validate_layout_geometry(layout: &LayoutDefinition) -> Result<(), String> {
@@ -113,6 +114,13 @@ pub fn validate_layout_geometry(layout: &LayoutDefinition) -> Result<(), String>
             ..
         }
         | LayoutGeometry::Frame {
+            fixture_size,
+            gap,
+            pitch,
+            origin,
+            ..
+        }
+        | LayoutGeometry::Honeycomb {
             fixture_size,
             gap,
             pitch,
@@ -190,6 +198,48 @@ pub fn validate_layout_geometry(layout: &LayoutDefinition) -> Result<(), String>
                 );
             }
         }
+        LayoutGeometry::Sector {
+            fixture_size,
+            ring_gap,
+            ring_pitch,
+            start_angle_degrees,
+            sweep_angle_degrees,
+            center,
+            ..
+        } => {
+            validate_radial_metrics(fixture_size, *ring_gap, *ring_pitch)?;
+            if ![
+                *start_angle_degrees,
+                *sweep_angle_degrees,
+                center.x,
+                center.y,
+            ]
+            .into_iter()
+            .all(f64::is_finite)
+                || *sweep_angle_degrees <= 0.0
+                || *sweep_angle_degrees > 360.0
+            {
+                return Err(
+                    "Sector angles and center must be finite, with sweep in (0, 360].".to_string(),
+                );
+            }
+        }
+        LayoutGeometry::Polygon {
+            fixture_size,
+            radius,
+            rotation_degrees,
+            center,
+            ..
+        } => {
+            validate_fixture_size(fixture_size.width, fixture_size.height)?;
+            if ![*radius, *rotation_degrees, center.x, center.y]
+                .into_iter()
+                .all(f64::is_finite)
+                || *radius <= 0.0
+            {
+                return Err("Polygon radius, rotation, and center must be finite.".to_string());
+            }
+        }
         LayoutGeometry::Formula {
             formula,
             fixture_size,
@@ -204,6 +254,7 @@ pub fn validate_layout_geometry(layout: &LayoutDefinition) -> Result<(), String>
             {
                 return Err("Formula range and scale must be finite and positive.".to_string());
             }
+            evaluate_formula_positions(formula, &[1, 2])?;
         }
         LayoutGeometry::SvgPath {
             svg_path,
@@ -258,7 +309,7 @@ pub fn validate_layout_geometry(layout: &LayoutDefinition) -> Result<(), String>
     Ok(())
 }
 
-pub fn layout_to_legacy(layout: &LayoutDefinition, fixture_ids: &[u32]) -> LayoutDSL {
+pub fn layout_to_show_dsl(layout: &LayoutDefinition, fixture_ids: &[u32]) -> LayoutDSL {
     let generator = match &layout.geometry {
         LayoutGeometry::Matrix {
             rows,
@@ -278,18 +329,6 @@ pub fn layout_to_legacy(layout: &LayoutDefinition, fixture_ids: &[u32]) -> Layou
             columns: *columns,
             spacing: pitch.x,
             origin: Some((origin.x, origin.y)),
-        },
-        LayoutGeometry::Circle {
-            rings,
-            increment,
-            ring_pitch,
-            center,
-            ..
-        } => GeneratorDSL::Circle {
-            rings: *rings,
-            increment: *increment,
-            gap: *ring_pitch,
-            center: Some((center.x, center.y)),
         },
         LayoutGeometry::Formula { formula, .. } => GeneratorDSL::Formula {
             formula: formula.clone(),
@@ -326,6 +365,21 @@ pub fn layout_positions(layout: &LayoutDefinition, fixture_ids: &[u32]) -> Vec<C
             origin,
             ..
         } => grid_positions(
+            *rows,
+            *columns,
+            pitch.x,
+            pitch.y,
+            origin.x,
+            origin.y,
+            fixture_ids,
+        ),
+        LayoutGeometry::Honeycomb {
+            rows,
+            columns,
+            pitch,
+            origin,
+            ..
+        } => honeycomb_positions(
             *rows,
             *columns,
             pitch.x,
@@ -373,6 +427,58 @@ pub fn layout_positions(layout: &LayoutDefinition, fixture_ids: &[u32]) -> Vec<C
             origin.y,
             fixture_ids,
         ),
+        LayoutGeometry::Circle {
+            rings,
+            increment,
+            ring_pitch,
+            center,
+            ..
+        } => radial_positions(
+            true,
+            *rings,
+            *increment,
+            *ring_pitch,
+            0.0,
+            360.0,
+            center.x,
+            center.y,
+            fixture_ids,
+        ),
+        LayoutGeometry::Sector {
+            rings,
+            segments,
+            ring_pitch,
+            start_angle_degrees,
+            sweep_angle_degrees,
+            center,
+            ..
+        } => radial_positions(
+            false,
+            *rings,
+            *segments,
+            *ring_pitch,
+            *start_angle_degrees,
+            *sweep_angle_degrees,
+            center.x,
+            center.y,
+            fixture_ids,
+        ),
+        LayoutGeometry::Polygon {
+            sides,
+            fixtures_per_side,
+            radius,
+            rotation_degrees,
+            center,
+            ..
+        } => polygon_positions(
+            *sides,
+            *fixtures_per_side,
+            *radius,
+            *rotation_degrees,
+            center.x,
+            center.y,
+            fixture_ids,
+        ),
         LayoutGeometry::Custom { fixtures, .. } => fixtures.clone(),
         LayoutGeometry::Algorithm {
             algorithm,
@@ -380,9 +486,10 @@ pub fn layout_positions(layout: &LayoutDefinition, fixture_ids: &[u32]) -> Vec<C
             parameters,
             ..
         } => algorithm_positions(*algorithm, origin.x, origin.y, parameters, fixture_ids),
-        LayoutGeometry::Circle { .. }
-        | LayoutGeometry::Formula { .. }
-        | LayoutGeometry::SvgPath { .. } => Vec::new(),
+        LayoutGeometry::Formula { formula, .. } => {
+            evaluate_formula_positions(formula, fixture_ids).unwrap_or_default()
+        }
+        LayoutGeometry::SvgPath { .. } => Vec::new(),
     }
 }
 
@@ -403,6 +510,115 @@ fn grid_positions(
             id: *id,
             x: origin_x + (index % columns as usize) as f64 * pitch_x,
             y: origin_y + (index / columns as usize) as f64 * pitch_y,
+        })
+        .collect()
+}
+
+fn honeycomb_positions(
+    rows: u32,
+    columns: u32,
+    pitch_x: f64,
+    pitch_y: f64,
+    origin_x: f64,
+    origin_y: f64,
+    fixture_ids: &[u32],
+) -> Vec<CustomFixturePos> {
+    fixture_ids
+        .iter()
+        .take((rows as usize) * (columns as usize))
+        .enumerate()
+        .map(|(index, id)| {
+            let row = index / columns as usize;
+            let column = index % columns as usize;
+            CustomFixturePos {
+                id: *id,
+                x: origin_x + column as f64 * pitch_x + (row % 2) as f64 * pitch_x / 2.0,
+                y: origin_y + row as f64 * pitch_y,
+            }
+        })
+        .collect()
+}
+
+#[allow(clippy::too_many_arguments)]
+fn radial_positions(
+    include_center: bool,
+    rings: u32,
+    increment: u32,
+    ring_pitch: f64,
+    start_angle_degrees: f64,
+    sweep_angle_degrees: f64,
+    center_x: f64,
+    center_y: f64,
+    fixture_ids: &[u32],
+) -> Vec<CustomFixturePos> {
+    let mut positions = Vec::with_capacity(fixture_ids.len());
+    let mut index = 0;
+    if include_center {
+        if let Some(id) = fixture_ids.first() {
+            positions.push(CustomFixturePos {
+                id: *id,
+                x: center_x,
+                y: center_y,
+            });
+            index = 1;
+        }
+    }
+    let full_circle = (sweep_angle_degrees - 360.0).abs() <= METRIC_EPSILON;
+    for ring in 1..=rings {
+        let count = increment.saturating_mul(ring) as usize;
+        for step in 0..count {
+            let Some(id) = fixture_ids.get(index) else {
+                return positions;
+            };
+            let divisor = if full_circle {
+                count
+            } else {
+                count.saturating_sub(1).max(1)
+            };
+            let angle = (start_angle_degrees + sweep_angle_degrees * step as f64 / divisor as f64)
+                .to_radians();
+            let radius = ring_pitch * f64::from(ring);
+            positions.push(CustomFixturePos {
+                id: *id,
+                x: center_x + angle.cos() * radius,
+                y: center_y + angle.sin() * radius,
+            });
+            index += 1;
+        }
+    }
+    positions
+}
+
+#[allow(clippy::too_many_arguments)]
+fn polygon_positions(
+    sides: u32,
+    fixtures_per_side: u32,
+    radius: f64,
+    rotation_degrees: f64,
+    center_x: f64,
+    center_y: f64,
+    fixture_ids: &[u32],
+) -> Vec<CustomFixturePos> {
+    let capacity = (sides as usize) * (fixtures_per_side as usize);
+    fixture_ids
+        .iter()
+        .take(capacity)
+        .enumerate()
+        .map(|(index, id)| {
+            let side = index / fixtures_per_side as usize;
+            let step = index % fixtures_per_side as usize;
+            let start_angle = rotation_degrees.to_radians()
+                + std::f64::consts::TAU * side as f64 / f64::from(sides);
+            let end_angle = rotation_degrees.to_radians()
+                + std::f64::consts::TAU * (side + 1) as f64 / f64::from(sides);
+            let progress = step as f64 / f64::from(fixtures_per_side);
+            let start = (start_angle.cos() * radius, start_angle.sin() * radius);
+            let end = (end_angle.cos() * radius, end_angle.sin() * radius);
+            CustomFixturePos {
+                id: *id,
+                x: center_x + start.0 + (end.0 - start.0) * progress,
+                y: center_y + start.1 + (end.1 - start.1) * progress,
+            }
         })
         .collect()
 }
@@ -486,6 +702,56 @@ fn algorithm_positions(
         .collect()
 }
 
+pub fn evaluate_formula_positions(
+    formula: &FormulaDef,
+    fixture_ids: &[u32],
+) -> Result<Vec<CustomFixturePos>, String> {
+    let mut slab_x = fasteval::Slab::new();
+    let mut slab_y = fasteval::Slab::new();
+    let compiled_x = fasteval::Parser::new()
+        .parse(&formula.x, &mut slab_x.ps)
+        .map_err(|error| format!("X formula cannot be parsed: {error}"))?
+        .from(&slab_x.ps)
+        .compile(&slab_x.ps, &mut slab_x.cs);
+    let compiled_y = fasteval::Parser::new()
+        .parse(&formula.y, &mut slab_y.ps)
+        .map_err(|error| format!("Y formula cannot be parsed: {error}"))?
+        .from(&slab_y.ps)
+        .compile(&slab_y.ps, &mut slab_y.cs);
+    let scale = formula.scale.unwrap_or(1.0);
+    fixture_ids
+        .iter()
+        .take(formula.count as usize)
+        .enumerate()
+        .map(|(index, id)| {
+            let t = formula.t_range.0
+                + (formula.t_range.1 - formula.t_range.0) * index as f64
+                    / (f64::from(formula.count) - 1.0).max(1.0);
+            let mut variables = |name: &str, args: Vec<f64>| -> Option<f64> {
+                match name {
+                    "t" => Some(t),
+                    "sin" => Some(args.first()?.sin()),
+                    "cos" => Some(args.first()?.cos()),
+                    "pow" => Some(args.first()?.powf(*args.get(1)?)),
+                    _ => None,
+                }
+            };
+            let x = compiled_x
+                .eval(&slab_x, &mut variables)
+                .map_err(|error| format!("X formula cannot be evaluated: {error}"))?
+                * scale;
+            let y = compiled_y
+                .eval(&slab_y, &mut variables)
+                .map_err(|error| format!("Y formula cannot be evaluated: {error}"))?
+                * scale;
+            if !x.is_finite() || !y.is_finite() {
+                return Err("Formula produced a non-finite coordinate.".to_string());
+            }
+            Ok(CustomFixturePos { id: *id, x, y })
+        })
+        .collect()
+}
+
 fn parameter(parameters: &std::collections::BTreeMap<String, f64>, id: &str, default: f64) -> f64 {
     parameters.get(id).copied().unwrap_or(default)
 }
@@ -498,111 +764,132 @@ fn validate_fixture_size(width: f64, height: f64) -> Result<(), String> {
     }
 }
 
-pub fn migrated_layout_definition(
-    id: String,
-    name: String,
-    layout: LayoutDSL,
-    _fixture_ids: &[u32],
-) -> LayoutDefinition {
-    let default_fixture_size = super::LayoutSize {
-        width: 12.0,
-        height: 12.0,
-    };
-    let geometry = match layout.generator {
-        GeneratorDSL::Matrix {
-            rows,
-            columns,
-            spacing,
-            origin,
-        } => {
-            let (x, y) = origin.unwrap_or((0.0, 0.0));
-            let fixture_size = super::LayoutSize {
-                width: spacing.min(default_fixture_size.width).max(METRIC_EPSILON),
-                height: spacing.min(default_fixture_size.height).max(METRIC_EPSILON),
-            };
-            LayoutGeometry::Matrix {
-                rows,
-                columns,
-                fixture_size,
-                gap: super::LayoutGap {
-                    x: (spacing - fixture_size.width).max(0.0),
-                    y: (spacing - fixture_size.height).max(0.0),
-                },
-                pitch: super::LayoutPitch {
-                    x: spacing,
-                    y: spacing,
-                },
-                origin: super::LayoutPoint { x, y },
-            }
+fn validate_radial_metrics(
+    fixture_size: &LayoutSize,
+    ring_gap: f64,
+    ring_pitch: f64,
+) -> Result<(), String> {
+    validate_fixture_size(fixture_size.width, fixture_size.height)?;
+    let diameter = fixture_size.width.max(fixture_size.height);
+    if ![ring_gap, ring_pitch].into_iter().all(f64::is_finite)
+        || ring_gap < 0.0
+        || ring_pitch <= 0.0
+        || (ring_pitch - diameter - ring_gap).abs() > METRIC_EPSILON
+    {
+        return Err(
+            "Radial spacing must equal fixture diameter plus a non-negative fixture gap."
+                .to_string(),
+        );
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{layout_capacity, layout_positions};
+    use crate::document::{builtin_production_catalog, LayoutGeometry};
+
+    #[test]
+    fn every_supported_builtin_generator_materializes_finite_unique_positions() {
+        let catalog = builtin_production_catalog().expect("built-in Catalog");
+        for layout in &catalog.layouts {
+            let capacity = layout_capacity(layout);
+            let fixture_ids = (1..=capacity as u32).collect::<Vec<_>>();
+            let positions = layout_positions(layout, &fixture_ids);
+            assert_eq!(positions.len(), capacity, "{} capacity", layout.id);
+            assert!(
+                positions
+                    .iter()
+                    .all(|position| position.x.is_finite() && position.y.is_finite()),
+                "{} finite coordinates",
+                layout.id
+            );
+            assert_eq!(
+                positions
+                    .iter()
+                    .map(|position| position.id)
+                    .collect::<std::collections::BTreeSet<_>>()
+                    .len(),
+                capacity,
+                "{} unique fixtures",
+                layout.id
+            );
         }
-        GeneratorDSL::Circle {
+    }
+
+    #[test]
+    fn radial_quantity_fields_do_not_rewrite_saved_spacing() {
+        let catalog = builtin_production_catalog().expect("built-in Catalog");
+        let mut circle = catalog
+            .layouts
+            .iter()
+            .find(|layout| matches!(layout.geometry, LayoutGeometry::Circle { .. }))
+            .expect("Circle preset")
+            .clone();
+        let LayoutGeometry::Circle {
             rings,
             increment,
-            gap,
-            center,
-        } => {
-            let (x, y) = center.unwrap_or((0.0, 0.0));
-            let diameter = gap
-                .min(default_fixture_size.width.max(default_fixture_size.height))
-                .max(METRIC_EPSILON);
-            let fixture_size = super::LayoutSize {
-                width: diameter,
-                height: diameter,
-            };
-            LayoutGeometry::Circle {
-                rings,
-                increment,
-                fixture_size,
-                ring_gap: (gap - fixture_size.width.max(fixture_size.height)).max(0.0),
-                ring_pitch: gap,
-                center: super::LayoutPoint { x, y },
-            }
+            ring_gap,
+            ring_pitch,
+            ..
+        } = &mut circle.geometry
+        else {
+            unreachable!()
+        };
+        let spacing = (*ring_gap, *ring_pitch);
+        *rings = 3;
+        *increment = 14;
+        assert_eq!(spacing, (*ring_gap, *ring_pitch));
+        assert_eq!(layout_capacity(&circle), 85);
+
+        let mut sector = catalog
+            .layouts
+            .iter()
+            .find(|layout| matches!(layout.geometry, LayoutGeometry::Sector { .. }))
+            .expect("Sector preset")
+            .clone();
+        let LayoutGeometry::Sector {
+            rings,
+            segments,
+            ring_gap,
+            ring_pitch,
+            ..
+        } = &mut sector.geometry
+        else {
+            unreachable!()
+        };
+        let spacing = (*ring_gap, *ring_pitch);
+        *rings = 4;
+        *segments = 5;
+        assert_eq!(spacing, (*ring_gap, *ring_pitch));
+        assert_eq!(layout_capacity(&sector), 50);
+    }
+
+    #[test]
+    fn circle_sector_polygon_and_honeycomb_presets_keep_clear_fixture_centers() {
+        let catalog = builtin_production_catalog().expect("built-in Catalog");
+        for layout in catalog.layouts.iter().filter(|layout| {
+            matches!(
+                layout.geometry,
+                LayoutGeometry::Circle { .. }
+                    | LayoutGeometry::Sector { .. }
+                    | LayoutGeometry::Polygon { .. }
+                    | LayoutGeometry::Honeycomb { .. }
+            )
+        }) {
+            let capacity = layout_capacity(layout);
+            let fixture_ids = (1..=capacity as u32).collect::<Vec<_>>();
+            let positions = layout_positions(layout, &fixture_ids);
+            let minimum = positions
+                .iter()
+                .enumerate()
+                .flat_map(|(index, left)| {
+                    positions[index + 1..]
+                        .iter()
+                        .map(move |right| (left.x - right.x).hypot(left.y - right.y))
+                })
+                .fold(f64::INFINITY, f64::min);
+            assert!(minimum >= 8.9, "{} minimum center gap {minimum}", layout.id);
         }
-        GeneratorDSL::Formula { formula } => LayoutGeometry::Formula {
-            formula,
-            fixture_size: default_fixture_size,
-        },
-        GeneratorDSL::SvgPath { svg_path } => LayoutGeometry::SvgPath {
-            svg_path,
-            fixture_size: default_fixture_size,
-        },
-        GeneratorDSL::Custom { fixtures } => LayoutGeometry::Custom {
-            fixtures,
-            fixture_size: default_fixture_size,
-        },
-    };
-    let category = match &geometry {
-        LayoutGeometry::Matrix { .. } | LayoutGeometry::Circle { .. } => {
-            super::LayoutCategory::Basic
-        }
-        _ => super::LayoutCategory::GeneratedAdvanced,
-    };
-    let editor = match &geometry {
-        LayoutGeometry::Matrix { .. } | LayoutGeometry::Circle { .. } => {
-            super::LayoutEditorCapability::Form
-        }
-        LayoutGeometry::Formula { .. } | LayoutGeometry::Algorithm { .. } => {
-            super::LayoutEditorCapability::ParameterSchema {
-                parameters: Vec::new(),
-            }
-        }
-        LayoutGeometry::Custom { .. } => super::LayoutEditorCapability::AdvancedOnly,
-        LayoutGeometry::SvgPath { .. } => super::LayoutEditorCapability::ReadOnly {
-            reason: "SVG source is preserved; visual path editing is not available in Setup."
-                .to_string(),
-        },
-        LayoutGeometry::Strip { .. }
-        | LayoutGeometry::Wall { .. }
-        | LayoutGeometry::Frame { .. } => super::LayoutEditorCapability::Form,
-    };
-    LayoutDefinition {
-        schema_version: super::LAYOUT_DEFINITION_SCHEMA_VERSION,
-        id,
-        revision: 1,
-        name,
-        category,
-        editor,
-        geometry,
-        fixture_size_overrides: Vec::new(),
     }
 }

@@ -56,9 +56,9 @@ export function TargetingSceneEditor() {
     <div className="flex flex-col gap-3 p-3">
       <div className="flex items-center gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold">TargetingScenes</p>
+          <p className="text-xs font-semibold">Playback patterns</p>
           <p className="text-muted-foreground text-[9px]">
-            Immutable selections + spatial masks · no Group membership mutation
+            Sequence fixture areas without changing their saved membership
           </p>
         </div>
         <Button
@@ -91,7 +91,7 @@ export function TargetingSceneEditor() {
       {!draft || !selected ? (
         <div className="border-border rounded-md border p-3 text-center">
           <p className="text-muted-foreground text-[10px]">
-            Create a TargetingScene to sequence immutable TargetSets.
+            Create a playback pattern to sequence fixture areas.
           </p>
         </div>
       ) : (
@@ -100,7 +100,7 @@ export function TargetingSceneEditor() {
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-medium">{selected.name}</p>
               <p className="text-muted-foreground font-mono text-[8px]">
-                {selected.id} · {draft.steps.length} steps · {references} Cue refs
+                {draft.steps.length} steps · used by {references} Cues
               </p>
             </div>
             {dirty && <Badge variant="secondary">Unsaved</Badge>}
@@ -197,10 +197,8 @@ export function TargetingSceneEditor() {
 
           {diagnostic && (
             <Alert variant="destructive">
-              <AlertTitle>TARGETING_SCENE_ACTION_FAILED · stage.targeting_scenes</AlertTitle>
-              <AlertDescription>
-                {diagnostic} Review pinned Cue references and recover at this editor.
-              </AlertDescription>
+              <AlertTitle>Playback pattern could not be updated</AlertTitle>
+              <AlertDescription>{diagnostic} Review linked Cues and retry here.</AlertDescription>
             </Alert>
           )}
 
@@ -211,7 +209,7 @@ export function TargetingSceneEditor() {
               onClick={() => runAction(() => projectActions.saveTargetingScene(selected.id, draft))}
             >
               <Save data-icon="inline-start" aria-hidden="true" />
-              Save revision
+              Save pattern
             </Button>
             <Button
               size="sm"
@@ -230,7 +228,7 @@ export function TargetingSceneEditor() {
               variant="outline"
               className="text-destructive hover:text-destructive"
               disabled={references > 0}
-              title={references > 0 ? `Referenced by ${references} Cue revisions` : undefined}
+              title={references > 0 ? `Used by ${references} Cues` : undefined}
               onClick={() =>
                 runAction(() => {
                   projectActions.deleteTargetingScene(selected.id);
@@ -244,7 +242,7 @@ export function TargetingSceneEditor() {
           </div>
           <FieldDescription>
             Hard switches and weighted transitions snap to beat/bar duration. Per-bar partition
-            steps preserve Effect phase; saving forks Stage and referenced draft revisions only.
+            steps preserve Effect phase; saving safely updates the Stage and linked Cues.
           </FieldDescription>
         </section>
       )}

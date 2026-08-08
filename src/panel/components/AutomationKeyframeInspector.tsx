@@ -234,7 +234,7 @@ const TypedValueInput = ({ definition, id, invalid, onChange, value }: TypedValu
     return (
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={id}>{definition.name}</Label>
-        <Input id={id} value="Edit on the Effect revision" disabled />
+        <Input id={id} value="Edit this value in Effect Lab" disabled />
       </div>
     );
   }

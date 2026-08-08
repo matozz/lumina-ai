@@ -3,6 +3,7 @@
     "arrangement": "arrangement-document-v1.schema.json",
     "cue": "cue-definition-v1.schema.json",
     "effect": "effect-definition-v1.schema.json",
+    "layout": "layout-definition-v1.schema.json",
     "manifest": "project-manifest-v1.schema.json",
     "stage": "stage-document-v1.schema.json"
   },
@@ -11,18 +12,64 @@
     "cue_layers": [
       "effect_ref",
       "target_set_ref",
+      "targeting_scene_ref",
       "parameter_overrides",
       "phase",
       "seed",
       "mix_overrides",
       "trigger_policy"
     ],
+    "effect_catalog": [
+      "family",
+      "category",
+      "visibility",
+      "layout_capabilities",
+      "parameter_summary",
+      "risk",
+      "deprecation"
+    ],
+    "effect_parameter_authoring": [
+      "step",
+      "required",
+      "help",
+      "safe_fallback",
+      "override_policy",
+      "advanced",
+      "graph_binding"
+    ],
+    "effect_parameter_types": ["scalar", "color", "direction", "boolean", "enum", "color_stops"],
+    "layout_categories": ["basic", "generated_advanced"],
+    "layout_editor_capabilities": ["form", "parameter_schema", "advanced_only", "read_only"],
+    "layout_shapes": [
+      "matrix",
+      "circle",
+      "sector",
+      "polygon",
+      "honeycomb",
+      "strip",
+      "wall",
+      "frame",
+      "formula",
+      "svg_path",
+      "custom",
+      "algorithm"
+    ],
     "musical_time": {
       "storage": "integer_tick",
       "tempo_map_owner": "arrangement"
     },
     "references": "stable_id_and_exact_revision",
-    "target_sets": ["all", "rows", "columns", "grid_zones", "checkerboard", "fixture_ids"]
+    "target_sets": [
+      "all",
+      "rows",
+      "columns",
+      "grid_zones",
+      "checkerboard",
+      "center_edges",
+      "fixture_ids"
+    ],
+    "targeting_scene": ["hard", "weighted", "beat", "bar", "partition", "phase_continuity"],
+    "user_asset_pack": "user-asset-pack-v1.schema.json"
   },
   "metadata_version": 1,
   "project_bundle_schema": "project-bundle-v1.schema.json"

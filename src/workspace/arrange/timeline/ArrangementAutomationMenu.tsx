@@ -38,7 +38,7 @@ export function ArrangementAutomationMenu({
         <PopoverHeader>
           <PopoverTitle>Add typed automation</PopoverTitle>
           <PopoverDescription>
-            Targets resolve through pinned Cue and Effect revisions. Existing targets are hidden.
+            Targets come from the Cue's Effects. Controls already automated elsewhere are hidden.
           </PopoverDescription>
         </PopoverHeader>
         <div className="flex max-h-64 flex-col gap-1 overflow-y-auto">

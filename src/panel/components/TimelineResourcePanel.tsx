@@ -64,17 +64,9 @@ export const TimelineResourcePanel = (props: ResourcePanelProps) => {
                     : "border-transparent bg-zinc-800/30 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200",
                 )}
                 aria-pressed={selectedPhaser === instance.id}
-                aria-label={`${definition.name}, revision ${definition.revision}. Select or drag to timeline`}
+                aria-label={`${definition.name}. Select or drag to timeline`}
               >
                 <span className="truncate">{definition.name}</span>
-                <span
-                  className={cn(
-                    "font-mono text-[9px] transition-opacity motion-reduce:transition-none",
-                    selectedPhaser === instance.id ? "text-indigo-300" : "text-zinc-600",
-                  )}
-                >
-                  r{definition.revision}
-                </span>
               </Button>
             ))}
             {effects.length === 0 && (

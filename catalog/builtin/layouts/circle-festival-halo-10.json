@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.circle-festival-halo-10",
+  "revision": 1,
+  "name": "Festival Halo Rings",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "circle",
+    "rings": 10,
+    "increment": 12,
+    "fixture_size": { "width": 9, "height": 9 },
+    "ring_gap": 15,
+    "ring_pitch": 24,
+    "center": { "x": 0, "y": 0 }
+  }
+}

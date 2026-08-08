@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "id": "builtin.strobe.safe-pulse",
+  "name": "Safe Strobe Pulse",
+  "revision": 1,
+  "source": "built_in",
+  "parameters": [
+    {
+      "id": "speed",
+      "name": "Speed",
+      "value_type": "scalar",
+      "default_value": {
+        "type": "scalar",
+        "value": 2
+      },
+      "range": [0.25, 8],
+      "step": 0.25,
+      "required": true,
+      "help": "Beat-synced flash rate; review risk before use.",
+      "safe_fallback": {
+        "type": "scalar",
+        "value": 1
+      },
+      "override_policy": "cue_override",
+      "advanced": false,
+      "unit": "multiplier",
+      "ui_hint": "slider",
+      "automation": "continuous"
+    },
+    {
+      "id": "intensity",
+      "name": "Intensity",
+      "value_type": "scalar",
+      "default_value": {
+        "type": "scalar",
+        "value": 0.65
+      },
+      "range": [0, 1],
+      "step": 0.05,
+      "required": true,
+      "help": "Maximum flash intensity.",
+      "safe_fallback": {
+        "type": "scalar",
+        "value": 0.25
+      },
+      "override_policy": "cue_override",
+      "advanced": false,
+      "unit": "normalized",
+      "ui_hint": "slider",
+      "automation": "continuous"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "type": "time",
+        "id": "time"
+      },
+      {
+        "type": "oscillator",
+        "id": "oscillator",
+        "waveform": "pulse",
+        "phase": {
+          "node_id": "time",
+          "port": "scalar"
+        }
+      },
+      {
+        "type": "attribute_writer",
+        "id": "writer",
+        "input": {
+          "node_id": "oscillator",
+          "port": "scalar"
+        },
+        "attribute_id": "intensity"
+      }
+    ]
+  },
+  "catalog": {
+    "family": "strobe",
+    "category": "Risk",
+    "visibility": "standard",
+    "mood": ["impact", "peak"],
+    "energy": 0.9,
+    "density": 0.4,
+    "motion": "pulse",
+    "colorfulness": 0,
+    "strobe_risk": "high",
+    "required_attributes": ["intensity"],
+    "layout_capabilities": ["any"],
+    "parameter_summary": ["speed", "intensity"],
+    "deprecated": false
+  }
+}

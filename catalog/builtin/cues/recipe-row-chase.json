@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "recipe.row-chase",
+  "revision": 1,
+  "name": "Matrix Spatial Chase",
+  "description": "A directional chase resolved to a row-capable TargetSet.",
+  "nominal_length_ticks": 15360,
+  "layers": [
+    {
+      "id": "chase",
+      "effect_ref": {
+        "id": "builtin.intensity.chase",
+        "revision": 1
+      },
+      "target": {
+        "type": "rows"
+      },
+      "parameter_overrides": {
+        "speed": {
+          "type": "scalar",
+          "value": 1
+        },
+        "direction": {
+          "type": "direction",
+          "value": "forward"
+        }
+      },
+      "phase": 0,
+      "seed": "2000000000000002",
+      "layer": 0,
+      "priority": 0
+    }
+  ],
+  "trigger_policy": {
+    "mode": "timeline",
+    "quantize": "bar"
+  }
+}

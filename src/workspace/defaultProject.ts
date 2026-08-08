@@ -7,7 +7,7 @@ import {
 
 export function createStarterProject(): FullDSL {
   return {
-    schema_version: 4,
+    schema_version: 1,
     meta: { name: "Untitled DJ Set" },
     patch: [{ profile_id: "generic-rgb", id_range: [1, DEFAULT_STAGE_FIXTURE_COUNT] }],
     layout: {
@@ -16,7 +16,7 @@ export function createStarterProject(): FullDSL {
         shape: "matrix",
         rows: DEFAULT_STAGE_ROWS,
         columns: DEFAULT_STAGE_COLUMNS,
-        spacing: 22,
+        spacing: 20,
         origin: [0, 0],
       },
     },

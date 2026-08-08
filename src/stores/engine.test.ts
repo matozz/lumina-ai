@@ -3,7 +3,7 @@ import type { FullDSL } from "@/bridge/types";
 import { engineActions, useEngineStore } from "./engine";
 
 const document: FullDSL = {
-  schema_version: 4,
+  schema_version: 1,
   meta: { name: "History" },
   patch: [],
   layout: { type: "generator", generator: { shape: "custom", fixtures: [] } },

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.frame-proscenium-16x36",
+  "revision": 1,
+  "name": "Proscenium Frame 16×36",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "frame",
+    "rows": 16,
+    "columns": 36,
+    "fixture_size": { "width": 10, "height": 10 },
+    "gap": { "x": 10, "y": 10 },
+    "pitch": { "x": 20, "y": 20 },
+    "origin": { "x": 0, "y": 0 }
+  }
+}

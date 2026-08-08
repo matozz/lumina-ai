@@ -25,6 +25,7 @@ import { engineActions, engineSelectors, useEngineStore } from "@/stores/engine"
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/stores/workspace";
 import { useState } from "react";
+import { WorkspaceAssetPackMenu } from "./WorkspaceAssetPackMenu";
 
 export function WorkspaceHeader() {
   const bundle = useProjectStore(projectSelectors.bundle);
@@ -108,6 +109,7 @@ export function WorkspaceHeader() {
         </div>
 
         <div className="ml-auto flex items-center gap-1">
+          <WorkspaceAssetPackMenu disabled={busy} />
           <Button variant="outline" size="sm" disabled={busy} onClick={() => setResetOpen(true)}>
             <RotateCcw data-icon="inline-start" aria-hidden="true" />
             Reset
@@ -151,7 +153,8 @@ export function WorkspaceHeader() {
             <DialogTitle>Restore default configuration?</DialogTitle>
             <DialogDescription>
               This replaces locally saved Stages, Layouts, Effects, Cues, and Arrangements with the
-              Lumina defaults. Current live output stays unchanged until you click Live.
+              Lumina defaults. Downloaded asset packs are not affected. Current live output stays
+              unchanged until you click Live.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

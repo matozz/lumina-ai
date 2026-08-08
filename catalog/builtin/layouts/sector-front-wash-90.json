@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.sector-front-wash-90",
+  "revision": 1,
+  "name": "Front Wash Sector 90°",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "sector",
+    "rings": 8,
+    "segments": 4,
+    "fixture_size": { "width": 10, "height": 10 },
+    "ring_gap": 14,
+    "ring_pitch": 24,
+    "start_angle_degrees": -135,
+    "sweep_angle_degrees": 90,
+    "center": { "x": 0, "y": 0 }
+  }
+}

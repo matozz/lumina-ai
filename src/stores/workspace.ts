@@ -63,14 +63,12 @@ const initialState: WorkspaceState = {
 export const useWorkspaceStore = create<WorkspaceState>()(
   persist(() => initialState, {
     name: "lumina-workspace-v1",
-    version: 2,
+    version: 3,
     migrate: (persistedState, version) => {
+      if (version < 3) return structuredClone(initialState);
       const state = persistedState as Omit<Partial<WorkspaceState>, "activeWorkspace"> & {
         activeWorkspace?: string;
       };
-      if (version < 2 && state.activeWorkspace === "song") {
-        return { ...state, activeWorkspace: "arrange" } as WorkspaceState;
-      }
       return state as WorkspaceState;
     },
     partialize: (state) => ({

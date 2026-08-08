@@ -7,6 +7,19 @@ use lumina_ai_lib::document::{
 #[test]
 fn checked_in_multi_tick_golden_matches_deterministic_rendering() {
     let catalog = builtin_production_catalog().expect("catalog parses");
+    assert!(catalog
+        .layouts
+        .iter()
+        .any(|layout| layout.id == "builtin.layout.matrix-main-20x20"));
+    assert!(catalog
+        .arrangements
+        .iter()
+        .any(|arrangement| arrangement.id == "builtin.arrangement.house-128"));
+    assert!(catalog.project_templates.iter().any(|template| {
+        template.id == "builtin.project-template.authoring-starter"
+            && template.stage.patch[0].id_range == (1, 400)
+            && template.arrangement_ref.id == "builtin.arrangement.house-128"
+    }));
     let actual =
         production_catalog_golden(&catalog).expect("catalog compiles at every golden tick");
     let actual: serde_json::Value =

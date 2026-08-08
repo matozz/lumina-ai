@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.honeycomb-loose-12x18",
+  "revision": 1,
+  "name": "Open Honeycomb 12×18",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "honeycomb",
+    "rows": 12,
+    "columns": 18,
+    "fixture_size": { "width": 10, "height": 10 },
+    "gap": { "x": 14, "y": 12 },
+    "pitch": { "x": 24, "y": 22 },
+    "origin": { "x": 0, "y": 0 }
+  }
+}

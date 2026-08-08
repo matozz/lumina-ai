@@ -30,6 +30,9 @@ describe("ArrangementTimeline workflow", () => {
       schema_version: 1,
       effects: [effect],
       cue_recipes: [],
+      layouts: [],
+      arrangements: [],
+      project_templates: [],
     });
     workspaceActions.setSelectedArrangeBuiltInCue({
       recipeRef: { id: "recipe.four-on-floor", revision: 1 },
@@ -90,6 +93,7 @@ describe("ArrangementTimeline workflow", () => {
         },
       ];
     });
+    const seededReference = useProjectStore.getState().selectedArrangementRef;
     const historyBefore = useProjectStore.getState().historyCursor;
     const { container } = render(<ArrangementTimeline />);
 
@@ -114,7 +118,9 @@ describe("ArrangementTimeline workflow", () => {
       expect(current.tracks[0].clips?.[0].start_tick).toBe(1_920);
     });
     expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 1);
-    expect(assetKey(useProjectStore.getState().selectedArrangementRef)).toBe(assetKey(reference));
+    expect(assetKey(useProjectStore.getState().selectedArrangementRef)).toBe(
+      assetKey(seededReference),
+    );
   });
 
   it("shows overlap failure beside the selected CueClip with a recovery action", () => {

@@ -1,0 +1,515 @@
+{
+  "schema_version": 1,
+  "generators": [
+    {
+      "shape": "matrix",
+      "label": "Matrix",
+      "status": "supported",
+      "editor_mode": "form",
+      "capacity_model": "rows × columns",
+      "coordinate_model": "row-major rectangular grid using saved X/Y pitch",
+      "validation_model": "positive counts and pitch; pitch equals fixture size plus gap",
+      "grid_targeting": true,
+      "parameter_schema": [
+        {
+          "id": "rows",
+          "label": "Rows",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 1,
+          "step": 1
+        },
+        {
+          "id": "columns",
+          "label": "Columns",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 1,
+          "step": 1
+        },
+        {
+          "id": "fixture_size",
+          "label": "Fixture size",
+          "value_type": "number",
+          "role": "appearance",
+          "minimum": 0.000001
+        },
+        {
+          "id": "gap",
+          "label": "Edge gap",
+          "value_type": "number",
+          "role": "spacing",
+          "minimum": 0
+        }
+      ],
+      "default_parameters": { "rows": 20, "columns": 20, "fixture_size": 12, "gap": 8 },
+      "preview": { "mode": "full_geometry", "auto_fit": true }
+    },
+    {
+      "shape": "wall",
+      "label": "Wall",
+      "status": "supported",
+      "editor_mode": "form",
+      "capacity_model": "rows × columns",
+      "coordinate_model": "row-major rectangular wall using saved X/Y pitch",
+      "validation_model": "positive counts and pitch; pitch equals fixture size plus gap",
+      "grid_targeting": true,
+      "parameter_schema": [
+        {
+          "id": "rows",
+          "label": "Rows",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 1,
+          "step": 1
+        },
+        {
+          "id": "columns",
+          "label": "Columns",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 1,
+          "step": 1
+        },
+        {
+          "id": "fixture_size",
+          "label": "Fixture size",
+          "value_type": "number",
+          "role": "appearance",
+          "minimum": 0.000001
+        },
+        {
+          "id": "gap",
+          "label": "Edge gap",
+          "value_type": "number",
+          "role": "spacing",
+          "minimum": 0
+        }
+      ],
+      "default_parameters": { "rows": 12, "columns": 24, "fixture_size": 10, "gap": 8 },
+      "preview": { "mode": "full_geometry", "auto_fit": true }
+    },
+    {
+      "shape": "strip",
+      "label": "Strip",
+      "status": "supported",
+      "editor_mode": "form",
+      "capacity_model": "count",
+      "coordinate_model": "single horizontal or vertical run using saved pitch",
+      "validation_model": "positive count and pitch; pitch equals fixture size plus gap",
+      "grid_targeting": true,
+      "parameter_schema": [
+        {
+          "id": "count",
+          "label": "Fixtures",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 1,
+          "step": 1
+        },
+        { "id": "orientation", "label": "Orientation", "value_type": "choice", "role": "shape" },
+        {
+          "id": "fixture_size",
+          "label": "Fixture size",
+          "value_type": "number",
+          "role": "appearance",
+          "minimum": 0.000001
+        },
+        {
+          "id": "gap",
+          "label": "Edge gap",
+          "value_type": "number",
+          "role": "spacing",
+          "minimum": 0
+        }
+      ],
+      "default_parameters": { "count": 160, "fixture_size": 10, "gap": 8 },
+      "preview": { "mode": "full_geometry", "auto_fit": true }
+    },
+    {
+      "shape": "frame",
+      "label": "Frame",
+      "status": "supported",
+      "editor_mode": "form",
+      "capacity_model": "2 × (rows + columns) − 4",
+      "coordinate_model": "clockwise rectangular perimeter using saved X/Y pitch",
+      "validation_model": "at least two rows and columns; pitch equals fixture size plus gap",
+      "grid_targeting": false,
+      "parameter_schema": [
+        {
+          "id": "rows",
+          "label": "Rows",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 2,
+          "step": 1
+        },
+        {
+          "id": "columns",
+          "label": "Columns",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 2,
+          "step": 1
+        },
+        {
+          "id": "fixture_size",
+          "label": "Fixture size",
+          "value_type": "number",
+          "role": "appearance",
+          "minimum": 0.000001
+        },
+        {
+          "id": "gap",
+          "label": "Edge gap",
+          "value_type": "number",
+          "role": "spacing",
+          "minimum": 0
+        }
+      ],
+      "default_parameters": { "rows": 24, "columns": 40, "fixture_size": 10, "gap": 8 },
+      "preview": { "mode": "full_geometry", "auto_fit": true }
+    },
+    {
+      "shape": "circle",
+      "label": "Circle",
+      "status": "supported",
+      "editor_mode": "form",
+      "capacity_model": "1 + increment × rings × (rings + 1) ÷ 2",
+      "coordinate_model": "center fixture plus evenly sampled concentric rings",
+      "validation_model": "positive ring counts; radial pitch equals fixture diameter plus gap",
+      "grid_targeting": false,
+      "parameter_schema": [
+        {
+          "id": "rings",
+          "label": "Rings",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 1,
+          "step": 1
+        },
+        {
+          "id": "increment",
+          "label": "Ring density",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 1,
+          "step": 1
+        },
+        {
+          "id": "fixture_size",
+          "label": "Fixture size",
+          "value_type": "number",
+          "role": "appearance",
+          "minimum": 0.000001
+        },
+        {
+          "id": "ring_gap",
+          "label": "Fixture gap",
+          "value_type": "number",
+          "role": "spacing",
+          "minimum": 0
+        }
+      ],
+      "default_parameters": { "rings": 8, "increment": 12, "fixture_size": 10, "ring_gap": 10 },
+      "preview": { "mode": "full_geometry", "auto_fit": true }
+    },
+    {
+      "shape": "sector",
+      "label": "Sector",
+      "status": "supported",
+      "editor_mode": "form",
+      "capacity_model": "segments × rings × (rings + 1) ÷ 2",
+      "coordinate_model": "inclusive angular samples on concentric partial rings",
+      "validation_model": "positive ring counts, sweep in (0, 360], radial pitch equals fixture diameter plus gap",
+      "grid_targeting": false,
+      "parameter_schema": [
+        {
+          "id": "rings",
+          "label": "Rings",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 1,
+          "step": 1
+        },
+        {
+          "id": "segments",
+          "label": "Segments",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 1,
+          "step": 1
+        },
+        {
+          "id": "start_angle_degrees",
+          "label": "Start angle",
+          "value_type": "number",
+          "role": "shape"
+        },
+        {
+          "id": "sweep_angle_degrees",
+          "label": "Sweep angle",
+          "value_type": "number",
+          "role": "shape",
+          "minimum": 0.000001,
+          "maximum": 360
+        },
+        {
+          "id": "fixture_size",
+          "label": "Fixture size",
+          "value_type": "number",
+          "role": "appearance",
+          "minimum": 0.000001
+        },
+        {
+          "id": "ring_gap",
+          "label": "Fixture gap",
+          "value_type": "number",
+          "role": "spacing",
+          "minimum": 0
+        }
+      ],
+      "default_parameters": {
+        "rings": 8,
+        "segments": 8,
+        "fixture_size": 10,
+        "ring_gap": 12,
+        "sweep_angle_degrees": 210
+      },
+      "preview": { "mode": "full_geometry", "auto_fit": true }
+    },
+    {
+      "shape": "polygon",
+      "label": "Polygon",
+      "status": "supported",
+      "editor_mode": "form",
+      "capacity_model": "sides × fixtures_per_side",
+      "coordinate_model": "even linear samples around a regular polygon perimeter",
+      "validation_model": "at least three sides, positive samples per side and positive radius",
+      "grid_targeting": false,
+      "parameter_schema": [
+        {
+          "id": "sides",
+          "label": "Sides",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 3,
+          "step": 1
+        },
+        {
+          "id": "fixtures_per_side",
+          "label": "Fixtures per side",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 1,
+          "step": 1
+        },
+        {
+          "id": "radius",
+          "label": "Radius",
+          "value_type": "number",
+          "role": "spacing",
+          "minimum": 0.000001
+        },
+        { "id": "rotation_degrees", "label": "Rotation", "value_type": "number", "role": "shape" },
+        {
+          "id": "fixture_size",
+          "label": "Fixture size",
+          "value_type": "number",
+          "role": "appearance",
+          "minimum": 0.000001
+        }
+      ],
+      "default_parameters": {
+        "sides": 6,
+        "fixtures_per_side": 24,
+        "fixture_size": 10,
+        "radius": 270
+      },
+      "preview": { "mode": "full_geometry", "auto_fit": true }
+    },
+    {
+      "shape": "honeycomb",
+      "label": "Honeycomb",
+      "status": "supported",
+      "editor_mode": "form",
+      "capacity_model": "rows × columns",
+      "coordinate_model": "alternating half-pitch row offsets on a rectangular index grid",
+      "validation_model": "positive counts and pitch; pitch equals fixture size plus gap",
+      "grid_targeting": true,
+      "parameter_schema": [
+        {
+          "id": "rows",
+          "label": "Rows",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 1,
+          "step": 1
+        },
+        {
+          "id": "columns",
+          "label": "Columns",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 1,
+          "step": 1
+        },
+        {
+          "id": "fixture_size",
+          "label": "Fixture size",
+          "value_type": "number",
+          "role": "appearance",
+          "minimum": 0.000001
+        },
+        {
+          "id": "gap",
+          "label": "Edge gap",
+          "value_type": "number",
+          "role": "spacing",
+          "minimum": 0
+        }
+      ],
+      "default_parameters": { "rows": 18, "columns": 24, "fixture_size": 10, "gap": 8 },
+      "preview": { "mode": "full_geometry", "auto_fit": true }
+    },
+    {
+      "shape": "formula",
+      "label": "Formula",
+      "status": "supported",
+      "editor_mode": "parameter_schema",
+      "capacity_model": "count",
+      "coordinate_model": "shared safe expression evaluator over an inclusive t range",
+      "validation_model": "non-empty supported expressions, increasing finite range and positive scale",
+      "grid_targeting": false,
+      "parameter_schema": [
+        {
+          "id": "count",
+          "label": "Fixtures",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 1,
+          "step": 1
+        },
+        { "id": "x", "label": "X formula", "value_type": "expression", "role": "source" },
+        { "id": "y", "label": "Y formula", "value_type": "expression", "role": "source" },
+        { "id": "t_range", "label": "Parameter range", "value_type": "number", "role": "shape" },
+        {
+          "id": "scale",
+          "label": "Scale",
+          "value_type": "number",
+          "role": "spacing",
+          "minimum": 0.000001
+        },
+        {
+          "id": "fixture_size",
+          "label": "Fixture size",
+          "value_type": "number",
+          "role": "appearance",
+          "minimum": 0.000001
+        }
+      ],
+      "default_parameters": { "count": 160, "fixture_size": 8, "scale": 1 },
+      "preview": { "mode": "full_geometry", "auto_fit": true }
+    },
+    {
+      "shape": "algorithm",
+      "label": "Algorithm",
+      "status": "supported",
+      "editor_mode": "parameter_schema",
+      "capacity_model": "count",
+      "coordinate_model": "named deterministic algorithm evaluated over normalized progress",
+      "validation_model": "supported algorithm, positive count, finite parameters and origin",
+      "grid_targeting": false,
+      "parameter_schema": [
+        {
+          "id": "count",
+          "label": "Fixtures",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 1,
+          "step": 1
+        },
+        { "id": "algorithm", "label": "Algorithm", "value_type": "choice", "role": "source" },
+        {
+          "id": "parameters",
+          "label": "Algorithm parameters",
+          "value_type": "number",
+          "role": "shape"
+        },
+        {
+          "id": "fixture_size",
+          "label": "Fixture size",
+          "value_type": "number",
+          "role": "appearance",
+          "minimum": 0.000001
+        }
+      ],
+      "default_parameters": { "count": 240, "fixture_size": 8 },
+      "preview": { "mode": "full_geometry", "auto_fit": true }
+    },
+    {
+      "shape": "custom",
+      "label": "Custom / Freeform",
+      "status": "unavailable",
+      "editor_mode": "unavailable",
+      "capacity_model": "saved fixture coordinates",
+      "coordinate_model": "preserved explicit coordinates",
+      "validation_model": "finite saved coordinates and positive fixture size",
+      "grid_targeting": false,
+      "parameter_schema": [
+        {
+          "id": "fixtures",
+          "label": "Saved coordinates",
+          "value_type": "coordinates",
+          "role": "source"
+        },
+        {
+          "id": "fixture_size",
+          "label": "Fixture size",
+          "value_type": "number",
+          "role": "appearance",
+          "minimum": 0.000001
+        }
+      ],
+      "default_parameters": { "fixture_size": 10 },
+      "preview": { "mode": "saved_only", "auto_fit": true }
+    },
+    {
+      "shape": "svg_path",
+      "label": "SVG Path",
+      "status": "read_only",
+      "editor_mode": "read_only",
+      "capacity_model": "saved sample count",
+      "coordinate_model": "preserved SVG path contract; sampling is not open in V1",
+      "validation_model": "non-empty path data, positive sample count and scale",
+      "grid_targeting": false,
+      "parameter_schema": [
+        { "id": "d", "label": "SVG path", "value_type": "path", "role": "source" },
+        {
+          "id": "sample_count",
+          "label": "Samples",
+          "value_type": "integer",
+          "role": "quantity",
+          "minimum": 1,
+          "step": 1
+        },
+        {
+          "id": "scale",
+          "label": "Scale",
+          "value_type": "number",
+          "role": "spacing",
+          "minimum": 0.000001
+        },
+        {
+          "id": "fixture_size",
+          "label": "Fixture size",
+          "value_type": "number",
+          "role": "appearance",
+          "minimum": 0.000001
+        }
+      ],
+      "default_parameters": { "sample_count": 160, "fixture_size": 8 },
+      "preview": { "mode": "saved_only", "auto_fit": true }
+    }
+  ]
+}

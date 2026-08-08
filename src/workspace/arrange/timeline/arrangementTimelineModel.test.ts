@@ -39,7 +39,9 @@ describe("Arrangement timeline model", () => {
       start_tick: 1_920,
       duration_tick: 3_840,
     });
-    expect(() => resizeCueClip(arrangement, "clip-a", 100_000)).toThrow(/inside/);
+    expect(() => resizeCueClip(arrangement, "clip-a", arrangement.length_ticks + 1)).toThrow(
+      /inside/,
+    );
   });
 
   it("enforces reject overlap policy with a recoverable diagnostic", () => {
@@ -103,8 +105,9 @@ describe("Arrangement timeline model", () => {
     projectActions.updateArrangement(reference, "Seed clip", (draft) => {
       draft.tracks[0].clips = structuredClone(arrangement.tracks[0].clips);
     });
+    const workingReference = useProjectStore.getState().selectedArrangementRef;
     const historyBefore = useProjectStore.getState().historyCursor;
-    projectActions.updateArrangement(reference, "Move CueClip", (draft) => {
+    projectActions.updateArrangement(workingReference, "Move CueClip", (draft) => {
       moveCueClip(draft, "clip-a", 5_760);
     });
     expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 1);

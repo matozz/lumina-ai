@@ -1,9 +1,9 @@
 use super::{
-    AutomationPolicyDSL, AutomationTargetV3DSL, EffectDefinitionDSL, EffectDefinitionDocument,
+    AutomationPolicyDSL, AutomationTargetDSL, EffectDefinitionDSL, EffectDefinitionDocument,
     EffectNodeDSL, EffectNodePropertyDSL, EffectPortDSL, EffectPortRefDSL, EffectSourceDSL,
     GeneratorDSL, GroupFixturesDSL, KeyframeDSL, OverlapPolicyDSL, ParameterDefinitionDSL,
     ParameterOverridePolicyDSL, ParameterUiHintDSL, ParameterValueDSL, ParameterValueTypeDSL,
-    ShowDocumentV4, CURRENT_SCHEMA_VERSION,
+    ShowDocumentV1, CURRENT_SCHEMA_VERSION,
 };
 use crate::compiler::diagnostic::{
     Diagnostic, CATALOG_GRAPH_BINDING_INVALID, CATALOG_METADATA_INVALID, CATALOG_PARAMETER_INVALID,
@@ -23,11 +23,11 @@ const MAX_FIXTURES: u64 = 1_000_000;
 
 #[derive(Debug, Clone)]
 pub struct ValidatedShow {
-    document: ShowDocumentV4,
+    document: ShowDocumentV1,
 }
 
 impl ValidatedShow {
-    pub(crate) fn into_document(self) -> ShowDocumentV4 {
+    pub(crate) fn into_document(self) -> ShowDocumentV1 {
         self.document
     }
 }
@@ -35,7 +35,7 @@ impl ValidatedShow {
 pub struct DocumentValidator;
 
 impl DocumentValidator {
-    pub fn validate(document: ShowDocumentV4) -> Result<ValidatedShow, Vec<Diagnostic>> {
+    pub fn validate(document: ShowDocumentV1) -> Result<ValidatedShow, Vec<Diagnostic>> {
         let mut diagnostics = Vec::new();
         if document.schema_version != CURRENT_SCHEMA_VERSION {
             diagnostics.push(Diagnostic::error(
@@ -62,7 +62,7 @@ impl DocumentValidator {
     }
 }
 
-fn validate_patch(document: &ShowDocumentV4, diagnostics: &mut Vec<Diagnostic>) -> HashSet<u32> {
+fn validate_patch(document: &ShowDocumentV1, diagnostics: &mut Vec<Diagnostic>) -> HashSet<u32> {
     let mut fixture_ids = HashSet::new();
     let mut total_fixture_count = 0_u64;
     for (index, patch) in document.patch.iter().enumerate() {
@@ -120,7 +120,7 @@ fn validate_patch(document: &ShowDocumentV4, diagnostics: &mut Vec<Diagnostic>) 
 }
 
 fn validate_layout(
-    document: &ShowDocumentV4,
+    document: &ShowDocumentV1,
     fixture_ids: &HashSet<u32>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
@@ -238,7 +238,7 @@ fn validate_layout(
 }
 
 fn validate_groups(
-    document: &ShowDocumentV4,
+    document: &ShowDocumentV1,
     fixture_ids: &HashSet<u32>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> HashSet<String> {
@@ -311,7 +311,7 @@ type DefinitionParameters = HashMap<(String, u32), HashMap<String, ParameterCont
 type InstanceParameters = HashMap<String, HashMap<String, ParameterContract>>;
 
 fn validate_effect_definitions(
-    document: &ShowDocumentV4,
+    document: &ShowDocumentV1,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> DefinitionParameters {
     let mut definitions = HashMap::new();
@@ -364,16 +364,7 @@ fn validate_effect_definition_contract(
     diagnostics: &mut Vec<Diagnostic>,
 ) -> HashMap<String, ParameterContract> {
     let parameters = validate_parameter_schema(path, definition, diagnostics);
-    let legacy_empty_graph = definition.graph.nodes.is_empty()
-        && !matches!(definition.source, EffectSourceDSL::BuiltIn)
-        && definition.catalog.family.is_none()
-        && definition
-            .parameters
-            .iter()
-            .all(|parameter| parameter.required.is_none());
-    if !legacy_empty_graph {
-        validate_effect_graph(path, definition, diagnostics);
-    }
+    validate_effect_graph(path, definition, diagnostics);
     validate_catalog_metadata(path, definition, &parameters, diagnostics);
     parameters
 }
@@ -1048,7 +1039,7 @@ fn binding_default_matches_node(
 }
 
 fn validate_effect_instances(
-    document: &ShowDocumentV4,
+    document: &ShowDocumentV1,
     group_ids: &HashSet<String>,
     definitions: &DefinitionParameters,
     diagnostics: &mut Vec<Diagnostic>,
@@ -1516,7 +1507,7 @@ fn validate_effect_node_values(
 }
 
 fn validate_timeline(
-    document: &ShowDocumentV4,
+    document: &ShowDocumentV1,
     instances: &InstanceParameters,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
@@ -1686,14 +1677,14 @@ fn validate_timeline(
 }
 
 fn automation_target_type(
-    target: &AutomationTargetV3DSL,
+    target: &AutomationTargetDSL,
     instances: &InstanceParameters,
     path: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<ParameterValueTypeDSL> {
     match target {
-        AutomationTargetV3DSL::Global { .. } => Some(ParameterValueTypeDSL::Scalar),
-        AutomationTargetV3DSL::EffectInstance {
+        AutomationTargetDSL::Global { .. } => Some(ParameterValueTypeDSL::Scalar),
+        AutomationTargetDSL::EffectInstance {
             instance_id,
             parameter_id,
         } => {

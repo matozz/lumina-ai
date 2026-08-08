@@ -172,7 +172,6 @@ export function CueBuilderInspector() {
           <div className="flex min-w-0 flex-col gap-3 p-3">
             {advancedMode && (
               <AuthoringSignalSpine
-                revision={session.pinned.revision}
                 status={session.status}
                 comparison={comparison}
                 onComparisonChange={authoringDraftActions.setComparison}

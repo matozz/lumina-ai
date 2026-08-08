@@ -5,12 +5,10 @@ import { cn } from "@/lib/utils";
 import type { DraftValidationStatus, PreviewComparison } from "@/stores/authoringDraft";
 
 export function AuthoringSignalSpine({
-  revision,
   status,
   comparison,
   onComparisonChange,
 }: {
-  revision: number;
   status: DraftValidationStatus;
   comparison: PreviewComparison;
   onComparisonChange: (comparison: PreviewComparison) => void;
@@ -18,15 +16,15 @@ export function AuthoringSignalSpine({
   return (
     <div className="border-border bg-muted/20 grid gap-2 rounded-md border p-2">
       <div className="grid grid-cols-[auto_1fr_auto_1fr_auto] items-center gap-1.5 text-[9px]">
-        <SignalNode icon={GitCommitHorizontal} label={`Saved version ${revision}`} />
+        <SignalNode icon={GitCommitHorizontal} label="Saved asset" />
         <span className="bg-border h-px" />
         <SignalNode
           icon={CircleDot}
-          label="Working draft"
+          label="Current changes"
           className={status === "invalid" ? "text-destructive" : "text-primary"}
         />
         <span className="bg-border h-px" />
-        <SignalNode icon={Check} label="Last Known Good" />
+        <SignalNode icon={Check} label="Verified preview" />
       </div>
       <div className="flex items-center gap-1.5">
         <Badge variant={status === "invalid" ? "destructive" : "secondary"}>
@@ -40,7 +38,7 @@ export function AuthoringSignalSpine({
             aria-pressed={comparison === "pinned"}
             onClick={() => onComparisonChange("pinned")}
           >
-            A · pinned
+            A · saved
           </Button>
           <Button
             size="xs"
@@ -49,7 +47,7 @@ export function AuthoringSignalSpine({
             aria-pressed={comparison === "working"}
             onClick={() => onComparisonChange("working")}
           >
-            B · LKG
+            B · verified
           </Button>
         </div>
       </div>
@@ -76,7 +74,7 @@ function SignalNode({
 
 function statusLabel(status: DraftValidationStatus) {
   return {
-    pristine: "Pinned",
+    pristine: "Saved",
     dirty: "Needs validation",
     validating: "Validating…",
     valid: "Preview safe",

@@ -1,15 +1,48 @@
 {
   "document_contract": {
+    "arrangement": ["track", "effect_clip", "automation_lane", "keyframe"],
     "automation_targets": {
-      "effect_instance": ["multiplier", "color", "dimmer", "pan", "tilt"],
+      "effect_instance": "definition_parameter_id",
       "global": ["master_dimmer"]
     },
-    "fixture_types": ["spot", "pixel"],
+    "common_parameters": [
+      "speed",
+      "phase",
+      "width",
+      "transition",
+      "intensity",
+      "color",
+      "direction"
+    ],
+    "effect_nodes": [
+      "time",
+      "constant",
+      "random",
+      "step_sequence",
+      "oscillator",
+      "envelope",
+      "spatial_phase",
+      "math",
+      "map",
+      "clamp",
+      "color_gradient",
+      "fixture_mask",
+      "attribute_writer"
+    ],
+    "effect_sources": ["built_in", "project_local", "user_library"],
+    "keyframe_interpolation": ["hold", "linear", "ease_in", "ease_out", "ease_in_out", "bezier"],
     "layout_shapes": ["matrix", "circle", "formula", "svg_path", "custom"],
-    "phase_modes": ["spread", "grouped"],
-    "step_attributes": ["color", "dimmer", "pan", "tilt"]
+    "musical_time": {
+      "ppq": 960,
+      "storage": "integer_tick"
+    },
+    "overlap_policies": ["layer", "replace", "reject", "crossfade"],
+    "parameter_types": ["scalar", "color", "direction", "boolean", "enum", "color_stops"],
+    "patch_reference": "profile_id",
+    "spatial_bases": ["index", "x", "y", "distance", "angle", "custom"]
   },
   "document_schema": "show-document-v1.schema.json",
   "document_schema_version": 1,
+  "fixture_profiles": "fixture-profiles-v1.json",
   "metadata_version": 1
 }

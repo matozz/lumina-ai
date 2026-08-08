@@ -151,7 +151,7 @@ export function createCueAsset(
     }
   }
   const cue: CueDefinition = {
-    schema_version: 2,
+    schema_version: 1,
     id,
     revision: 1,
     name,

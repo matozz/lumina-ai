@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.strip-runway-160",
+  "revision": 1,
+  "name": "Runway Strip 160",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "strip",
+    "count": 160,
+    "orientation": "horizontal",
+    "fixture_size": { "width": 8, "height": 14 },
+    "gap": { "x": 6, "y": 6 },
+    "pitch": { "x": 14, "y": 20 },
+    "origin": { "x": 0, "y": 0 }
+  }
+}

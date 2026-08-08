@@ -3,15 +3,15 @@ use crate::compiler::diagnostic::{
     Diagnostic, PROJECT_REFERENCE_NOT_FOUND, PROJECT_REVISION_MISMATCH,
 };
 use crate::document::{
-    layout_fixture_size_for_fixture, layout_to_legacy, resolve_target_set,
+    layout_fixture_size_for_fixture, layout_to_show_dsl, resolve_target_set,
     ArrangementAutomationTarget, ArrangementDocument, ArrangementMarker, AssetRef,
-    AutomationLaneDSL, AutomationTargetV3DSL, ClipPlaybackDSL, CueAutomationLane,
+    AutomationLaneDSL, AutomationTargetDSL, ClipPlaybackDSL, CueAutomationLane,
     CueCapabilitySummary, CueDefinition, CueLayer, CueMixOverride, CueRiskSummary,
     CueTriggerPolicy, EffectClipDSL, EffectDefinitionDSL, EffectInstanceDSL, GroupDSL,
     GroupFixturesDSL, LayoutDefinition, MetaDSL, MixPolicy as CueMixPolicy, ProjectBundle,
-    ShowDocumentV4, StageDocument, TargetingDuration, TargetingDurationUnit,
+    ShowDocumentV1, StageDocument, TargetingDuration, TargetingDurationUnit,
     TargetingSceneDefinition, TargetingTransition, TimeSignaturePoint, TimelineTrackDSL,
-    TimelineV4DSL, ValidatedProject,
+    TimelineV1DSL, ValidatedProject,
 };
 use crate::engine::effect::{CompiledTargetingScene, CompiledTargetingStep, EffectInstance};
 use crate::engine::profile::{profile_by_handle, profile_by_id, MixPolicy};
@@ -63,7 +63,7 @@ struct InstanceCustomization {
 struct AggregatedAutomation {
     owner_track: usize,
     id: String,
-    target: AutomationTargetV3DSL,
+    target: AutomationTargetDSL,
     keyframes: BTreeMap<u32, crate::document::KeyframeDSL>,
 }
 
@@ -312,7 +312,7 @@ impl Compiler {
                                 .or_insert_with(|| AggregatedAutomation {
                                     owner_track: track_index,
                                     id: format!("cue:{}:{}", clip.id, cue_lane.id),
-                                    target: AutomationTargetV3DSL::EffectInstance {
+                                    target: AutomationTargetDSL::EffectInstance {
                                         instance_id: instance_id.clone(),
                                         parameter_id: cue_lane.target.parameter_id.clone(),
                                     },
@@ -338,7 +338,7 @@ impl Compiler {
                 let (key, target) = match &lane.target {
                     ArrangementAutomationTarget::Global { parameter_id } => (
                         format!("global:{parameter_id:?}"),
-                        AutomationTargetV3DSL::Global {
+                        AutomationTargetDSL::Global {
                             parameter_id: *parameter_id,
                         },
                     ),
@@ -369,7 +369,7 @@ impl Compiler {
                         let instance_id = cue_clip_instance_id(&arrangement, clip, layer);
                         (
                             automation_key(&instance_id, parameter_id),
-                            AutomationTargetV3DSL::EffectInstance {
+                            AutomationTargetDSL::EffectInstance {
                                 instance_id,
                                 parameter_id: parameter_id.clone(),
                             },
@@ -407,17 +407,17 @@ impl Compiler {
                 });
         }
 
-        let document = ShowDocumentV4 {
-            schema_version: 4,
+        let document = ShowDocumentV1 {
+            schema_version: 1,
             meta: MetaDSL {
                 name: format!("{} · {}", bundle.manifest.name, arrangement.name),
             },
             patch: stage.patch.clone(),
-            layout: layout_to_legacy(&layout, &stage_fixture_ids(&stage)),
+            layout: layout_to_show_dsl(&layout, &stage_fixture_ids(&stage)),
             groups,
             effect_definitions: effects,
             effect_instances: instances,
-            timeline: Some(TimelineV4DSL {
+            timeline: Some(TimelineV1DSL {
                 ppq: arrangement.ppq,
                 tempo_map: arrangement.tempo_map.clone(),
                 tracks: timeline_tracks,
@@ -1000,6 +1000,124 @@ mod tests {
         bundle
     }
 
+    fn twenty_by_twenty_multi_zone_project() -> ProjectBundle {
+        let mut bundle = matrix_project();
+        bundle.stages[0].patch[0].id_range = (1, 400);
+        bundle.layouts[0].geometry = serde_json::from_value(serde_json::json!({
+            "shape": "matrix",
+            "rows": 20,
+            "columns": 20,
+            "fixture_size": { "width": 10.0, "height": 10.0 },
+            "gap": { "x": 10.0, "y": 10.0 },
+            "pitch": { "x": 20.0, "y": 20.0 },
+            "origin": { "x": 0.0, "y": 0.0 }
+        }))
+        .expect("20x20 layout");
+        bundle.stages[0].groups[0].fixtures = GroupFixturesDSL::List((1..=400).collect());
+        bundle.stages[0]
+            .target_sets
+            .retain(|target| target.id == "all");
+        for (id, name, grid, row, column) in [
+            ("zone-2x2-1", "2×2 Top left", 2, 0, 0),
+            ("zone-2x2-2", "2×2 Top right", 2, 0, 1),
+            ("zone-2x2-3", "2×2 Bottom left", 2, 1, 0),
+            ("zone-2x2-4", "2×2 Bottom right", 2, 1, 1),
+            ("zone-4x4-1", "4×4 Top left", 4, 0, 0),
+            ("zone-4x4-4", "4×4 Top right", 4, 0, 3),
+            ("zone-4x4-13", "4×4 Bottom left", 4, 3, 0),
+            ("zone-4x4-16", "4×4 Bottom right", 4, 3, 3),
+        ] {
+            bundle.stages[0].target_sets.push(TargetSetDefinition {
+                id: id.to_string(),
+                name: name.to_string(),
+                selector: TargetSetSelector::GridZones {
+                    rows: grid,
+                    columns: grid,
+                    zones: vec![GridZone { row, column }],
+                },
+                weights: Vec::new(),
+            });
+        }
+
+        let base_layer = bundle.cues[0].layers[0].clone();
+        let mut simultaneous = bundle.cues[0].clone();
+        simultaneous.id = "four-quadrants".to_string();
+        simultaneous.name = "Four Quadrants".to_string();
+        simultaneous.layers = (1..=4)
+            .map(|index| {
+                let mut layer = base_layer.clone();
+                layer.id = format!("quadrant-{index}");
+                layer.target_set_ref.target_set_id = format!("zone-2x2-{index}");
+                layer.layer = index - 1;
+                layer.priority = index - 1;
+                layer.mix_overrides.clear();
+                layer
+            })
+            .collect();
+        let mut cues = vec![simultaneous];
+        for (index, target_id) in ["zone-4x4-1", "zone-4x4-4", "zone-4x4-13", "zone-4x4-16"]
+            .into_iter()
+            .enumerate()
+        {
+            let mut cue = bundle.cues[0].clone();
+            cue.id = format!("corner-{}", index + 1);
+            cue.name = format!("Corner {}", index + 1);
+            cue.layers = vec![base_layer.clone()];
+            cue.layers[0].id = format!("corner-layer-{}", index + 1);
+            cue.layers[0].target_set_ref.target_set_id = target_id.to_string();
+            cue.layers[0].mix_overrides.clear();
+            cues.push(cue);
+        }
+        bundle.manifest.cue_refs = cues
+            .iter()
+            .map(|cue| AssetRef {
+                id: cue.id.clone(),
+                revision: cue.revision,
+            })
+            .collect();
+        bundle.cues = cues;
+
+        let arrangement = &mut bundle.arrangements[0];
+        arrangement.length_ticks = 30_720;
+        arrangement.tracks[0].clips = vec![
+            serde_json::from_value(serde_json::json!({
+                "id": "simultaneous", "cue_ref": bundle.manifest.cue_refs[0],
+                "start_tick": 0, "duration_tick": 3840
+            }))
+            .expect("simultaneous clip"),
+            serde_json::from_value(serde_json::json!({
+                "id": "corner-1", "cue_ref": bundle.manifest.cue_refs[1],
+                "start_tick": 3840, "duration_tick": 5760
+            }))
+            .expect("corner 1 clip"),
+            serde_json::from_value(serde_json::json!({
+                "id": "corner-2", "cue_ref": bundle.manifest.cue_refs[2],
+                "start_tick": 7680, "duration_tick": 5760
+            }))
+            .expect("corner 2 clip"),
+            serde_json::from_value(serde_json::json!({
+                "id": "corner-3", "cue_ref": bundle.manifest.cue_refs[3],
+                "start_tick": 11520, "duration_tick": 5760
+            }))
+            .expect("corner 3 clip"),
+            serde_json::from_value(serde_json::json!({
+                "id": "corner-4", "cue_ref": bundle.manifest.cue_refs[4],
+                "start_tick": 15360, "duration_tick": 5760
+            }))
+            .expect("corner 4 clip"),
+        ];
+        arrangement.tracks[0].automation_lanes = serde_json::from_value(serde_json::json!([{
+            "id": "master-build",
+            "target": { "scope": "global", "parameter_id": "master_dimmer" },
+            "keyframes": [
+                { "id": "start", "time_tick": 0, "value": { "type": "scalar", "value": 1.0 }, "interpolation": "linear" },
+                { "id": "end", "time_tick": 30720, "value": { "type": "scalar", "value": 1.0 }, "interpolation": "linear" }
+            ]
+        }]))
+        .expect("Arrangement automation");
+        bundle
+    }
+
     fn targeting_project(fixture_count: u32, rows: u32, columns: u32) -> ProjectBundle {
         let mut bundle = matrix_project();
         bundle.stages[0].patch[0].id_range = (1, fixture_count);
@@ -1278,6 +1396,54 @@ mod tests {
             .expect("RGB intensity");
             matches!(frame.value(intensity), Some(AttributeValue::Scalar(value)) if (*value - 0.5).abs() < f32::EPSILON)
         }));
+    }
+
+    #[test]
+    fn compiles_simultaneous_and_overlapping_multi_zone_cues_on_twenty_by_twenty() {
+        let bundle = twenty_by_twenty_multi_zone_project();
+        let stage = bundle.stages[0].clone();
+        let snapshot = Compiler::compile_active_project(
+            ValidatedProject::validate(bundle).expect("multi-zone Project validates"),
+        )
+        .expect("multi-zone Project compiles");
+
+        for target_id in ["zone-2x2-1", "zone-2x2-2", "zone-2x2-3", "zone-2x2-4"] {
+            assert_eq!(
+                snapshot.show.groups[&target_group_id(&stage, target_id)]
+                    .sorted_fixture_ids
+                    .len(),
+                100
+            );
+        }
+        for target_id in ["zone-4x4-1", "zone-4x4-4", "zone-4x4-13", "zone-4x4-16"] {
+            assert_eq!(
+                snapshot.show.groups[&target_group_id(&stage, target_id)]
+                    .sorted_fixture_ids
+                    .len(),
+                25
+            );
+        }
+
+        let lit_count = |beat| {
+            render_at(
+                &snapshot.show,
+                RenderTime { beat },
+                RenderSource::Timeline,
+            )
+            .iter()
+            .filter(|frame| {
+                let handle = crate::engine::attribute::resolve_attribute(
+                    frame.profile,
+                    INTENSITY_ATTRIBUTE,
+                )
+                .expect("intensity handle");
+                matches!(frame.value(handle), Some(AttributeValue::Scalar(value)) if *value > 0.01)
+            })
+            .count()
+        };
+        assert_eq!(lit_count(0.5), 400);
+        assert_eq!(lit_count(4.5), 25);
+        assert_eq!(lit_count(8.5), 50);
     }
 
     #[test]

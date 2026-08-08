@@ -47,7 +47,7 @@ export function findCueClip(arrangement: ArrangementDocument, clipId: string) {
   }
   throw timelineError(
     "ARRANGEMENT_CLIP_MISSING",
-    `CueClip ${clipId} is no longer present in this Arrangement revision.`,
+    `CueClip ${clipId} is no longer present in this Arrangement.`,
     "Select an existing CueClip and retry the edit.",
   );
 }

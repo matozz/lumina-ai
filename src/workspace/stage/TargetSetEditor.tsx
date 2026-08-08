@@ -65,7 +65,6 @@ export function TargetSetEditor() {
           <p className="text-xs font-semibold">Fixture areas</p>
           <p className="text-muted-foreground text-[9px]">
             Reusable fixture selections for Effect Lab and Cues
-            {advancedMode ? ` · Stage ${stage.id}@${stage.revision}` : ""}
           </p>
         </div>
         <Button
@@ -95,8 +94,8 @@ export function TargetSetEditor() {
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-medium">{selected.name}</p>
-            <p className="text-muted-foreground font-mono text-[8px]">
-              {selected.id} · {resolved?.fixtureIds.length ?? 0}/{fixtureIds.length} fixtures ·{" "}
+            <p className="text-muted-foreground text-[8px]">
+              {resolved?.fixtureIds.length ?? 0}/{fixtureIds.length} fixtures ·{" "}
               {resolved?.partitions.length ?? 0} partitions
             </p>
           </div>
@@ -124,7 +123,7 @@ export function TargetSetEditor() {
 
         {!resolved && (
           <Alert variant="destructive">
-            <AlertTitle>TARGET_SET_INVALID · stage.target_sets.{draft.id}</AlertTitle>
+            <AlertTitle>This fixture area does not fit the Layout</AlertTitle>
             <AlertDescription>
               This selector does not fit the current Layout grid. Adjust its dimensions or choose
               Fixture IDs before saving.
@@ -133,7 +132,7 @@ export function TargetSetEditor() {
         )}
         {diagnostic && (
           <Alert variant="destructive">
-            <AlertTitle>TARGET_SET_ACTION_FAILED · stage.target_sets.{draft.id}</AlertTitle>
+            <AlertTitle>Fixture area could not be updated</AlertTitle>
             <AlertDescription>
               {diagnostic} Review Cue and TargetingScene references, then retry here.
             </AlertDescription>
@@ -188,7 +187,7 @@ export function TargetSetEditor() {
         </div>
         <FieldDescription>
           {advancedMode
-            ? `Saving creates a new Stage revision and upgrades draft dependents. Delete is protected by ${references.cues} Cue and ${references.scenes} scene references.`
+            ? `Saving safely updates the Stage and linked content. Delete is protected by ${references.cues} Cues and ${references.scenes} playback patterns.`
             : "Saved areas immediately appear in Effect Lab and can be assigned to Cue effects."}
         </FieldDescription>
       </section>

@@ -18,6 +18,9 @@ describe("authoring preview materialization", () => {
       schema_version: 1,
       effects: [pinned],
       cue_recipes: [],
+      layouts: [],
+      arrangements: [],
+      project_templates: [],
     };
 
     const result = materializeAuthoringPreview(

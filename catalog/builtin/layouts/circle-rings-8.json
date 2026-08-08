@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.circle-rings-8",
+  "revision": 1,
+  "name": "Concentric Arena Rings",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "circle",
+    "rings": 8,
+    "increment": 12,
+    "fixture_size": { "width": 10, "height": 10 },
+    "ring_gap": 10,
+    "ring_pitch": 20,
+    "center": { "x": 0, "y": 0 }
+  }
+}

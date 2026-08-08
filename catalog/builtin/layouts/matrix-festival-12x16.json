@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.matrix-festival-12x16",
+  "revision": 1,
+  "name": "Festival Matrix 12×16",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "matrix",
+    "rows": 12,
+    "columns": 16,
+    "fixture_size": { "width": 10, "height": 10 },
+    "gap": { "x": 10, "y": 10 },
+    "pitch": { "x": 20, "y": 20 },
+    "origin": { "x": 0, "y": 0 }
+  }
+}

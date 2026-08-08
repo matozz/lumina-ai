@@ -57,14 +57,15 @@ describe("ProjectStageInspector Layout workflow", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     const savedLayoutRef = useProjectStore.getState().selectedLayoutRef;
-    expect(savedLayoutRef).toEqual({ id: originalLayoutRef.id, revision: 2 });
+    expect(savedLayoutRef.id).not.toBe(originalLayoutRef.id);
+    expect(savedLayoutRef.revision).toBe(1);
     expect(activeStage(useProjectStore.getState().bundle).layout_ref).toEqual(originalLayoutRef);
 
     fireEvent.click(screen.getByRole("button", { name: "Use on Stage" }));
     expect(screen.getByText("Compatible Stage upgrade")).toBeTruthy();
     expect(useProjectStore.getState().bundle.manifest.stage_ref).toEqual(originalStageRef);
 
-    fireEvent.click(screen.getByRole("button", { name: "Upgrade Stage + listed dependents" }));
+    fireEvent.click(screen.getByRole("button", { name: "Update Stage + linked Cues" }));
     const upgradedStage = activeStage(useProjectStore.getState().bundle);
     expect(upgradedStage.revision).toBe(2);
     expect(upgradedStage.layout_ref).toEqual(savedLayoutRef);
@@ -89,7 +90,9 @@ describe("ProjectStageInspector Layout workflow", () => {
     workspaceActions.setAdvancedMode(false);
     const circleRef = useProjectStore
       .getState()
-      .bundle.manifest.layout_refs.find((reference) => reference.id === "circle-16")!;
+      .bundle.manifest.layout_refs.find(
+        (reference) => reference.id === "builtin.layout.circle-rings-8",
+      )!;
     projectActions.setSelectedLayoutRef(circleRef);
     render(<ProjectStageInspector />);
     await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
@@ -100,7 +103,7 @@ describe("ProjectStageInspector Layout workflow", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Update Stage & choose an Effect" }));
     expect(activeStage(useProjectStore.getState().bundle).patch).toEqual([
-      { profile_id: "generic-rgb", id_range: [1, 37] },
+      { profile_id: "generic-rgb", id_range: [1, 433] },
     ]);
     expect(useWorkspaceStore.getState().activeWorkspace).toBe("effect-lab");
   });
@@ -110,7 +113,7 @@ describe("ProjectStageInspector Layout workflow", () => {
     const state = useProjectStore.getState();
     const bundle = structuredClone(state.bundle);
     const circleRef = bundle.manifest.layout_refs.find(
-      (reference) => reference.id === "circle-16",
+      (reference) => reference.id === "builtin.layout.circle-rings-8",
     )!;
     activeStage(bundle).layout_ref = circleRef;
     useProjectStore.setState({ bundle, selectedLayoutRef: circleRef });
@@ -187,7 +190,9 @@ describe("ProjectStageInspector Layout workflow", () => {
   it("edits circles through rings, fixture gap, and shared fixture size", async () => {
     const circleRef = useProjectStore
       .getState()
-      .bundle.manifest.layout_refs.find((reference) => reference.id === "circle-16");
+      .bundle.manifest.layout_refs.find(
+        (reference) => reference.id === "builtin.layout.circle-rings-8",
+      );
     expect(circleRef).toBeTruthy();
     act(() => projectActions.setSelectedLayoutRef(circleRef!));
 
@@ -195,7 +200,7 @@ describe("ProjectStageInspector Layout workflow", () => {
     await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
 
     expect(screen.getByLabelText("Rings")).toBeTruthy();
-    expect(screen.getByLabelText("Fixtures per ring step")).toHaveProperty("value", "6");
+    expect(screen.getByLabelText("Fixtures per ring step")).toHaveProperty("value", "12");
     expect(screen.getByLabelText("Fixture gap")).toBeTruthy();
     expect(screen.getByLabelText("Fixture width")).toBeTruthy();
     expect(screen.getByLabelText("Fixture height")).toBeTruthy();
@@ -209,7 +214,7 @@ describe("ProjectStageInspector Layout workflow", () => {
       expect(previewLayout.geometry).toMatchObject({
         shape: "circle",
         rings: 2,
-        increment: 6,
+        increment: 12,
       });
     });
   });

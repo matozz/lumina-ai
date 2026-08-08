@@ -502,18 +502,6 @@ pub struct EffectDefinition {
 }
 
 impl EffectDefinition {
-    pub fn legacy(id: &str, name: &str, default_speed: f64) -> Self {
-        Self {
-            id: format!("legacy.{id}"),
-            name: name.to_string(),
-            revision: 1,
-            source: EffectSource::ProjectLocal,
-            parameters: common_parameters(default_speed),
-            graph: CompiledEffectGraph::default(),
-            catalog: EffectCatalog::default(),
-        }
-    }
-
     pub fn parameter_handle(&self, id: &str) -> Option<ParameterHandle> {
         self.parameters
             .iter()
@@ -1110,12 +1098,13 @@ fn scalar_parameter(
 #[cfg(test)]
 mod tests {
     use super::{
-        deterministic_random, evaluate_effect_graph, query_effect_catalog, CompiledColorStop,
-        CompiledEffectGraph, CompiledEffectNode, CompiledEffectStep, CompiledTargetingScene,
-        CompiledTargetingStep, Direction, EffectCatalog, EffectCatalogQuery, EffectDefinition,
-        EffectDefinitionHandle, EffectInstance, EffectNodeHandle, EffectSource, MathOperation,
-        MotionTag, OscillatorWaveform, ParameterValue, SpatialBasis, StrobeRisk,
-        COLOR_PARAMETER_ID, DIRECTION_PARAMETER_ID, SPEED_PARAMETER_ID,
+        common_parameters, deterministic_random, evaluate_effect_graph, query_effect_catalog,
+        CompiledColorStop, CompiledEffectGraph, CompiledEffectNode, CompiledEffectStep,
+        CompiledTargetingScene, CompiledTargetingStep, Direction, EffectCatalog,
+        EffectCatalogQuery, EffectDefinition, EffectDefinitionHandle, EffectInstance,
+        EffectNodeHandle, EffectSource, MathOperation, MotionTag, OscillatorWaveform,
+        ParameterValue, SpatialBasis, StrobeRisk, COLOR_PARAMETER_ID, DIRECTION_PARAMETER_ID,
+        SPEED_PARAMETER_ID,
     };
     use crate::engine::attribute::resolve_attribute;
     use crate::engine::profile::{
@@ -1123,6 +1112,18 @@ mod tests {
         GENERIC_RGB_PROFILE_ID, INTENSITY_ATTRIBUTE, PAN_ATTRIBUTE,
     };
     use std::collections::HashMap;
+
+    fn test_definition(id: &str, name: &str, default_speed: f64) -> EffectDefinition {
+        EffectDefinition {
+            id: format!("test.{id}"),
+            name: name.to_string(),
+            revision: 1,
+            source: EffectSource::ProjectLocal,
+            parameters: common_parameters(default_speed),
+            graph: CompiledEffectGraph::default(),
+            catalog: EffectCatalog::default(),
+        }
+    }
 
     #[test]
     fn targeting_scene_phase_continuity_controls_step_boundary_reset() {
@@ -1151,7 +1152,7 @@ mod tests {
 
     #[test]
     fn typed_parameters_reject_wrong_types_and_ranges() {
-        let definition = EffectDefinition::legacy("pulse", "Pulse", 2.0);
+        let definition = test_definition("pulse", "Pulse", 2.0);
         let speed = definition
             .parameter_handle(SPEED_PARAMETER_ID)
             .expect("speed");
@@ -1182,7 +1183,7 @@ mod tests {
 
     #[test]
     fn instances_resolve_overrides_without_mutating_definitions() {
-        let definition = EffectDefinition::legacy("pulse", "Pulse", 1.0);
+        let definition = test_definition("pulse", "Pulse", 1.0);
         let speed = definition
             .parameter_handle(SPEED_PARAMETER_ID)
             .expect("speed");
@@ -1420,7 +1421,7 @@ mod tests {
 
     #[test]
     fn catalog_query_filters_metadata_and_explains_target_capability() {
-        let mut pulse = EffectDefinition::legacy("pulse", "Pulse", 1.0);
+        let mut pulse = test_definition("pulse", "Pulse", 1.0);
         pulse.source = EffectSource::BuiltIn;
         pulse.catalog = EffectCatalog {
             mood: vec!["energetic".to_string()],
@@ -1432,7 +1433,7 @@ mod tests {
             required_attributes: vec![INTENSITY_ATTRIBUTE.to_string()],
             ..EffectCatalog::default()
         };
-        let mut sweep = EffectDefinition::legacy("sweep", "Sweep", 1.0);
+        let mut sweep = test_definition("sweep", "Sweep", 1.0);
         sweep.source = EffectSource::UserLibrary;
         sweep.catalog = EffectCatalog {
             mood: vec!["energetic".to_string()],

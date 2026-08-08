@@ -1,9 +1,9 @@
 use super::validation::{validate_effect_definition_document, validate_parameter_value_contract};
 use super::{
-    layout_capacity, layout_grid_dimensions, migrate_project_bundle, validate_layout_geometry,
-    ArrangementAutomationTarget, ArrangementDocument, AssetRef, CenterEdgesRegion, CueDefinition,
-    CueLayer, CueMixOverride, EffectDefinitionDocument, EffectNodeDSL, LayoutDefinition,
-    LayoutGeometry, ParameterOverridePolicyDSL, ParameterValueDSL, ProjectBundle, StageDocument,
+    layout_capacity, layout_grid_dimensions, validate_layout_geometry, ArrangementAutomationTarget,
+    ArrangementDocument, AssetRef, CenterEdgesRegion, CueDefinition, CueLayer, CueMixOverride,
+    EffectDefinitionDocument, EffectNodeDSL, LayoutDefinition, LayoutGeometry,
+    ParameterOverridePolicyDSL, ParameterValueDSL, ProjectBundle, StageDocument,
     TargetSetDefinition, TargetSetSelector, TargetingDuration, TargetingDurationUnit,
     TargetingTransition, ARRANGEMENT_DOCUMENT_SCHEMA_VERSION, CUE_DEFINITION_SCHEMA_VERSION,
     EFFECT_DEFINITION_SCHEMA_VERSION, LAYOUT_DEFINITION_SCHEMA_VERSION,
@@ -58,9 +58,15 @@ impl ValidatedProject {
 }
 
 pub fn load_project_bundle(source: &str) -> Result<ValidatedProject, Vec<Diagnostic>> {
-    migrate_project_bundle(source).map(|migrated| ValidatedProject {
-        bundle: migrated.bundle,
-    })
+    let bundle = serde_json::from_str::<ProjectBundle>(source).map_err(|error| {
+        vec![Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            "$",
+            error.to_string(),
+            "Use a ProjectBundle that matches the current Lumina V1 schema.",
+        )]
+    })?;
+    ValidatedProject::validate(bundle)
 }
 
 fn validate_schema_versions(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
@@ -608,46 +614,6 @@ fn validate_effects(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
     }
 }
 
-pub(super) fn validate_effect_asset(effect: &EffectDefinitionDocument) -> Vec<Diagnostic> {
-    let mut diagnostics = Vec::new();
-    validate_effect_definition_document(effect, "effect", &mut diagnostics);
-    for (parameter_index, parameter) in effect.parameters.iter().enumerate() {
-        validate_beat_sync_speed_override(
-            &parameter.id,
-            &parameter.default_value,
-            &format!("effect.parameters[{parameter_index}].default_value"),
-            &mut diagnostics,
-        );
-    }
-    for diagnostic in &mut diagnostics {
-        if diagnostic.asset.is_none() {
-            diagnostic.asset = Some(Box::new(crate::compiler::diagnostic::DiagnosticAsset {
-                kind: "effect".to_string(),
-                id: effect.id.clone(),
-                revision: effect.revision,
-            }));
-        }
-    }
-    diagnostics
-}
-
-pub(super) fn validate_cue_asset(bundle: &ProjectBundle, cue: &CueDefinition) -> Vec<Diagnostic> {
-    let mut scoped = bundle.clone();
-    scoped.cues = vec![cue.clone()];
-    let mut diagnostics = Vec::new();
-    validate_cues(&scoped, &mut diagnostics);
-    for diagnostic in &mut diagnostics {
-        if diagnostic.asset.is_none() {
-            diagnostic.asset = Some(Box::new(crate::compiler::diagnostic::DiagnosticAsset {
-                kind: "cue".to_string(),
-                id: cue.id.clone(),
-                revision: cue.revision,
-            }));
-        }
-    }
-    diagnostics
-}
-
 fn validate_cue_layer(
     bundle: &ProjectBundle,
     stage: &StageDocument,
@@ -945,7 +911,175 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
                 );
             }
         }
+        validate_arrangement_clip_composition(bundle, arrangement, &path, diagnostics);
     }
+}
+
+struct ArrangementClipContext<'a> {
+    track_index: usize,
+    clip_index: usize,
+    track: &'a super::CueTrack,
+    clip: &'a super::CueClip,
+    cue: &'a CueDefinition,
+}
+
+fn validate_arrangement_clip_composition(
+    bundle: &ProjectBundle,
+    arrangement: &ArrangementDocument,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let mut clips = arrangement
+        .tracks
+        .iter()
+        .enumerate()
+        .flat_map(|(track_index, track)| {
+            track
+                .clips
+                .iter()
+                .enumerate()
+                .filter_map(move |(clip_index, clip)| {
+                    exact_asset(&bundle.cues, &clip.cue_ref, |asset| {
+                        (&asset.id, asset.revision)
+                    })
+                    .map(|cue| ArrangementClipContext {
+                        track_index,
+                        clip_index,
+                        track,
+                        clip,
+                        cue,
+                    })
+                })
+        })
+        .collect::<Vec<_>>();
+    clips.sort_by_key(|context| {
+        (
+            context.clip.start_tick,
+            context.clip.layer,
+            context.track_index,
+            context.clip_index,
+        )
+    });
+    let mut reported = BTreeSet::new();
+
+    for left_index in 0..clips.len() {
+        for right_index in (left_index + 1)..clips.len() {
+            let left = &clips[left_index];
+            let right = &clips[right_index];
+            if !clip_ranges_overlap(left.clip, right.clip) {
+                continue;
+            }
+            let right_path = format!(
+                "{path}.tracks[{}].clips[{}]",
+                right.track_index, right.clip_index
+            );
+            if left.track_index == right.track_index
+                && right.track.overlap_policy == super::OverlapPolicyDSL::Reject
+            {
+                diagnostics.push(Diagnostic::error(
+                    PROJECT_SCHEMA_INVALID,
+                    format!("{right_path}.start_tick"),
+                    "CueClips overlap on a track whose overlap policy is reject.",
+                    "Move or trim one CueClip, or explicitly choose a compositing overlap policy.",
+                ));
+                continue;
+            }
+            if left.cue.compatible_stage_ref != right.cue.compatible_stage_ref {
+                continue;
+            }
+            let Some(stage) =
+                exact_asset(&bundle.stages, &right.cue.compatible_stage_ref, |asset| {
+                    (&asset.id, asset.revision)
+                })
+            else {
+                continue;
+            };
+            let Some(layout) = exact_asset(&bundle.layouts, &stage.layout_ref, |asset| {
+                (&asset.id, asset.revision)
+            }) else {
+                continue;
+            };
+
+            for left_layer in &left.cue.layers {
+                let left_fixtures = cue_layer_fixture_ids(stage, layout, left_layer);
+                let Some(left_effect) =
+                    exact_asset(&bundle.effects, &left_layer.effect_ref, |asset| {
+                        (&asset.id, asset.revision)
+                    })
+                else {
+                    continue;
+                };
+                let left_attributes = effect_writer_attributes(left_effect);
+                for right_layer in &right.cue.layers {
+                    let right_fixtures = cue_layer_fixture_ids(stage, layout, right_layer);
+                    if left_fixtures.is_disjoint(&right_fixtures) {
+                        continue;
+                    }
+                    let Some(right_effect) =
+                        exact_asset(&bundle.effects, &right_layer.effect_ref, |asset| {
+                            (&asset.id, asset.revision)
+                        })
+                    else {
+                        continue;
+                    };
+                    let right_attributes = effect_writer_attributes(right_effect);
+                    let conflicts = left_attributes
+                        .intersection(&right_attributes)
+                        .filter(|attribute| {
+                            !clip_has_explicit_mix_policy(right.clip, right_layer, attribute)
+                        })
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    if conflicts.is_empty()
+                        || !reported.insert((
+                            right.clip.id.clone(),
+                            right_layer.id.clone(),
+                            conflicts.join(","),
+                        ))
+                    {
+                        continue;
+                    }
+                    diagnostics.push(
+                        Diagnostic::error(
+                            CUE_LAYER_ATTRIBUTE_CONFLICT,
+                            format!("{right_path}.layer_overrides"),
+                            format!(
+                                "Overlapping Cue clips write {} on the same fixtures without an explicit mix policy.",
+                                conflicts.join(", ")
+                            ),
+                            "Use disjoint TargetSets or choose a mix policy on the later Cue layer or CueClip override.",
+                        )
+                        .with_recovery(
+                            "choose_mix_policy",
+                            "Choose explicit mix policy",
+                            Some(format!("{right_path}.layer_overrides")),
+                        ),
+                    );
+                }
+            }
+        }
+    }
+}
+
+fn clip_ranges_overlap(left: &super::CueClip, right: &super::CueClip) -> bool {
+    let left_end = u64::from(left.start_tick) + u64::from(left.duration_tick);
+    let right_end = u64::from(right.start_tick) + u64::from(right.duration_tick);
+    u64::from(left.start_tick) < right_end && u64::from(right.start_tick) < left_end
+}
+
+fn clip_has_explicit_mix_policy(
+    clip: &super::CueClip,
+    layer: &CueLayer,
+    attribute_id: &str,
+) -> bool {
+    has_explicit_mix_policy(layer, attribute_id)
+        || clip.layer_overrides.iter().any(|layer_override| {
+            layer_override.layer_id == layer.id
+                && layer_override
+                    .mix_overrides
+                    .iter()
+                    .any(|mix_override| mix_override.attribute_id == attribute_id)
+        })
 }
 
 fn validate_tempo_map(
@@ -1903,7 +2037,7 @@ pub(crate) mod tests {
     use serde_json::{json, Value};
 
     pub(crate) fn valid_bundle() -> ProjectBundle {
-        let legacy = json!({
+        let value = json!({
             "schema_version": 1,
             "manifest": {
                 "schema_version": 1,
@@ -1911,6 +2045,7 @@ pub(crate) mod tests {
                 "revision": 1,
                 "name": "Project",
                 "stage_ref": { "id": "stage-1", "revision": 1 },
+                "layout_refs": [{ "id": "layout-1", "revision": 1 }],
                 "effect_refs": [{ "id": "pulse", "revision": 1 }],
                 "cue_refs": [{ "id": "cue-1", "revision": 1 }],
                 "arrangement_refs": [{ "id": "arrangement-1", "revision": 1 }],
@@ -1922,9 +2057,7 @@ pub(crate) mod tests {
                 "revision": 1,
                 "name": "Stage",
                 "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 4] }],
-                "layout": { "type": "generator", "generator": {
-                    "shape": "matrix", "rows": 2, "columns": 2, "spacing": 64.0
-                }},
+                "layout_ref": { "id": "layout-1", "revision": 1 },
                 "groups": [{
                     "id": "all-fixtures", "name": "All fixtures",
                     "fixtures": { "range": [1, 4] }, "sort_by": "none"
@@ -1932,6 +2065,23 @@ pub(crate) mod tests {
                 "target_sets": [{
                     "id": "all", "name": "All", "selector": { "type": "all" }
                 }]
+            }],
+            "layouts": [{
+                "schema_version": 1,
+                "id": "layout-1",
+                "revision": 1,
+                "name": "Matrix 2×2",
+                "category": "basic",
+                "editor": { "mode": "form" },
+                "geometry": {
+                    "shape": "matrix",
+                    "rows": 2,
+                    "columns": 2,
+                    "fixture_size": { "width": 12.0, "height": 12.0 },
+                    "gap": { "x": 52.0, "y": 52.0 },
+                    "pitch": { "x": 64.0, "y": 64.0 },
+                    "origin": { "x": 0.0, "y": 0.0 }
+                }
             }],
             "effects": [{
                 "schema_version": 1,
@@ -1945,7 +2095,20 @@ pub(crate) mod tests {
                     "range": [0.0, 1.0], "unit": "normalized", "ui_hint": "slider",
                     "automation": "continuous"
                 }],
-                "graph": { "nodes": [] },
+                "graph": { "nodes": [
+                    { "type": "time", "id": "time" },
+                    {
+                        "type": "step_sequence",
+                        "id": "sequence",
+                        "phase": { "node_id": "time", "port": "scalar" },
+                        "steps": [{ "values": { "dimmer": 1.0 } }]
+                    },
+                    {
+                        "type": "attribute_writer",
+                        "id": "output",
+                        "input": { "node_id": "sequence", "port": "attribute_set" }
+                    }
+                ] },
                 "catalog": {
                     "energy": 0.5, "density": 0.5, "motion": "pulse",
                     "colorfulness": 0.5, "strobe_risk": "low",
@@ -1994,9 +2157,7 @@ pub(crate) mod tests {
                 }]
             }]
         });
-        migrate_project_bundle(&legacy.to_string())
-            .expect("valid project fixture migrates")
-            .bundle
+        serde_json::from_value(value).expect("valid V1 project fixture")
     }
 
     #[test]
@@ -2083,6 +2244,30 @@ pub(crate) mod tests {
         disjoint.cues[0].layers.push(disjoint_layer);
         ValidatedProject::validate(disjoint)
             .expect("the same attribute may target disjoint fixtures without a mix policy");
+    }
+
+    #[test]
+    fn requires_an_explicit_mix_for_overlapping_arrangement_cues() {
+        let mut implicit = valid_bundle();
+        let mut overlapping = implicit.arrangements[0].tracks[0].clips[0].clone();
+        overlapping.id = "clip-2".to_string();
+        overlapping.start_tick = 1_920;
+        implicit.arrangements[0].tracks[0].clips.push(overlapping);
+
+        let diagnostics = ValidatedProject::validate(implicit.clone())
+            .expect_err("overlapping Cue writers need an explicit mix");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == CUE_LAYER_ATTRIBUTE_CONFLICT
+                && diagnostic.path.ends_with("clips[1].layer_overrides")
+        }));
+
+        implicit.arrangements[0].tracks[0].clips[1].layer_overrides =
+            serde_json::from_value(json!([{
+                "layer_id": "pulse-layer",
+                "mix_overrides": [{ "attribute_id": "intensity", "policy": "htp" }]
+            }]))
+            .expect("explicit CueClip mix override");
+        ValidatedProject::validate(implicit).expect("explicit overlap mix documents the intent");
     }
 
     #[test]

@@ -86,7 +86,6 @@ export function StagePatchDialog({
               <PatchMetric label="Edited layout" value={String(draftCapacity)} />
               <PatchMetric label="Active Layout" value={String(capacity)} />
               <PatchMetric label="Patched fixtures" value={String(currentCount)} />
-              {advanced && <PatchMetric label="Internal version" value={String(stage.revision)} />}
             </div>
 
             {draftCapacity !== capacity && (
