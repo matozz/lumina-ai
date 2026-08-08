@@ -671,10 +671,19 @@ impl EffectValue {
 }
 
 pub fn deterministic_random(seed: u64, node: EffectNodeHandle, fixture_id: u32, phase: f64) -> f64 {
+    // Keep phase zero as the stopped preview, then enter the first seeded cycle as soon as
+    // transport advances. This avoids holding the stopped frame for an extra beat on playback.
+    let cycle = if phase > 0.0 {
+        phase.floor() + 1.0
+    } else if phase < 0.0 {
+        phase.ceil() - 1.0
+    } else {
+        0.0
+    };
     let mut value = seed
         ^ (u64::from(node.0).wrapping_mul(0x9e37_79b9_7f4a_7c15))
         ^ (u64::from(fixture_id).wrapping_mul(0xbf58_476d_1ce4_e5b9))
-        ^ phase.floor().to_bits();
+        ^ cycle.to_bits();
     value ^= value >> 30;
     value = value.wrapping_mul(0xbf58_476d_1ce4_e5b9);
     value ^= value >> 27;
@@ -1226,6 +1235,21 @@ mod tests {
         assert_ne!(value, deterministic_random(42, node, 10, 3.25));
         assert_ne!(value, deterministic_random(42, node, 9, 4.0));
         assert!((0.0..1.0).contains(&value));
+    }
+
+    #[test]
+    fn random_node_leaves_the_stopped_preview_without_waiting_an_extra_beat() {
+        let node = EffectNodeHandle::from_index(7).expect("node handle");
+        let stopped = deterministic_random(42, node, 9, 0.0);
+        let first_forward = deterministic_random(42, node, 9, 0.01);
+        let first_reverse = deterministic_random(42, node, 9, -0.01);
+
+        assert_ne!(stopped, first_forward);
+        assert_eq!(first_forward, deterministic_random(42, node, 9, 0.99));
+        assert_ne!(first_forward, deterministic_random(42, node, 9, 1.0));
+        assert_ne!(stopped, first_reverse);
+        assert_eq!(first_reverse, deterministic_random(42, node, 9, -0.99));
+        assert_ne!(first_reverse, deterministic_random(42, node, 9, -1.0));
     }
 
     #[test]
