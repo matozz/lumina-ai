@@ -24,16 +24,16 @@ describe("ProjectGroupEditor", () => {
         (output) =>
           output.attributes[0].value.type === "scalar" && output.attributes[0].value.value === 1,
       ),
-    ).toHaveLength(8);
+    ).toHaveLength(40);
 
-    fireEvent.click(screen.getByRole("button", { name: "Save revision" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save group" }));
     const state = useProjectStore.getState();
     expect(activeStage(state.bundle).revision).toBe(2);
-    expect(activeStage(state.bundle).groups[0].fixtures).toHaveLength(8);
+    expect(activeStage(state.bundle).groups[0].fixtures).toHaveLength(40);
     expect(
       exactAsset(state.bundle.stages, { id: "main-stage", revision: 1 })?.groups[0].fixtures,
     ).toEqual({
-      range: [1, 16],
+      range: [1, 80],
     });
 
     window.removeEventListener("workspace:test-fixtures", preview);

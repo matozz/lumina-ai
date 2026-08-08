@@ -12,7 +12,7 @@ describe("WorkspaceRail", () => {
       </TooltipProvider>,
     );
 
-    for (const name of ["Stage", "Effect Lab", "Cues", "Arrange", "Live / Rehearse"]) {
+    for (const name of ["Stage", "Effect Lab", "Cues", "Arrange", "Live"]) {
       const button = screen.getByRole("button", { name });
       button.focus();
       expect(document.activeElement).toBe(button);

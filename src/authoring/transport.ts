@@ -34,8 +34,8 @@ interface AuthoringTransportState {
   sessions: Record<string, AuthoringTransportSession>;
 }
 
-const DEFAULT_LOCAL_TIMING: LocalPreviewTiming = {
-  bpm: 120,
+export const DEFAULT_AUTHORING_LOCAL_TIMING: Readonly<LocalPreviewTiming> = {
+  bpm: 128,
   numerator: 4,
   denominator: 4,
   loopBars: 1,
@@ -93,6 +93,12 @@ export const authoringTransportActions = {
     updateCommand(key, now, (draft) => {
       draft.playback = "paused";
     });
+  },
+  pauseAll(now = monotonicNow()) {
+    const playingKeys = Object.values(useAuthoringTransportStore.getState().sessions)
+      .filter((session) => session.playback === "playing")
+      .map((session) => session.key);
+    for (const key of playingKeys) authoringTransportActions.pause(key, now);
   },
   stop(key: string, now = monotonicNow()) {
     updateCommand(key, now, (session) => {
@@ -186,6 +192,7 @@ export const authoringTransportActions = {
       ...source,
       key: target.key,
       scope: target.scope,
+      playback: source.playback === "playing" ? "paused" : source.playback,
       durationTicks,
       cursorTick: Math.min(source.cursorTick, durationTicks),
       anchorTick: Math.min(source.cursorTick, durationTicks),
@@ -209,7 +216,7 @@ export function authoringSessionKey(scope: AuthoringScope, assetKey: string) {
 
 export function createSession(defaults: AuthoringSessionDefaults): AuthoringTransportSession {
   const durationTicks = positiveInteger(defaults.durationTicks);
-  const localTiming = { ...DEFAULT_LOCAL_TIMING, ...defaults.localTiming };
+  const localTiming = { ...DEFAULT_AUTHORING_LOCAL_TIMING, ...defaults.localTiming };
   validateLocalTiming(localTiming);
   return {
     key: defaults.key,

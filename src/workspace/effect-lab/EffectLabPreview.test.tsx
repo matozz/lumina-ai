@@ -84,7 +84,7 @@ describe("EffectLabPreview", () => {
     });
 
     await waitFor(() => expect(commandMocks.previewProject).toHaveBeenCalledTimes(2));
-    expect(screen.getByText("Gradient · r1")).toBeTruthy();
+    expect(screen.getByText("Gradient · Main Stage")).toBeTruthy();
   });
 });
 

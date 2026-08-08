@@ -102,7 +102,7 @@ export function ProjectGroupEditor() {
               {selected.id} · {selectedFixtures.size}/{fixtureIds.length} fixtures
             </p>
           </div>
-          {dirty && <Badge variant="secondary">Draft</Badge>}
+          {dirty && <Badge variant="secondary">Unsaved</Badge>}
         </div>
 
         <Field>
@@ -182,7 +182,7 @@ export function ProjectGroupEditor() {
             onClick={() => runAction(() => projectActions.saveStageGroup(selected.id, draft))}
           >
             <Save data-icon="inline-start" aria-hidden="true" />
-            Save revision
+            Save group
           </Button>
           <Button
             size="sm"
@@ -217,8 +217,8 @@ export function ProjectGroupEditor() {
           </Button>
         </div>
         <FieldDescription>
-          Save is an authoring transaction: it forks Stage and pinned Draft revisions. Playback
-          expresses motion through TargetingScene weights, never by changing this membership.
+          Save updates this Stage configuration. Playback expresses motion through scene weights,
+          never by changing fixture membership.
         </FieldDescription>
       </section>
     </div>

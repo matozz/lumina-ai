@@ -103,7 +103,7 @@ export function TargetingSceneEditor() {
                 {selected.id} · {draft.steps.length} steps · {references} Cue refs
               </p>
             </div>
-            {dirty && <Badge variant="secondary">Draft</Badge>}
+            {dirty && <Badge variant="secondary">Unsaved</Badge>}
           </div>
 
           <Field>

@@ -1,17 +1,22 @@
 import type { FullDSL } from "@/bridge/types";
+import {
+  DEFAULT_STAGE_COLUMNS,
+  DEFAULT_STAGE_FIXTURE_COUNT,
+  DEFAULT_STAGE_ROWS,
+} from "./defaultProjectBundle";
 
 export function createStarterProject(): FullDSL {
   return {
     schema_version: 4,
     meta: { name: "Untitled DJ Set" },
-    patch: [{ profile_id: "generic-rgb", id_range: [1, 16] }],
+    patch: [{ profile_id: "generic-rgb", id_range: [1, DEFAULT_STAGE_FIXTURE_COUNT] }],
     layout: {
       type: "generator",
       generator: {
         shape: "matrix",
-        rows: 4,
-        columns: 4,
-        spacing: 64,
+        rows: DEFAULT_STAGE_ROWS,
+        columns: DEFAULT_STAGE_COLUMNS,
+        spacing: 22,
         origin: [0, 0],
       },
     },
@@ -19,7 +24,7 @@ export function createStarterProject(): FullDSL {
       {
         id: "all-fixtures",
         name: "All fixtures",
-        fixtures: { range: [1, 16] },
+        fixtures: { range: [1, DEFAULT_STAGE_FIXTURE_COUNT] },
         sort_by: "none",
       },
     ],
@@ -27,7 +32,7 @@ export function createStarterProject(): FullDSL {
     effect_instances: [],
     timeline: {
       ppq: 960,
-      tempo_map: { points: [{ time_tick: 0, bpm: 120 }] },
+      tempo_map: { points: [{ time_tick: 0, bpm: 128 }] },
       tracks: [
         {
           id: "effects",

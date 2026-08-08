@@ -7,7 +7,15 @@ import type { FixtureFramePayload, LayoutCoord } from "../bridge/types";
 import type { ProjectPreviewFrame } from "../bridge/types";
 import { cn } from "../lib/utils";
 
-export const CanvasView = ({ frameSource = "live" }: { frameSource?: "preview" | "live" }) => {
+const INTENSITY_PREVIEW_COLOR: [number, number, number] = [139, 119, 255];
+
+export const CanvasView = ({
+  frameSource = "live",
+  showIntensityWithoutColor = false,
+}: {
+  frameSource?: "preview" | "live";
+  showIntensityWithoutColor?: boolean;
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CanvasRenderer | null>(null);
   const frameCursorRef = useRef<FrameCursor | null>(null);
@@ -37,7 +45,11 @@ export const CanvasView = ({ frameSource = "live" }: { frameSource?: "preview" |
       if (frameSource !== "preview") return;
       const frame = (event as CustomEvent<ProjectPreviewFrame>).detail;
       renderer.initFromLayout(frame.layout_coords);
-      renderer.applyFrame(frame.outputs, true);
+      renderer.applyFrame(
+        frame.outputs,
+        true,
+        showIntensityWithoutColor ? INTENSITY_PREVIEW_COLOR : undefined,
+      );
     };
     const handleLayoutDraft = (event: Event) => {
       if (frameSource !== "preview") return;
@@ -52,7 +64,7 @@ export const CanvasView = ({ frameSource = "live" }: { frameSource?: "preview" |
       window.removeEventListener("engine:project-preview-frame", handleProjectPreview);
       window.removeEventListener("engine:layout-draft-coords", handleLayoutDraft);
     };
-  }, [frameSource]);
+  }, [frameSource, showIntensityWithoutColor]);
 
   // Expose a way to init layout (e.g. from parent component or global event)
   useEffect(() => {
@@ -68,7 +80,11 @@ export const CanvasView = ({ frameSource = "live" }: { frameSource?: "preview" |
       rendererRef.current?.initFromLayout((event as CustomEvent<LayoutCoord[]>).detail);
     };
     const handleFixtureTest = (event: Event) => {
-      rendererRef.current?.applyFrame((event as CustomEvent<FixtureFramePayload[]>).detail, true);
+      rendererRef.current?.applyFrame(
+        (event as CustomEvent<FixtureFramePayload[]>).detail,
+        true,
+        showIntensityWithoutColor ? INTENSITY_PREVIEW_COLOR : undefined,
+      );
     };
 
     window.addEventListener("workspace:test-fixtures", handleFixtureTest);
@@ -82,7 +98,7 @@ export const CanvasView = ({ frameSource = "live" }: { frameSource?: "preview" |
       window.removeEventListener("engine:draft-layout", handleDraftLayout);
       window.removeEventListener("workspace:test-fixtures", handleFixtureTest);
     };
-  }, [frameSource]);
+  }, [frameSource, showIntensityWithoutColor]);
 
   return (
     <div className={cn("flex h-full min-h-0 w-full min-w-0 flex-1 overflow-hidden")}>

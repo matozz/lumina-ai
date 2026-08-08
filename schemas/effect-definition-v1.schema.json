@@ -50,7 +50,11 @@
   "$defs": {
     "AutomationPolicyDSL": {
       "type": "string",
-      "enum": ["continuous", "discrete"]
+      "enum": ["continuous", "discrete", "disabled"]
+    },
+    "CatalogVisibilityDSL": {
+      "type": "string",
+      "enum": ["standard", "advanced", "hidden"]
     },
     "ColorStopDSL": {
       "type": "object",
@@ -75,6 +79,9 @@
     "EffectCatalogDSL": {
       "type": "object",
       "properties": {
+        "category": {
+          "type": ["string", "null"]
+        },
         "colorfulness": {
           "type": "number",
           "format": "float",
@@ -87,11 +94,31 @@
           "maximum": 1.0,
           "minimum": 0.0
         },
+        "deprecated": {
+          "type": "boolean",
+          "default": false
+        },
         "energy": {
           "type": "number",
           "format": "float",
           "maximum": 1.0,
           "minimum": 0.0
+        },
+        "family": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EffectFamilyDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "layout_capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LayoutCapabilityDSL"
+          }
         },
         "mood": {
           "type": "array",
@@ -102,6 +129,22 @@
         "motion": {
           "$ref": "#/$defs/MotionTagDSL"
         },
+        "parameter_summary": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "replacement": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EffectReplacementDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "required_attributes": {
           "type": "array",
           "items": {
@@ -110,10 +153,18 @@
         },
         "strobe_risk": {
           "$ref": "#/$defs/StrobeRiskDSL"
+        },
+        "visibility": {
+          "$ref": "#/$defs/CatalogVisibilityDSL",
+          "default": "standard"
         }
       },
       "additionalProperties": false,
       "required": ["energy", "density", "motion", "colorfulness", "strobe_risk"]
+    },
+    "EffectFamilyDSL": {
+      "type": "string",
+      "enum": ["intensity", "color", "movement", "spatial", "strobe", "utility"]
     },
     "EffectGraphDSL": {
       "type": "object",
@@ -466,9 +517,23 @@
         }
       ]
     },
+    "EffectNodePropertyDSL": {
+      "type": "string",
+      "enum": ["waveform", "attack", "release", "color_stops"]
+    },
     "EffectPortDSL": {
       "type": "string",
-      "enum": ["scalar", "color", "direction", "mask", "attribute_set", "writes"]
+      "enum": [
+        "scalar",
+        "color",
+        "direction",
+        "boolean",
+        "enum",
+        "color_stops",
+        "mask",
+        "attribute_set",
+        "writes"
+      ]
     },
     "EffectPortRefDSL": {
       "type": "object",
@@ -483,9 +548,28 @@
       "additionalProperties": false,
       "required": ["node_id", "port"]
     },
+    "EffectReplacementDSL": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "revision"]
+    },
     "EffectSourceDSL": {
       "type": "string",
       "enum": ["built_in", "project_local", "user_library"]
+    },
+    "LayoutCapabilityDSL": {
+      "type": "string",
+      "enum": ["any", "linear", "matrix", "radial", "coordinates", "targeting_scene"]
     },
     "MathOperationDSL": {
       "type": "string",
@@ -502,17 +586,49 @@
     "ParameterDefinitionDSL": {
       "type": "object",
       "properties": {
+        "advanced": {
+          "type": ["boolean", "null"]
+        },
         "automation": {
           "$ref": "#/$defs/AutomationPolicyDSL"
         },
         "default_value": {
           "$ref": "#/$defs/ParameterValueDSL"
         },
+        "enum_values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "graph_binding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParameterGraphBindingDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "help": {
+          "type": ["string", "null"]
+        },
         "id": {
           "type": "string"
         },
         "name": {
           "type": "string"
+        },
+        "override_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParameterOverridePolicyDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "range": {
           "type": ["array", "null"],
@@ -529,6 +645,23 @@
             }
           ]
         },
+        "required": {
+          "type": ["boolean", "null"]
+        },
+        "safe_fallback": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParameterValueDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "step": {
+          "type": ["number", "null"],
+          "format": "double"
+        },
         "ui_hint": {
           "$ref": "#/$defs/ParameterUiHintDSL"
         },
@@ -542,13 +675,42 @@
       "additionalProperties": false,
       "required": ["id", "name", "value_type", "default_value", "unit", "ui_hint", "automation"]
     },
+    "ParameterGraphBindingDSL": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "type": "string"
+        },
+        "property": {
+          "$ref": "#/$defs/EffectNodePropertyDSL"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["node_id", "property"]
+    },
+    "ParameterOverridePolicyDSL": {
+      "type": "string",
+      "enum": ["cue_override", "effect_only", "locked"]
+    },
     "ParameterUiHintDSL": {
       "type": "string",
-      "enum": ["slider", "color", "segmented", "angle"]
+      "enum": ["slider", "color", "segmented", "angle", "toggle", "select", "color_stops"]
     },
     "ParameterUnitDSL": {
       "type": "string",
-      "enum": ["multiplier", "cycles", "percent", "normalized", "color", "direction", "degrees"]
+      "enum": [
+        "none",
+        "multiplier",
+        "cycles",
+        "percent",
+        "normalized",
+        "color",
+        "direction",
+        "degrees",
+        "boolean",
+        "choice",
+        "color_stops"
+      ]
     },
     "ParameterValueDSL": {
       "oneOf": [
@@ -594,12 +756,57 @@
           },
           "additionalProperties": false,
           "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "enum"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "color_stops"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ColorStopDSL"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
         }
       ]
     },
     "ParameterValueTypeDSL": {
       "type": "string",
-      "enum": ["scalar", "color", "direction"]
+      "enum": ["scalar", "color", "direction", "boolean", "enum", "color_stops"]
     },
     "PhaserStepDSL": {
       "type": "object",

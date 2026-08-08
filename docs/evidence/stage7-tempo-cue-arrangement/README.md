@@ -1,5 +1,8 @@
 # Stage 7 — TempoMap、Cue 与多 Arrangement 验证证据
 
+> 历史证据说明：本页记录 Stage 7 当时的行为。Stage 7.5D 后，步骤 3 的 Pulse + Gradient 若没有为重叠的
+> `intensity` writer 显式选择 mix policy，会被 `CUE_LAYER_ATTRIBUTE_CONFLICT` 阻止。
+
 ## 环境与门禁
 
 - 基线：`main@aa14242`；分支：`codex/tempo-cue-arrangement`。

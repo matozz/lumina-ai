@@ -6,6 +6,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 mod effect;
+mod production_catalog;
 mod project;
 mod project_layout;
 mod project_migration;
@@ -14,6 +15,7 @@ mod timeline;
 mod validation;
 
 pub use effect::*;
+pub use production_catalog::*;
 pub use project::*;
 pub use project_layout::*;
 pub use project_migration::*;

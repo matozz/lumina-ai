@@ -122,7 +122,7 @@ export function createCueAsset(
       `${effectRef.id}-layer`,
       effectRefs.slice(0, index).map((reference) => `${reference.id}-layer`),
     ),
-    effect_ref: { ...effectRef },
+    effect_ref: toAssetRef(effectRef),
     target_set_ref: {
       stage_id: stage.id,
       stage_revision: stage.revision,
@@ -243,9 +243,40 @@ export function cloneAssetRevision(
 }
 
 export function appendExactRef(references: AssetRef[], reference: AssetRef) {
-  if (!references.some((candidate) => assetKey(candidate) === assetKey(reference))) {
-    references.push(reference);
+  const normalized = toAssetRef(reference);
+  const index = references.findIndex((candidate) => assetKey(candidate) === assetKey(normalized));
+  if (index >= 0) references[index] = normalized;
+  else references.push(normalized);
+}
+
+export function normalizeProjectAssetRefs(bundle: ProjectBundle) {
+  bundle.manifest.stage_ref = toAssetRef(bundle.manifest.stage_ref);
+  bundle.manifest.layout_refs = normalizeRefList(bundle.manifest.layout_refs);
+  bundle.manifest.effect_refs = normalizeRefList(bundle.manifest.effect_refs);
+  bundle.manifest.cue_refs = normalizeRefList(bundle.manifest.cue_refs);
+  bundle.manifest.arrangement_refs = normalizeRefList(bundle.manifest.arrangement_refs);
+
+  for (const stage of bundle.stages) stage.layout_ref = toAssetRef(stage.layout_ref);
+  for (const cue of bundle.cues) {
+    cue.compatible_stage_ref = toAssetRef(cue.compatible_stage_ref);
+    for (const layer of cue.layers) layer.effect_ref = toAssetRef(layer.effect_ref);
   }
+  for (const arrangement of bundle.arrangements) {
+    for (const track of arrangement.tracks) {
+      for (const clip of track.clips ?? []) clip.cue_ref = toAssetRef(clip.cue_ref);
+    }
+  }
+  return bundle;
+}
+
+export function toAssetRef(reference: AssetRef): AssetRef {
+  return { id: reference.id, revision: reference.revision };
+}
+
+function normalizeRefList(references: AssetRef[]) {
+  const normalized: AssetRef[] = [];
+  for (const reference of references) appendExactRef(normalized, reference);
+  return normalized;
 }
 
 function cloneNextRevision<T extends { id: string; revision: number }>(
@@ -309,7 +340,7 @@ function slug(value: string) {
   );
 }
 
-function stableSeed(value: string) {
+export function stableSeed(value: string) {
   let hash = 0xcbf29ce484222325n;
   for (const character of value) {
     hash ^= BigInt(character.charCodeAt(0));

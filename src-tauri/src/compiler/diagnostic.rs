@@ -25,7 +25,15 @@ pub const DOC_PARAMETER_INVALID: &str = "DOC_PARAMETER_INVALID";
 pub const DOC_PHASER_REFERENCE_NOT_FOUND: &str = "DOC_PHASER_REFERENCE_NOT_FOUND";
 pub const DOC_PROFILE_NOT_FOUND: &str = "DOC_PROFILE_NOT_FOUND";
 pub const DOC_TIMELINE_TARGET_INVALID: &str = "DOC_TIMELINE_TARGET_INVALID";
+pub const CATALOG_GRAPH_BINDING_INVALID: &str = "CATALOG_GRAPH_BINDING_INVALID";
+pub const CATALOG_METADATA_INVALID: &str = "CATALOG_METADATA_INVALID";
+pub const CATALOG_PARAMETER_INVALID: &str = "CATALOG_PARAMETER_INVALID";
+pub const CATALOG_OUTPUT_INVALID: &str = "CATALOG_OUTPUT_INVALID";
+pub const CUE_RECIPE_INVALID: &str = "CUE_RECIPE_INVALID";
+pub const CUE_RECIPE_UNRESOLVED: &str = "CUE_RECIPE_UNRESOLVED";
+pub const CUE_LAYER_ATTRIBUTE_CONFLICT: &str = "CUE_LAYER_ATTRIBUTE_CONFLICT";
 pub const PROJECT_CAPABILITY_MISMATCH: &str = "PROJECT_CAPABILITY_MISMATCH";
+pub const PROJECT_ASSET_QUARANTINED: &str = "PROJECT_ASSET_QUARANTINED";
 pub const PROJECT_DUPLICATE_ASSET: &str = "PROJECT_DUPLICATE_ASSET";
 pub const PROJECT_REFERENCE_CYCLE: &str = "PROJECT_REFERENCE_CYCLE";
 pub const PROJECT_REFERENCE_NOT_FOUND: &str = "PROJECT_REFERENCE_NOT_FOUND";
@@ -41,6 +49,25 @@ pub struct Diagnostic {
     pub path: String,
     pub message: String,
     pub hint: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub asset: Option<Box<DiagnosticAsset>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recovery: Option<Box<DiagnosticRecovery>>,
+}
+
+#[derive(Serialize, Debug, Clone, PartialEq, Eq)]
+pub struct DiagnosticAsset {
+    pub kind: String,
+    pub id: String,
+    pub revision: u32,
+}
+
+#[derive(Serialize, Debug, Clone, PartialEq, Eq)]
+pub struct DiagnosticRecovery {
+    pub action: String,
+    pub label: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
 }
 
 impl Diagnostic {
@@ -56,7 +83,37 @@ impl Diagnostic {
             path: path.into(),
             message: message.into(),
             hint: Some(hint.into()),
+            asset: None,
+            recovery: None,
         }
+    }
+
+    pub fn with_asset(
+        mut self,
+        kind: impl Into<String>,
+        id: impl Into<String>,
+        revision: u32,
+    ) -> Self {
+        self.asset = Some(Box::new(DiagnosticAsset {
+            kind: kind.into(),
+            id: id.into(),
+            revision,
+        }));
+        self
+    }
+
+    pub fn with_recovery(
+        mut self,
+        action: impl Into<String>,
+        label: impl Into<String>,
+        path: Option<String>,
+    ) -> Self {
+        self.recovery = Some(Box::new(DiagnosticRecovery {
+            action: action.into(),
+            label: label.into(),
+            path,
+        }));
+        self
     }
 
     pub fn json_parse(error: &serde_json::Error) -> Self {

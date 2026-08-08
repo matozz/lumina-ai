@@ -17,7 +17,7 @@ const workspaces: WorkspaceDefinition[] = [
   { id: "effect-lab", label: "Effect Lab", shortLabel: "Lab", icon: FlaskConical },
   { id: "cues", label: "Cues", shortLabel: "Cues", icon: Layers2 },
   { id: "arrange", label: "Arrange", shortLabel: "Arrange", icon: Layers3 },
-  { id: "live", label: "Live / Rehearse", shortLabel: "Live", icon: Activity },
+  { id: "live", label: "Live", shortLabel: "Live", icon: Activity },
 ];
 
 interface WorkspaceRailProps {

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { assetKey, exactAsset } from "@/document/projectModel";
 import { projectActions, useProjectStore } from "@/stores/project";
+import { workspaceActions } from "@/stores/workspace";
 import { AuthoringTransportBar } from "./AuthoringTransportBar";
 import {
   authoringSessionKey,
@@ -13,6 +14,8 @@ describe("AuthoringTransportBar", () => {
   beforeEach(() => {
     localStorage.clear();
     projectActions.reset();
+    workspaceActions.reset();
+    workspaceActions.setAdvancedMode(true);
   });
 
   it("offers shared Play/Pause/Stop/Seek/Loop controls without editing the Effect asset", () => {
@@ -36,6 +39,22 @@ describe("AuthoringTransportBar", () => {
       loopEnabled: true,
     });
     expect(useProjectStore.getState().bundle).toEqual(bundleBefore);
+  });
+
+  it("shows musical position instead of clock internals by default", () => {
+    workspaceActions.setAdvancedMode(false);
+    const reference = projectActions.createEffect("Pulse")!;
+    const state = useProjectStore.getState();
+    const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
+
+    render(
+      <AuthoringTransportBar scope="effect" reference={reference} arrangement={arrangement} />,
+    );
+
+    expect(screen.getByText("Bar 1 · Beat 1")).toBeTruthy();
+    expect(screen.getByLabelText("Musical position").textContent).toBe("1.1.000");
+    expect(screen.queryByLabelText("Local BPM")).toBeNull();
+    expect(screen.queryByText("Follow Arrangement")).toBeNull();
   });
 
   it("keeps Local BPM, 3/4 meter and loop bars session-only and can Follow Arrangement", () => {
@@ -106,7 +125,22 @@ describe("AuthoringTransportBar", () => {
 
     expect(screen.getByText("96 BPM")).toBeTruthy();
     expect(screen.getByText("3/4")).toBeTruthy();
-    expect(screen.getByText("3.2.0")).toBeTruthy();
+    expect(screen.getByText("3.2.000")).toBeTruthy();
+  });
+
+  it("keeps the live timing readouts at fixed widths", () => {
+    const reference = projectActions.createEffect("Pulse")!;
+    const state = useProjectStore.getState();
+    const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
+
+    render(
+      <AuthoringTransportBar scope="effect" reference={reference} arrangement={arrangement} />,
+    );
+
+    expect(screen.getByText("128 BPM").className).toContain("w-[5.25rem]");
+    expect(screen.getByText("4/4").className).toContain("w-12");
+    expect(screen.getByLabelText("Musical position").className).toContain("w-[5.25rem]");
+    expect(screen.getByLabelText("Beat 1 of 4").className).toContain("w-[4.5rem]");
   });
 });
 

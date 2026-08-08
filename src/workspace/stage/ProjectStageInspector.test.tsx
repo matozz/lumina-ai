@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProjectBundle } from "@/bridge/types";
 import { activeStage, exactAsset } from "@/document/projectModel";
 import { projectActions, useProjectStore } from "@/stores/project";
+import { useWorkspaceStore, workspaceActions } from "@/stores/workspace";
 import { ProjectStageInspector } from "./ProjectStageInspector";
 
 const commandMocks = vi.hoisted(() => ({ previewLayout: vi.fn(), previewProject: vi.fn() }));
@@ -17,6 +18,7 @@ describe("ProjectStageInspector Layout workflow", () => {
     vi.clearAllMocks();
     localStorage.clear();
     projectActions.reset();
+    workspaceActions.setAdvancedMode(true);
     commandMocks.previewLayout.mockResolvedValue([]);
     commandMocks.previewProject.mockImplementation(({ project }) =>
       Promise.resolve({
@@ -70,6 +72,54 @@ describe("ProjectStageInspector Layout workflow", () => {
       exactAsset(useProjectStore.getState().bundle.stages, originalStageRef)?.layout_ref,
     ).toEqual(originalLayoutRef);
     expect(useProjectStore.getState().publishedBundle).toBeNull();
+    expect(useWorkspaceStore.getState().activeWorkspace).toBe("effect-lab");
+  });
+
+  it("continues from the active Stage to Effect selection in the simple workflow", async () => {
+    workspaceActions.setAdvancedMode(false);
+    render(<ProjectStageInspector />);
+    await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
+
+    expect(screen.queryByRole("button", { name: "Groups" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Preview Effects" }));
+    expect(useWorkspaceStore.getState().activeWorkspace).toBe("effect-lab");
+  });
+
+  it("automatically materializes Layout fixtures without exposing remap configuration", async () => {
+    workspaceActions.setAdvancedMode(false);
+    const circleRef = useProjectStore
+      .getState()
+      .bundle.manifest.layout_refs.find((reference) => reference.id === "circle-16")!;
+    projectActions.setSelectedLayoutRef(circleRef);
+    render(<ProjectStageInspector />);
+    await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole("button", { name: "Use on Stage" }));
+    expect(screen.getByText("Areas adapt automatically")).toBeTruthy();
+    expect(screen.queryByRole("combobox")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Update Stage & choose an Effect" }));
+    expect(activeStage(useProjectStore.getState().bundle).patch).toEqual([
+      { profile_id: "generic-rgb", id_range: [1, 37] },
+    ]);
+    expect(useWorkspaceStore.getState().activeWorkspace).toBe("effect-lab");
+  });
+
+  it("offers to sync an older active Circle whose fixture count no longer matches the Layout", async () => {
+    workspaceActions.setAdvancedMode(false);
+    const state = useProjectStore.getState();
+    const bundle = structuredClone(state.bundle);
+    const circleRef = bundle.manifest.layout_refs.find(
+      (reference) => reference.id === "circle-16",
+    )!;
+    activeStage(bundle).layout_ref = circleRef;
+    useProjectStore.setState({ bundle, selectedLayoutRef: circleRef });
+
+    render(<ProjectStageInspector />);
+    await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
+
+    expect(screen.getByText("Needs sync")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Use on Stage" })).toBeTruthy();
   });
 
   it("keeps an unsaved Layout Draft when Stage subviews update the bundle", async () => {
@@ -92,7 +142,7 @@ describe("ProjectStageInspector Layout workflow", () => {
     expect(screen.getByText("Unsaved")).toBeTruthy();
   });
 
-  it("opens Groups and TargetSets in expanded responsive dialogs", async () => {
+  it("opens Groups and fixture areas in expanded responsive dialogs", async () => {
     render(<ProjectStageInspector />);
     await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
 
@@ -102,12 +152,12 @@ describe("ProjectStageInspector Layout workflow", () => {
     expect(screen.getByRole("grid", { name: "Fixture Group membership" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "TargetSets" }));
-    expect(screen.getByText("TargetSet editor")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Areas" }));
+    expect(screen.getByText("Fixture area editor")).toBeTruthy();
     expect(screen.getByRole("grid", { name: "TargetSet fixture preview" })).toBeTruthy();
   });
 
-  it("previews and saves a smaller Layout while reporting Stage capacity separately", async () => {
+  it("previews and saves a smaller Layout without constraining it to the Stage fixture count", async () => {
     render(<ProjectStageInspector />);
     await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
 
@@ -119,30 +169,22 @@ describe("ProjectStageInspector Layout workflow", () => {
       const previewLayout = calls[calls.length - 1]?.[0] as ProjectBundle["layouts"][number];
       expect(previewLayout.geometry).toMatchObject({ rows: 2, columns: 2 });
     });
-    expect(
-      screen.getByText(/previews 4 positions while this Stage patches 16 fixtures/),
-    ).toBeTruthy();
+    expect(screen.queryByText(/patches 80 fixtures/)).toBeNull();
     expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(
       false,
     );
   });
 
-  it("shows Layout positions beyond the Stage patch and exposes patch configuration", async () => {
+  it("keeps larger Layout previews independent from advanced fixture patch controls", async () => {
     render(<ProjectStageInspector />);
     await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
 
-    fireEvent.change(screen.getByLabelText("Rows"), { target: { value: "5" } });
-    expect(screen.getByText(/4 unpatched positions use dashed Canvas borders/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /Stage patch: 16 fixtures/ }));
-
-    expect(screen.getByText("Configure Stage patch")).toBeTruthy();
-    expect(screen.getByText(/A 21×45 Layout contains 945 positions/)).toBeTruthy();
-    expect(screen.getByText("Draft is not on Stage yet")).toBeTruthy();
-    expect(screen.getByText(/This Draft has 20 positions/)).toBeTruthy();
-    expect(screen.getByLabelText("Fixture count")).toHaveProperty("value", "16");
+    fireEvent.change(screen.getByLabelText("Rows"), { target: { value: "9" } });
+    expect(screen.queryByText(/unpatched positions/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /Stage patch/ })).toBeNull();
   });
 
-  it("edits circles through rings, ring gap, and shared fixture size", async () => {
+  it("edits circles through rings, fixture gap, and shared fixture size", async () => {
     const circleRef = useProjectStore
       .getState()
       .bundle.manifest.layout_refs.find((reference) => reference.id === "circle-16");
@@ -153,7 +195,8 @@ describe("ProjectStageInspector Layout workflow", () => {
     await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
 
     expect(screen.getByLabelText("Rings")).toBeTruthy();
-    expect(screen.getByLabelText("Ring gap")).toBeTruthy();
+    expect(screen.getByLabelText("Fixtures per ring step")).toHaveProperty("value", "6");
+    expect(screen.getByLabelText("Fixture gap")).toBeTruthy();
     expect(screen.getByLabelText("Fixture width")).toBeTruthy();
     expect(screen.getByLabelText("Fixture height")).toBeTruthy();
     expect(screen.queryByLabelText("Ring increment")).toBeNull();
@@ -166,7 +209,7 @@ describe("ProjectStageInspector Layout workflow", () => {
       expect(previewLayout.geometry).toMatchObject({
         shape: "circle",
         rings: 2,
-        increment: 5,
+        increment: 6,
       });
     });
   });

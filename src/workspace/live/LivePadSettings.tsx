@@ -1,7 +1,6 @@
 import type { LiveEffectInfo } from "@/bridge/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { engineSelectors, useEngineStore } from "@/stores/engine";
 import {
   type LivePadMode,
   useWorkspaceStore,
@@ -18,15 +17,9 @@ export function LivePadSettings({
   selectedEffectId: string | null;
 }) {
   const configs = useWorkspaceStore(workspaceSelectors.livePadConfigs);
-  const draft = useEngineStore(engineSelectors.parsedDsl);
   const effect = effects.find((candidate) => candidate.instance_id === selectedEffectId);
   if (!effect) return null;
   const config = configFor(effect.instance_id, configs);
-  const draftDefinition = draft?.effect_definitions.find(
-    (candidate) => candidate.id === effect.definition_id,
-  );
-  const draftAhead =
-    (draftDefinition?.revision ?? effect.definition_revision) > effect.definition_revision;
 
   const update = (changes: Partial<typeof config>) => {
     workspaceActions.setLivePadConfig(effect.instance_id, { ...config, ...changes });
@@ -40,15 +33,8 @@ export function LivePadSettings({
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-xs font-medium">{effect.name}</p>
-          <p className="text-muted-foreground font-mono text-[9px]">
-            Live r{effect.definition_revision} · {effect.target_group_id}
-          </p>
+          <p className="text-muted-foreground text-[9px]">Fixtures: {effect.target_group_id}</p>
         </div>
-        {draftAhead && (
-          <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[9px] text-amber-300">
-            Draft newer
-          </span>
-        )}
       </div>
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-1 text-[10px] text-zinc-400">

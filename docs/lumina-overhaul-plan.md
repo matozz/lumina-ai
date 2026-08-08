@@ -911,15 +911,25 @@ LayoutPreset、动态 Targeting 或 Production Catalog。
 
 2026-08-05：7.5B/7.5C 已按
 [`stage7-5bc-acceptance.md`](./stage7-5bc-acceptance.md) 完成 scoped 退出。Stage 7.5 总状态仍为
-`in_progress`；7.5D Production Catalog 与 7.5E 全 Stage 收口未开始，本次明确停止在 7.5C。
+`in_progress`；7.5D 现已按 [`stage7-5d-acceptance.md`](./stage7-5d-acceptance.md) 完成 scoped 退出，7.5E
+全 Stage release closure 未开始。
 
 ### 7.5D Production Effect/Cue Catalog
 
-- [ ] 用 Effect parameter schema 驱动完整编辑器，覆盖 waveform、speed、phase、width、transition、颜色、强度和 A/B revision preview。
-- [ ] Cue Builder 改为 layer list + selected-layer editor，并支持 reorder、mute/solo、duplicate 和受控 override。
-- [ ] 审计历史配置，将其分类为保留、重写、合并、隐藏或 legacy fixture；将被重写的旧界面不先行修补。
-- [ ] 建立覆盖频闪/节奏、慢速氛围、空间扫描、gradient 和 transition 的 Production Effect/Cue Catalog。
-- [ ] 每个效果提供有效参数、capability、energy/density/motion、适用布局和 strobe risk metadata。
+- [x] 用 Effect parameter schema 驱动完整编辑器，覆盖 waveform、speed、phase、width、transition、颜色、强度和 A/B revision preview。
+- [x] Cue Builder 改为 layer list + selected-layer editor，并支持 reorder、mute/solo、duplicate 和受控 override。
+- [x] 审计历史配置，将其分类为保留、重写、合并、隐藏或 legacy fixture；将被重写的旧界面不先行修补。
+- [x] 建立覆盖频闪/节奏、慢速氛围、空间扫描、gradient 和 transition 的 Production Effect/Cue Catalog。
+- [x] 每个效果提供有效参数、capability、energy/density/motion、适用布局和 strobe risk metadata。
+
+2026-08-05：7.5D 建立 16 个 Production Effect、8 个 capability-resolved Cue recipe、protected
+Effect/Cue working draft、统一 Rust Catalog validator、multi-tick golden、四类 Layout compatibility matrix、
+30×30 五层 A/B 60Hz gate 和真实 Tauri 主路径。18 template / 43 legacy Effect 不再进入普通 Catalog；必要
+migration/golden consumer 保留。7.5D scoped complete，并明确停止，不提前勾选 7.5E。
+
+2026-08-05 用户反馈复查：8 个默认 Cue recipe 均收敛为单一视觉意图；Project Cue 中覆盖相同 fixture、写入相同
+attribute 的后续 layer 必须显式声明 mix policy。隐式 Pulse + Gradient、双 movement intensity 或双 transition
+intensity composition 会在 Rust validation 阶段失败，不进入 preview/save。
 
 ### 7.5E 验证与收口
 
@@ -1149,15 +1159,15 @@ flowchart LR
 
 ## Handoff
 
-- Current Stage: Stage 7.5 为 `in_progress`；7.5A、7.5B、7.5C 已完成 scoped 退出；7.5D/7.5E 未开始。
-- Slice completed: 独立 LayoutDefinition/迁移、Layout Library/Draft/Canvas、Stage topology impact/remap、可视化 TargetSet/TargetingScene、预计算 spatial weight cache 与确定性运行时全部接通；补充完成独立容量 preview、显式 Patch revision editor、跨子视图 Draft 保持、简化整数几何、全局/单 fixture size、全 authoring speed 倍率约束和大布局 Group/TargetSet Dialog；Stage 7/7.5A revision 和 AuthoringTransport 边界保留。
-- Commits: `8402091`、`0c79132`、`871b6cb`、`c99b8aa`、`e872efd`、`bda8f7a`、`c8fb70c`，以及本次 7.5B/C 验收文档提交。
-- Files changed: Project schema/migration/compiler/store；Stage Layout/Group/TargetSet/Scene 工作区；删除已完成 capability parity 的 V4 Stage Setup shell；新增 ADR-0012 与 7.5B/C acceptance。
-- Validation: `pnpm check:all`；60 frontend files/163 tests；112 Rust unit + 12 integration/contracts；app-only debug bundle；真实 Tauri Duplicate/Edit/Save As/Canvas/impact/remap/TargetSet/Scene/save-reopen/keyboard/inline recovery，并补测 900-patch Stage 上 21×45/945 Draft、45 unpatched positions、显式 Patch recovery、整数输入、跨 Groups transaction Draft 保持、全 speed 倍率菜单与大布局 Dialog。
-- ADRs added/updated: ADR-0012 Accepted 并补充实现 commits；ADR-0002、ADR-0006、ADR-0010、ADR-0011 继续成立。
-- Risks opened/closed: R-028 closed；R-031 closed；R-019 的默认 debug DMG bundler 问题仍 open，但 app-only bundle 成功且不阻塞本 scope。
-- Remaining exit criteria: 7.5B/7.5C 无剩余 scoped blocker。Production Effect/Cue Catalog（7.5D）与 Stage 7.5 全目录/整链路收口（7.5E）保持未实现。
-- Recommended next slice: 停止当前 Goal，不进入 7.5D。只有新的显式 Goal 才启动 Production Effect/Cue Catalog。
+- Current Stage: Stage 7.5 为 `in_progress`；7.5A、7.5B、7.5C、7.5D 已完成 scoped 退出；7.5E 未开始。
+- Slice completed: 16 Effect / 8 Cue recipe Production Catalog、schema-driven Effect Lab、protected Effect/Cue working draft、Cue layer selected editor、A/B/LKG、high-risk confirmation、unified Rust validation、recoverable Project open、golden/compatibility/performance/native acceptance；Stage/Target/revision/AuthoringTransport 边界保留。
+- Commits: `48c1237`、`2b85218`、`0a02f7f`、`57cf17a`、`95612bb`、`0b0c58e`，以及本次 7.5D 验收文档提交。
+- Files changed: Production catalog/compatibility/golden；schema/generated TS；Rust document/compiler/commands/evaluator；frontend Effect/Cue draft stores/workspaces；ADR-0013、audit、acceptance 与 native evidence。
+- Validation: `pnpm check`（63 frontend files / 171 tests）、`pnpm check:rust`（118 unit + 15 integration/contract）、`pnpm catalog:check`、`pnpm tauri build --debug --bundles app`；16×6×16 golden；4-layout compatibility；30×30/900 fixtures × 5 layers × 180 random seeks；真实 Tauri Customize/invalid-LKG/recovery/Effect Save/Cue layer edit/TargetingScene/Cue Save/Arrangement/reopen/high-risk/keyboard/1100×720。
+- ADRs added/updated: ADR-0013 Accepted 并补充实现 commits；ADR-0004、ADR-0005、ADR-0006、ADR-0010、ADR-0011、ADR-0012 继续成立。
+- Risks opened/closed: R-032、R-033、R-034 closed；R-019 的默认 debug DMG bundler 问题仍 open，app-only debug bundle 成功且不阻塞本 scope。
+- Remaining exit criteria: 7.5D 无剩余 scoped blocker。7.5E 的全 Stage 7.5 release closure、最终 legacy 删除判定和 release bundle/长时矩阵保持未实现。
+- Recommended next slice: 停止当前 Goal，不进入 7.5E。只有新的显式 Goal 才启动 Stage 7.5 release closure。
 
 ## 19. ADR 规范
 
@@ -1187,6 +1197,7 @@ flowchart LR
 | ADR-0010 | TempoMap 与 Stage/Effect/Cue/Arrangement 资产边界         | 7     | accepted                         |
 | ADR-0011 | Authoring Preview Clock、Transport 与 CueClip Timeline    | 7.5   | accepted                         |
 | ADR-0012 | LayoutPreset、Stage upgrade 与动态 TargetSet/Spatial Mask | 7.5   | accepted                         |
+| ADR-0013 | Production catalog、safe authoring 与 validation          | 7.5   | accepted                         |
 
 ## 20. Progress Ledger
 
@@ -1309,6 +1320,10 @@ flowchart LR
 | 2026-08-05 | 7.5B/C   | Scoped final gate              | completed  | 本次交接提交            | `check:all`；150 frontend；119 Rust；debug app；native remap/reopen/keyboard   | R-031 closed；7.5D/7.5E 未开始                                 | 停止；等待显式 7.5D Goal                    |
 | 2026-08-05 | 7.5B/C   | Layout workflow feedback       | completed  | 本次补充提交            | `check:all`；157 frontend；121 Rust；native 10×10/integer/Draft/speed menu     | 容量差异归 Use on Stage；共用 controls；beat-sync speed only   | 停止；不进入 7.5D                           |
 | 2026-08-05 | 7.5B/C   | Patch + large-grid feedback    | completed  | `c8fb70c`               | `check:all`；163 frontend；124 Rust；native 21×45/patch/speed/dialog           | Layout capacity ≠ Patch；显式 Stage revision；大网格独立编辑   | 停止；不进入 7.5D                           |
+| 2026-08-05 | 7.5D     | Catalog audit + ADR            | started    | 本切片提交              | 18 templates；43 legacy Effects；schema/consumer audit                         | ADR-0013；R-032–R-034 open                                     | contract + unified validator                |
+| 2026-08-05 | 7.5D     | Catalog + safe authoring       | completed  | `2b85218`、`0a02f7f`    | 16 Effects/8 recipes；schema；draft；Effect/Cue UI                             | exact refs；read-only fork                                     | validator + recovery + performance          |
+| 2026-08-05 | 7.5D     | Validation + recovery          | completed  | `57cf17a`               | sampled/strobe；quarantine；missing ref；30×30 A/B                             | R-032–R-034 closed                                             | real native acceptance                      |
+| 2026-08-05 | 7.5D     | Native fixes + scoped close    | completed  | `95612bb`、`0b0c58e`    | full gates；debug app；native main path/min window                             | two native regressions fixed；7.5E untouched                   | stop；wait for explicit 7.5E Goal           |
 
 ## 21. Open Risks
 
@@ -1345,6 +1360,9 @@ flowchart LR
 | R-029 | Lab/Cue/Arrange 的作者时钟隐藏且语义分裂，首 BPM、固定 PPQ/4/4 造成错误预览           | high     | 7.5         | 共享 AuthoringTransport/PreviewClock；读取完整 TempoMap/TimeSignatureMap；原生回归          | closed |
 | R-030 | 最小 CueTimelinePanel 丢失 zoom、snap、resize、键盘和 typed automation 编辑           | critical | 7.5         | production ArrangementTimeline + CueClip adapter；rAF DOM preview；单 transaction           | closed |
 | R-031 | 无调用者的 V4 Stage Setup/Timeline reference shell 可能与当前资产工作区继续漂移       | medium   | 7.5         | Timeline 与 Stage Setup 能力完成迁移和回归后删除旧 shell                                    | closed |
+| R-032 | 非法 Effect/Cue input 污染 Project/history                                            | critical | 7.5D        | working draft + validated Save + last-known-good                                            | closed |
+| R-033 | built-in 修订被静默修改，破坏 Cue/Arrangement 重放                                    | critical | 7.5D        | read-only exact revision；Customize fork；explicit upgrade                                  | closed |
+| R-034 | Cue recipe 绑定 fixture ID/name，换 Stage 后失效                                      | high     | 7.5D        | capability/type selector resolver + stable diagnostics                                      | closed |
 
 ## 22. Deferred Backlog
 

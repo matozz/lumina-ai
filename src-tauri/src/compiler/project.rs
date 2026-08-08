@@ -919,7 +919,8 @@ fn cue_keyframes_for_clip(
 mod tests {
     use super::*;
     use crate::document::{
-        valid_bundle, AssetRef, GridZone, TargetSetDefinition, TargetSetRef, TargetSetSelector,
+        builtin_production_catalog, resolve_cue_recipe, valid_bundle, AssetRef, CueRecipeRef,
+        GridZone, TargetSetDefinition, TargetSetRef, TargetSetSelector,
     };
     use crate::engine::profile::{AttributeValue, INTENSITY_ATTRIBUTE};
     use crate::engine::render::{render_at, RenderSource, RenderTime};
@@ -970,32 +971,32 @@ mod tests {
         .expect("constant effect graph");
         bundle.effects[0].name = "Pulse".to_string();
         bundle.effects[0].graph = constant_graph;
-        let mut gradient = bundle.effects[0].clone();
-        gradient.id = "gradient".to_string();
-        gradient.name = "Gradient".to_string();
-        bundle.effects.push(gradient);
+        let mut secondary = bundle.effects[0].clone();
+        secondary.id = "secondary-intensity".to_string();
+        secondary.name = "Secondary Intensity".to_string();
+        bundle.effects.push(secondary);
         bundle.manifest.effect_refs.push(AssetRef {
-            id: "gradient".to_string(),
+            id: "secondary-intensity".to_string(),
             revision: 1,
         });
 
         bundle.cues[0].layers[0].parameter_overrides.clear();
-        let mut gradient_layer = bundle.cues[0].layers[0].clone();
-        gradient_layer.id = "gradient-layer".to_string();
-        gradient_layer.effect_ref.id = "gradient".to_string();
-        gradient_layer.target_set_ref = TargetSetRef {
+        let mut secondary_layer = bundle.cues[0].layers[0].clone();
+        secondary_layer.id = "secondary-intensity-layer".to_string();
+        secondary_layer.effect_ref.id = "secondary-intensity".to_string();
+        secondary_layer.target_set_ref = TargetSetRef {
             stage_id: "stage-1".to_string(),
             stage_revision: 1,
             target_set_id: "zones-3x3".to_string(),
         };
-        gradient_layer.phase = 0.25;
-        gradient_layer.priority = 2;
-        gradient_layer.mix_overrides = vec![CueMixOverride {
+        secondary_layer.phase = 0.25;
+        secondary_layer.priority = 2;
+        secondary_layer.mix_overrides = vec![CueMixOverride {
             attribute_id: INTENSITY_ATTRIBUTE.to_string(),
             policy: CueMixPolicy::Add,
         }];
-        bundle.cues[0].name = "Pulse + Gradient".to_string();
-        bundle.cues[0].layers.push(gradient_layer);
+        bundle.cues[0].name = "Explicit Add Mix".to_string();
+        bundle.cues[0].layers.push(secondary_layer);
         bundle
     }
 
@@ -1054,6 +1055,176 @@ mod tests {
             .expect("TargetingScene ref"),
         );
         bundle
+    }
+
+    fn production_catalog_project() -> ProjectBundle {
+        let mut bundle = targeting_project(900, 30, 30);
+        let catalog = builtin_production_catalog().expect("Production Catalog");
+        let stage_ref = bundle.manifest.stage_ref.clone();
+        let recipe_refs = [
+            ("recipe.four-on-floor", 1),
+            ("recipe.rainbow-wash", 1),
+            ("recipe.radial-bloom", 1),
+            ("recipe.strip-traveler", 1),
+            ("recipe.build-transition", 2),
+        ];
+        let mut resolved = recipe_refs
+            .iter()
+            .enumerate()
+            .map(|(index, (id, revision))| {
+                resolve_cue_recipe(
+                    &catalog,
+                    &bundle,
+                    &CueRecipeRef {
+                        id: (*id).to_string(),
+                        revision: *revision,
+                    },
+                    &stage_ref,
+                    format!("production-layer-{index}"),
+                    1,
+                    format!("Production Layer {index}"),
+                )
+                .unwrap_or_else(|diagnostics| panic!("{id} resolves: {diagnostics:#?}"))
+            })
+            .collect::<Vec<_>>();
+        let mut cue = resolved.remove(0);
+        cue.id = "production-five-layer".to_string();
+        cue.name = "Explicit Five-layer Stress".to_string();
+        for (index, resolved_cue) in resolved.into_iter().enumerate() {
+            let mut layer = resolved_cue
+                .layers
+                .into_iter()
+                .next()
+                .expect("Production recipe has one coherent layer");
+            layer.layer = i32::try_from(index + 1).expect("five layers fit i32");
+            layer.priority = layer.layer;
+            layer.mix_overrides.push(CueMixOverride {
+                attribute_id: INTENSITY_ATTRIBUTE.to_string(),
+                policy: CueMixPolicy::Htp,
+            });
+            cue.layers.push(layer);
+        }
+        cue.capability_summary.required_attributes =
+            vec!["color.rgb".to_string(), INTENSITY_ATTRIBUTE.to_string()];
+        cue.nominal_length_ticks = 15_360;
+
+        let effect_refs = cue
+            .layers
+            .iter()
+            .map(|layer| (layer.effect_ref.id.clone(), layer.effect_ref.revision))
+            .collect::<BTreeSet<_>>();
+        bundle.effects = catalog
+            .effects
+            .iter()
+            .filter(|effect| effect_refs.contains(&(effect.id.clone(), effect.revision)))
+            .cloned()
+            .collect();
+        bundle.manifest.effect_refs = effect_refs
+            .into_iter()
+            .map(|(id, revision)| AssetRef { id, revision })
+            .collect();
+        bundle.manifest.cue_refs = vec![AssetRef {
+            id: cue.id.clone(),
+            revision: cue.revision,
+        }];
+        bundle.cues = vec![cue];
+
+        let arrangement = &mut bundle.arrangements[0];
+        arrangement.tempo_map = serde_json::from_value(serde_json::json!({
+            "points": [
+                { "time_tick": 0, "bpm": 128.0 },
+                { "time_tick": 15_360, "bpm": 96.0 },
+                { "time_tick": 30_720, "bpm": 140.0 }
+            ]
+        }))
+        .expect("tempo map");
+        arrangement.time_signatures = vec![
+            TimeSignaturePoint {
+                time_tick: 0,
+                numerator: 4,
+                denominator: 4,
+            },
+            TimeSignaturePoint {
+                time_tick: 15_360,
+                numerator: 7,
+                denominator: 8,
+            },
+            TimeSignaturePoint {
+                time_tick: 30_720,
+                numerator: 3,
+                denominator: 4,
+            },
+        ];
+        arrangement.length_ticks = 61_440;
+        let clip = &mut arrangement.tracks[0].clips[0];
+        clip.cue_ref = bundle.manifest.cue_refs[0].clone();
+        clip.start_tick = 0;
+        clip.duration_tick = arrangement.length_ticks;
+        clip.source_offset_tick = 0;
+        clip.playback = crate::document::ClipPlaybackDSL::Loop;
+        clip.layer_overrides.clear();
+        bundle
+    }
+
+    fn measured_render_signatures(
+        snapshot: &CompiledProjectSnapshot,
+        beats: &[f64],
+    ) -> (std::time::Duration, Vec<u64>) {
+        let _warm = render_at(
+            &snapshot.show,
+            RenderTime { beat: 0.0 },
+            RenderSource::Timeline,
+        );
+        let started = Instant::now();
+        let rendered = beats
+            .iter()
+            .map(|beat| {
+                render_at(
+                    &snapshot.show,
+                    RenderTime { beat: *beat },
+                    RenderSource::Timeline,
+                )
+            })
+            .collect::<Vec<_>>();
+        let elapsed = started.elapsed();
+        let signatures = rendered
+            .iter()
+            .zip(beats)
+            .map(|(frames, beat)| {
+                assert_eq!(frames.len(), 900);
+                assert_eq!(
+                    *frames,
+                    render_at(
+                        &snapshot.show,
+                        RenderTime { beat: *beat },
+                        RenderSource::Timeline,
+                    )
+                );
+                let payload = frames
+                    .iter()
+                    .map(|frame| frame.to_payload())
+                    .collect::<Vec<_>>();
+                let mut hash = 0xcbf2_9ce4_8422_2325_u64;
+                for byte in serde_json::to_vec(&payload).expect("frame payload serializes") {
+                    hash ^= u64::from(byte);
+                    hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+                }
+                hash
+            })
+            .collect();
+        (elapsed, signatures)
+    }
+
+    fn assert_60hz_average_budget(label: &str, elapsed: std::time::Duration, frame_count: usize) {
+        let seconds_per_frame = elapsed.as_secs_f64() / frame_count as f64;
+        eprintln!("{label}: {:.3} ms/frame", seconds_per_frame * 1_000.0);
+        if cfg!(debug_assertions) {
+            return;
+        }
+        assert!(
+            seconds_per_frame <= 1.0 / 60.0,
+            "{label} average exceeded 60Hz: {elapsed:?} for {frame_count} frames"
+        );
     }
 
     #[test]
@@ -1375,10 +1546,7 @@ mod tests {
 
         assert_eq!(first, replay);
         assert!(first.iter().all(|frame| frame.len() == 1_000));
-        assert!(
-            elapsed.as_secs_f64() / beats.len() as f64 <= 1.0 / 60.0,
-            "1,000 fixture parallel targeting average exceeded 60Hz: {elapsed:?}"
-        );
+        assert_60hz_average_budget("1,000 fixture parallel targeting", elapsed, beats.len());
     }
 
     #[test]
@@ -1413,12 +1581,46 @@ mod tests {
             })
             .collect();
         assert_eq!(first, replay);
-        assert!(
-            elapsed.as_secs_f64() / beats.len() as f64 <= 1.0 / 60.0,
-            "30×30 render average exceeded 60Hz: {:?} for {} frames",
-            elapsed,
-            beats.len()
+        assert_60hz_average_budget("30×30 random seek render", elapsed, beats.len());
+    }
+
+    #[test]
+    fn production_five_layer_ab_seek_and_replay_fit_the_30_by_30_60hz_budget() {
+        let pinned_bundle = production_catalog_project();
+        assert_eq!(pinned_bundle.cues[0].layers.len(), 5);
+        let mut working_bundle = pinned_bundle.clone();
+        working_bundle.cues[0].layers[1].phase += 0.25;
+
+        let pinned = Compiler::compile_active_project(
+            ValidatedProject::validate(pinned_bundle).expect("pinned Production Project validates"),
+        )
+        .expect("pinned Production Project compiles");
+        let working = Compiler::compile_active_project(
+            ValidatedProject::validate(working_bundle)
+                .expect("working Production Project validates"),
+        )
+        .expect("working Production Project compiles");
+        assert_eq!(
+            pinned.cues.values().next().map(|cue| cue.layers.len()),
+            Some(5)
         );
+        let beats = (0..180)
+            .map(|index| f64::from((index * 997) % 61_440) / 960.0)
+            .collect::<Vec<_>>();
+
+        let (pinned_elapsed, pinned_signatures) = measured_render_signatures(&pinned, &beats);
+        let (working_elapsed, working_signatures) = measured_render_signatures(&working, &beats);
+        assert_ne!(
+            pinned_signatures, working_signatures,
+            "A/B candidates must remain observably distinct"
+        );
+        for (label, elapsed) in [("pinned", pinned_elapsed), ("working/LKG", working_elapsed)] {
+            assert_60hz_average_budget(
+                &format!("{label} 30×30 five-layer render"),
+                elapsed,
+                beats.len(),
+            );
+        }
     }
 
     #[test]

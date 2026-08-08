@@ -15,18 +15,26 @@ export interface PreviewFixtureOutput {
   tilt?: number;
 }
 
-export function toPreviewOutput(frame: FixtureFramePayload): PreviewFixtureOutput {
+export function toPreviewOutput(
+  frame: FixtureFramePayload,
+  intensityPreviewColor?: [number, number, number],
+): PreviewFixtureOutput {
   const attributes = new Map(frame.attributes.map((attribute) => [attribute.id, attribute.value]));
   const color = readColor(attributes.get(COLOR_RGB_ATTRIBUTE));
+  const dimmer = readScalar(attributes.get(INTENSITY_ATTRIBUTE));
+  const visibleColor =
+    intensityPreviewColor && dimmer > 0 && color.every((channel) => channel === 0)
+      ? intensityPreviewColor
+      : color;
   const pan = readAngle(attributes.get(PAN_ATTRIBUTE));
   const tilt = readAngle(attributes.get(TILT_ATTRIBUTE));
 
   return {
     id: frame.id,
-    r: color[0],
-    g: color[1],
-    b: color[2],
-    dimmer: readScalar(attributes.get(INTENSITY_ATTRIBUTE)),
+    r: visibleColor[0],
+    g: visibleColor[1],
+    b: visibleColor[2],
+    dimmer,
     ...(pan === undefined ? {} : { pan }),
     ...(tilt === undefined ? {} : { tilt }),
   };

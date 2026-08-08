@@ -4,6 +4,11 @@ use super::{
 };
 
 const METRIC_EPSILON: f64 = 0.000_001;
+const MAX_CIRCLE_RING_DENSITY: u32 = 6;
+
+fn circle_ring_density(increment: u32) -> u32 {
+    increment.clamp(1, MAX_CIRCLE_RING_DENSITY)
+}
 
 pub fn layout_fixture_size(layout: &LayoutDefinition) -> LayoutSize {
     match &layout.geometry {
@@ -67,6 +72,20 @@ pub fn layout_capacity(layout: &LayoutDefinition) -> usize {
         LayoutGeometry::Formula { formula, .. } => formula.count as usize,
         LayoutGeometry::SvgPath { svg_path, .. } => svg_path.sample_count as usize,
         LayoutGeometry::Custom { fixtures, .. } => fixtures.len(),
+    }
+}
+
+pub fn layout_authoring_capacity(layout: &LayoutDefinition) -> usize {
+    match &layout.geometry {
+        LayoutGeometry::Circle {
+            rings, increment, ..
+        } => {
+            1 + (circle_ring_density(*increment) as usize)
+                * (*rings as usize)
+                * ((*rings + 1) as usize)
+                / 2
+        }
+        _ => layout_capacity(layout),
     }
 }
 
@@ -160,14 +179,14 @@ pub fn validate_layout_geometry(layout: &LayoutDefinition) -> Result<(), String>
                 || *ring_pitch <= 0.0
             {
                 return Err(
-                    "Circle fixture size and pitch must be positive; ring gap may be zero."
+                    "Circle fixture size and spacing must be positive; fixture gap may be zero."
                         .to_string(),
                 );
             }
             let diameter = fixture_size.width.max(fixture_size.height);
             if (*ring_pitch - diameter - *ring_gap).abs() > METRIC_EPSILON {
                 return Err(
-                    "Circle ring pitch must equal fixture diameter plus ring gap.".to_string(),
+                    "Circle spacing must equal fixture diameter plus fixture gap.".to_string(),
                 );
             }
         }

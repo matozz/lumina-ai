@@ -8,6 +8,7 @@ import type {
 import { assetKey } from "./projectModel";
 
 const METRIC_EPSILON = 0.000_001;
+export const MAX_CIRCLE_RING_DENSITY = 6;
 
 export interface LayoutDiagnostic {
   code: string;
@@ -15,22 +16,6 @@ export interface LayoutDiagnostic {
   path: string;
   message: string;
   recovery: string;
-}
-
-export function layoutStageCapacityDiagnostic(
-  layout: LayoutDefinition,
-  fixtureIds: number[],
-): LayoutDiagnostic | null {
-  const capacity = layoutCapacity(layout);
-  if (capacity >= fixtureIds.length) return null;
-  return {
-    code: "LAYOUT_CAPACITY_BELOW_STAGE_PATCH",
-    severity: "warning",
-    path: "layout.geometry",
-    message: `${layout.geometry.shape} previews ${capacity} positions while this Stage patches ${fixtureIds.length} fixtures.`,
-    recovery:
-      "The Layout Draft can still be saved. Increase its rows, columns, rings, samples, or fixture count before Use on Stage.",
-  };
 }
 
 export function fixtureIdsForStage(stage: StageDocument) {
@@ -42,6 +27,13 @@ export function fixtureIdsForStage(stage: StageDocument) {
   );
 }
 
+export function fixtureIdsForLayout(layout: LayoutDefinition, startId = 1) {
+  if (layout.geometry.shape === "custom") {
+    return layout.geometry.fixtures.map((fixture) => fixture.id);
+  }
+  return Array.from({ length: layoutCapacity(layout) }, (_, index) => startId + index);
+}
+
 export function layoutCapacity(layout: LayoutDefinition) {
   const geometry = layout.geometry;
   switch (geometry.shape) {
@@ -49,7 +41,9 @@ export function layoutCapacity(layout: LayoutDefinition) {
     case "wall":
       return geometry.rows * geometry.columns;
     case "circle":
-      return 1 + (geometry.increment * geometry.rings * (geometry.rings + 1)) / 2;
+      return (
+        1 + (circleRingDensity(geometry.increment) * geometry.rings * (geometry.rings + 1)) / 2
+      );
     case "strip":
     case "algorithm":
       return geometry.count;
@@ -75,10 +69,7 @@ export function layoutGridDimensions(layout: LayoutDefinition): [number, number]
   return null;
 }
 
-export function diagnoseLayoutDefinition(
-  layout: LayoutDefinition,
-  fixtureIds: number[],
-): LayoutDiagnostic[] {
+export function diagnoseLayoutDefinition(layout: LayoutDefinition): LayoutDiagnostic[] {
   const diagnostics: LayoutDiagnostic[] = [];
   if (!layout.name.trim()) {
     diagnostics.push({
@@ -92,15 +83,14 @@ export function diagnoseLayoutDefinition(
   const geometryError = geometryDiagnostic(layout.geometry);
   if (geometryError) diagnostics.push(geometryError);
   if (layout.geometry.shape === "custom") {
-    const ids = new Set(layout.geometry.fixtures.map((fixture) => fixture.id));
-    const missing = fixtureIds.filter((id) => !ids.has(id));
-    if (missing.length > 0) {
+    const ids = layout.geometry.fixtures.map((fixture) => fixture.id);
+    if (new Set(ids).size !== ids.length) {
       diagnostics.push({
-        code: "LAYOUT_CUSTOM_FIXTURES_MISSING",
+        code: "LAYOUT_CUSTOM_FIXTURES_DUPLICATED",
         severity: "error",
         path: "layout.geometry.fixtures",
-        message: `Custom coordinates are missing fixture IDs ${missing.slice(0, 8).join(", ")}${missing.length > 8 ? "…" : ""}.`,
-        recovery: "Add coordinates for every patched fixture ID or choose a generated Layout.",
+        message: "Custom coordinates contain duplicate fixture IDs.",
+        recovery: "Give every custom position a unique fixture ID before saving the Layout.",
       });
     }
   }
@@ -227,8 +217,8 @@ function geometryDiagnostic(geometry: LayoutGeometry): LayoutDiagnostic | null {
       return diagnostic(
         "LAYOUT_RING_METRICS_INVALID",
         "layout.geometry.ring_pitch",
-        "Ring pitch must equal fixture diameter plus a non-negative ring gap.",
-        "Adjust fixture size or ring gap; zero ring gap is supported.",
+        "Circle spacing must equal fixture diameter plus a non-negative fixture gap.",
+        "Adjust fixture size or fixture gap; zero gap is supported.",
       );
     }
   }
@@ -285,8 +275,13 @@ function circlePositions(
     ? [{ id: fixtureIds[0], x: geometry.center.x, y: geometry.center.y }]
     : [];
   let index = 1;
-  for (let ring = 1; ring <= geometry.rings && index < fixtureIds.length; ring += 1) {
-    const count = geometry.increment * ring;
+  const ringCounts = circleRingFixtureCounts(
+    fixtureIds.length,
+    geometry.rings,
+    circleRingDensity(geometry.increment),
+  );
+  for (let ring = 1; ring <= ringCounts.length && index < fixtureIds.length; ring += 1) {
+    const count = ringCounts[ring - 1];
     for (let step = 0; step < count && index < fixtureIds.length; step += 1) {
       const angle = (step / count) * Math.PI * 2;
       positions.push({
@@ -298,6 +293,35 @@ function circlePositions(
     }
   }
   return positions;
+}
+
+export function circleRingFixtureCounts(fixtureCount: number, rings: number, increment: number) {
+  const ringCount = Math.max(0, Math.floor(rings));
+  if (ringCount === 0 || fixtureCount <= 1) return Array.from({ length: ringCount }, () => 0);
+
+  const ringWeight = (ringCount * (ringCount + 1)) / 2;
+  const capacity = Math.max(0, Math.floor(increment)) * ringWeight;
+  const remaining = Math.min(Math.max(0, Math.floor(fixtureCount) - 1), capacity);
+  const allocations = Array.from({ length: ringCount }, (_, index) => {
+    const weighted = remaining * (index + 1);
+    return {
+      index,
+      count: Math.floor(weighted / ringWeight),
+      remainder: weighted % ringWeight,
+    };
+  });
+  let unassigned = remaining - allocations.reduce((sum, allocation) => sum + allocation.count, 0);
+  const priority = [...allocations].sort(
+    (left, right) => right.remainder - left.remainder || right.index - left.index,
+  );
+  for (let index = 0; index < unassigned; index += 1) {
+    priority[index % priority.length].count += 1;
+  }
+  return allocations.map((allocation) => allocation.count);
+}
+
+export function circleRingDensity(increment: number) {
+  return Math.min(MAX_CIRCLE_RING_DENSITY, Math.max(1, Math.floor(increment)));
 }
 
 function framePositions(

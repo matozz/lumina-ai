@@ -211,9 +211,17 @@ pub(crate) fn render_resolved(
                 ) {
                     values[handle.index()] = Some(AttributeValue::Color([red, green, blue]));
                 }
-                apply_scalar_override(
+                apply_intensity_control(
                     &mut values,
                     super::attribute::resolve_attribute(fixture.profile, INTENSITY_ATTRIBUTE),
+                    resolve_effect_scalar(
+                        definition,
+                        instance,
+                        &active.instance,
+                        parameters,
+                        INTENSITY_PARAMETER_ID,
+                        1.0,
+                    ),
                     resolve_effect_scalar_override(
                         definition,
                         instance,
@@ -221,7 +229,6 @@ pub(crate) fn render_resolved(
                         parameters,
                         INTENSITY_PARAMETER_ID,
                     ),
-                    AttributeValue::Scalar,
                 );
                 apply_scalar_override(
                     &mut values,
@@ -347,6 +354,26 @@ fn apply_scalar_override(
 ) {
     if let (Some(handle), Some(value)) = (handle, value) {
         values[handle.index()] = Some(convert(value as f32));
+    }
+}
+
+fn apply_intensity_control(
+    values: &mut [Option<AttributeValue>],
+    handle: Option<AttributeHandle>,
+    scale: f64,
+    explicit_override: Option<f64>,
+) {
+    let Some(handle) = handle else {
+        return;
+    };
+    match values.get_mut(handle.index()) {
+        Some(Some(AttributeValue::Scalar(value))) => *value *= scale as f32,
+        Some(slot @ None) => {
+            if let Some(value) = explicit_override {
+                *slot = Some(AttributeValue::Scalar(value as f32));
+            }
+        }
+        _ => {}
     }
 }
 

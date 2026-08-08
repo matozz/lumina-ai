@@ -13,19 +13,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { fixtureIdsForStage } from "@/document/layoutDefinition";
-import type { StageDocument } from "@/bridge/types";
+import {
+  circleRingDensity,
+  fixtureIdsForLayout,
+  MAX_CIRCLE_RING_DENSITY,
+} from "@/document/layoutDefinition";
 
 export function LayoutGeometryEditor({
   layout,
-  stage,
+  advanced = false,
   onChange,
 }: {
   layout: LayoutDefinition;
-  stage: StageDocument;
+  advanced?: boolean;
   onChange: (layout: LayoutDefinition) => void;
 }) {
-  const fixtureIds = fixtureIdsForStage(stage);
+  const fixtureIds = fixtureIdsForLayout(layout);
   const updateGeometry = (geometry: LayoutGeometry) => onChange({ ...layout, geometry });
 
   if (layout.editor.mode === "read_only") {
@@ -41,7 +44,12 @@ export function LayoutGeometryEditor({
   const geometry = layout.geometry;
   return (
     <FieldGroup>
-      <FixtureSizeFields layout={layout} fixtureIds={fixtureIds} onChange={onChange} />
+      <FixtureSizeFields
+        layout={layout}
+        fixtureIds={fixtureIds}
+        advanced={advanced}
+        onChange={onChange}
+      />
       {(geometry.shape === "matrix" || geometry.shape === "wall" || geometry.shape === "frame") && (
         <GridGeometryFields geometry={geometry} onChange={updateGeometry} />
       )}
@@ -49,11 +57,7 @@ export function LayoutGeometryEditor({
         <StripGeometryFields geometry={geometry} onChange={updateGeometry} />
       )}
       {geometry.shape === "circle" && (
-        <CircleGeometryFields
-          geometry={geometry}
-          fixtureCount={fixtureIds.length}
-          onChange={updateGeometry}
-        />
+        <CircleGeometryFields geometry={geometry} onChange={updateGeometry} />
       )}
       {geometry.shape === "formula" && (
         <FormulaGeometryFields geometry={geometry} onChange={updateGeometry} />
@@ -73,8 +77,8 @@ export function LayoutGeometryEditor({
           <Braces aria-hidden="true" />
           <AlertTitle>SVG path source</AlertTitle>
           <AlertDescription>
-            This revision preserves {geometry.svg_path.sample_count} sampled positions. Duplicate it
-            before changing source data in the advanced editor.
+            This layout preserves {geometry.svg_path.sample_count} sampled positions. Duplicate it
+            before changing the source in Advanced.
           </AlertDescription>
         </Alert>
       )}
@@ -164,14 +168,13 @@ function StripGeometryFields({
 
 function CircleGeometryFields({
   geometry,
-  fixtureCount,
   onChange,
 }: {
   geometry: Extract<LayoutGeometry, { shape: "circle" }>;
-  fixtureCount: number;
   onChange: (geometry: Extract<LayoutGeometry, { shape: "circle" }>) => void;
 }) {
   const diameter = Math.max(geometry.fixture_size.width, geometry.fixture_size.height);
+  const density = circleRingDensity(geometry.increment);
   return (
     <>
       <div className="grid grid-cols-2 gap-2">
@@ -180,27 +183,37 @@ function CircleGeometryFields({
           value={geometry.rings}
           min={1}
           integer
-          onChange={(rings) =>
-            onChange({
-              ...geometry,
-              rings,
-              increment: circleIncrementForFixtureCount(fixtureCount, rings),
-            })
-          }
+          onChange={(rings) => onChange({ ...geometry, rings, increment: density })}
         />
         <NumberField
-          label="Ring gap"
-          value={geometry.ring_gap}
-          min={0}
+          label="Fixtures per ring step"
+          shortLabel="Ring density"
+          value={density}
+          min={1}
+          max={MAX_CIRCLE_RING_DENSITY}
           integer
-          onChange={(ring_gap) =>
-            onChange({ ...geometry, ring_gap, ring_pitch: diameter + ring_gap })
+          onChange={(increment) =>
+            onChange({ ...geometry, increment: circleRingDensity(increment) })
           }
         />
       </div>
+      <NumberField
+        label="Fixture gap"
+        value={geometry.ring_gap}
+        min={0}
+        integer
+        onChange={(ring_gap) =>
+          onChange({
+            ...geometry,
+            increment: density,
+            ring_gap,
+            ring_pitch: diameter + ring_gap,
+          })
+        }
+      />
       <FieldDescription>
-        Rings distribute the patched fixtures automatically. Gap is measured edge-to-edge and may be
-        zero; radial pitch is derived from fixture size + gap.
+        Rings change how many fixtures the Layout creates, never the spacing. Fixture gap stays
+        edge-to-edge on every ring; ring density controls how many fixtures each new ring adds.
       </FieldDescription>
     </>
   );
@@ -463,10 +476,12 @@ function OriginFields<T extends OriginGeometry>({
 function FixtureSizeFields({
   layout,
   fixtureIds,
+  advanced,
   onChange,
 }: {
   layout: LayoutDefinition;
   fixtureIds: number[];
+  advanced: boolean;
   onChange: (layout: LayoutDefinition) => void;
 }) {
   const geometry = layout.geometry;
@@ -551,71 +566,68 @@ function FixtureSizeFields({
           onChange={(height) => update("height", height)}
         />
       </div>
-      <div className="border-border bg-background/30 flex flex-col gap-2 rounded-md border p-2">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-medium">Individual fixture size</p>
-          <span className="text-muted-foreground font-mono text-[9px]">
-            {fixtureSizeOverrides.length} overrides
-          </span>
+      {advanced && (
+        <div className="border-border bg-background/30 flex flex-col gap-2 rounded-md border p-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] font-medium">Individual fixture size</p>
+            <span className="text-muted-foreground font-mono text-[9px]">
+              {fixtureSizeOverrides.length} overrides
+            </span>
+          </div>
+          <NumberField
+            label="Fixture ID for size override"
+            shortLabel="Fixture ID"
+            value={selectedFixtureId}
+            min={fixtureIds[0] ?? 0}
+            integer
+            onChange={setSelectedFixtureId}
+          />
+          {selectedFixtureExists ? (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <NumberField
+                  label={`Fixture ${selectedFixtureId} width`}
+                  shortLabel="Width"
+                  value={selectedSize.width}
+                  min={1}
+                  integer
+                  onChange={(width) => updateFixture("width", width)}
+                />
+                <NumberField
+                  label={`Fixture ${selectedFixtureId} height`}
+                  shortLabel="Height"
+                  value={selectedSize.height}
+                  min={1}
+                  integer
+                  onChange={(height) => updateFixture("height", height)}
+                />
+              </div>
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={!override}
+                onClick={() => {
+                  const remaining = fixtureSizeOverrides.filter(
+                    (item) => item.fixture_id !== selectedFixtureId,
+                  );
+                  onChange({
+                    ...layout,
+                    fixture_size_overrides: remaining.length > 0 ? remaining : undefined,
+                  });
+                }}
+              >
+                Clear fixture override
+              </Button>
+            </>
+          ) : (
+            <FieldDescription>
+              Enter a patched fixture ID to edit its size without changing the other blocks.
+            </FieldDescription>
+          )}
         </div>
-        <NumberField
-          label="Fixture ID for size override"
-          shortLabel="Fixture ID"
-          value={selectedFixtureId}
-          min={fixtureIds[0] ?? 0}
-          integer
-          onChange={setSelectedFixtureId}
-        />
-        {selectedFixtureExists ? (
-          <>
-            <div className="grid grid-cols-2 gap-2">
-              <NumberField
-                label={`Fixture ${selectedFixtureId} width`}
-                shortLabel="Width"
-                value={selectedSize.width}
-                min={1}
-                integer
-                onChange={(width) => updateFixture("width", width)}
-              />
-              <NumberField
-                label={`Fixture ${selectedFixtureId} height`}
-                shortLabel="Height"
-                value={selectedSize.height}
-                min={1}
-                integer
-                onChange={(height) => updateFixture("height", height)}
-              />
-            </div>
-            <Button
-              size="xs"
-              variant="outline"
-              disabled={!override}
-              onClick={() => {
-                const remaining = fixtureSizeOverrides.filter(
-                  (item) => item.fixture_id !== selectedFixtureId,
-                );
-                onChange({
-                  ...layout,
-                  fixture_size_overrides: remaining.length > 0 ? remaining : undefined,
-                });
-              }}
-            >
-              Clear fixture override
-            </Button>
-          </>
-        ) : (
-          <FieldDescription>
-            Enter a patched fixture ID to edit its size without changing the other blocks.
-          </FieldDescription>
-        )}
-      </div>
+      )}
     </>
   );
-}
-
-function circleIncrementForFixtureCount(fixtureCount: number, rings: number) {
-  const ringWeight = (rings * (rings + 1)) / 2;
-  return Math.max(1, Math.ceil(Math.max(0, fixtureCount - 1) / ringWeight));
 }
 
 function NumberField({

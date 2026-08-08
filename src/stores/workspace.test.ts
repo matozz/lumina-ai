@@ -1,9 +1,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import {
+  authoringSessionKey,
+  authoringTransportActions,
+  useAuthoringTransportStore,
+} from "@/authoring/transport";
 import { useWorkspaceStore, workspaceActions } from "./workspace";
 
 describe("workspace state", () => {
   beforeEach(() => {
     localStorage.clear();
+    authoringTransportActions.reset();
     workspaceActions.reset();
   });
 
@@ -15,6 +21,16 @@ describe("workspace state", () => {
       activeWorkspace: "effect-lab",
       advancedMode: false,
     });
+  });
+
+  it("pauses authoring playback when the user changes workspace", () => {
+    const key = authoringSessionKey("effect", "pulse@1");
+    authoringTransportActions.ensureSession({ key, scope: "effect", durationTicks: 3_840 });
+    authoringTransportActions.play(key);
+
+    workspaceActions.setActiveWorkspace("effect-lab");
+
+    expect(useAuthoringTransportStore.getState().sessions[key].playback).toBe("paused");
   });
 
   it("migrates the removed Song workspace to Arrange", async () => {

@@ -1,0 +1,1146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProductionCatalog",
+  "type": "object",
+  "properties": {
+    "cue_recipes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CueRecipeDefinition"
+      }
+    },
+    "effects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/EffectDefinitionDocument"
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "format": "uint32",
+      "maximum": 1,
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false,
+  "required": ["schema_version", "effects", "cue_recipes"],
+  "$defs": {
+    "AssetRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "revision"]
+    },
+    "AutomationPolicyDSL": {
+      "type": "string",
+      "enum": ["continuous", "discrete", "disabled"]
+    },
+    "CatalogVisibilityDSL": {
+      "type": "string",
+      "enum": ["standard", "advanced", "hidden"]
+    },
+    "ColorStopDSL": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string"
+        },
+        "position": {
+          "type": "number",
+          "format": "double",
+          "maximum": 1.0,
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false,
+      "required": ["position", "color"]
+    },
+    "CueQuantize": {
+      "type": "string",
+      "enum": ["off", "beat", "bar"]
+    },
+    "CueRecipeDefinition": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "layers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CueRecipeLayer"
+          }
+        },
+        "name": {
+          "type": "string"
+        },
+        "nominal_length_ticks": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        },
+        "schema_version": {
+          "type": "integer",
+          "format": "uint32",
+          "maximum": 1,
+          "minimum": 1
+        },
+        "trigger_policy": {
+          "$ref": "#/$defs/CueTriggerPolicy"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "id",
+        "revision",
+        "name",
+        "description",
+        "nominal_length_ticks",
+        "layers",
+        "trigger_policy"
+      ]
+    },
+    "CueRecipeLayer": {
+      "type": "object",
+      "properties": {
+        "effect_ref": {
+          "$ref": "#/$defs/AssetRef"
+        },
+        "id": {
+          "type": "string"
+        },
+        "layer": {
+          "type": "integer",
+          "format": "int32",
+          "default": 0
+        },
+        "parameter_overrides": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/ParameterValueDSL"
+          }
+        },
+        "phase": {
+          "type": "number",
+          "format": "double"
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int32",
+          "default": 0
+        },
+        "scene": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CueRecipeSceneDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "seed": {
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/CueRecipeTargetDSL"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "effect_ref", "target", "phase", "seed"]
+    },
+    "CueRecipeSceneDSL": {
+      "type": "object",
+      "properties": {
+        "minimum_steps": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        },
+        "requires_weighted_transition": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "required": ["minimum_steps"]
+    },
+    "CueRecipeTargetDSL": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "any_compatible"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "all"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "rows"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "columns"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "grid_zones"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "checkerboard"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "center"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "edges"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type"]
+        }
+      ]
+    },
+    "CueTriggerMode": {
+      "type": "string",
+      "enum": ["timeline", "toggle", "momentary", "one_shot"]
+    },
+    "CueTriggerPolicy": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "$ref": "#/$defs/CueTriggerMode"
+        },
+        "one_shot_ticks": {
+          "type": ["integer", "null"],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "quantize": {
+          "$ref": "#/$defs/CueQuantize"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["mode", "quantize"]
+    },
+    "DirectionDSL": {
+      "type": "string",
+      "enum": ["forward", "reverse"]
+    },
+    "EffectCatalogDSL": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": ["string", "null"]
+        },
+        "colorfulness": {
+          "type": "number",
+          "format": "float",
+          "maximum": 1.0,
+          "minimum": 0.0
+        },
+        "density": {
+          "type": "number",
+          "format": "float",
+          "maximum": 1.0,
+          "minimum": 0.0
+        },
+        "deprecated": {
+          "type": "boolean",
+          "default": false
+        },
+        "energy": {
+          "type": "number",
+          "format": "float",
+          "maximum": 1.0,
+          "minimum": 0.0
+        },
+        "family": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EffectFamilyDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "layout_capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LayoutCapabilityDSL"
+          }
+        },
+        "mood": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "motion": {
+          "$ref": "#/$defs/MotionTagDSL"
+        },
+        "parameter_summary": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "replacement": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EffectReplacementDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "required_attributes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "strobe_risk": {
+          "$ref": "#/$defs/StrobeRiskDSL"
+        },
+        "visibility": {
+          "$ref": "#/$defs/CatalogVisibilityDSL",
+          "default": "standard"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["energy", "density", "motion", "colorfulness", "strobe_risk"]
+    },
+    "EffectDefinitionDocument": {
+      "type": "object",
+      "properties": {
+        "catalog": {
+          "$ref": "#/$defs/EffectCatalogDSL"
+        },
+        "graph": {
+          "$ref": "#/$defs/EffectGraphDSL"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parameters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ParameterDefinitionDSL"
+          }
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        },
+        "schema_version": {
+          "type": "integer",
+          "format": "uint32",
+          "maximum": 1,
+          "minimum": 1
+        },
+        "source": {
+          "$ref": "#/$defs/EffectSourceDSL"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "id",
+        "name",
+        "revision",
+        "source",
+        "parameters",
+        "graph",
+        "catalog"
+      ]
+    },
+    "EffectFamilyDSL": {
+      "type": "string",
+      "enum": ["intensity", "color", "movement", "spatial", "strobe", "utility"]
+    },
+    "EffectGraphDSL": {
+      "type": "object",
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EffectNodeDSL"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": ["nodes"]
+    },
+    "EffectNodeDSL": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "time"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "id"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "constant"
+            },
+            "value": {
+              "$ref": "#/$defs/ParameterValueDSL"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "id", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "random"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "id"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "phase": {
+              "$ref": "#/$defs/EffectPortRefDSL"
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/PhaserStepDSL"
+              }
+            },
+            "type": {
+              "type": "string",
+              "const": "step_sequence"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "id", "phase", "steps"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "phase": {
+              "$ref": "#/$defs/EffectPortRefDSL"
+            },
+            "type": {
+              "type": "string",
+              "const": "oscillator"
+            },
+            "waveform": {
+              "$ref": "#/$defs/OscillatorWaveformDSL"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "id", "waveform", "phase"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "attack": {
+              "type": "number",
+              "format": "double",
+              "maximum": 1.0,
+              "minimum": 0.0
+            },
+            "id": {
+              "type": "string"
+            },
+            "input": {
+              "$ref": "#/$defs/EffectPortRefDSL"
+            },
+            "release": {
+              "type": "number",
+              "format": "double",
+              "maximum": 1.0,
+              "minimum": 0.0
+            },
+            "type": {
+              "type": "string",
+              "const": "envelope"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "id", "input", "attack", "release"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "basis": {
+              "$ref": "#/$defs/SpatialBasisDSL"
+            },
+            "custom_order": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0
+              }
+            },
+            "from": {
+              "type": "number",
+              "format": "double"
+            },
+            "group_size": {
+              "type": ["integer", "null"],
+              "format": "uint32",
+              "minimum": 0
+            },
+            "id": {
+              "type": "string"
+            },
+            "input": {
+              "$ref": "#/$defs/EffectPortRefDSL"
+            },
+            "to": {
+              "type": "number",
+              "format": "double"
+            },
+            "type": {
+              "type": "string",
+              "const": "spatial_phase"
+            },
+            "wrap": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "id", "input", "basis", "from", "to", "wrap"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "left": {
+              "$ref": "#/$defs/EffectPortRefDSL"
+            },
+            "operation": {
+              "$ref": "#/$defs/MathOperationDSL"
+            },
+            "right": {
+              "$ref": "#/$defs/EffectPortRefDSL"
+            },
+            "type": {
+              "type": "string",
+              "const": "math"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "id", "operation", "left", "right"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "input": {
+              "$ref": "#/$defs/EffectPortRefDSL"
+            },
+            "input_range": {
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number",
+                  "format": "double"
+                },
+                {
+                  "type": "number",
+                  "format": "double"
+                }
+              ]
+            },
+            "output_range": {
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number",
+                  "format": "double"
+                },
+                {
+                  "type": "number",
+                  "format": "double"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "map"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "id", "input", "input_range", "output_range"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "input": {
+              "$ref": "#/$defs/EffectPortRefDSL"
+            },
+            "max": {
+              "type": "number",
+              "format": "double"
+            },
+            "min": {
+              "type": "number",
+              "format": "double"
+            },
+            "type": {
+              "type": "string",
+              "const": "clamp"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "id", "input", "min", "max"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "input": {
+              "$ref": "#/$defs/EffectPortRefDSL"
+            },
+            "stops": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ColorStopDSL"
+              }
+            },
+            "type": {
+              "type": "string",
+              "const": "color_gradient"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "id", "input", "stops"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "input": {
+              "$ref": "#/$defs/EffectPortRefDSL"
+            },
+            "max": {
+              "type": "number",
+              "format": "double"
+            },
+            "min": {
+              "type": "number",
+              "format": "double"
+            },
+            "type": {
+              "type": "string",
+              "const": "fixture_mask"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "id", "input", "min", "max"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "attribute_id": {
+              "type": ["string", "null"]
+            },
+            "id": {
+              "type": "string"
+            },
+            "input": {
+              "$ref": "#/$defs/EffectPortRefDSL"
+            },
+            "mask": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/EffectPortRefDSL"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "attribute_writer"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "id", "input"]
+        }
+      ]
+    },
+    "EffectNodePropertyDSL": {
+      "type": "string",
+      "enum": ["waveform", "attack", "release", "color_stops"]
+    },
+    "EffectPortDSL": {
+      "type": "string",
+      "enum": [
+        "scalar",
+        "color",
+        "direction",
+        "boolean",
+        "enum",
+        "color_stops",
+        "mask",
+        "attribute_set",
+        "writes"
+      ]
+    },
+    "EffectPortRefDSL": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "type": "string"
+        },
+        "port": {
+          "$ref": "#/$defs/EffectPortDSL"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["node_id", "port"]
+    },
+    "EffectReplacementDSL": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "revision"]
+    },
+    "EffectSourceDSL": {
+      "type": "string",
+      "enum": ["built_in", "project_local", "user_library"]
+    },
+    "LayoutCapabilityDSL": {
+      "type": "string",
+      "enum": ["any", "linear", "matrix", "radial", "coordinates", "targeting_scene"]
+    },
+    "MathOperationDSL": {
+      "type": "string",
+      "enum": ["add", "subtract", "multiply", "divide", "min", "max"]
+    },
+    "MotionTagDSL": {
+      "type": "string",
+      "enum": ["static", "pulse", "chase", "sweep", "organic"]
+    },
+    "OscillatorWaveformDSL": {
+      "type": "string",
+      "enum": ["sine", "triangle", "saw", "pulse"]
+    },
+    "ParameterDefinitionDSL": {
+      "type": "object",
+      "properties": {
+        "advanced": {
+          "type": ["boolean", "null"]
+        },
+        "automation": {
+          "$ref": "#/$defs/AutomationPolicyDSL"
+        },
+        "default_value": {
+          "$ref": "#/$defs/ParameterValueDSL"
+        },
+        "enum_values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "graph_binding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParameterGraphBindingDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "help": {
+          "type": ["string", "null"]
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "override_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParameterOverridePolicyDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "range": {
+          "type": ["array", "null"],
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number",
+              "format": "double"
+            },
+            {
+              "type": "number",
+              "format": "double"
+            }
+          ]
+        },
+        "required": {
+          "type": ["boolean", "null"]
+        },
+        "safe_fallback": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParameterValueDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "step": {
+          "type": ["number", "null"],
+          "format": "double"
+        },
+        "ui_hint": {
+          "$ref": "#/$defs/ParameterUiHintDSL"
+        },
+        "unit": {
+          "$ref": "#/$defs/ParameterUnitDSL"
+        },
+        "value_type": {
+          "$ref": "#/$defs/ParameterValueTypeDSL"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "name", "value_type", "default_value", "unit", "ui_hint", "automation"]
+    },
+    "ParameterGraphBindingDSL": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "type": "string"
+        },
+        "property": {
+          "$ref": "#/$defs/EffectNodePropertyDSL"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["node_id", "property"]
+    },
+    "ParameterOverridePolicyDSL": {
+      "type": "string",
+      "enum": ["cue_override", "effect_only", "locked"]
+    },
+    "ParameterUiHintDSL": {
+      "type": "string",
+      "enum": ["slider", "color", "segmented", "angle", "toggle", "select", "color_stops"]
+    },
+    "ParameterUnitDSL": {
+      "type": "string",
+      "enum": [
+        "none",
+        "multiplier",
+        "cycles",
+        "percent",
+        "normalized",
+        "color",
+        "direction",
+        "degrees",
+        "boolean",
+        "choice",
+        "color_stops"
+      ]
+    },
+    "ParameterValueDSL": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "scalar"
+            },
+            "value": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "color"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "direction"
+            },
+            "value": {
+              "$ref": "#/$defs/DirectionDSL"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "enum"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "color_stops"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ColorStopDSL"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        }
+      ]
+    },
+    "ParameterValueTypeDSL": {
+      "type": "string",
+      "enum": ["scalar", "color", "direction", "boolean", "enum", "color_stops"]
+    },
+    "PhaserStepDSL": {
+      "type": "object",
+      "properties": {
+        "accel": {
+          "type": ["integer", "null"],
+          "format": "int32"
+        },
+        "decel": {
+          "type": ["integer", "null"],
+          "format": "int32"
+        },
+        "transition": {
+          "type": ["number", "null"],
+          "format": "double",
+          "maximum": 100.0,
+          "minimum": 0.0
+        },
+        "values": {
+          "$ref": "#/$defs/StepValuesDSL"
+        },
+        "width": {
+          "type": ["number", "null"],
+          "format": "double",
+          "maximum": 100.0,
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false,
+      "required": ["values"]
+    },
+    "SpatialBasisDSL": {
+      "type": "string",
+      "enum": ["index", "x", "y", "distance", "angle", "custom"]
+    },
+    "StepValuesDSL": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": ["string", "null"]
+        },
+        "dimmer": {
+          "type": ["number", "null"],
+          "format": "float",
+          "maximum": 1.0,
+          "minimum": 0.0
+        },
+        "pan": {
+          "type": ["number", "null"],
+          "format": "float"
+        },
+        "tilt": {
+          "type": ["number", "null"],
+          "format": "float"
+        }
+      },
+      "additionalProperties": false
+    },
+    "StrobeRiskDSL": {
+      "type": "string",
+      "enum": ["none", "low", "medium", "high"]
+    }
+  }
+}

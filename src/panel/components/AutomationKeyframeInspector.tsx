@@ -191,6 +191,53 @@ const TypedValueInput = ({ definition, id, invalid, onChange, value }: TypedValu
       </div>
     );
   }
+  if (definition.value_type === "boolean") {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={id}>{definition.name}</Label>
+        <Select value={value} onValueChange={(next) => next && onChange(next)}>
+          <SelectTrigger id={id} className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="true">On</SelectItem>
+              <SelectItem value="false">Off</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+  if (definition.value_type === "enum") {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={id}>{definition.name}</Label>
+        <Select value={value} onValueChange={(next) => next && onChange(next)}>
+          <SelectTrigger id={id} className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {(definition.enum_values ?? []).map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option.replace(/_/g, " ")}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+  if (definition.value_type === "color_stops") {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={id}>{definition.name}</Label>
+        <Input id={id} value="Edit on the Effect revision" disabled />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -212,8 +259,16 @@ const TypedValueInput = ({ definition, id, invalid, onChange, value }: TypedValu
 };
 
 function valueForDisplay(value: ParameterValueDSL, definition: ParameterDefinitionDSL): string {
-  if (value.type !== "scalar") return value.value;
-  return String(value.value * scalarDisplayScale(definition));
+  switch (value.type) {
+    case "scalar":
+      return String(value.value * scalarDisplayScale(definition));
+    case "boolean":
+      return String(value.value);
+    case "color_stops":
+      return JSON.stringify(value.value);
+    default:
+      return value.value;
+  }
 }
 
 function parseValue(
@@ -226,6 +281,15 @@ function parseValue(
   if (definition.value_type === "direction") {
     return value === "forward" || value === "reverse" ? { type: "direction", value } : undefined;
   }
+  if (definition.value_type === "boolean") {
+    return value === "true" || value === "false"
+      ? { type: "boolean", value: value === "true" }
+      : undefined;
+  }
+  if (definition.value_type === "enum") {
+    return (definition.enum_values ?? []).includes(value) ? { type: "enum", value } : undefined;
+  }
+  if (definition.value_type === "color_stops") return undefined;
   const parsed = Number(value) / scalarDisplayScale(definition);
   if (!Number.isFinite(parsed)) return undefined;
   if (definition.id === "speed" && !isBeatSyncSpeedMultiplier(parsed)) return undefined;
@@ -256,6 +320,10 @@ function unitLabel(definition: ParameterDefinitionDSL): string {
     color: "",
     direction: "",
     degrees: "(°)",
+    none: "",
+    boolean: "",
+    choice: "",
+    color_stops: "",
   };
   return labels[definition.unit];
 }

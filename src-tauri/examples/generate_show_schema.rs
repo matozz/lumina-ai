@@ -1,7 +1,7 @@
 use lumina_ai_lib::document::{
-    ArrangementDocument, CueDefinition, EffectDefinitionDocument, LayoutDefinition, ProjectBundle,
-    ProjectManifest, ShowDocumentV1, ShowDocumentV2, ShowDocumentV3, ShowDocumentV4, StageDocument,
-    CURRENT_SCHEMA_VERSION,
+    ArrangementDocument, CueDefinition, EffectDefinitionDocument, LayoutDefinition,
+    ProductionCatalog, ProjectBundle, ProjectManifest, ShowDocumentV1, ShowDocumentV2,
+    ShowDocumentV3, ShowDocumentV4, StageDocument, CURRENT_SCHEMA_VERSION,
 };
 use lumina_ai_lib::engine::profile::builtin_profiles;
 use serde_json::{json, Map, Value};
@@ -28,6 +28,8 @@ fn main() {
     let arrangement_document_v1_path =
         repository_root.join("schemas/arrangement-document-v1.schema.json");
     let project_bundle_v2_path = repository_root.join("schemas/project-bundle-v2.schema.json");
+    let production_catalog_v1_path =
+        repository_root.join("schemas/production-catalog-v1.schema.json");
     let capabilities_v1_path = repository_root.join("schemas/show-capabilities-v1.json");
     let capabilities_v2_path = repository_root.join("schemas/show-capabilities-v2.json");
     let capabilities_v3_path = repository_root.join("schemas/show-capabilities-v3.json");
@@ -39,6 +41,8 @@ fn main() {
     let typescript_v3_path = repository_root.join("src/generated/show-document-v3.ts");
     let typescript_v4_path = repository_root.join("src/generated/show-document-v4.ts");
     let project_typescript_v2_path = repository_root.join("src/generated/project-contract-v2.ts");
+    let production_typescript_v1_path =
+        repository_root.join("src/generated/production-catalog-v1.ts");
 
     let schema_v1 = schemars::schema_for!(ShowDocumentV1);
     let schema_v2 = schemars::schema_for!(ShowDocumentV2);
@@ -51,6 +55,7 @@ fn main() {
     let cue_definition_v2 = schemars::schema_for!(CueDefinition);
     let arrangement_document_v1 = schemars::schema_for!(ArrangementDocument);
     let project_bundle_v2 = schemars::schema_for!(ProjectBundle);
+    let production_catalog_v1 = schemars::schema_for!(ProductionCatalog);
     let schema_v1_value = serde_json::to_value(&schema_v1).expect("V1 schema converts to JSON");
     let schema_v2_value = serde_json::to_value(&schema_v2).expect("V2 schema converts to JSON");
     let schema_v3_value = serde_json::to_value(&schema_v3).expect("V3 schema converts to JSON");
@@ -69,6 +74,8 @@ fn main() {
         .expect("arrangement schema converts to JSON");
     let project_bundle_v2_value =
         serde_json::to_value(&project_bundle_v2).expect("project bundle schema converts to JSON");
+    let production_catalog_v1_value = serde_json::to_value(&production_catalog_v1)
+        .expect("production catalog schema converts to JSON");
     let capabilities_v1_value = json!({
         "metadata_version": 1,
         "document_schema_version": 1,
@@ -107,7 +114,7 @@ fn main() {
         "fixture_profiles": "fixture-profiles-v1.json",
         "document_contract": {
             "effect_sources": ["built_in", "project_local", "user_library"],
-            "parameter_types": ["scalar", "color", "direction"],
+            "parameter_types": ["scalar", "color", "direction", "boolean", "enum", "color_stops"],
             "common_parameters": ["speed", "phase", "width", "transition", "intensity", "color", "direction"],
             "effect_nodes": [
                 "time", "constant", "random", "step_sequence", "oscillator", "envelope",
@@ -155,6 +162,9 @@ fn main() {
             "layout_editor_capabilities": ["form", "parameter_schema", "advanced_only", "read_only"],
             "target_sets": ["all", "rows", "columns", "grid_zones", "checkerboard", "center_edges", "fixture_ids"],
             "targeting_scene": ["hard", "weighted", "beat", "bar", "partition", "phase_continuity"],
+            "effect_parameter_types": ["scalar", "color", "direction", "boolean", "enum", "color_stops"],
+            "effect_parameter_authoring": ["step", "required", "help", "safe_fallback", "override_policy", "advanced", "graph_binding"],
+            "effect_catalog": ["family", "category", "visibility", "layout_capabilities", "parameter_summary", "risk", "deprecation"],
             "cue_layers": ["effect_ref", "target_set_ref", "targeting_scene_ref", "parameter_overrides", "phase", "seed", "mix_overrides", "trigger_policy"],
             "musical_time": { "storage": "integer_tick", "tempo_map_owner": "arrangement" },
             "audio_capabilities": []
@@ -180,6 +190,7 @@ fn main() {
             &arrangement_document_v1_value,
         ),
         (&project_bundle_v2_path, &project_bundle_v2_value),
+        (&production_catalog_v1_path, &production_catalog_v1_value),
         (&capabilities_v1_path, &capabilities_v1_value),
         (&capabilities_v2_path, &capabilities_v2_value),
         (&capabilities_v3_path, &capabilities_v3_value),
@@ -195,12 +206,18 @@ fn main() {
     let typescript_v3 = render_typescript(&schema_v3_value, "ShowDocumentV3");
     let typescript_v4 = render_typescript(&schema_v4_value, "ShowDocumentV4");
     let project_typescript_v2 = render_typescript(&project_bundle_v2_value, "ProjectBundle");
+    let production_typescript_v1 =
+        render_typescript(&production_catalog_v1_value, "ProductionCatalog");
     let text_artifacts = [
         (&typescript_v1_path, typescript_v1.as_str()),
         (&typescript_v2_path, typescript_v2.as_str()),
         (&typescript_v3_path, typescript_v3.as_str()),
         (&typescript_v4_path, typescript_v4.as_str()),
         (&project_typescript_v2_path, project_typescript_v2.as_str()),
+        (
+            &production_typescript_v1_path,
+            production_typescript_v1.as_str(),
+        ),
     ];
 
     if std::env::args().any(|argument| argument == "--check") {
@@ -234,12 +251,13 @@ fn main() {
         (&cue_definition_v2_path, &cue_definition_v2),
         (&arrangement_document_v1_path, &arrangement_document_v1),
         (&project_bundle_v2_path, &project_bundle_v2),
+        (&production_catalog_v1_path, &production_catalog_v1),
     ] {
         let mut contents = serde_json::to_string_pretty(schema).expect("schema serializes");
         contents.push('\n');
         fs::write(path, contents).expect("schema artifact is writable");
     }
-    for (path, value) in json_artifacts.into_iter().skip(11) {
+    for (path, value) in json_artifacts.into_iter().skip(12) {
         let mut contents = serde_json::to_string_pretty(value).expect("JSON artifact serializes");
         contents.push('\n');
         fs::write(path, contents).expect("JSON artifact is writable");

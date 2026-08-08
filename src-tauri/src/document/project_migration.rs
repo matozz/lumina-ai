@@ -8,9 +8,9 @@ use super::{
     CUE_DEFINITION_SCHEMA_VERSION, EFFECT_DEFINITION_SCHEMA_VERSION, PROJECT_BUNDLE_SCHEMA_VERSION,
     PROJECT_MANIFEST_SCHEMA_VERSION, STAGE_DOCUMENT_SCHEMA_VERSION,
 };
-use crate::compiler::diagnostic::{Diagnostic, PROJECT_SCHEMA_INVALID};
+use crate::compiler::diagnostic::{Diagnostic, PROJECT_ASSET_QUARANTINED, PROJECT_SCHEMA_INVALID};
 use serde_json::Value;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 const MIGRATED_PROJECT_ID: &str = "project-default";
 const MIGRATED_STAGE_ID: &str = "stage-default";
@@ -30,9 +30,37 @@ pub struct ProjectMigrationReport {
 pub struct MigratedProject {
     pub bundle: ProjectBundle,
     pub migration_report: ProjectMigrationReport,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub quarantined_assets: Vec<QuarantinedProjectAsset>,
+}
+
+#[derive(Debug, serde::Serialize, Clone)]
+pub struct QuarantinedProjectAsset {
+    pub kind: String,
+    pub id: Option<String>,
+    pub revision: Option<u32>,
+    pub source: Value,
+    pub diagnostics: Vec<Diagnostic>,
 }
 
 pub fn migrate_project_bundle(source: &str) -> Result<MigratedProject, Vec<Diagnostic>> {
+    let (value, source_schema_version, changes) = migrate_project_value(source)?;
+    let bundle = deserialize_project_bundle(value)?;
+    super::ValidatedProject::validate(bundle.clone())?;
+    Ok(MigratedProject {
+        bundle,
+        migration_report: ProjectMigrationReport {
+            source_schema_version,
+            project_bundle_schema_version: PROJECT_BUNDLE_SCHEMA_VERSION,
+            changes,
+        },
+        quarantined_assets: Vec::new(),
+    })
+}
+
+fn migrate_project_value(
+    source: &str,
+) -> Result<(Value, Option<u32>, Vec<MigrationChange>), Vec<Diagnostic>> {
     let mut value: Value = serde_json::from_str(source).map_err(|error| {
         vec![Diagnostic::error(
             PROJECT_SCHEMA_INVALID,
@@ -66,14 +94,173 @@ pub fn migrate_project_bundle(source: &str) -> Result<MigratedProject, Vec<Diagn
             )]);
         }
     }
-    let bundle: ProjectBundle = serde_json::from_value(value).map_err(|error| {
+    Ok((value, source_schema_version, changes))
+}
+
+fn deserialize_project_bundle(value: Value) -> Result<ProjectBundle, Vec<Diagnostic>> {
+    serde_json::from_value(value).map_err(|error| {
         vec![Diagnostic::error(
             PROJECT_SCHEMA_INVALID,
             "project_bundle",
             error.to_string(),
             "Repair the reported asset field before opening the Project.",
         )]
-    })?;
+    })
+}
+
+pub fn recover_project_bundle(source: &str) -> Result<MigratedProject, Vec<Diagnostic>> {
+    let (mut value, source_schema_version, mut changes) = migrate_project_value(source)?;
+    let mut quarantined_assets = Vec::new();
+    quarantine_unparseable_asset_values(&mut value, "effects", "effect", &mut quarantined_assets)?;
+    quarantine_unparseable_asset_values(&mut value, "cues", "cue", &mut quarantined_assets)?;
+    let mut bundle = deserialize_project_bundle(value)?;
+
+    let mut effect_identities = BTreeSet::new();
+    let mut valid_effects = Vec::new();
+    for effect in std::mem::take(&mut bundle.effects) {
+        let identity = (effect.id.clone(), effect.revision);
+        let duplicate = !effect_identities.insert(identity.clone());
+        let mut diagnostics = super::project_validation::validate_effect_asset(&effect);
+        if duplicate {
+            diagnostics.push(quarantine_summary(
+                "effect",
+                &effect.id,
+                effect.revision,
+                "effect",
+                "Duplicate Effect identity cannot be opened safely.",
+                "duplicate_safe_copy",
+                "Duplicate as safe copy",
+            ));
+        }
+        if diagnostics.is_empty() {
+            valid_effects.push(effect);
+        } else {
+            let has_valid_revision = valid_effects
+                .iter()
+                .any(|candidate: &EffectDefinitionDocument| candidate.id == effect.id);
+            diagnostics.push(quarantine_summary(
+                "effect",
+                &effect.id,
+                effect.revision,
+                "effect",
+                "Effect was isolated so the rest of the Project can open.",
+                if has_valid_revision {
+                    "revert_to_valid_revision"
+                } else {
+                    "duplicate_safe_copy"
+                },
+                if has_valid_revision {
+                    "Revert to valid revision"
+                } else {
+                    "Duplicate as safe copy"
+                },
+            ));
+            quarantined_assets.push(QuarantinedProjectAsset {
+                kind: "effect".to_string(),
+                id: Some(effect.id.clone()),
+                revision: Some(effect.revision),
+                source: serde_json::to_value(effect).expect("Effect asset serializes"),
+                diagnostics,
+            });
+        }
+    }
+    bundle.effects = valid_effects;
+    let valid_effect_identities = bundle
+        .effects
+        .iter()
+        .map(|effect| (effect.id.as_str(), effect.revision))
+        .collect::<BTreeSet<_>>();
+    bundle.manifest.effect_refs.retain(|reference| {
+        valid_effect_identities.contains(&(reference.id.as_str(), reference.revision))
+    });
+
+    let mut cue_identities = BTreeSet::new();
+    let mut valid_cues = Vec::new();
+    for cue in std::mem::take(&mut bundle.cues) {
+        let identity = (cue.id.clone(), cue.revision);
+        let duplicate = !cue_identities.insert(identity);
+        let mut diagnostics = super::project_validation::validate_cue_asset(&bundle, &cue);
+        if duplicate {
+            diagnostics.push(quarantine_summary(
+                "cue",
+                &cue.id,
+                cue.revision,
+                "cue",
+                "Duplicate Cue identity cannot be opened safely.",
+                "duplicate_safe_copy",
+                "Duplicate as safe copy",
+            ));
+        }
+        if diagnostics.is_empty() {
+            valid_cues.push(cue);
+        } else {
+            let has_valid_revision = valid_cues
+                .iter()
+                .any(|candidate: &CueDefinition| candidate.id == cue.id);
+            diagnostics.push(quarantine_summary(
+                "cue",
+                &cue.id,
+                cue.revision,
+                "cue",
+                "Cue was isolated so the rest of the Project can open.",
+                if has_valid_revision {
+                    "revert_to_valid_revision"
+                } else {
+                    "duplicate_safe_copy"
+                },
+                if has_valid_revision {
+                    "Revert to valid revision"
+                } else {
+                    "Duplicate as safe copy"
+                },
+            ));
+            quarantined_assets.push(QuarantinedProjectAsset {
+                kind: "cue".to_string(),
+                id: Some(cue.id.clone()),
+                revision: Some(cue.revision),
+                source: serde_json::to_value(cue).expect("Cue asset serializes"),
+                diagnostics,
+            });
+        }
+    }
+    bundle.cues = valid_cues;
+    let valid_cue_identities = bundle
+        .cues
+        .iter()
+        .map(|cue| (cue.id.as_str(), cue.revision))
+        .collect::<BTreeSet<_>>();
+    bundle.manifest.cue_refs.retain(|reference| {
+        valid_cue_identities.contains(&(reference.id.as_str(), reference.revision))
+    });
+    let mut removed_clips = 0;
+    for arrangement in &mut bundle.arrangements {
+        for track in &mut arrangement.tracks {
+            let before = track.clips.len();
+            track.clips.retain(|clip| {
+                valid_cue_identities.contains(&(clip.cue_ref.id.as_str(), clip.cue_ref.revision))
+            });
+            removed_clips += before - track.clips.len();
+        }
+    }
+    if !quarantined_assets.is_empty() {
+        changes.push(migration_change(
+            "MIGRATION_PROJECT_ASSET_QUARANTINE",
+            "effects,cues",
+            format!(
+                "Isolated {} invalid Effect/Cue assets while preserving their source and diagnostics.",
+                quarantined_assets.len()
+            ),
+        ));
+    }
+    if removed_clips > 0 {
+        changes.push(migration_change(
+            "MIGRATION_PROJECT_QUARANTINED_CUE_CLIPS",
+            "arrangements[].tracks[].clips",
+            format!(
+                "Removed {removed_clips} Arrangement clips that pinned quarantined or missing Cue revisions."
+            ),
+        ));
+    }
     super::ValidatedProject::validate(bundle.clone())?;
     Ok(MigratedProject {
         bundle,
@@ -82,7 +269,94 @@ pub fn migrate_project_bundle(source: &str) -> Result<MigratedProject, Vec<Diagn
             project_bundle_schema_version: PROJECT_BUNDLE_SCHEMA_VERSION,
             changes,
         },
+        quarantined_assets,
     })
+}
+
+fn quarantine_unparseable_asset_values(
+    project: &mut Value,
+    collection: &str,
+    kind: &str,
+    quarantined: &mut Vec<QuarantinedProjectAsset>,
+) -> Result<(), Vec<Diagnostic>> {
+    let values = project
+        .get_mut(collection)
+        .and_then(Value::as_array_mut)
+        .ok_or_else(|| {
+            vec![Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                collection,
+                format!("Project {collection} must be an array."),
+                "Repair the Project container before opening it.",
+            )]
+        })?;
+    let mut retained = Vec::with_capacity(values.len());
+    for (index, source) in std::mem::take(values).into_iter().enumerate() {
+        let parse_error = match kind {
+            "effect" => serde_json::from_value::<EffectDefinitionDocument>(source.clone())
+                .err()
+                .map(|error| error.to_string()),
+            "cue" => serde_json::from_value::<CueDefinition>(source.clone())
+                .err()
+                .map(|error| error.to_string()),
+            _ => unreachable!("only Effect and Cue collections are recoverable"),
+        };
+        let Some(error) = parse_error else {
+            retained.push(source);
+            continue;
+        };
+        let id = source
+            .get("id")
+            .and_then(Value::as_str)
+            .map(ToOwned::to_owned);
+        let revision = source
+            .get("revision")
+            .and_then(Value::as_u64)
+            .and_then(|value| u32::try_from(value).ok());
+        let path = format!("{collection}[{index}]");
+        let mut diagnostic = Diagnostic::error(
+            PROJECT_ASSET_QUARANTINED,
+            &path,
+            format!("{kind} asset could not be decoded: {error}"),
+            "Migrate the preserved source or duplicate it into a new safe draft.",
+        )
+        .with_recovery(
+            "migrate_asset",
+            "Migrate preserved asset",
+            Some(path.clone()),
+        );
+        if let (Some(id), Some(revision)) = (&id, revision) {
+            diagnostic = diagnostic.with_asset(kind, id, revision);
+        }
+        quarantined.push(QuarantinedProjectAsset {
+            kind: kind.to_string(),
+            id,
+            revision,
+            source,
+            diagnostics: vec![diagnostic],
+        });
+    }
+    *values = retained;
+    Ok(())
+}
+
+fn quarantine_summary(
+    kind: &str,
+    id: &str,
+    revision: u32,
+    path: &str,
+    message: &str,
+    action: &str,
+    label: &str,
+) -> Diagnostic {
+    Diagnostic::error(
+        PROJECT_ASSET_QUARANTINED,
+        path,
+        message,
+        "The preserved source is available in quarantined_assets; Published and Live remain unchanged.",
+    )
+    .with_asset(kind, id, revision)
+    .with_recovery(action, label, Some(path.to_string()))
 }
 
 fn migrate_project_bundle_v1_value(
@@ -258,6 +532,7 @@ pub fn migrate_show_to_project(source: &str) -> Result<MigratedProject, Vec<Diag
             project_bundle_schema_version: PROJECT_BUNDLE_SCHEMA_VERSION,
             changes,
         },
+        quarantined_assets: Vec::new(),
     })
 }
 
@@ -633,6 +908,109 @@ fn migration_change(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn recoverable_open_quarantines_bad_effects_and_cues_without_blocking_the_project() {
+        let mut bundle = crate::document::valid_bundle();
+        let mut broken_effect = bundle.effects[0].clone();
+        broken_effect.id = "broken-no-output".to_string();
+        broken_effect.graph = serde_json::from_value(serde_json::json!({
+            "nodes": [{
+                "type": "constant",
+                "id": "orphan",
+                "value": { "type": "scalar", "value": 1.0 }
+            }]
+        }))
+        .expect("structurally decodable graph");
+        bundle.manifest.effect_refs.push(AssetRef {
+            id: broken_effect.id.clone(),
+            revision: broken_effect.revision,
+        });
+        bundle.effects.push(broken_effect.clone());
+
+        let mut broken_cue = bundle.cues[0].clone();
+        broken_cue.id = "broken-cue".to_string();
+        broken_cue.layers[0].effect_ref = AssetRef {
+            id: broken_effect.id.clone(),
+            revision: broken_effect.revision,
+        };
+        let mut legacy_cue = bundle.cues[0].clone();
+        legacy_cue.id = "legacy-cue".to_string();
+        for cue in [&broken_cue, &legacy_cue] {
+            bundle.manifest.cue_refs.push(AssetRef {
+                id: cue.id.clone(),
+                revision: cue.revision,
+            });
+            let mut clip = bundle.arrangements[0].tracks[0].clips[0].clone();
+            clip.id = format!("{}-clip", cue.id);
+            clip.cue_ref = AssetRef {
+                id: cue.id.clone(),
+                revision: cue.revision,
+            };
+            bundle.arrangements[0].tracks[0].clips.push(clip);
+        }
+        bundle.cues.push(broken_cue);
+        bundle.cues.push(legacy_cue);
+
+        let mut source = serde_json::to_value(bundle).expect("Project serializes");
+        source["cues"][2]
+            .as_object_mut()
+            .expect("legacy Cue object")
+            .insert("legacy_unknown_field".to_string(), Value::Bool(true));
+        let source = source.to_string();
+        assert!(migrate_project_bundle(&source).is_err());
+
+        let recovered = recover_project_bundle(&source).expect("other Project assets remain valid");
+        assert_eq!(recovered.bundle.effects.len(), 1);
+        assert_eq!(recovered.bundle.cues.len(), 1);
+        assert_eq!(recovered.bundle.layouts.len(), 1);
+        assert_eq!(recovered.bundle.stages.len(), 1);
+        assert_eq!(recovered.bundle.arrangements[0].tracks[0].clips.len(), 1);
+        assert_eq!(recovered.quarantined_assets.len(), 3);
+        assert!(recovered.quarantined_assets.iter().any(|asset| {
+            asset.id.as_deref() == Some("broken-no-output")
+                && asset.diagnostics.iter().any(|diagnostic| {
+                    diagnostic.code == PROJECT_ASSET_QUARANTINED
+                        && diagnostic
+                            .recovery
+                            .as_ref()
+                            .is_some_and(|recovery| recovery.action == "duplicate_safe_copy")
+                })
+        }));
+        assert!(recovered.quarantined_assets.iter().any(|asset| {
+            asset.id.as_deref() == Some("legacy-cue")
+                && asset.source.get("legacy_unknown_field") == Some(&Value::Bool(true))
+                && asset.diagnostics.iter().any(|diagnostic| {
+                    diagnostic.code == PROJECT_ASSET_QUARANTINED
+                        && diagnostic
+                            .recovery
+                            .as_ref()
+                            .is_some_and(|recovery| recovery.action == "migrate_asset")
+                })
+        }));
+        assert!(recovered
+            .migration_report
+            .changes
+            .iter()
+            .any(|change| change.code == "MIGRATION_PROJECT_ASSET_QUARANTINE"));
+    }
+
+    #[test]
+    fn recoverable_open_isolates_a_cue_with_a_missing_effect_revision() {
+        let mut bundle = crate::document::valid_bundle();
+        bundle.cues[0].layers[0].effect_ref.revision = 999;
+        let source = serde_json::to_string(&bundle).expect("Project serializes");
+
+        let recovered = recover_project_bundle(&source).expect("Project opens around bad Cue");
+        assert!(recovered.bundle.cues.is_empty());
+        assert!(recovered.bundle.arrangements[0].tracks[0].clips.is_empty());
+        assert_eq!(recovered.bundle.effects.len(), 1);
+        assert_eq!(recovered.quarantined_assets.len(), 1);
+        assert!(recovered.quarantined_assets[0]
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == "PROJECT_REVISION_MISMATCH"));
+    }
 
     #[test]
     fn migrates_v4_into_independent_assets_without_moving_timeline_ticks() {

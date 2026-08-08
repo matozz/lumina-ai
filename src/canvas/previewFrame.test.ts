@@ -44,4 +44,26 @@ describe("fixture frame preview adapter", () => {
     });
     expect(frame).toEqual(snapshot);
   });
+
+  it("can visualize intensity-only authoring output without changing engine data", () => {
+    const frame: FixtureFramePayload = {
+      id: 3,
+      profile_id: "generic-rgb",
+      attributes: [
+        { id: "intensity", value: { type: "scalar", value: 0.5 } },
+        { id: "color.rgb", value: { type: "color", value: [0, 0, 0] } },
+      ],
+    };
+
+    expect(toPreviewOutput(frame, [139, 119, 255])).toMatchObject({
+      r: 139,
+      g: 119,
+      b: 255,
+      dimmer: 0.5,
+    });
+    expect(frame.attributes[1]).toEqual({
+      id: "color.rgb",
+      value: { type: "color", value: [0, 0, 0] },
+    });
+  });
 });

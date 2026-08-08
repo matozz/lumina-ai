@@ -1,10 +1,13 @@
 use super::{
-    AutomationPolicyDSL, AutomationTargetV3DSL, EffectDefinitionDSL, EffectNodeDSL, EffectPortDSL,
-    EffectPortRefDSL, GeneratorDSL, GroupFixturesDSL, KeyframeDSL, OverlapPolicyDSL,
-    ParameterValueDSL, ParameterValueTypeDSL, ShowDocumentV4, CURRENT_SCHEMA_VERSION,
+    AutomationPolicyDSL, AutomationTargetV3DSL, EffectDefinitionDSL, EffectDefinitionDocument,
+    EffectNodeDSL, EffectNodePropertyDSL, EffectPortDSL, EffectPortRefDSL, EffectSourceDSL,
+    GeneratorDSL, GroupFixturesDSL, KeyframeDSL, OverlapPolicyDSL, ParameterDefinitionDSL,
+    ParameterOverridePolicyDSL, ParameterUiHintDSL, ParameterValueDSL, ParameterValueTypeDSL,
+    ShowDocumentV4, CURRENT_SCHEMA_VERSION,
 };
 use crate::compiler::diagnostic::{
-    Diagnostic, DOC_DUPLICATE_ID, DOC_EFFECT_DEFINITION_NOT_FOUND, DOC_EFFECT_GRAPH_INVALID,
+    Diagnostic, CATALOG_GRAPH_BINDING_INVALID, CATALOG_METADATA_INVALID, CATALOG_PARAMETER_INVALID,
+    DOC_DUPLICATE_ID, DOC_EFFECT_DEFINITION_NOT_FOUND, DOC_EFFECT_GRAPH_INVALID,
     DOC_EFFECT_INSTANCE_NOT_FOUND, DOC_FIXTURE_REFERENCE_NOT_FOUND, DOC_FORMULA_INVALID,
     DOC_INVALID_COLOR, DOC_INVALID_NUMBER, DOC_INVALID_RANGE, DOC_INVALID_VALUE,
     DOC_PARAMETER_INVALID, DOC_PROFILE_NOT_FOUND, DOC_SVG_PATH_INVALID,
@@ -295,10 +298,13 @@ fn validate_groups(
     group_ids
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct ParameterContract {
     value_type: ParameterValueTypeDSL,
     range: Option<(f64, f64)>,
+    enum_values: Vec<String>,
+    override_policy: Option<ParameterOverridePolicyDSL>,
+    automation: AutomationPolicyDSL,
 }
 
 type DefinitionParameters = HashMap<(String, u32), HashMap<String, ParameterContract>>;
@@ -329,42 +335,57 @@ fn validate_effect_definitions(
                 "Effect definition revision must be greater than zero.",
             ));
         }
-        let parameters = validate_parameter_schema(index, definition, diagnostics);
-        validate_effect_graph(index, definition, diagnostics);
-        validate_range(
-            f64::from(definition.catalog.energy),
-            0.0,
-            1.0,
-            format!("{path}.catalog.energy"),
-            diagnostics,
-        );
-        validate_range(
-            f64::from(definition.catalog.density),
-            0.0,
-            1.0,
-            format!("{path}.catalog.density"),
-            diagnostics,
-        );
-        validate_range(
-            f64::from(definition.catalog.colorfulness),
-            0.0,
-            1.0,
-            format!("{path}.catalog.colorfulness"),
-            diagnostics,
-        );
+        let parameters = validate_effect_definition_contract(definition, &path, diagnostics);
         definitions.insert(identity, parameters);
     }
     definitions
 }
 
+pub(super) fn validate_effect_definition_document(
+    document: &EffectDefinitionDocument,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let definition = EffectDefinitionDSL {
+        id: document.id.clone(),
+        name: document.name.clone(),
+        revision: document.revision,
+        source: document.source,
+        parameters: document.parameters.clone(),
+        graph: document.graph.clone(),
+        catalog: document.catalog.clone(),
+    };
+    validate_effect_definition_contract(&definition, path, diagnostics);
+}
+
+fn validate_effect_definition_contract(
+    definition: &EffectDefinitionDSL,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> HashMap<String, ParameterContract> {
+    let parameters = validate_parameter_schema(path, definition, diagnostics);
+    let legacy_empty_graph = definition.graph.nodes.is_empty()
+        && !matches!(definition.source, EffectSourceDSL::BuiltIn)
+        && definition.catalog.family.is_none()
+        && definition
+            .parameters
+            .iter()
+            .all(|parameter| parameter.required.is_none());
+    if !legacy_empty_graph {
+        validate_effect_graph(path, definition, diagnostics);
+    }
+    validate_catalog_metadata(path, definition, &parameters, diagnostics);
+    parameters
+}
+
 fn validate_parameter_schema(
-    definition_index: usize,
+    definition_path: &str,
     definition: &EffectDefinitionDSL,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> HashMap<String, ParameterContract> {
     let mut parameters = HashMap::new();
     for (index, parameter) in definition.parameters.iter().enumerate() {
-        let path = format!("effect_definitions[{definition_index}].parameters[{index}]");
+        let path = format!("{definition_path}.parameters[{index}]");
         if parameter.id.trim().is_empty() || parameters.contains_key(&parameter.id) {
             diagnostics.push(Diagnostic::error(
                 DOC_DUPLICATE_ID,
@@ -382,6 +403,14 @@ fn validate_parameter_schema(
                 format!("{path}.default_value"),
                 "Parameter default value does not match its declared type.",
                 "Use a typed default value matching value_type.",
+            ));
+        }
+        if parameter.name.trim().is_empty() {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_PARAMETER_INVALID,
+                format!("{path}.name"),
+                "Parameter display name must not be empty.",
+                "Provide a concise user-facing parameter name.",
             ));
         }
         if let Some((min, max)) = parameter.range {
@@ -403,29 +432,619 @@ fn validate_parameter_schema(
                     ));
                 }
             }
+            if !matches!(parameter.value_type, ParameterValueTypeDSL::Scalar) {
+                diagnostics.push(Diagnostic::error(
+                    CATALOG_PARAMETER_INVALID,
+                    format!("{path}.range"),
+                    "Only scalar parameters can declare a numeric range.",
+                    "Remove the range or change the parameter to scalar.",
+                ));
+            }
+        } else if matches!(parameter.value_type, ParameterValueTypeDSL::Scalar)
+            && matches!(definition.source, EffectSourceDSL::BuiltIn)
+        {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_PARAMETER_INVALID,
+                format!("{path}.range"),
+                "Production scalar parameters require a finite range.",
+                "Declare the safe inclusive range used by the authoring control.",
+            ));
+        }
+        if let Some(step) = parameter.step {
+            if !step.is_finite() || step <= 0.0 {
+                diagnostics.push(Diagnostic::error(
+                    CATALOG_PARAMETER_INVALID,
+                    format!("{path}.step"),
+                    "Parameter step must be finite and greater than zero.",
+                    "Use a positive authoring increment.",
+                ));
+            }
+            if !matches!(parameter.value_type, ParameterValueTypeDSL::Scalar) {
+                diagnostics.push(Diagnostic::error(
+                    CATALOG_PARAMETER_INVALID,
+                    format!("{path}.step"),
+                    "Only scalar parameters can declare a numeric step.",
+                    "Remove the step or change the parameter to scalar.",
+                ));
+            }
+        } else if matches!(parameter.value_type, ParameterValueTypeDSL::Scalar)
+            && matches!(definition.source, EffectSourceDSL::BuiltIn)
+        {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_PARAMETER_INVALID,
+                format!("{path}.step"),
+                "Production scalar parameters require an authoring step.",
+                "Declare a positive step appropriate for the control.",
+            ));
         }
         if matches!(parameter.automation, AutomationPolicyDSL::Continuous)
-            && matches!(parameter.value_type, ParameterValueTypeDSL::Direction)
+            && !matches!(
+                parameter.value_type,
+                ParameterValueTypeDSL::Scalar | ParameterValueTypeDSL::Color
+            )
         {
             diagnostics.push(Diagnostic::error(
                 DOC_PARAMETER_INVALID,
                 format!("{path}.automation"),
-                "Direction parameters cannot use continuous automation.",
-                "Use discrete automation for direction parameters.",
+                "This parameter type cannot use continuous automation.",
+                "Use discrete or disabled automation for non-continuous values.",
             ));
         }
-        if let ParameterValueDSL::Color(color) = &parameter.default_value {
-            validate_color(color, format!("{path}.default_value.value"), diagnostics);
+        if parameter
+            .override_policy
+            .is_some_and(|policy| !matches!(policy, ParameterOverridePolicyDSL::CueOverride))
+            && !matches!(parameter.automation, AutomationPolicyDSL::Disabled)
+        {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_PARAMETER_INVALID,
+                format!("{path}.automation"),
+                "Effect-only and locked parameters cannot be automated by Cue or Arrangement.",
+                "Disable automation or mark the parameter as cue_override.",
+            ));
+        }
+        validate_parameter_value_contract(
+            &parameter.default_value,
+            parameter.value_type,
+            parameter.range,
+            &parameter.enum_values,
+            &format!("{path}.default_value"),
+            diagnostics,
+        );
+        if let Some(fallback) = &parameter.safe_fallback {
+            validate_parameter_value_contract(
+                fallback,
+                parameter.value_type,
+                parameter.range,
+                &parameter.enum_values,
+                &format!("{path}.safe_fallback"),
+                diagnostics,
+            );
+        }
+        validate_parameter_ui_contract(parameter.value_type, parameter.ui_hint, &path, diagnostics);
+        validate_enum_contract(parameter, &path, diagnostics);
+        if matches!(definition.source, EffectSourceDSL::BuiltIn) {
+            validate_production_parameter_metadata(parameter, &path, diagnostics);
         }
         parameters.insert(
             parameter.id.clone(),
             ParameterContract {
                 value_type: parameter.value_type,
                 range: parameter.range,
+                enum_values: parameter.enum_values.clone(),
+                override_policy: parameter.override_policy,
+                automation: parameter.automation,
             },
         );
     }
     parameters
+}
+
+fn validate_production_parameter_metadata(
+    parameter: &ParameterDefinitionDSL,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for (field, missing, hint) in [
+        (
+            "required",
+            parameter.required.is_none(),
+            "Declare whether a saved Effect must contain this value.",
+        ),
+        (
+            "help",
+            parameter.help.as_deref().is_none_or(str::is_empty),
+            "Provide concise authoring guidance.",
+        ),
+        (
+            "safe_fallback",
+            parameter.safe_fallback.is_none(),
+            "Provide a typed value that is safe to restore explicitly.",
+        ),
+        (
+            "override_policy",
+            parameter.override_policy.is_none(),
+            "Declare cue_override, effect_only, or locked.",
+        ),
+        (
+            "advanced",
+            parameter.advanced.is_none(),
+            "Declare whether the control belongs in Advanced.",
+        ),
+    ] {
+        if missing {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_PARAMETER_INVALID,
+                format!("{path}.{field}"),
+                format!("Production parameter metadata is missing {field}."),
+                hint,
+            ));
+        }
+    }
+}
+
+fn validate_enum_contract(
+    parameter: &ParameterDefinitionDSL,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let is_enum = matches!(parameter.value_type, ParameterValueTypeDSL::Enum);
+    if is_enum && parameter.enum_values.is_empty() {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_PARAMETER_INVALID,
+            format!("{path}.enum_values"),
+            "Enum parameters require at least one allowed value.",
+            "Declare a stable non-empty list of choices.",
+        ));
+    }
+    if !is_enum && !parameter.enum_values.is_empty() {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_PARAMETER_INVALID,
+            format!("{path}.enum_values"),
+            "Only enum parameters can declare enum_values.",
+            "Remove enum_values or change value_type to enum.",
+        ));
+    }
+    let mut values = HashSet::new();
+    for (index, value) in parameter.enum_values.iter().enumerate() {
+        if value.trim().is_empty() || !values.insert(value.as_str()) {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_PARAMETER_INVALID,
+                format!("{path}.enum_values[{index}]"),
+                "Enum values must be non-empty and unique.",
+                "Use stable unique enum tokens.",
+            ));
+        }
+    }
+}
+
+fn validate_parameter_ui_contract(
+    value_type: ParameterValueTypeDSL,
+    ui_hint: ParameterUiHintDSL,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let compatible = matches!(
+        (value_type, ui_hint),
+        (
+            ParameterValueTypeDSL::Scalar,
+            ParameterUiHintDSL::Slider | ParameterUiHintDSL::Angle
+        ) | (ParameterValueTypeDSL::Color, ParameterUiHintDSL::Color)
+            | (
+                ParameterValueTypeDSL::Direction,
+                ParameterUiHintDSL::Segmented
+            )
+            | (
+                ParameterValueTypeDSL::Boolean,
+                ParameterUiHintDSL::Toggle | ParameterUiHintDSL::Segmented
+            )
+            | (
+                ParameterValueTypeDSL::Enum,
+                ParameterUiHintDSL::Select | ParameterUiHintDSL::Segmented
+            )
+            | (
+                ParameterValueTypeDSL::ColorStops,
+                ParameterUiHintDSL::ColorStops
+            )
+    );
+    if !compatible {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_PARAMETER_INVALID,
+            format!("{path}.ui_hint"),
+            "Parameter UI hint is incompatible with its value type.",
+            "Choose the schema-driven control for this value type.",
+        ));
+    }
+}
+
+pub(super) fn validate_parameter_value_contract(
+    value: &ParameterValueDSL,
+    expected: ParameterValueTypeDSL,
+    range: Option<(f64, f64)>,
+    enum_values: &[String],
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if value.value_type() != expected {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_PARAMETER_INVALID,
+            path,
+            "Typed parameter value does not match value_type.",
+            "Use a value with the parameter's declared type.",
+        ));
+        return;
+    }
+    match value {
+        ParameterValueDSL::Scalar(value) => {
+            if !value.is_finite()
+                || range.is_some_and(|(minimum, maximum)| *value < minimum || *value > maximum)
+            {
+                diagnostics.push(Diagnostic::error(
+                    CATALOG_PARAMETER_INVALID,
+                    path,
+                    "Scalar value must be finite and inside the declared range.",
+                    "Choose a finite value inside the safe range.",
+                ));
+            }
+        }
+        ParameterValueDSL::Color(color) => {
+            validate_color(color, format!("{path}.value"), diagnostics);
+        }
+        ParameterValueDSL::Enum(value) => {
+            if !enum_values.iter().any(|allowed| allowed == value) {
+                diagnostics.push(Diagnostic::error(
+                    CATALOG_PARAMETER_INVALID,
+                    format!("{path}.value"),
+                    format!("Enum value {value:?} is not declared in enum_values."),
+                    "Choose one of the declared stable enum values.",
+                ));
+            }
+        }
+        ParameterValueDSL::ColorStops(stops) => {
+            validate_color_stops(stops, path, diagnostics);
+        }
+        ParameterValueDSL::Direction(_) | ParameterValueDSL::Boolean(_) => {}
+    }
+}
+
+fn validate_color_stops(
+    stops: &[super::ColorStopDSL],
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if stops.len() < 2 {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_PARAMETER_INVALID,
+            path,
+            "Color stops require at least two entries.",
+            "Provide an ordered start and end color.",
+        ));
+    }
+    for (index, stop) in stops.iter().enumerate() {
+        validate_range(
+            stop.position,
+            0.0,
+            1.0,
+            format!("{path}.value[{index}].position"),
+            diagnostics,
+        );
+        validate_color(
+            &stop.color,
+            format!("{path}.value[{index}].color"),
+            diagnostics,
+        );
+    }
+    if stops
+        .windows(2)
+        .any(|pair| pair[0].position >= pair[1].position)
+    {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_PARAMETER_INVALID,
+            path,
+            "Color stop positions must be strictly increasing.",
+            "Sort stops and remove duplicate positions.",
+        ));
+    }
+}
+
+fn validate_catalog_metadata(
+    path: &str,
+    definition: &EffectDefinitionDSL,
+    parameters: &HashMap<String, ParameterContract>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for (field, value) in [
+        ("energy", definition.catalog.energy),
+        ("density", definition.catalog.density),
+        ("colorfulness", definition.catalog.colorfulness),
+    ] {
+        validate_range(
+            f64::from(value),
+            0.0,
+            1.0,
+            format!("{path}.catalog.{field}"),
+            diagnostics,
+        );
+    }
+    if definition
+        .catalog
+        .category
+        .as_deref()
+        .is_some_and(|category| category.trim().is_empty())
+    {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.catalog.category"),
+            "Catalog category must not be blank.",
+            "Use a stable, user-facing category name.",
+        ));
+    }
+    validate_unique_catalog_tokens(
+        &definition.catalog.mood,
+        &format!("{path}.catalog.mood"),
+        diagnostics,
+    );
+    validate_unique_catalog_tokens(
+        &definition.catalog.required_attributes,
+        &format!("{path}.catalog.required_attributes"),
+        diagnostics,
+    );
+    validate_unique_catalog_tokens(
+        &definition.catalog.parameter_summary,
+        &format!("{path}.catalog.parameter_summary"),
+        diagnostics,
+    );
+    for (index, parameter_id) in definition.catalog.parameter_summary.iter().enumerate() {
+        if !parameters.contains_key(parameter_id) {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_METADATA_INVALID,
+                format!("{path}.catalog.parameter_summary[{index}]"),
+                format!("Catalog summary references unknown parameter {parameter_id:?}."),
+                "Use a parameter ID declared by this exact Effect revision.",
+            ));
+        }
+    }
+    if definition.catalog.deprecated && definition.catalog.replacement.is_none() {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.catalog.replacement"),
+            "Deprecated Effect revisions require an explicit replacement.",
+            "Pin the replacement Effect ID and exact revision.",
+        ));
+    }
+    if definition
+        .catalog
+        .replacement
+        .as_ref()
+        .is_some_and(|replacement| {
+            replacement.id == definition.id && replacement.revision == definition.revision
+        })
+    {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.catalog.replacement"),
+            "An Effect revision cannot replace itself.",
+            "Reference a different exact Effect revision.",
+        ));
+    }
+    if matches!(definition.source, EffectSourceDSL::BuiltIn) {
+        for (field, missing, hint) in [
+            (
+                "family",
+                definition.catalog.family.is_none(),
+                "Assign one stable Production family.",
+            ),
+            (
+                "category",
+                definition
+                    .catalog
+                    .category
+                    .as_deref()
+                    .is_none_or(|value| value.trim().is_empty()),
+                "Provide a non-empty Production category.",
+            ),
+            (
+                "mood",
+                definition.catalog.mood.is_empty(),
+                "Provide at least one searchable mood.",
+            ),
+            (
+                "layout_capabilities",
+                definition.catalog.layout_capabilities.is_empty(),
+                "Declare at least one supported layout capability.",
+            ),
+            (
+                "parameter_summary",
+                definition.catalog.parameter_summary.is_empty()
+                    && !definition.parameters.is_empty(),
+                "List the primary parameter IDs in display order.",
+            ),
+        ] {
+            if missing {
+                diagnostics.push(
+                    Diagnostic::error(
+                        CATALOG_METADATA_INVALID,
+                        format!("{path}.catalog.{field}"),
+                        format!("Production Catalog metadata is missing {field}."),
+                        hint,
+                    )
+                    .with_asset(
+                        "effect",
+                        definition.id.clone(),
+                        definition.revision,
+                    ),
+                );
+            }
+        }
+    }
+    validate_graph_bindings(path, definition, diagnostics);
+}
+
+fn validate_unique_catalog_tokens(
+    values: &[String],
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let mut unique = HashSet::new();
+    for (index, value) in values.iter().enumerate() {
+        if value.trim().is_empty() || !unique.insert(value.as_str()) {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_METADATA_INVALID,
+                format!("{path}[{index}]"),
+                "Catalog tokens must be non-empty and unique.",
+                "Remove blank or duplicate metadata values.",
+            ));
+        }
+    }
+}
+
+fn validate_graph_bindings(
+    path: &str,
+    definition: &EffectDefinitionDSL,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let nodes: HashMap<_, _> = definition
+        .graph
+        .nodes
+        .iter()
+        .map(|node| (node.id(), node))
+        .collect();
+    let mut bindings = HashSet::new();
+    for (index, parameter) in definition.parameters.iter().enumerate() {
+        let Some(binding) = &parameter.graph_binding else {
+            continue;
+        };
+        let binding_path = format!("{path}.parameters[{index}].graph_binding");
+        if !bindings.insert((binding.node_id.as_str(), binding.property)) {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_GRAPH_BINDING_INVALID,
+                binding_path,
+                "Only one parameter can bind a graph node property.",
+                "Remove the duplicate structural binding.",
+            ));
+            continue;
+        }
+        let Some(node) = nodes.get(binding.node_id.as_str()) else {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_GRAPH_BINDING_INVALID,
+                format!("{binding_path}.node_id"),
+                format!(
+                    "Graph binding references unknown node {:?}.",
+                    binding.node_id
+                ),
+                "Reference a node in this exact Effect graph.",
+            ));
+            continue;
+        };
+        let compatible = matches!(
+            (binding.property, *node, parameter.value_type),
+            (
+                EffectNodePropertyDSL::Waveform,
+                EffectNodeDSL::Oscillator { .. },
+                ParameterValueTypeDSL::Enum
+            ) | (
+                EffectNodePropertyDSL::Attack | EffectNodePropertyDSL::Release,
+                EffectNodeDSL::Envelope { .. },
+                ParameterValueTypeDSL::Scalar
+            ) | (
+                EffectNodePropertyDSL::ColorStops,
+                EffectNodeDSL::ColorGradient { .. },
+                ParameterValueTypeDSL::ColorStops
+            )
+        );
+        if !compatible {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_GRAPH_BINDING_INVALID,
+                format!("{binding_path}.property"),
+                "Graph binding property, node type, and parameter type are incompatible.",
+                "Bind waveform→oscillator enum, attack/release→envelope scalar, or color_stops→gradient.",
+            ));
+        } else if !binding_default_matches_node(parameter, node, binding.property) {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_GRAPH_BINDING_INVALID,
+                format!("{path}.parameters[{index}].default_value"),
+                "Graph-bound parameter default does not match the pinned node property.",
+                "Materialize typed graph bindings before validating or saving the Effect revision.",
+            ));
+        }
+        if !matches!(
+            parameter.override_policy,
+            Some(ParameterOverridePolicyDSL::EffectOnly | ParameterOverridePolicyDSL::Locked)
+        ) {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_GRAPH_BINDING_INVALID,
+                format!("{path}.parameters[{index}].override_policy"),
+                "Structural graph parameters cannot be overridden by Cue layers.",
+                "Use effect_only or locked override policy.",
+            ));
+        }
+        if !matches!(parameter.automation, AutomationPolicyDSL::Disabled) {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_GRAPH_BINDING_INVALID,
+                format!("{path}.parameters[{index}].automation"),
+                "Structural graph parameters cannot be automated at runtime.",
+                "Disable automation for graph-bound parameters.",
+            ));
+        }
+        if matches!(binding.property, EffectNodePropertyDSL::Waveform) {
+            let supported = ["sine", "triangle", "saw", "pulse"];
+            if parameter
+                .enum_values
+                .iter()
+                .any(|value| !supported.contains(&value.as_str()))
+            {
+                diagnostics.push(Diagnostic::error(
+                    CATALOG_GRAPH_BINDING_INVALID,
+                    format!("{path}.parameters[{index}].enum_values"),
+                    "Waveform enum contains an unsupported oscillator value.",
+                    "Use sine, triangle, saw, or pulse.",
+                ));
+            }
+        }
+    }
+}
+
+fn binding_default_matches_node(
+    parameter: &ParameterDefinitionDSL,
+    node: &EffectNodeDSL,
+    property: EffectNodePropertyDSL,
+) -> bool {
+    match (property, node, &parameter.default_value) {
+        (
+            EffectNodePropertyDSL::Waveform,
+            EffectNodeDSL::Oscillator { waveform, .. },
+            ParameterValueDSL::Enum(value),
+        ) => {
+            let waveform = match waveform {
+                super::OscillatorWaveformDSL::Sine => "sine",
+                super::OscillatorWaveformDSL::Triangle => "triangle",
+                super::OscillatorWaveformDSL::Saw => "saw",
+                super::OscillatorWaveformDSL::Pulse => "pulse",
+            };
+            value == waveform
+        }
+        (
+            EffectNodePropertyDSL::Attack,
+            EffectNodeDSL::Envelope { attack, .. },
+            ParameterValueDSL::Scalar(value),
+        ) => (*value - *attack).abs() <= f64::EPSILON,
+        (
+            EffectNodePropertyDSL::Release,
+            EffectNodeDSL::Envelope { release, .. },
+            ParameterValueDSL::Scalar(value),
+        ) => (*value - *release).abs() <= f64::EPSILON,
+        (
+            EffectNodePropertyDSL::ColorStops,
+            EffectNodeDSL::ColorGradient { stops, .. },
+            ParameterValueDSL::ColorStops(value),
+        ) => {
+            value.len() == stops.len()
+                && value.iter().zip(stops).all(|(left, right)| {
+                    (left.position - right.position).abs() <= f64::EPSILON
+                        && left.color.eq_ignore_ascii_case(&right.color)
+                })
+        }
+        _ => false,
+    }
 }
 
 fn validate_effect_instances(
@@ -508,17 +1127,25 @@ fn validate_effect_instances(
                     "Use the value type declared by the referenced definition.",
                 ));
             }
-            if let (Some((min, max)), ParameterValueDSL::Scalar(value)) = (value_type.range, value)
+            if value_type
+                .override_policy
+                .is_some_and(|policy| !matches!(policy, ParameterOverridePolicyDSL::CueOverride))
             {
-                if !value.is_finite() || *value < min || *value > max {
-                    diagnostics.push(Diagnostic::error(
-                        DOC_PARAMETER_INVALID,
-                        format!("{path}.parameter_overrides.{parameter_id}"),
-                        "Effect parameter override is outside its declared range.",
-                        "Keep the override inside the definition parameter range.",
-                    ));
-                }
+                diagnostics.push(Diagnostic::error(
+                    DOC_PARAMETER_INVALID,
+                    format!("{path}.parameter_overrides.{parameter_id}"),
+                    "Effect parameter cannot be overridden at runtime.",
+                    "Customize the Effect revision or remove the override.",
+                ));
             }
+            validate_parameter_value_contract(
+                value,
+                value_type.value_type,
+                value_type.range,
+                &value_type.enum_values,
+                &format!("{path}.parameter_overrides.{parameter_id}"),
+                diagnostics,
+            );
         }
         instances.insert(instance.id.clone(), parameters.clone());
     }
@@ -526,11 +1153,11 @@ fn validate_effect_instances(
 }
 
 fn validate_effect_graph(
-    definition_index: usize,
+    definition_path: &str,
     definition: &EffectDefinitionDSL,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let base = format!("effect_definitions[{definition_index}].graph.nodes");
+    let base = format!("{definition_path}.graph.nodes");
     let mut nodes = HashMap::new();
     for (index, node) in definition.graph.nodes.iter().enumerate() {
         if node.id().trim().is_empty() || nodes.insert(node.id(), (index, node)).is_some() {
@@ -592,10 +1219,54 @@ fn validate_effect_graph(
     if graph_has_cycle(&definition.graph.nodes) {
         diagnostics.push(Diagnostic::error(
             DOC_EFFECT_GRAPH_INVALID,
-            base,
+            base.clone(),
             "EffectGraph contains a cycle.",
             "Make the graph acyclic so it can be topologically compiled.",
         ));
+    }
+    validate_graph_reachability(&base, &definition.graph.nodes, diagnostics);
+}
+
+fn validate_graph_reachability(
+    base: &str,
+    nodes: &[EffectNodeDSL],
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    fn visit<'a>(
+        node: &'a EffectNodeDSL,
+        nodes: &HashMap<&'a str, &'a EffectNodeDSL>,
+        reachable: &mut HashSet<&'a str>,
+    ) {
+        if !reachable.insert(node.id()) {
+            return;
+        }
+        for (reference, _) in effect_node_inputs(node) {
+            if let Some(source) = nodes.get(reference.node_id.as_str()) {
+                visit(source, nodes, reachable);
+            }
+        }
+    }
+
+    let by_id: HashMap<_, _> = nodes.iter().map(|node| (node.id(), node)).collect();
+    let mut reachable = HashSet::new();
+    for writer in nodes
+        .iter()
+        .filter(|node| matches!(node, EffectNodeDSL::AttributeWriter { .. }))
+    {
+        visit(writer, &by_id, &mut reachable);
+    }
+    for (index, node) in nodes.iter().enumerate() {
+        if !reachable.contains(node.id()) {
+            diagnostics.push(Diagnostic::error(
+                DOC_EFFECT_GRAPH_INVALID,
+                format!("{base}[{index}]"),
+                format!(
+                    "Effect node {:?} cannot reach an AttributeWriter.",
+                    node.id()
+                ),
+                "Connect the node to a visible output or remove it.",
+            ));
+        }
     }
 }
 
@@ -674,9 +1345,20 @@ fn validate_effect_node_values(
     let path = format!("{base}[{index}]");
     match node {
         EffectNodeDSL::Constant {
+            value: ParameterValueDSL::Scalar(value),
+            ..
+        } if !value.is_finite() => diagnostics.push(invalid_number(
+            format!("{path}.value"),
+            "Constant scalar values must be finite.",
+        )),
+        EffectNodeDSL::Constant {
             value: ParameterValueDSL::Color(color),
             ..
         } => validate_color(color, format!("{path}.value"), diagnostics),
+        EffectNodeDSL::Constant {
+            value: ParameterValueDSL::ColorStops(stops),
+            ..
+        } => validate_color_stops(stops, &format!("{path}.value"), diagnostics),
         EffectNodeDSL::StepSequence { steps, .. } => {
             if steps.is_empty() {
                 diagnostics.push(invalid_number(
@@ -720,10 +1402,18 @@ fn validate_effect_node_values(
         }
         EffectNodeDSL::SpatialPhase {
             basis,
+            from,
+            to,
             group_size,
             custom_order,
             ..
         } => {
+            if !from.is_finite() || !to.is_finite() {
+                diagnostics.push(invalid_number(
+                    format!("{path}.from"),
+                    "SpatialPhase endpoints must be finite.",
+                ));
+            }
             if group_size.is_some_and(|size| size == 0) {
                 diagnostics.push(invalid_number(
                     format!("{path}.group_size"),
@@ -797,13 +1487,13 @@ fn validate_effect_node_values(
             }
             if stops
                 .windows(2)
-                .any(|pair| pair[0].position > pair[1].position)
+                .any(|pair| pair[0].position >= pair[1].position)
             {
                 diagnostics.push(Diagnostic::error(
                     DOC_EFFECT_GRAPH_INVALID,
                     format!("{path}.stops"),
-                    "ColorGradient stops must be ordered by position.",
-                    "Sort stops from lowest to highest position.",
+                    "ColorGradient stops must use strictly increasing positions.",
+                    "Sort stops and remove duplicate positions.",
                 ));
             }
         }
@@ -1016,11 +1706,19 @@ fn automation_target_type(
                 ));
                 return None;
             };
-            match parameters
-                .get(parameter_id)
-                .map(|parameter| parameter.value_type)
-            {
-                Some(value_type) => Some(value_type),
+            match parameters.get(parameter_id) {
+                Some(parameter)
+                    if matches!(parameter.automation, AutomationPolicyDSL::Disabled) =>
+                {
+                    diagnostics.push(Diagnostic::error(
+                        DOC_PARAMETER_INVALID,
+                        format!("{path}.target"),
+                        format!("Parameter {parameter_id:?} does not allow automation."),
+                        "Choose an automatable parameter or customize the Effect schema.",
+                    ));
+                    None
+                }
+                Some(parameter) => Some(parameter.value_type),
                 None => {
                     diagnostics.push(Diagnostic::error(
                         DOC_PARAMETER_INVALID,

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { ShowSnapshotState } from "@/bridge/types";
+import { authoringTransportActions } from "@/authoring/transport";
+import type { AssetRef, CueDefinition, ShowSnapshotState } from "@/bridge/types";
 
 export type WorkspaceId = "stage" | "effect-lab" | "cues" | "arrange" | "live";
 export type PublishStatus = "idle" | "publishing" | "activating" | "error";
@@ -18,6 +19,11 @@ export interface PatchAddress {
   startChannel: number;
 }
 
+export interface ArrangeBuiltInCueSelection {
+  recipeRef: AssetRef;
+  cue: CueDefinition;
+}
+
 export interface WorkspaceState {
   activeWorkspace: WorkspaceId;
   advancedMode: boolean;
@@ -25,6 +31,7 @@ export interface WorkspaceState {
   inspectorVisible: boolean;
   selectedEffectId: string | null;
   selectedLiveEffectId: string | null;
+  selectedArrangeBuiltInCue: ArrangeBuiltInCueSelection | null;
   favoriteEffectIds: string[];
   livePadQuantize: LivePadQuantize;
   livePadConfigs: Record<string, LivePadConfig>;
@@ -42,6 +49,7 @@ const initialState: WorkspaceState = {
   inspectorVisible: true,
   selectedEffectId: null,
   selectedLiveEffectId: null,
+  selectedArrangeBuiltInCue: null,
   favoriteEffectIds: [],
   livePadQuantize: "beat",
   livePadConfigs: {},
@@ -78,8 +86,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 );
 
 export const workspaceActions = {
-  setActiveWorkspace: (activeWorkspace: WorkspaceId) =>
-    useWorkspaceStore.setState({ activeWorkspace, advancedMode: false, statusMessage: null }),
+  setActiveWorkspace: (activeWorkspace: WorkspaceId) => {
+    if (useWorkspaceStore.getState().activeWorkspace !== activeWorkspace) {
+      authoringTransportActions.pauseAll();
+    }
+    useWorkspaceStore.setState({ activeWorkspace, advancedMode: false, statusMessage: null });
+  },
   setAdvancedMode: (advancedMode: boolean) => useWorkspaceStore.setState({ advancedMode }),
   setLibraryVisible: (libraryVisible: boolean) => useWorkspaceStore.setState({ libraryVisible }),
   setInspectorVisible: (inspectorVisible: boolean) =>
@@ -88,6 +100,20 @@ export const workspaceActions = {
     useWorkspaceStore.setState({ selectedEffectId }),
   setSelectedLiveEffectId: (selectedLiveEffectId: string | null) =>
     useWorkspaceStore.setState({ selectedLiveEffectId }),
+  setSelectedArrangeBuiltInCue: (selection: ArrangeBuiltInCueSelection | null) => {
+    const current = useWorkspaceStore.getState().selectedArrangeBuiltInCue;
+    if (
+      current?.recipeRef.id !== selection?.recipeRef.id ||
+      current?.recipeRef.revision !== selection?.recipeRef.revision ||
+      current?.cue.compatible_stage_ref.id !== selection?.cue.compatible_stage_ref.id ||
+      current?.cue.compatible_stage_ref.revision !== selection?.cue.compatible_stage_ref.revision
+    ) {
+      authoringTransportActions.pauseAll();
+    }
+    useWorkspaceStore.setState({
+      selectedArrangeBuiltInCue: selection ? structuredClone(selection) : null,
+    });
+  },
   setLivePadQuantize: (livePadQuantize: LivePadQuantize) =>
     useWorkspaceStore.setState({ livePadQuantize }),
   setLivePadConfig: (effectId: string, config: LivePadConfig) =>
@@ -115,6 +141,13 @@ export const workspaceActions = {
     useWorkspaceStore.setState({ publishedRevision }),
   setPublishStatus: (publishStatus: PublishStatus, statusMessage: string | null = null) =>
     useWorkspaceStore.setState({ publishStatus, statusMessage }),
+  resetAuthoringDefaults: () =>
+    useWorkspaceStore.setState((state) => ({
+      ...initialState,
+      publishedRevision: state.publishedRevision,
+      liveRevision: state.liveRevision,
+      statusMessage: "Defaults restored. Click Live when you are ready to update output.",
+    })),
   reset: () => useWorkspaceStore.setState(initialState, true),
 };
 
@@ -125,6 +158,7 @@ export const workspaceSelectors = {
   inspectorVisible: (state: WorkspaceState) => state.inspectorVisible,
   selectedEffectId: (state: WorkspaceState) => state.selectedEffectId,
   selectedLiveEffectId: (state: WorkspaceState) => state.selectedLiveEffectId,
+  selectedArrangeBuiltInCue: (state: WorkspaceState) => state.selectedArrangeBuiltInCue,
   favoriteEffectIds: (state: WorkspaceState) => state.favoriteEffectIds,
   livePadQuantize: (state: WorkspaceState) => state.livePadQuantize,
   livePadConfigs: (state: WorkspaceState) => state.livePadConfigs,

@@ -33,6 +33,22 @@ pub struct ParameterDefinitionDSL {
     pub default_value: ParameterValueDSL,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub range: Option<(f64, f64)>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub step: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub required: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub help: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub safe_fallback: Option<ParameterValueDSL>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub override_policy: Option<ParameterOverridePolicyDSL>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub advanced: Option<bool>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub enum_values: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub graph_binding: Option<ParameterGraphBindingDSL>,
     pub unit: ParameterUnitDSL,
     pub ui_hint: ParameterUiHintDSL,
     pub automation: AutomationPolicyDSL,
@@ -44,6 +60,9 @@ pub enum ParameterValueTypeDSL {
     Scalar,
     Color,
     Direction,
+    Boolean,
+    Enum,
+    ColorStops,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
@@ -57,6 +76,9 @@ pub enum ParameterValueDSL {
     Scalar(f64),
     Color(String),
     Direction(DirectionDSL),
+    Boolean(bool),
+    Enum(String),
+    ColorStops(Vec<ColorStopDSL>),
 }
 
 impl ParameterValueDSL {
@@ -65,8 +87,35 @@ impl ParameterValueDSL {
             Self::Scalar(_) => ParameterValueTypeDSL::Scalar,
             Self::Color(_) => ParameterValueTypeDSL::Color,
             Self::Direction(_) => ParameterValueTypeDSL::Direction,
+            Self::Boolean(_) => ParameterValueTypeDSL::Boolean,
+            Self::Enum(_) => ParameterValueTypeDSL::Enum,
+            Self::ColorStops(_) => ParameterValueTypeDSL::ColorStops,
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ParameterOverridePolicyDSL {
+    CueOverride,
+    EffectOnly,
+    Locked,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ParameterGraphBindingDSL {
+    pub node_id: String,
+    pub property: EffectNodePropertyDSL,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum EffectNodePropertyDSL {
+    Waveform,
+    Attack,
+    Release,
+    ColorStops,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
@@ -79,6 +128,7 @@ pub enum DirectionDSL {
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum ParameterUnitDSL {
+    None,
     Multiplier,
     Cycles,
     Percent,
@@ -86,6 +136,9 @@ pub enum ParameterUnitDSL {
     Color,
     Direction,
     Degrees,
+    Boolean,
+    Choice,
+    ColorStops,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
@@ -95,6 +148,9 @@ pub enum ParameterUiHintDSL {
     Color,
     Segmented,
     Angle,
+    Toggle,
+    Select,
+    ColorStops,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
@@ -102,6 +158,7 @@ pub enum ParameterUiHintDSL {
 pub enum AutomationPolicyDSL {
     Continuous,
     Discrete,
+    Disabled,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
@@ -120,6 +177,12 @@ pub struct EffectInstanceDSL {
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct EffectCatalogDSL {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub family: Option<EffectFamilyDSL>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
+    #[serde(default)]
+    pub visibility: CatalogVisibilityDSL,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mood: Vec<String>,
     #[schemars(range(min = 0.0, max = 1.0))]
@@ -132,6 +195,53 @@ pub struct EffectCatalogDSL {
     pub strobe_risk: StrobeRiskDSL,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required_attributes: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub layout_capabilities: Vec<LayoutCapabilityDSL>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parameter_summary: Vec<String>,
+    #[serde(default)]
+    pub deprecated: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub replacement: Option<EffectReplacementDSL>,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum EffectFamilyDSL {
+    Intensity,
+    Color,
+    Movement,
+    Spatial,
+    Strobe,
+    Utility,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CatalogVisibilityDSL {
+    #[default]
+    Standard,
+    Advanced,
+    Hidden,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum LayoutCapabilityDSL {
+    Any,
+    Linear,
+    Matrix,
+    Radial,
+    Coordinates,
+    TargetingScene,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct EffectReplacementDSL {
+    pub id: String,
+    #[schemars(range(min = 1))]
+    pub revision: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
@@ -144,7 +254,7 @@ pub enum MotionTagDSL {
     Organic,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum StrobeRiskDSL {
     None,
@@ -274,6 +384,9 @@ impl EffectNodeDSL {
                 ParameterValueDSL::Scalar(_) => EffectPortDSL::Scalar,
                 ParameterValueDSL::Color(_) => EffectPortDSL::Color,
                 ParameterValueDSL::Direction(_) => EffectPortDSL::Direction,
+                ParameterValueDSL::Boolean(_) => EffectPortDSL::Boolean,
+                ParameterValueDSL::Enum(_) => EffectPortDSL::Enum,
+                ParameterValueDSL::ColorStops(_) => EffectPortDSL::ColorStops,
             },
             Self::StepSequence { .. } => EffectPortDSL::AttributeSet,
             Self::ColorGradient { .. } => EffectPortDSL::Color,
@@ -296,6 +409,9 @@ pub enum EffectPortDSL {
     Scalar,
     Color,
     Direction,
+    Boolean,
+    Enum,
+    ColorStops,
     Mask,
     AttributeSet,
     Writes,

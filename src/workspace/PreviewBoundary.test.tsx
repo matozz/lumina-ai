@@ -61,9 +61,8 @@ describe("PreviewSession boundary state machine", () => {
 
     view.rerender(<Harness workspace="cues" />);
     await waitFor(() =>
-      expect(commandMocks.renderProjectPreview).toHaveBeenLastCalledWith(
-        { type: "cue", cue_ref: cue },
-        0,
+      expect(commandMocks.previewProject).toHaveBeenLastCalledWith(
+        expect.objectContaining({ context: { type: "cue", cue_ref: cue }, playheadTick: 0 }),
       ),
     );
     expect(useAuthoringTransportStore.getState().sessions[effectSessionKey].cursorTick).toBe(1_234);

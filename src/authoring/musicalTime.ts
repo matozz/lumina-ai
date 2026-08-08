@@ -178,8 +178,12 @@ export function musicalPositionAtTick(
   };
 }
 
-export function formatMusicalPosition(position: Pick<MusicalPosition, "bar" | "beat" | "tick">) {
-  return `${position.bar}.${position.beat}.${position.tick}`;
+export function formatMusicalPosition(
+  position: Pick<MusicalPosition, "bar" | "beat" | "tick">,
+  ppq = 960,
+) {
+  const tickWidth = String(Math.max(0, ppq - 1)).length;
+  return `${position.bar}.${position.beat}.${String(position.tick).padStart(tickWidth, "0")}`;
 }
 
 export function rulerMarks(

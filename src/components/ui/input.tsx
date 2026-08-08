@@ -3,7 +3,11 @@ import { Input as InputPrimitive } from "@base-ui/react/input";
 
 import { cn } from "@/lib/utils";
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+function normalizeNumberInputValue(value: string) {
+  return value.replace(/^(-?)0+(?=\d)/, "$1");
+}
+
+function Input({ className, type, onChange, ...props }: React.ComponentProps<"input">) {
   return (
     <InputPrimitive
       type={type}
@@ -13,6 +17,12 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
         className,
       )}
       {...props}
+      onChange={(event) => {
+        if (type === "number") {
+          event.currentTarget.value = normalizeNumberInputValue(event.currentTarget.value);
+        }
+        onChange?.(event);
+      }}
     />
   );
 }

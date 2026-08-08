@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FixtureFramePayload } from "@/bridge/types";
 import { activeStage, exactAsset } from "@/document/projectModel";
 import { projectActions, useProjectStore } from "@/stores/project";
+import { workspaceActions } from "@/stores/workspace";
 import { TargetSetEditor } from "./TargetSetEditor";
 
 describe("TargetSetEditor", () => {
   beforeEach(() => {
     localStorage.clear();
     projectActions.reset();
+    workspaceActions.setAdvancedMode(false);
   });
 
   it("visually edits Rows, previews fixture output, and saves one Stage revision", () => {
@@ -21,19 +23,19 @@ describe("TargetSetEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Preview" }));
 
     const outputs = preview.mock.calls[0][0].detail as FixtureFramePayload[];
-    expect(outputs).toHaveLength(16);
+    expect(outputs).toHaveLength(80);
     expect(outputs[0].attributes[0].value).toEqual({ type: "scalar", value: 0.04 });
-    expect(outputs[4].attributes[0].value).toEqual({ type: "scalar", value: 1 });
+    expect(outputs[10].attributes[0].value).toEqual({ type: "scalar", value: 1 });
 
-    fireEvent.click(screen.getByRole("button", { name: "Save revision" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save area" }));
     const state = useProjectStore.getState();
     const oldRows = exactAsset(state.bundle.stages, {
       id: "main-stage",
       revision: 1,
     })?.target_sets.find((target) => target.id === "rows");
     const nextRows = activeStage(state.bundle).target_sets.find((target) => target.id === "rows");
-    expect(oldRows?.selector).toMatchObject({ indices: [0, 1, 2, 3] });
-    expect(nextRows?.selector).toMatchObject({ indices: [1, 2, 3] });
+    expect(oldRows?.selector).toMatchObject({ indices: [0, 1, 2, 3, 4, 5, 6, 7] });
+    expect(nextRows?.selector).toMatchObject({ indices: [1, 2, 3, 4, 5, 6, 7] });
     expect(activeStage(state.bundle).revision).toBe(2);
 
     window.removeEventListener("workspace:test-fixtures", preview);

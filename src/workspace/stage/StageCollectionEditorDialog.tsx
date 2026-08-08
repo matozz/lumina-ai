@@ -39,14 +39,14 @@ export function StageCollectionEditorDialog({
         <DialogHeader className="border-border border-b px-4 py-3 pr-12">
           <div className="flex items-center gap-2">
             {groups ? <LayoutGrid aria-hidden="true" /> : <ScanSearch aria-hidden="true" />}
-            <DialogTitle>{groups ? "Fixture Group editor" : "TargetSet editor"}</DialogTitle>
+            <DialogTitle>{groups ? "Fixture Group editor" : "Fixture area editor"}</DialogTitle>
             <Badge variant="outline" className="ml-auto">
               {dimensions ? dimensions[0] + "×" + dimensions[1] : layout.geometry.shape}
             </Badge>
           </div>
           <DialogDescription>
-            {fixtures.length} patched fixtures · Stage {stage.id}@{stage.revision}. The expanded
-            grid keeps fixture cells usable without stacking inside the Stage inspector.
+            {fixtures.length} connected fixtures. Select rows, columns, zones, or individual
+            fixtures and reuse the saved area in Effect Lab and Cues.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="min-h-0">
@@ -80,14 +80,14 @@ export function StageCollectionEditorLauncher({
       </div>
       <div>
         <p className="text-xs font-medium">
-          {count} {kind === "groups" ? "Fixture Groups" : "TargetSets"}
+          {count} {kind === "groups" ? "Fixture Groups" : "Fixture areas"}
         </p>
         <p className="text-muted-foreground mt-1 text-[10px] leading-relaxed">
-          Open the expanded editor for a responsive fixture grid and revision-safe save controls.
+          Open the expanded editor for a responsive fixture grid and safe save controls.
         </p>
       </div>
       <Button size="sm" onClick={onOpen}>
-        Open {kind === "groups" ? "Group" : "TargetSet"} editor
+        Open {kind === "groups" ? "Group" : "Fixture area"} editor
       </Button>
     </div>
   );

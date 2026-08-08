@@ -9,11 +9,12 @@ use crate::engine::animation::AnimatableValue;
 use crate::engine::attribute::{resolve_attribute, AttributeHandle};
 use crate::engine::color::parse_hex_color;
 use crate::engine::effect::{
-    AutomationPolicy, CompiledColorStop, CompiledEffectGraph, CompiledEffectNode,
-    CompiledEffectStep, CompiledProfileSequence, Direction, EffectCatalog, EffectCatalogMatch,
-    EffectCatalogQuery, EffectDefinition, EffectDefinitionHandle, EffectInstance, EffectNodeHandle,
-    EffectSource, MathOperation, MotionTag, OscillatorWaveform, ParameterDefinition,
-    ParameterHandle, ParameterUiHint, ParameterUnit, ParameterValue, ParameterValueType,
+    AutomationPolicy, CatalogVisibility, CompiledColorStop, CompiledEffectGraph,
+    CompiledEffectNode, CompiledEffectStep, CompiledProfileSequence, Direction, EffectCatalog,
+    EffectCatalogMatch, EffectCatalogQuery, EffectDefinition, EffectDefinitionHandle, EffectFamily,
+    EffectInstance, EffectNodeHandle, EffectReplacement, EffectSource, LayoutCapability,
+    MathOperation, MotionTag, OscillatorWaveform, ParameterDefinition, ParameterHandle,
+    ParameterOverridePolicy, ParameterUiHint, ParameterUnit, ParameterValue, ParameterValueType,
     SpatialBasis, StrobeRisk,
 };
 use crate::engine::musical_time::{MusicalTime, TempoMap, TempoPoint};
@@ -319,6 +320,35 @@ pub enum CompiledAutomationTarget {
     },
 }
 
+fn circle_ring_fixture_counts(fixture_count: usize, rings: u32, increment: u32) -> Vec<usize> {
+    let ring_count = rings as usize;
+    if ring_count == 0 || fixture_count <= 1 {
+        return vec![0; ring_count];
+    }
+
+    let ring_weight = ring_count * (ring_count + 1) / 2;
+    let capacity = increment as usize * ring_weight;
+    let remaining = fixture_count.saturating_sub(1).min(capacity);
+    let mut allocations: Vec<(usize, usize, usize)> = (0..ring_count)
+        .map(|index| {
+            let weighted = remaining * (index + 1);
+            (index, weighted / ring_weight, weighted % ring_weight)
+        })
+        .collect();
+    let assigned: usize = allocations.iter().map(|(_, count, _)| count).sum();
+    let mut priority: Vec<usize> = (0..ring_count).collect();
+    priority.sort_by(|left, right| {
+        allocations[*right]
+            .2
+            .cmp(&allocations[*left].2)
+            .then_with(|| right.cmp(left))
+    });
+    for index in 0..remaining.saturating_sub(assigned) {
+        allocations[priority[index % priority.len()]].1 += 1;
+    }
+    allocations.into_iter().map(|(_, count, _)| count).collect()
+}
+
 pub struct Compiler;
 
 impl Compiler {
@@ -465,23 +495,21 @@ impl Compiler {
                         patched: None,
                     });
                     let mut current_idx = 1;
-                    for ring in 1..=*rings {
-                        let count = increment * ring;
-                        let radius = gap * ring as f64;
-                        for i in 0..count {
-                            if current_idx < fix_ids.len() {
-                                let angle = (2.0 * std::f64::consts::PI / count as f64) * i as f64;
-                                coords.push(LayoutCoord {
-                                    id: fix_ids[current_idx],
-                                    x: cx + angle.cos() * radius,
-                                    y: cy + angle.sin() * radius,
-                                    type_: get_type(fix_ids[current_idx]),
-                                    width: None,
-                                    height: None,
-                                    patched: None,
-                                });
-                                current_idx += 1;
-                            }
+                    let ring_counts = circle_ring_fixture_counts(fix_ids.len(), *rings, *increment);
+                    for (ring_index, count) in ring_counts.into_iter().enumerate() {
+                        let radius = gap * (ring_index + 1) as f64;
+                        for step in 0..count {
+                            let angle = (2.0 * std::f64::consts::PI / count as f64) * step as f64;
+                            coords.push(LayoutCoord {
+                                id: fix_ids[current_idx],
+                                x: cx + angle.cos() * radius,
+                                y: cy + angle.sin() * radius,
+                                type_: get_type(fix_ids[current_idx]),
+                                width: None,
+                                height: None,
+                                patched: None,
+                            });
+                            current_idx += 1;
                         }
                     }
                 }
@@ -1299,6 +1327,20 @@ fn compile_effect_models(
 
 fn compile_effect_catalog(catalog: &EffectCatalogDSL) -> EffectCatalog {
     EffectCatalog {
+        family: catalog.family.map(|family| match family {
+            EffectFamilyDSL::Intensity => EffectFamily::Intensity,
+            EffectFamilyDSL::Color => EffectFamily::Color,
+            EffectFamilyDSL::Movement => EffectFamily::Movement,
+            EffectFamilyDSL::Spatial => EffectFamily::Spatial,
+            EffectFamilyDSL::Strobe => EffectFamily::Strobe,
+            EffectFamilyDSL::Utility => EffectFamily::Utility,
+        }),
+        category: catalog.category.clone(),
+        visibility: match catalog.visibility {
+            CatalogVisibilityDSL::Standard => CatalogVisibility::Standard,
+            CatalogVisibilityDSL::Advanced => CatalogVisibility::Advanced,
+            CatalogVisibilityDSL::Hidden => CatalogVisibility::Hidden,
+        },
         mood: catalog.mood.clone(),
         energy: catalog.energy,
         density: catalog.density,
@@ -1317,6 +1359,27 @@ fn compile_effect_catalog(catalog: &EffectCatalogDSL) -> EffectCatalog {
             StrobeRiskDSL::High => StrobeRisk::High,
         },
         required_attributes: catalog.required_attributes.clone(),
+        layout_capabilities: catalog
+            .layout_capabilities
+            .iter()
+            .map(|capability| match capability {
+                LayoutCapabilityDSL::Any => LayoutCapability::Any,
+                LayoutCapabilityDSL::Linear => LayoutCapability::Linear,
+                LayoutCapabilityDSL::Matrix => LayoutCapability::Matrix,
+                LayoutCapabilityDSL::Radial => LayoutCapability::Radial,
+                LayoutCapabilityDSL::Coordinates => LayoutCapability::Coordinates,
+                LayoutCapabilityDSL::TargetingScene => LayoutCapability::TargetingScene,
+            })
+            .collect(),
+        parameter_summary: catalog.parameter_summary.clone(),
+        deprecated: catalog.deprecated,
+        replacement: catalog
+            .replacement
+            .as_ref()
+            .map(|replacement| EffectReplacement {
+                id: replacement.id.clone(),
+                revision: replacement.revision,
+            }),
     }
 }
 
@@ -1686,10 +1749,28 @@ fn compile_parameter_definition(
             ParameterValueTypeDSL::Scalar => ParameterValueType::Scalar,
             ParameterValueTypeDSL::Color => ParameterValueType::Color,
             ParameterValueTypeDSL::Direction => ParameterValueType::Direction,
+            ParameterValueTypeDSL::Boolean => ParameterValueType::Boolean,
+            ParameterValueTypeDSL::Enum => ParameterValueType::Enum,
+            ParameterValueTypeDSL::ColorStops => ParameterValueType::ColorStops,
         },
         default_value,
         range: parameter.range,
+        step: parameter.step,
+        required: parameter.required,
+        help: parameter.help.clone(),
+        safe_fallback: parameter
+            .safe_fallback
+            .as_ref()
+            .and_then(|fallback| compile_parameter_value(fallback, errors)),
+        override_policy: parameter.override_policy.map(|policy| match policy {
+            ParameterOverridePolicyDSL::CueOverride => ParameterOverridePolicy::CueOverride,
+            ParameterOverridePolicyDSL::EffectOnly => ParameterOverridePolicy::EffectOnly,
+            ParameterOverridePolicyDSL::Locked => ParameterOverridePolicy::Locked,
+        }),
+        advanced: parameter.advanced,
+        enum_values: parameter.enum_values.clone(),
         unit: match parameter.unit {
+            ParameterUnitDSL::None => ParameterUnit::None,
             ParameterUnitDSL::Multiplier => ParameterUnit::Multiplier,
             ParameterUnitDSL::Cycles => ParameterUnit::Cycles,
             ParameterUnitDSL::Percent => ParameterUnit::Percent,
@@ -1697,16 +1778,23 @@ fn compile_parameter_definition(
             ParameterUnitDSL::Color => ParameterUnit::Color,
             ParameterUnitDSL::Direction => ParameterUnit::Direction,
             ParameterUnitDSL::Degrees => ParameterUnit::Degrees,
+            ParameterUnitDSL::Boolean => ParameterUnit::Boolean,
+            ParameterUnitDSL::Choice => ParameterUnit::Choice,
+            ParameterUnitDSL::ColorStops => ParameterUnit::ColorStops,
         },
         ui_hint: match parameter.ui_hint {
             ParameterUiHintDSL::Slider => ParameterUiHint::Slider,
             ParameterUiHintDSL::Color => ParameterUiHint::Color,
             ParameterUiHintDSL::Segmented => ParameterUiHint::Segmented,
             ParameterUiHintDSL::Angle => ParameterUiHint::Angle,
+            ParameterUiHintDSL::Toggle => ParameterUiHint::Toggle,
+            ParameterUiHintDSL::Select => ParameterUiHint::Select,
+            ParameterUiHintDSL::ColorStops => ParameterUiHint::ColorStops,
         },
         automation: match parameter.automation {
             AutomationPolicyDSL::Continuous => AutomationPolicy::Continuous,
             AutomationPolicyDSL::Discrete => AutomationPolicy::Discrete,
+            AutomationPolicyDSL::Disabled => AutomationPolicy::Disabled,
         },
     })
 }
@@ -1735,6 +1823,25 @@ fn compile_parameter_value(
                 DirectionDSL::Reverse => Direction::Reverse,
             }))
         }
+        ParameterValueDSL::Boolean(value) => Some(ParameterValue::Boolean(*value)),
+        ParameterValueDSL::Enum(value) => Some(ParameterValue::Enum(value.clone())),
+        ParameterValueDSL::ColorStops(stops) => stops
+            .iter()
+            .map(|stop| {
+                parse_hex_color(&stop.color)
+                    .map(|(red, green, blue)| (stop.position, [red, green, blue]))
+                    .map_err(|error| {
+                        errors.push(Diagnostic::error(
+                            DOC_INVALID_COLOR,
+                            "effect_definitions.parameters.default_value",
+                            error.to_string(),
+                            "Use colors in #RRGGBB format.",
+                        ));
+                    })
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .ok()
+            .map(ParameterValue::ColorStops),
     }
 }
 
@@ -1759,6 +1866,7 @@ fn non_finite_formula_diagnostic(path: &str) -> Diagnostic {
 #[cfg(test)]
 mod tests {
     use super::{
+        circle_ring_fixture_counts,
         diagnostic::{
             DOC_ATTRIBUTE_NOT_SUPPORTED, DOC_ATTRIBUTE_OUT_OF_RANGE, DSL_DUPLICATE_FIXTURE_ID,
             DSL_TARGET_GROUP_NOT_FOUND,
@@ -1805,6 +1913,13 @@ mod tests {
       }
     }
     "##;
+
+    #[test]
+    fn circle_rings_distribute_every_ring_as_a_complete_symmetric_set() {
+        assert_eq!(circle_ring_fixture_counts(80, 3, 14), vec![13, 26, 40]);
+        assert_eq!(circle_ring_fixture_counts(86, 3, 14), vec![14, 28, 42]);
+        assert_eq!(circle_ring_fixture_counts(5, 3, 14), vec![1, 1, 2]);
+    }
 
     #[test]
     fn compiles_fixture_group_phaser_and_timeline_outputs() {

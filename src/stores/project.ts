@@ -6,9 +6,11 @@ import type {
   AssetRef,
   CueDefinition,
   CueLayer,
+  EffectDefinitionDocument,
   GroupDSL,
   LayoutDefinition,
   ProjectBundle,
+  ProjectPreviewFrame,
   TargetSetDefinition,
   TargetingSceneDefinition,
 } from "@/bridge/types";
@@ -25,12 +27,17 @@ import {
   duplicateArrangementAsset,
   exactAsset,
   forkAssetRevision,
+  normalizeProjectAssetRefs,
+  toAssetRef,
   uniqueId,
 } from "@/document/projectModel";
 import { migrateProjectBundle } from "@/document/projectMigration";
+import { INTERNAL_PRODUCTION_CUE_PREFIX } from "@/document/productionCue";
 import { layoutCapacity } from "@/document/layoutDefinition";
-import { analyzeStageTopology, resolveTargetSet } from "@/document/stageTopology";
+import { analyzeStageTopology, resolveTargetSet, stageForLayout } from "@/document/stageTopology";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
+
+export const PREVIEW_DARK_FRAME_NOTICE_THRESHOLD = 45;
 
 export type PreviewSourceMode = "authoring_draft" | "rehearsal_draft" | "rehearsal_published";
 
@@ -60,12 +67,38 @@ export interface ProjectState {
   rehearsalPublishedRevision: number | null;
   previewGeneration: number | null;
   previewError: string | null;
+  previewSummary: {
+    fixtureCount: number;
+    litFixtureCount: number;
+    consecutiveDarkFrames: number;
+  } | null;
   history: ProjectHistoryEntry[];
   historyCursor: number;
   savedHistoryCursor: number;
 }
 
 const starter = createStarterProjectBundle();
+const LOCAL_WORKSPACE_STORAGE_VERSION = 6;
+const LEGACY_LOCAL_EFFECT_NAMES = new Set([
+  "Breathe Custom",
+  "Gradient 2",
+  "Gradient Draft v3",
+  "Pulse 2",
+]);
+const LEGACY_LOCAL_CUE_NAMES = new Set(["Gradient Cue", "New Cue"]);
+const LEGACY_ARRANGE_RECIPE_CUES = new Map([
+  ["cue-four-on-floor", "Full-stage Drop Pulse"],
+  ["cue-row-chase", "Matrix Spatial Chase"],
+  ["cue-rainbow-wash", "Slow Atmospheric Look"],
+  ["cue-radial-bloom", "3×3 Zone Burst"],
+  ["cue-moving-sweep", "Moving Sweep"],
+  ["cue-layered-peak", "Peak Zone Chase"],
+  ["cue-strip-traveler", "Strip / Bar Traveler"],
+  ["cue-build-transition", "Blackout-safe Build / Transition"],
+  ["cue-gentle-breathe", "Gentle Breathe"],
+  ["cue-center-bloom", "Center-out Bloom"],
+  ["cue-spatial-wipe", "Spatial Wipe In"],
+]);
 
 const initialState: ProjectState = {
   bundle: starter,
@@ -80,6 +113,7 @@ const initialState: ProjectState = {
   rehearsalPublishedRevision: null,
   previewGeneration: null,
   previewError: null,
+  previewSummary: null,
   history: [],
   historyCursor: 0,
   savedHistoryCursor: 0,
@@ -88,15 +122,48 @@ const initialState: ProjectState = {
 export const useProjectStore = create<ProjectState>()(
   persist(() => initialState, {
     name: "lumina-project-v1",
-    version: 2,
-    migrate: (persistedState) => {
+    version: LOCAL_WORKSPACE_STORAGE_VERSION,
+    migrate: (persistedState, version) => {
       const state = persistedState as Partial<ProjectState>;
-      const bundle = migrateProjectBundle(state.bundle ?? starter).bundle;
+      const persistedBundle = structuredClone(state.bundle ?? starter);
+      if (persistedBundle.schema_version === 2) normalizeProjectAssetRefs(persistedBundle);
+      let bundle = migrateProjectBundle(persistedBundle).bundle;
+      const refreshed =
+        version < LOCAL_WORKSPACE_STORAGE_VERSION && isLegacyAcceptanceWorkspace(bundle);
+      if (refreshed) bundle = createStarterProjectBundle();
+      const cleanedArrangeCopies =
+        !refreshed &&
+        version < LOCAL_WORKSPACE_STORAGE_VERSION &&
+        bundle.manifest.project_id === "lumina-project" &&
+        bundle.manifest.name === "Untitled Lighting Project"
+          ? cleanupLegacyArrangeCueCopies(bundle)
+          : false;
+      simplifyLegacyCueNames(bundle);
       return {
         ...initialState,
         ...state,
         bundle,
-        selectedLayoutRef: state.selectedLayoutRef ?? bundle.manifest.layout_refs[0],
+        selectedLayoutRef: refreshed
+          ? bundle.manifest.layout_refs[0]
+          : toAssetRef(state.selectedLayoutRef ?? bundle.manifest.layout_refs[0]),
+        selectedEffectRef:
+          refreshed ||
+          (cleanedArrangeCopies && !exactAsset(bundle.effects, state.selectedEffectRef ?? null))
+            ? null
+            : state.selectedEffectRef
+              ? toAssetRef(state.selectedEffectRef)
+              : null,
+        selectedCueRef:
+          refreshed ||
+          (cleanedArrangeCopies && !exactAsset(bundle.cues, state.selectedCueRef ?? null))
+            ? null
+            : state.selectedCueRef
+              ? toAssetRef(state.selectedCueRef)
+              : null,
+        selectedArrangementRef: refreshed
+          ? activeArrangementRef(bundle)
+          : toAssetRef(state.selectedArrangementRef ?? activeArrangementRef(bundle)),
+        selectedTargetSetId: refreshed ? "all" : (state.selectedTargetSetId ?? "all"),
       } satisfies ProjectState;
     },
     partialize: (state) => ({
@@ -109,6 +176,89 @@ export const useProjectStore = create<ProjectState>()(
     }),
   }),
 );
+
+export function isLegacyAcceptanceWorkspace(bundle: ProjectBundle) {
+  if (
+    bundle.manifest.project_id !== "lumina-project" ||
+    bundle.manifest.name !== "Untitled Lighting Project"
+  ) {
+    return false;
+  }
+  const hasLegacyEffect = bundle.effects.some((effect) =>
+    LEGACY_LOCAL_EFFECT_NAMES.has(effect.name),
+  );
+  const hasLegacyCue = bundle.cues.some((cue) => LEGACY_LOCAL_CUE_NAMES.has(cue.name));
+  return hasLegacyEffect && hasLegacyCue;
+}
+
+export function cleanupLegacyArrangeCueCopies(bundle: ProjectBundle) {
+  const referencedCueKeys = new Set(
+    bundle.arrangements.flatMap((arrangement) =>
+      arrangement.tracks.flatMap((track) =>
+        (track.clips ?? []).map((clip) => assetKey(clip.cue_ref)),
+      ),
+    ),
+  );
+  const replacements = new Map<string, AssetRef>();
+  const removed = new Set<string>();
+  const occupiedIds = new Set(bundle.cues.map((cue) => cue.id));
+
+  for (const cue of bundle.cues) {
+    const legacyBaseId = [...LEGACY_ARRANGE_RECIPE_CUES.entries()].find(
+      ([baseId, name]) =>
+        cue.name === name && (cue.id === baseId || cue.id.startsWith(`${baseId}-`)),
+    )?.[0];
+    if (!legacyBaseId) continue;
+    const previousRef = { id: cue.id, revision: cue.revision };
+    const previousKey = assetKey(previousRef);
+    if (!referencedCueKeys.has(previousKey)) {
+      removed.add(previousKey);
+      continue;
+    }
+    const nextId = uniqueId(`${INTERNAL_PRODUCTION_CUE_PREFIX}${cue.id.replace(/^cue-/, "")}`, [
+      ...occupiedIds,
+    ]);
+    occupiedIds.add(nextId);
+    cue.id = nextId;
+    replacements.set(previousKey, { id: nextId, revision: cue.revision });
+  }
+
+  if (replacements.size === 0 && removed.size === 0) return false;
+
+  bundle.cues = bundle.cues.filter((cue) => !removed.has(assetKey(cue)));
+  bundle.manifest.cue_refs = bundle.manifest.cue_refs.flatMap((reference) => {
+    const key = assetKey(reference);
+    if (removed.has(key)) return [];
+    return [replacements.get(key) ?? reference];
+  });
+  for (const arrangement of bundle.arrangements) {
+    for (const track of arrangement.tracks) {
+      for (const clip of track.clips ?? []) {
+        clip.cue_ref = replacements.get(assetKey(clip.cue_ref)) ?? clip.cue_ref;
+      }
+    }
+  }
+
+  const referencedEffectKeys = new Set(
+    bundle.cues.flatMap((cue) => cue.layers.map((layer) => assetKey(layer.effect_ref))),
+  );
+  bundle.effects = bundle.effects.filter(
+    (effect) => effect.source !== "built_in" || referencedEffectKeys.has(assetKey(effect)),
+  );
+  const remainingEffectKeys = new Set(bundle.effects.map(assetKey));
+  bundle.manifest.effect_refs = bundle.manifest.effect_refs.filter((reference) =>
+    remainingEffectKeys.has(assetKey(reference)),
+  );
+  return true;
+}
+
+export function simplifyLegacyCueNames(bundle: ProjectBundle) {
+  for (const cue of bundle.cues) {
+    if (cue.name !== "Pulse + Gradient" || cue.layers.length !== 1) continue;
+    const effect = exactAsset(bundle.effects, cue.layers[0].effect_ref);
+    cue.name = `${effect?.name ?? "Pulse"} Cue`;
+  }
+}
 
 export const projectActions = {
   loadBundle: (bundle: ProjectBundle) => {
@@ -129,8 +279,16 @@ export const projectActions = {
       publishedBundle: structuredClone(state.bundle),
       savedHistoryCursor: state.historyCursor,
     })),
-  setSelectedEffectRef: (selectedEffectRef: AssetRef | null) =>
-    useProjectStore.setState({ selectedEffectRef }),
+  setSelectedEffectRef: (selectedEffectRef: AssetRef | null) => {
+    const current = useProjectStore.getState().selectedEffectRef;
+    if (
+      current?.id !== selectedEffectRef?.id ||
+      current?.revision !== selectedEffectRef?.revision
+    ) {
+      authoringTransportActions.pauseAll();
+    }
+    useProjectStore.setState({ selectedEffectRef });
+  },
   setSelectedLayoutRef: (selectedLayoutRef: AssetRef) =>
     useProjectStore.setState({ selectedLayoutRef }),
   duplicateLayout: (reference: AssetRef) => {
@@ -222,11 +380,6 @@ export const projectActions = {
   useLayoutOnStage: (request: StageLayoutUpgradeRequest) => {
     const current = useProjectStore.getState();
     const impact = analyzeStageTopology(current.bundle, request.layoutRef);
-    if (!impact.capacityFits) {
-      throw new Error(
-        `Layout provides ${impact.candidateCapacity} positions for ${impact.fixtureCount} patched fixtures`,
-      );
-    }
     if (request.mode === "upgrade" && !impact.compatible) {
       throw new Error("Topology changed; choose an explicit TargetSet remap or create a new Stage");
     }
@@ -240,18 +393,6 @@ export const projectActions = {
       const layout = exactAsset(bundle.layouts, request.layoutRef);
       if (!sourceStage || !layout) throw new Error("Stage or Layout revision is missing");
       const targetMappings = request.targetMappings ?? {};
-      const validTargets = sourceStage.target_sets.filter(
-        (target) => resolveTargetSet(sourceStage, layout, target) !== null,
-      );
-      if (validTargets.length === 0) throw new Error("Candidate Layout has no valid TargetSet");
-      const validIds = new Set(validTargets.map((target) => target.id));
-      for (const target of sourceStage.target_sets) {
-        if (validIds.has(target.id)) continue;
-        const mapped = targetMappings[target.id];
-        if (!mapped || !validIds.has(mapped)) {
-          throw new Error(`TargetSet ${target.name} requires an explicit valid remap`);
-        }
-      }
 
       if (request.mode === "create_stage") {
         const name = uniqueStageName(
@@ -298,7 +439,23 @@ export const projectActions = {
 
       const nextStage = exactAsset(bundle.stages, nextStageRef);
       if (!nextStage) throw new Error("Upgraded Stage revision is missing");
-      nextStage.layout_ref = structuredClone(request.layoutRef);
+      const materializedStage = stageForLayout(nextStage, layout);
+      nextStage.layout_ref = materializedStage.layout_ref;
+      nextStage.patch = materializedStage.patch;
+      nextStage.groups = materializedStage.groups;
+      nextStage.target_sets = materializedStage.target_sets;
+      const validTargets = nextStage.target_sets.filter(
+        (target) => resolveTargetSet(nextStage, layout, target) !== null,
+      );
+      if (validTargets.length === 0) throw new Error("Candidate Layout has no valid TargetSet");
+      const validIds = new Set(validTargets.map((target) => target.id));
+      for (const target of nextStage.target_sets) {
+        if (validIds.has(target.id)) continue;
+        const mapped = targetMappings[target.id];
+        if (!mapped || !validIds.has(mapped)) {
+          throw new Error(`TargetSet ${target.name} requires an explicit valid remap`);
+        }
+      }
       nextStage.target_sets = validTargets.map((target) => {
         const nextTarget = structuredClone(target);
         const selected = new Set(resolveTargetSet(nextStage, layout, nextTarget)?.fixtureIds ?? []);
@@ -383,7 +540,14 @@ export const projectActions = {
       }
       bumpManifestRevision(bundle, published);
     });
-    const updates: Partial<ProjectState> = { selectedLayoutRef: request.layoutRef };
+    const nextStage = activeStage(useProjectStore.getState().bundle);
+    const updates: Partial<ProjectState> = {
+      selectedLayoutRef: request.layoutRef,
+      selectedTargetSetId:
+        nextStage.target_sets.find((target) => target.id === "all")?.id ??
+        nextStage.target_sets[0]?.id ??
+        "all",
+    };
     const selectedCueRef = current.selectedCueRef
       ? cueUpgrades.get(assetKey(current.selectedCueRef))
       : null;
@@ -396,8 +560,13 @@ export const projectActions = {
     useProjectStore.setState(updates);
     return { stageRef: nextStageRef, cueUpgrades, arrangementUpgrades };
   },
-  setSelectedCueRef: (selectedCueRef: AssetRef | null) =>
-    useProjectStore.setState({ selectedCueRef }),
+  setSelectedCueRef: (selectedCueRef: AssetRef | null) => {
+    const current = useProjectStore.getState().selectedCueRef;
+    if (current?.id !== selectedCueRef?.id || current?.revision !== selectedCueRef?.revision) {
+      authoringTransportActions.pauseAll();
+    }
+    useProjectStore.setState({ selectedCueRef });
+  },
   setSelectedTargetSetId: (selectedTargetSetId: string) =>
     useProjectStore.setState({ selectedTargetSetId }),
   duplicateTargetSet: (targetSetId: string) => {
@@ -577,6 +746,13 @@ export const projectActions = {
         weights: (target.weights ?? []).filter((weight) => validFixtureIds.has(weight.fixture_id)),
       }));
     });
+    const nextStage = activeStage(useProjectStore.getState().bundle);
+    useProjectStore.setState({
+      selectedTargetSetId:
+        nextStage.target_sets.find((target) => target.id === "all")?.id ??
+        nextStage.target_sets[0]?.id ??
+        "all",
+    });
   },
   duplicateTargetingScene: (sceneId: string) => {
     const state = useProjectStore.getState();
@@ -655,6 +831,10 @@ export const projectActions = {
     });
   },
   selectArrangement: (selectedArrangementRef: AssetRef) => {
+    const current = useProjectStore.getState().selectedArrangementRef;
+    if (assetKey(current) !== assetKey(selectedArrangementRef)) {
+      authoringTransportActions.pauseAll();
+    }
     useProjectStore.setState({ selectedArrangementRef });
   },
   setPreviewSource: (
@@ -663,9 +843,34 @@ export const projectActions = {
   ) => useProjectStore.setState({ previewSource, rehearsalPublishedRevision }),
   setLiveViewMode: (liveViewMode: "live" | "rehearsal") =>
     useProjectStore.setState({ liveViewMode }),
-  setPreviewResult: (previewGeneration: number) =>
-    useProjectStore.setState({ previewGeneration, previewError: null }),
-  setPreviewError: (previewError: string) => useProjectStore.setState({ previewError }),
+  setPreviewResult: (frame: ProjectPreviewFrame) =>
+    useProjectStore.setState((state) => {
+      const litFixtureCount = frame.outputs.filter((output) =>
+        output.attributes.some(
+          (attribute) =>
+            attribute.id === "intensity" &&
+            attribute.value.type === "scalar" &&
+            attribute.value.value > 0.01,
+        ),
+      ).length;
+      const samePreview = state.previewGeneration === frame.generation;
+      return {
+        previewGeneration: frame.generation,
+        previewError: null,
+        previewSummary: {
+          fixtureCount: frame.outputs.length,
+          litFixtureCount,
+          consecutiveDarkFrames:
+            litFixtureCount === 0
+              ? samePreview
+                ? (state.previewSummary?.consecutiveDarkFrames ?? 0) + 1
+                : 1
+              : 0,
+        },
+      };
+    }),
+  setPreviewError: (previewError: string) =>
+    useProjectStore.setState({ previewError, previewSummary: null }),
   createEffect: (name = "Pulse") => {
     let created: AssetRef | null = null;
     transact(`Create Effect ${name}`, (bundle, published) => {
@@ -725,6 +930,26 @@ export const projectActions = {
       bumpManifestRevision(bundle, published);
     });
     useProjectStore.setState({ selectedEffectRef: selected });
+  },
+  saveEffectWorkingDraft: (draft: EffectDefinitionDocument) => {
+    if (draft.source === "built_in") {
+      throw new Error("Built-in Effects are read-only. Customize before saving.");
+    }
+    let selected: AssetRef = { id: draft.id, revision: draft.revision };
+    let saved = structuredClone(draft);
+    transact(`Save Effect ${draft.name}`, (bundle, published) => {
+      const revisions = bundle.effects
+        .filter((effect) => effect.id === draft.id)
+        .map((effect) => effect.revision);
+      saved = structuredClone(draft);
+      saved.revision = revisions.length > 0 ? Math.max(...revisions) + 1 : 1;
+      selected = { id: saved.id, revision: saved.revision };
+      bundle.effects.push(saved);
+      appendExactRef(bundle.manifest.effect_refs, selected);
+      bumpManifestRevision(bundle, published);
+    });
+    useProjectStore.setState({ selectedEffectRef: selected });
+    return structuredClone(saved);
   },
   createCue: (effectRefs: AssetRef[], name = "New Cue") => {
     let created: AssetRef | null = null;
@@ -823,6 +1048,29 @@ export const projectActions = {
       if (cue.layers.length <= 1) throw new Error("A Cue requires at least one layer");
       cue.layers = cue.layers.filter((layer) => layer.id !== layerId);
     }),
+  saveCueWorkingDraft: (
+    draft: CueDefinition,
+    productionEffects: EffectDefinitionDocument[] = [],
+  ) => {
+    let selected: AssetRef = { id: draft.id, revision: draft.revision };
+    let saved = structuredClone(draft);
+    transact(`Save Cue ${draft.name}`, (bundle, published) => {
+      for (const effect of productionEffects) {
+        const reference = { id: effect.id, revision: effect.revision };
+        if (!exactAsset(bundle.effects, reference)) bundle.effects.push(structuredClone(effect));
+        appendExactRef(bundle.manifest.effect_refs, reference);
+      }
+      const revisions = bundle.cues.filter((cue) => cue.id === draft.id).map((cue) => cue.revision);
+      saved = structuredClone(draft);
+      saved.revision = revisions.length > 0 ? Math.max(...revisions) + 1 : 1;
+      selected = { id: saved.id, revision: saved.revision };
+      bundle.cues.push(saved);
+      appendExactRef(bundle.manifest.cue_refs, selected);
+      bumpManifestRevision(bundle, published);
+    });
+    useProjectStore.setState({ selectedCueRef: selected });
+    return structuredClone(saved);
+  },
   duplicateArrangement: (reference: AssetRef, name?: string) => {
     let created: AssetRef | null = null;
     transact("Duplicate Arrangement", (bundle, published) => {
@@ -867,7 +1115,7 @@ export const projectActions = {
   updateArrangement: (
     reference: AssetRef,
     label: string,
-    update: (arrangement: ArrangementDocument) => void,
+    update: (arrangement: ArrangementDocument, bundle: ProjectBundle) => void,
   ) => updateArrangement(reference, label, update),
   updateStage: (label: string, update: (stage: ProjectBundle["stages"][number]) => void) =>
     updateActiveStageRevision(label, update),
@@ -909,6 +1157,7 @@ export const projectSelectors = {
   rehearsalPublishedRevision: (state: ProjectState) => state.rehearsalPublishedRevision,
   previewGeneration: (state: ProjectState) => state.previewGeneration,
   previewError: (state: ProjectState) => state.previewError,
+  previewSummary: (state: ProjectState) => state.previewSummary,
   canUndo: (state: ProjectState) => state.historyCursor > 0,
   canRedo: (state: ProjectState) => state.historyCursor < state.history.length,
   isDirty: (state: ProjectState) => state.savedHistoryCursor !== state.historyCursor,
@@ -919,9 +1168,10 @@ function transact(
   mutate: (bundle: ProjectBundle, published: ProjectBundle | null) => void,
 ) {
   const state = useProjectStore.getState();
-  const before = structuredClone(state.bundle);
-  const after = structuredClone(state.bundle);
+  const before = normalizeProjectAssetRefs(structuredClone(state.bundle));
+  const after = structuredClone(before);
   mutate(after, state.publishedBundle);
+  normalizeProjectAssetRefs(after);
   if (JSON.stringify(before) === JSON.stringify(after)) return;
   const history = state.history.slice(0, state.historyCursor);
   history.push({ label, before, after: structuredClone(after) });
@@ -947,14 +1197,14 @@ function updateCue(
 function updateArrangement(
   reference: AssetRef,
   label: string,
-  update: (arrangement: ArrangementDocument) => void,
+  update: (arrangement: ArrangementDocument, bundle: ProjectBundle) => void,
 ) {
   let selected = reference;
   transact(label, (bundle, published) => {
     selected = forkAssetRevision(bundle, published, "arrangement", reference);
     const arrangement = exactAsset(bundle.arrangements, selected);
     if (!arrangement) throw new Error("Arrangement revision is missing");
-    update(arrangement);
+    update(arrangement, bundle);
     bundle.manifest.active_arrangement_id = arrangement.id;
     bumpManifestRevision(bundle, published);
   });

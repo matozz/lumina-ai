@@ -1,0 +1,512 @@
+{
+  "effects": [
+    {
+      "declared_capabilities": ["any"],
+      "effect_ref": {
+        "id": "builtin.intensity.pulse",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        }
+      },
+      "name": "Pulse"
+    },
+    {
+      "declared_capabilities": ["any"],
+      "effect_ref": {
+        "id": "builtin.intensity.breathe",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        }
+      },
+      "name": "Breathe"
+    },
+    {
+      "declared_capabilities": ["linear", "matrix", "coordinates"],
+      "effect_ref": {
+        "id": "builtin.intensity.chase",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "linear",
+          "status": "native",
+          "supported": true
+        }
+      },
+      "name": "Alternating Grid Chase"
+    },
+    {
+      "declared_capabilities": ["coordinates"],
+      "effect_ref": {
+        "id": "builtin.intensity.wave",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        }
+      },
+      "name": "Strip / Bar Traveler"
+    },
+    {
+      "declared_capabilities": ["coordinates"],
+      "effect_ref": {
+        "id": "builtin.color.rainbow",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        }
+      },
+      "name": "Slow Color Shimmer"
+    },
+    {
+      "declared_capabilities": ["coordinates"],
+      "effect_ref": {
+        "id": "builtin.color.dual-sweep",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        }
+      },
+      "name": "Gradient Drift"
+    },
+    {
+      "declared_capabilities": ["any"],
+      "effect_ref": {
+        "id": "builtin.color.pulse",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        }
+      },
+      "name": "Short Color Burst"
+    },
+    {
+      "declared_capabilities": ["coordinates", "radial"],
+      "effect_ref": {
+        "id": "builtin.spatial.radial-bloom",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "radial",
+          "status": "native",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        }
+      },
+      "name": "Center-out / Edge-in Bloom"
+    },
+    {
+      "declared_capabilities": ["coordinates", "radial"],
+      "effect_ref": {
+        "id": "builtin.spatial.angular-orbit",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "radial",
+          "status": "native",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        }
+      },
+      "name": "Diagonal / Radial Wave"
+    },
+    {
+      "declared_capabilities": ["any"],
+      "effect_ref": {
+        "id": "builtin.movement.pan-sweep",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        }
+      },
+      "name": "Pan Sweep"
+    },
+    {
+      "declared_capabilities": ["linear", "matrix", "coordinates"],
+      "effect_ref": {
+        "id": "builtin.movement.tilt-wave",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "linear",
+          "status": "native",
+          "supported": true
+        }
+      },
+      "name": "Tilt Wave"
+    },
+    {
+      "declared_capabilities": ["any"],
+      "effect_ref": {
+        "id": "builtin.strobe.safe-pulse",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        }
+      },
+      "name": "Safe Strobe Pulse"
+    },
+    {
+      "declared_capabilities": ["any"],
+      "effect_ref": {
+        "id": "builtin.transition.fade-crossfade",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        }
+      },
+      "name": "Fade / Crossfade"
+    },
+    {
+      "declared_capabilities": ["linear", "matrix", "coordinates"],
+      "effect_ref": {
+        "id": "builtin.transition.wipe",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "linear",
+          "status": "native",
+          "supported": true
+        }
+      },
+      "name": "Spatial Wipe"
+    },
+    {
+      "declared_capabilities": ["any"],
+      "effect_ref": {
+        "id": "builtin.transition.dissolve",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        }
+      },
+      "name": "Seeded Dissolve"
+    },
+    {
+      "declared_capabilities": ["any"],
+      "effect_ref": {
+        "id": "builtin.transition.blackout-safe",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "any",
+          "status": "universal",
+          "supported": true
+        }
+      },
+      "name": "Blackout-safe Transition"
+    }
+  ],
+  "layouts": [
+    {
+      "coordinate_fallback": true,
+      "id": "matrix",
+      "label": "Matrix",
+      "native_capability": "matrix"
+    },
+    {
+      "coordinate_fallback": true,
+      "id": "strip_bar",
+      "label": "Strip / Bar",
+      "native_capability": "linear"
+    },
+    {
+      "coordinate_fallback": true,
+      "id": "circle",
+      "label": "Circle",
+      "native_capability": "radial"
+    },
+    {
+      "coordinate_fallback": true,
+      "id": "frame",
+      "label": "Frame",
+      "native_capability": "matrix"
+    }
+  ],
+  "policy": "native capability first, then universal or coordinate fallback",
+  "schema_version": 1
+}

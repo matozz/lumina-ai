@@ -3,9 +3,12 @@ use crate::compiler::diagnostic::{
 };
 use crate::compiler::{CompiledProjectSnapshot, Compiler, LayoutCoord};
 use crate::document::{
-    layout_capacity, layout_fixture_size_for_fixture, layout_to_legacy, load_document,
-    load_project_bundle, migrate_project_bundle, validate_layout_geometry, AssetRef,
-    LayoutDefinition, MetaDSL, MigrationReport, PatchDSL, ShowDocumentV4, StageDocument,
+    builtin_production_catalog, layout_authoring_capacity, layout_fixture_size_for_fixture,
+    layout_to_legacy, load_document, load_project_bundle, recover_project_bundle,
+    resolve_cue_recipe, validate_effect_draft, validate_layout_geometry,
+    validate_production_catalog, AssetRef, CueDefinition, CueRecipeRef, EffectDefinitionDocument,
+    LayoutDefinition, LayoutGeometry, MetaDSL, MigrationReport, PatchDSL, ProductionCatalog,
+    ProjectBundle, ShowDocumentV4, StageDocument,
 };
 use crate::engine::attribute::FixtureFramePayload;
 use crate::engine::effect::{
@@ -138,6 +141,60 @@ pub async fn query_effect_catalog(
             missing_attributes: matched.missing_attributes,
         })
         .collect())
+}
+
+#[tauri::command]
+pub fn get_production_catalog() -> Result<ProductionCatalog, Vec<Diagnostic>> {
+    let catalog = builtin_production_catalog().map_err(|diagnostic| vec![diagnostic])?;
+    let diagnostics = validate_production_catalog(&catalog);
+    if diagnostics.is_empty() {
+        Ok(catalog)
+    } else {
+        Err(diagnostics)
+    }
+}
+
+#[tauri::command]
+pub fn validate_effect_working_draft(
+    effect: EffectDefinitionDocument,
+) -> Result<EffectDefinitionDocument, Vec<Diagnostic>> {
+    validate_effect_draft(effect)
+}
+
+#[tauri::command]
+pub fn validate_project_working_draft(
+    project_json: String,
+) -> Result<crate::document::ProjectBundle, Vec<Diagnostic>> {
+    load_project_bundle(&project_json).map(|validated| validated.into_bundle())
+}
+
+#[tauri::command]
+pub fn resolve_production_cue_recipe(
+    project_json: String,
+    recipe_ref: CueRecipeRef,
+    stage_ref: AssetRef,
+    cue_id: String,
+    cue_revision: u32,
+    cue_name: String,
+) -> Result<CueDefinition, Vec<Diagnostic>> {
+    let project = serde_json::from_str::<ProjectBundle>(&project_json).map_err(|error| {
+        vec![Diagnostic::error(
+            PROJECT_SCHEMA_INVALID,
+            "project_bundle",
+            error.to_string(),
+            "Repair the active Stage or Layout data before opening this recipe.",
+        )]
+    })?;
+    let catalog = get_production_catalog()?;
+    resolve_cue_recipe(
+        &catalog,
+        &project,
+        &recipe_ref,
+        &stage_ref,
+        cue_id,
+        cue_revision,
+        cue_name,
+    )
 }
 
 #[tauri::command]
@@ -282,7 +339,7 @@ pub async fn load_project(path: String) -> Result<crate::document::MigratedProje
     let content = tokio::fs::read_to_string(&path)
         .await
         .map_err(|error| format!("Project read error: {error}"))?;
-    migrate_project_bundle(&content).map_err(|diagnostics| {
+    recover_project_bundle(&content).map_err(|diagnostics| {
         diagnostics
             .into_iter()
             .map(|diagnostic| diagnostic.to_string())
@@ -744,60 +801,47 @@ pub fn preview_layout(
             "Enter valid integer fixture size and gap values, then retry this Layout Draft preview.",
         )]
     })?;
-    let patched_fixture_ids: Vec<_> = stage
+    let stage_fixture_ids: Vec<_> = stage
         .patch
         .iter()
         .flat_map(|item| item.id_range.0..=item.id_range.1)
         .collect();
-    let patched_fixture_set: std::collections::BTreeSet<_> =
-        patched_fixture_ids.iter().copied().collect();
-    let mut preview_patch = stage.patch;
-    let capacity = layout_capacity(&layout);
-    if capacity > patched_fixture_ids.len() {
-        let extra = u32::try_from(capacity - patched_fixture_ids.len()).map_err(|_| {
-            vec![Diagnostic::error(
-                PROJECT_SCHEMA_INVALID,
-                "layout.geometry",
-                "Layout preview capacity exceeds the supported fixture ID range.",
-                "Reduce the Layout position count and retry preview.",
-            )]
-        })?;
-        let first_id = patched_fixture_ids
+    let capacity = layout_authoring_capacity(&layout);
+    let first_id = stage_fixture_ids.iter().min().copied().unwrap_or(1);
+    let preview_fixture_ids = match &layout.geometry {
+        LayoutGeometry::Custom { fixtures, .. } => fixtures
             .iter()
-            .max()
-            .copied()
-            .unwrap_or(0)
-            .checked_add(1)
-            .ok_or_else(|| {
-                vec![Diagnostic::error(
-                    PROJECT_SCHEMA_INVALID,
-                    "stage.patch",
-                    "No fixture IDs remain for unpatched Layout preview positions.",
-                    "Use a lower Stage fixture ID range or reduce the Layout capacity.",
-                )]
-            })?;
-        let last_id = first_id
-            .checked_add(extra.saturating_sub(1))
-            .ok_or_else(|| {
-                vec![Diagnostic::error(
-                    PROJECT_SCHEMA_INVALID,
-                    "stage.patch",
-                    "Unpatched Layout preview positions overflow the fixture ID range.",
-                    "Use a lower Stage fixture ID range or reduce the Layout capacity.",
-                )]
-            })?;
-        preview_patch.push(PatchDSL {
-            profile_id: preview_patch
-                .first()
-                .map(|item| item.profile_id.clone())
-                .unwrap_or_else(|| "generic-rgb".to_string()),
-            id_range: (first_id, last_id),
-        });
-    }
-    let preview_fixture_ids: Vec<_> = preview_patch
-        .iter()
-        .flat_map(|item| item.id_range.0..=item.id_range.1)
-        .collect();
+            .map(|fixture| fixture.id)
+            .collect::<Vec<_>>(),
+        _ => (0..capacity)
+            .map(|index| {
+                let offset = u32::try_from(index).map_err(|_| {
+                    vec![Diagnostic::error(
+                        PROJECT_SCHEMA_INVALID,
+                        "layout.geometry",
+                        "Layout preview capacity exceeds the supported fixture ID range.",
+                        "Reduce the Layout position count and retry preview.",
+                    )]
+                })?;
+                first_id.checked_add(offset).ok_or_else(|| {
+                    vec![Diagnostic::error(
+                        PROJECT_SCHEMA_INVALID,
+                        "layout.geometry",
+                        "Layout preview fixture IDs overflow the supported range.",
+                        "Use a lower fixture ID range or reduce the Layout position count.",
+                    )]
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+    };
+    let preview_patch = preview_patch_for_fixture_ids(
+        &preview_fixture_ids,
+        stage
+            .patch
+            .first()
+            .map(|item| item.profile_id.as_str())
+            .unwrap_or("generic-rgb"),
+    );
     let document = ShowDocumentV4 {
         schema_version: 4,
         meta: MetaDSL {
@@ -815,9 +859,29 @@ pub fn preview_layout(
         let fixture_size = layout_fixture_size_for_fixture(&layout, coord.id);
         coord.width = Some(fixture_size.width);
         coord.height = Some(fixture_size.height);
-        coord.patched = Some(patched_fixture_set.contains(&coord.id));
+        coord.patched = Some(true);
     }
     Ok(show.coords)
+}
+
+fn preview_patch_for_fixture_ids(fixture_ids: &[u32], profile_id: &str) -> Vec<PatchDSL> {
+    let mut sorted = fixture_ids.to_vec();
+    sorted.sort_unstable();
+    sorted.dedup();
+    let mut patch: Vec<PatchDSL> = Vec::new();
+    for fixture_id in sorted {
+        if let Some(previous) = patch.last_mut() {
+            if previous.id_range.1.checked_add(1) == Some(fixture_id) {
+                previous.id_range.1 = fixture_id;
+                continue;
+            }
+        }
+        patch.push(PatchDSL {
+            profile_id: profile_id.to_string(),
+            id_range: (fixture_id, fixture_id),
+        });
+    }
+    patch
 }
 
 #[tauri::command]
@@ -899,7 +963,7 @@ fn render_preview_session(
                 id: instance.as_str().to_string(),
                 start_beat: 0.0,
                 phase_offset: 0.0,
-                multiplier: 1.0,
+                multiplier: preview_instance_speed(show, instance.as_str()),
             });
             RenderSource::Live(&live_phasers)
         }
@@ -917,7 +981,7 @@ fn render_preview_session(
                 id: layer.instance.as_str().to_string(),
                 start_beat: 0.0,
                 phase_offset: 0.0,
-                multiplier: 1.0,
+                multiplier: preview_instance_speed(show, layer.instance.as_str()),
             }));
             RenderSource::Live(&live_phasers)
         }
@@ -937,6 +1001,19 @@ fn render_preview_session(
         layout_coords: show.coords.clone(),
         outputs,
     })
+}
+
+fn preview_instance_speed(show: &crate::compiler::CompiledShow, instance_id: &str) -> f64 {
+    show.effect_instances
+        .get(instance_id)
+        .and_then(|instance| {
+            let definition = show.effect_definitions.get(instance.definition.index())?;
+            let handle = definition.parameter_handle(SPEED_PARAMETER_ID)?;
+            instance
+                .resolve_parameter(definition, handle)
+                .and_then(|value| value.as_scalar())
+        })
+        .unwrap_or(1.0)
 }
 
 fn project_diagnostic(path: impl Into<String>, message: impl Into<String>) -> Diagnostic {
@@ -974,11 +1051,12 @@ async fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), String> {
 mod tests {
     use super::{
         atomic_write, compile_dsl, is_live_catalog_instance, live_effect_catalog, load_project,
-        preview_dsl, preview_effect_loop, preview_layout, save_project, SAVE_SEQUENCE,
+        preview_dsl, preview_effect_loop, preview_instance_speed, preview_layout,
+        resolve_production_cue_recipe, save_project, SAVE_SEQUENCE,
     };
     use crate::document::{
-        valid_bundle, AssetRef, LayoutFixtureSizeOverride, LayoutGeometry, LayoutSize,
-        TempoPointDSL,
+        load_project_bundle, valid_bundle, AssetRef, CueRecipeRef, LayoutFixtureSizeOverride,
+        LayoutGeometry, LayoutSize, TempoPointDSL,
     };
     use crate::state::ShowSnapshot;
     use std::sync::atomic::Ordering;
@@ -1096,6 +1174,73 @@ mod tests {
     }
 
     #[test]
+    fn recipe_resolution_ignores_unrelated_invalid_cues() {
+        let mut bundle = valid_bundle();
+        let mut conflicting_layer = bundle.cues[0].layers[0].clone();
+        conflicting_layer.id = "unrelated-conflict".to_string();
+        bundle.cues[0].layers.push(conflicting_layer);
+        let source = serde_json::to_string(&bundle).expect("serialize Project");
+        assert!(load_project_bundle(&source).is_err());
+
+        let stage_ref = bundle.manifest.stage_ref.clone();
+        let cue = resolve_production_cue_recipe(
+            source,
+            CueRecipeRef {
+                id: "recipe.four-on-floor".to_string(),
+                revision: 1,
+            },
+            stage_ref.clone(),
+            "resolved-pulse".to_string(),
+            1,
+            "Resolved Pulse".to_string(),
+        )
+        .expect("unrelated Cue diagnostics must not block a new recipe draft");
+
+        assert_eq!(cue.compatible_stage_ref, stage_ref);
+        assert_eq!(cue.layers.len(), 1);
+        assert_eq!(cue.layers[0].target_set_ref.target_set_id, "all");
+    }
+
+    #[test]
+    fn authoring_preview_uses_the_cue_speed_override() {
+        let mut bundle = valid_bundle();
+        let catalog = crate::document::builtin_production_catalog().expect("catalog");
+        let traveler = catalog
+            .effects
+            .iter()
+            .find(|effect| effect.id == "builtin.intensity.wave")
+            .expect("traveler")
+            .clone();
+        let reference = AssetRef {
+            id: traveler.id.clone(),
+            revision: traveler.revision,
+        };
+        bundle.effects = vec![traveler];
+        bundle.manifest.effect_refs = vec![reference.clone()];
+        bundle.cues[0].layers[0].effect_ref = reference;
+        bundle.cues[0].risk_summary =
+            serde_json::from_value(serde_json::json!({ "strobe_risk": "none" }))
+                .expect("traveler risk summary");
+        bundle.cues[0].layers[0].parameter_overrides.insert(
+            "speed".to_string(),
+            serde_json::from_value(serde_json::json!({ "type": "scalar", "value": 2.0 }))
+                .expect("speed override"),
+        );
+        let source = serde_json::to_string(&bundle).expect("serialize Project");
+        let snapshot = crate::compiler::Compiler::compile_active_project(
+            load_project_bundle(&source).expect("Project validates"),
+        )
+        .expect("Project compiles");
+        let cue = snapshot
+            .cues
+            .get(&bundle.manifest.cue_refs[0])
+            .expect("compiled Cue");
+        let instance_id = cue.layers[0].instance.as_str();
+
+        assert_eq!(preview_instance_speed(&snapshot.show, instance_id), 2.0);
+    }
+
+    #[test]
     fn draft_preview_compiles_without_assigning_a_show_revision() {
         let source = r#"{
           "schema_version": 4,
@@ -1148,7 +1293,7 @@ mod tests {
     }
 
     #[test]
-    fn layout_draft_preview_marks_positions_beyond_the_stage_patch() {
+    fn layout_draft_preview_materializes_every_layout_position() {
         let mut bundle = valid_bundle();
         let layout = &mut bundle.layouts[0];
         let LayoutGeometry::Matrix { rows, columns, .. } = &mut layout.geometry else {
@@ -1165,15 +1310,41 @@ mod tests {
                 .iter()
                 .filter(|coord| coord.patched == Some(true))
                 .count(),
-            4
+            20
         );
         assert_eq!(
             coords
                 .iter()
                 .filter(|coord| coord.patched == Some(false))
                 .count(),
-            16
+            0
         );
+    }
+
+    #[test]
+    fn circle_authoring_preview_converts_legacy_density_and_keeps_fixed_ring_gap() {
+        let mut bundle = valid_bundle();
+        let layout = &mut bundle.layouts[0];
+        layout.geometry = LayoutGeometry::Circle {
+            rings: 3,
+            increment: 14,
+            fixture_size: LayoutSize {
+                width: 12.0,
+                height: 12.0,
+            },
+            ring_gap: 10.0,
+            ring_pitch: 22.0,
+            center: crate::document::LayoutPoint { x: 0.0, y: 0.0 },
+        };
+
+        let coords = preview_layout(layout.clone(), bundle.stages[0].clone())
+            .expect("legacy dense Circle previews safely");
+        assert_eq!(coords.len(), 37);
+        let radii: std::collections::BTreeSet<_> = coords
+            .iter()
+            .map(|coord| (coord.x.hypot(coord.y)).round() as i64)
+            .collect();
+        assert_eq!(radii, [0, 22, 44, 66].into_iter().collect());
     }
 
     #[tokio::test]

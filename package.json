@@ -17,8 +17,10 @@
     "baseline:stage4": "cargo run --release --manifest-path src-tauri/Cargo.toml --example stage4_effect_benchmark",
     "schema:generate": "cargo run --manifest-path src-tauri/Cargo.toml --example generate_show_schema && prettier --write schemas/*.json src/generated/*.ts",
     "schema:check": "cargo run --quiet --manifest-path src-tauri/Cargo.toml --example generate_show_schema -- --check",
+    "catalog:check": "cargo run --quiet --manifest-path src-tauri/Cargo.toml --example check_production_catalog",
+    "catalog:golden:update": "cargo run --quiet --manifest-path src-tauri/Cargo.toml --example check_production_catalog -- --update-golden",
     "document:migrate": "cargo run --manifest-path src-tauri/Cargo.toml --example migrate_show_document --",
-    "check": "pnpm schema:check && pnpm format:check && pnpm typecheck && pnpm test && pnpm build:vite",
+    "check": "pnpm schema:check && pnpm catalog:check && pnpm format:check && pnpm typecheck && pnpm test && pnpm build:vite",
     "check:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml -- --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings && cargo test --manifest-path src-tauri/Cargo.toml",
     "check:all": "pnpm check && pnpm check:rust",
     "test": "vitest run",
@@ -26,8 +28,8 @@
     "typecheck": "tsc",
     "preview": "vite preview",
     "tauri": "tauri",
-    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,css,md}\" \"docs/**/*.{md,json}\" \"schemas/**/*.{json,md}\" \"*.{json,ts,md}\" \".github/**/*.yml\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,css,md}\" \"docs/**/*.{md,json}\" \"schemas/**/*.{json,md}\" \"*.{json,ts,md}\" \".github/**/*.yml\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,css,md}\" \"docs/**/*.{md,json}\" \"schemas/**/*.{json,md}\" \"catalog/**/*.json\" \"*.{json,ts,md}\" \".github/**/*.yml\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,css,md}\" \"docs/**/*.{md,json}\" \"schemas/**/*.{json,md}\" \"catalog/**/*.json\" \"*.{json,ts,md}\" \".github/**/*.yml\""
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

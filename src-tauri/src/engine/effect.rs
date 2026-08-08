@@ -67,6 +67,9 @@ pub enum ParameterValueType {
     Scalar,
     Color,
     Direction,
+    Boolean,
+    Enum,
+    ColorStops,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -80,6 +83,9 @@ pub enum ParameterValue {
     Scalar(f64),
     Color([u8; 3]),
     Direction(Direction),
+    Boolean(bool),
+    Enum(String),
+    ColorStops(Vec<(f64, [u8; 3])>),
 }
 
 impl ParameterValue {
@@ -88,19 +94,27 @@ impl ParameterValue {
             Self::Scalar(_) => ParameterValueType::Scalar,
             Self::Color(_) => ParameterValueType::Color,
             Self::Direction(_) => ParameterValueType::Direction,
+            Self::Boolean(_) => ParameterValueType::Boolean,
+            Self::Enum(_) => ParameterValueType::Enum,
+            Self::ColorStops(_) => ParameterValueType::ColorStops,
         }
     }
 
     pub const fn as_scalar(&self) -> Option<f64> {
         match self {
             Self::Scalar(value) => Some(*value),
-            Self::Color(_) | Self::Direction(_) => None,
+            Self::Color(_)
+            | Self::Direction(_)
+            | Self::Boolean(_)
+            | Self::Enum(_)
+            | Self::ColorStops(_) => None,
         }
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ParameterUnit {
+    None,
     Multiplier,
     Cycles,
     Percent,
@@ -108,6 +122,9 @@ pub enum ParameterUnit {
     Color,
     Direction,
     Degrees,
+    Boolean,
+    Choice,
+    ColorStops,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -116,12 +133,23 @@ pub enum ParameterUiHint {
     Color,
     Segmented,
     Angle,
+    Toggle,
+    Select,
+    ColorStops,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AutomationPolicy {
     Continuous,
     Discrete,
+    Disabled,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ParameterOverridePolicy {
+    CueOverride,
+    EffectOnly,
+    Locked,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -153,8 +181,47 @@ pub enum StrobeRisk {
     High,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EffectFamily {
+    Intensity,
+    Color,
+    Movement,
+    Spatial,
+    Strobe,
+    Utility,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CatalogVisibility {
+    Standard,
+    Advanced,
+    Hidden,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LayoutCapability {
+    Any,
+    Linear,
+    Matrix,
+    Radial,
+    Coordinates,
+    TargetingScene,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+pub struct EffectReplacement {
+    pub id: String,
+    pub revision: u32,
+}
+
 #[derive(Clone, Debug, PartialEq, serde::Serialize)]
 pub struct EffectCatalog {
+    pub family: Option<EffectFamily>,
+    pub category: Option<String>,
+    pub visibility: CatalogVisibility,
     pub mood: Vec<String>,
     pub energy: f32,
     pub density: f32,
@@ -162,6 +229,10 @@ pub struct EffectCatalog {
     pub colorfulness: f32,
     pub strobe_risk: StrobeRisk,
     pub required_attributes: Vec<String>,
+    pub layout_capabilities: Vec<LayoutCapability>,
+    pub parameter_summary: Vec<String>,
+    pub deprecated: bool,
+    pub replacement: Option<EffectReplacement>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize)]
@@ -242,6 +313,9 @@ fn catalog_matches(
 impl Default for EffectCatalog {
     fn default() -> Self {
         Self {
+            family: None,
+            category: None,
+            visibility: CatalogVisibility::Standard,
             mood: Vec::new(),
             energy: 0.0,
             density: 0.0,
@@ -249,6 +323,10 @@ impl Default for EffectCatalog {
             colorfulness: 0.0,
             strobe_risk: StrobeRisk::None,
             required_attributes: Vec::new(),
+            layout_capabilities: Vec::new(),
+            parameter_summary: Vec::new(),
+            deprecated: false,
+            replacement: None,
         }
     }
 }
@@ -375,6 +453,13 @@ pub struct ParameterDefinition {
     pub value_type: ParameterValueType,
     pub default_value: ParameterValue,
     pub range: Option<(f64, f64)>,
+    pub step: Option<f64>,
+    pub required: Option<bool>,
+    pub help: Option<String>,
+    pub safe_fallback: Option<ParameterValue>,
+    pub override_policy: Option<ParameterOverridePolicy>,
+    pub advanced: Option<bool>,
+    pub enum_values: Vec<String>,
     pub unit: ParameterUnit,
     pub ui_hint: ParameterUiHint,
     pub automation: AutomationPolicy,
@@ -387,7 +472,20 @@ impl ParameterDefinition {
         }
         match (self.range, value.as_scalar()) {
             (Some((min, max)), Some(value)) => value.is_finite() && value >= min && value <= max,
-            _ => true,
+            _ => match value {
+                ParameterValue::Scalar(value) => value.is_finite(),
+                ParameterValue::Enum(value) => {
+                    self.enum_values.iter().any(|allowed| allowed == value)
+                }
+                ParameterValue::ColorStops(stops) => {
+                    stops.len() >= 2
+                        && stops.iter().all(|(position, _)| position.is_finite())
+                        && stops.windows(2).all(|pair| pair[0].0 < pair[1].0)
+                }
+                ParameterValue::Color(_)
+                | ParameterValue::Direction(_)
+                | ParameterValue::Boolean(_) => true,
+            },
         }
     }
 }
@@ -552,6 +650,9 @@ pub enum EffectValue {
     Scalar(f64),
     Color([u8; 3]),
     Direction(Direction),
+    Boolean(bool),
+    Enum(String),
+    ColorStops(Vec<(f64, [u8; 3])>),
     Mask(bool),
     AttributeSet(Vec<Option<AttributeValue>>),
 }
@@ -611,6 +712,9 @@ pub fn evaluate_effect_graph(
                 ParameterValue::Scalar(value) => EffectValue::Scalar(*value),
                 ParameterValue::Color(value) => EffectValue::Color(*value),
                 ParameterValue::Direction(value) => EffectValue::Direction(*value),
+                ParameterValue::Boolean(value) => EffectValue::Boolean(*value),
+                ParameterValue::Enum(value) => EffectValue::Enum(value.clone()),
+                ParameterValue::ColorStops(value) => EffectValue::ColorStops(value.clone()),
             },
             CompiledEffectNode::Random => EffectValue::Scalar(deterministic_random(
                 instance.seed,
@@ -918,6 +1022,13 @@ pub fn common_parameters(default_speed: f64) -> Vec<ParameterDefinition> {
             value_type: ParameterValueType::Color,
             default_value: ParameterValue::Color([255, 255, 255]),
             range: None,
+            step: None,
+            required: None,
+            help: None,
+            safe_fallback: None,
+            override_policy: None,
+            advanced: None,
+            enum_values: Vec::new(),
             unit: ParameterUnit::Color,
             ui_hint: ParameterUiHint::Color,
             automation: AutomationPolicy::Continuous,
@@ -927,6 +1038,13 @@ pub fn common_parameters(default_speed: f64) -> Vec<ParameterDefinition> {
             value_type: ParameterValueType::Direction,
             default_value: ParameterValue::Direction(Direction::Forward),
             range: None,
+            step: None,
+            required: None,
+            help: None,
+            safe_fallback: None,
+            override_policy: None,
+            advanced: None,
+            enum_values: Vec::new(),
             unit: ParameterUnit::Direction,
             ui_hint: ParameterUiHint::Segmented,
             automation: AutomationPolicy::Discrete,
@@ -976,6 +1094,13 @@ fn scalar_parameter(
         value_type: ParameterValueType::Scalar,
         default_value: ParameterValue::Scalar(default_value),
         range: Some(range),
+        step: None,
+        required: None,
+        help: None,
+        safe_fallback: None,
+        override_policy: None,
+        advanced: None,
+        enum_values: Vec::new(),
         unit,
         ui_hint,
         automation: AutomationPolicy::Continuous,
@@ -1305,6 +1430,7 @@ mod tests {
             colorfulness: 0.8,
             strobe_risk: StrobeRisk::Low,
             required_attributes: vec![INTENSITY_ATTRIBUTE.to_string()],
+            ..EffectCatalog::default()
         };
         let mut sweep = EffectDefinition::legacy("sweep", "Sweep", 1.0);
         sweep.source = EffectSource::UserLibrary;
@@ -1316,6 +1442,7 @@ mod tests {
             colorfulness: 0.4,
             strobe_risk: StrobeRisk::None,
             required_attributes: vec![PAN_ATTRIBUTE.to_string()],
+            ..EffectCatalog::default()
         };
         let rgb = profile_handle_by_id(GENERIC_RGB_PROFILE_ID).expect("RGB profile");
         let moving = profile_handle_by_id(GENERIC_MOVING_HEAD_PROFILE_ID).expect("moving profile");

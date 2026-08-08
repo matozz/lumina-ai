@@ -2,7 +2,7 @@
 
 export type AnimatableValueDSL = number | string;
 
-export type AutomationPolicyDSL = "continuous" | "discrete";
+export type AutomationPolicyDSL = "continuous" | "discrete" | "disabled";
 
 export type AutomationTargetV3DSL =
   | {
@@ -14,6 +14,8 @@ export type AutomationTargetV3DSL =
       parameter_id: string;
       scope: "effect_instance";
     };
+
+export type CatalogVisibilityDSL = "standard" | "advanced" | "hidden";
 
 export interface ColorStopDSL {
   color: string;
@@ -31,13 +33,20 @@ export type DirectionDSL = "forward" | "reverse";
 export type EasingDSL = "linear" | "ease_in" | "ease_out" | "ease_in_out";
 
 export interface EffectCatalogDSL {
+  category?: string | null;
   colorfulness: number;
   density: number;
+  deprecated?: boolean;
   energy: number;
+  family?: EffectFamilyDSL | null;
+  layout_capabilities?: Array<LayoutCapabilityDSL>;
   mood?: Array<string>;
   motion: MotionTagDSL;
+  parameter_summary?: Array<string>;
+  replacement?: EffectReplacementDSL | null;
   required_attributes?: Array<string>;
   strobe_risk: StrobeRiskDSL;
+  visibility?: CatalogVisibilityDSL;
 }
 
 export interface EffectDefinitionDSL {
@@ -49,6 +58,8 @@ export interface EffectDefinitionDSL {
   revision: number;
   source: EffectSourceDSL;
 }
+
+export type EffectFamilyDSL = "intensity" | "color" | "movement" | "spatial" | "strobe" | "utility";
 
 export interface EffectGraphDSL {
   nodes: Array<EffectNodeDSL>;
@@ -149,11 +160,27 @@ export type EffectNodeDSL =
       type: "attribute_writer";
     };
 
-export type EffectPortDSL = "scalar" | "color" | "direction" | "mask" | "attribute_set" | "writes";
+export type EffectNodePropertyDSL = "waveform" | "attack" | "release" | "color_stops";
+
+export type EffectPortDSL =
+  | "scalar"
+  | "color"
+  | "direction"
+  | "boolean"
+  | "enum"
+  | "color_stops"
+  | "mask"
+  | "attribute_set"
+  | "writes";
 
 export interface EffectPortRefDSL {
   node_id: string;
   port: EffectPortDSL;
+}
+
+export interface EffectReplacementDSL {
+  id: string;
+  revision: number;
 }
 
 export type EffectSourceDSL = "built_in" | "project_local" | "user_library";
@@ -209,6 +236,14 @@ export interface GroupRangeDSL {
   range: [number, number];
 }
 
+export type LayoutCapabilityDSL =
+  | "any"
+  | "linear"
+  | "matrix"
+  | "radial"
+  | "coordinates"
+  | "targeting_scene";
+
 export interface LayoutDSL {
   generator: GeneratorDSL;
   type: LayoutType;
@@ -227,26 +262,52 @@ export type MotionTagDSL = "static" | "pulse" | "chase" | "sweep" | "organic";
 export type OscillatorWaveformDSL = "sine" | "triangle" | "saw" | "pulse";
 
 export interface ParameterDefinitionDSL {
+  advanced?: boolean | null;
   automation: AutomationPolicyDSL;
   default_value: ParameterValueDSL;
+  enum_values?: Array<string>;
+  graph_binding?: ParameterGraphBindingDSL | null;
+  help?: string | null;
   id: string;
   name: string;
+  override_policy?: ParameterOverridePolicyDSL | null;
   range?: [number, number] | null;
+  required?: boolean | null;
+  safe_fallback?: ParameterValueDSL | null;
+  step?: number | null;
   ui_hint: ParameterUiHintDSL;
   unit: ParameterUnitDSL;
   value_type: ParameterValueTypeDSL;
 }
 
-export type ParameterUiHintDSL = "slider" | "color" | "segmented" | "angle";
+export interface ParameterGraphBindingDSL {
+  node_id: string;
+  property: EffectNodePropertyDSL;
+}
+
+export type ParameterOverridePolicyDSL = "cue_override" | "effect_only" | "locked";
+
+export type ParameterUiHintDSL =
+  | "slider"
+  | "color"
+  | "segmented"
+  | "angle"
+  | "toggle"
+  | "select"
+  | "color_stops";
 
 export type ParameterUnitDSL =
+  | "none"
   | "multiplier"
   | "cycles"
   | "percent"
   | "normalized"
   | "color"
   | "direction"
-  | "degrees";
+  | "degrees"
+  | "boolean"
+  | "choice"
+  | "color_stops";
 
 export type ParameterValueDSL =
   | {
@@ -260,9 +321,27 @@ export type ParameterValueDSL =
   | {
       type: "direction";
       value: DirectionDSL;
+    }
+  | {
+      type: "boolean";
+      value: boolean;
+    }
+  | {
+      type: "enum";
+      value: string;
+    }
+  | {
+      type: "color_stops";
+      value: Array<ColorStopDSL>;
     };
 
-export type ParameterValueTypeDSL = "scalar" | "color" | "direction";
+export type ParameterValueTypeDSL =
+  | "scalar"
+  | "color"
+  | "direction"
+  | "boolean"
+  | "enum"
+  | "color_stops";
 
 export interface PatchDSL {
   id_range: [number, number];

@@ -1,10 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { LiveEffectInfo } from "@/bridge/types";
-import { engineActions, useEngineStore } from "@/stores/engine";
+import { useEngineStore } from "@/stores/engine";
 import { workspaceActions, useWorkspaceStore } from "@/stores/workspace";
-import { createStarterProject } from "@/workspace/defaultProject";
-import { createEffectPair } from "@/workspace/effect-lab/effectFactory";
 import { LivePadSettings } from "./LivePadSettings";
 
 const liveEffect: LiveEffectInfo = {
@@ -40,18 +38,10 @@ describe("LivePadSettings", () => {
     });
   });
 
-  it("warns when Draft has a newer revision than the Live Snapshot", () => {
-    const draft = createStarterProject();
-    const pair = createEffectPair(draft);
-    pair.definition.id = liveEffect.definition_id;
-    pair.definition.revision = 2;
-    draft.effect_definitions.push(pair.definition);
-    draft.effect_instances.push(pair.instance);
-    engineActions.loadCurrentDslCode(JSON.stringify(draft));
-
+  it("keeps internal revision comparisons out of the Live controls", () => {
     render(<LivePadSettings effects={[liveEffect]} selectedEffectId={liveEffect.instance_id} />);
 
-    expect(screen.getByText("Draft newer")).toBeTruthy();
-    expect(screen.getByText(/Live r1/)).toBeTruthy();
+    expect(screen.queryByText(/Draft|revision/i)).toBeNull();
+    expect(screen.getByText(/Fixtures: all-fixtures/)).toBeTruthy();
   });
 });

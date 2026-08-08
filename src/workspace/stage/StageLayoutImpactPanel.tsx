@@ -20,10 +20,12 @@ export function StageLayoutImpactPanel({
   impact,
   onApply,
   onClose,
+  advanced = false,
 }: {
   impact: StageTopologyImpact;
   onApply: (request: StageLayoutUpgradeRequest) => void;
   onClose: () => void;
+  advanced?: boolean;
 }) {
   const invalidTargets = impact.targetSets.filter((target) => !target.valid);
   const defaultTargetId = impact.validTargetSetIds.includes("all")
@@ -55,6 +57,63 @@ export function StageLayoutImpactPanel({
       upgradeDependents,
     });
 
+  if (!advanced) {
+    return (
+      <section
+        className="border-primary/40 bg-background/80 flex flex-col gap-3 rounded-md border p-3"
+        aria-label="Stage Layout impact"
+      >
+        <div className="flex items-start gap-2">
+          {impact.compatible ? (
+            <CheckCircle2 className="mt-0.5 size-4 text-emerald-400" aria-hidden="true" />
+          ) : (
+            <AlertTriangle className="text-destructive mt-0.5 size-4" aria-hidden="true" />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Update the Stage?</p>
+            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              This Layout creates {impact.candidateCapacity} fixtures for Lab, Cues, and Arrange
+              {impact.fixtureCount === impact.candidateCapacity
+                ? ". Lumina will keep compatible Cues working."
+                : ` instead of the current ${impact.fixtureCount}. Lumina will resize the internal fixture patch and keep compatible Cues working.`}
+            </p>
+          </div>
+          <Button size="icon-xs" variant="ghost" aria-label="Cancel Stage update" onClick={onClose}>
+            <X aria-hidden="true" />
+          </Button>
+        </div>
+
+        {invalidTargets.length > 0 && (
+          <div className="border-border rounded-md border p-2.5">
+            <p className="text-xs font-medium">Areas adapt automatically</p>
+            <p className="text-muted-foreground mt-1 text-[10px] leading-relaxed">
+              {invalidTargets.length} grid-specific areas will use All fixtures on this Layout.
+              Detailed remapping remains available in Advanced.
+            </p>
+          </div>
+        )}
+
+        <div className="border-border flex items-center gap-2 rounded-md border p-2.5">
+          <ShieldCheck className="size-4 text-emerald-400" aria-hidden="true" />
+          <p className="text-muted-foreground text-xs">
+            Your published and live show will not change until you publish again.
+          </p>
+        </div>
+
+        <Button
+          size="sm"
+          disabled={!mappingsComplete}
+          onClick={() => apply(impact.compatible ? "upgrade" : "remap", true)}
+        >
+          Update Stage & choose an Effect
+        </Button>
+        <Button size="sm" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+      </section>
+    );
+  }
+
   return (
     <section
       className="border-primary/40 bg-background/80 flex flex-col gap-3 rounded-md border p-2.5"
@@ -68,11 +127,7 @@ export function StageLayoutImpactPanel({
         )}
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold">
-            {impact.compatible
-              ? "Compatible Stage upgrade"
-              : impact.capacityFits
-                ? "Topology remap required"
-                : "Layout capacity cannot fit this Stage"}
+            {impact.compatible ? "Compatible Stage upgrade" : "Topology remap required"}
           </p>
           <p className="text-muted-foreground font-mono text-[9px]">
             {formatRef(impact.currentLayoutRef)} <ArrowRight className="inline size-2.5" />{" "}
@@ -85,7 +140,10 @@ export function StageLayoutImpactPanel({
       </div>
 
       <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border">
-        <ImpactMetric label="Fixtures" value={String(impact.fixtureCount)} />
+        <ImpactMetric
+          label="Fixtures"
+          value={`${impact.fixtureCount}→${impact.candidateCapacity}`}
+        />
         <ImpactMetric
           label="Capacity"
           value={`${impact.currentCapacity}→${impact.candidateCapacity}`}
@@ -109,7 +167,7 @@ export function StageLayoutImpactPanel({
           <ImpactRow
             key={group.id}
             label={group.name}
-            detail={`${group.fixtureCount} fixtures · membership unchanged`}
+            detail={`${group.fixtureCount} fixtures · reviewed`}
             status="safe"
           />
         ))}
@@ -202,28 +260,18 @@ export function StageLayoutImpactPanel({
         </Alert>
       )}
 
-      {!impact.capacityFits && (
-        <Alert variant="destructive">
-          <AlertTriangle aria-hidden="true" />
-          <AlertTitle>LAYOUT_CAPACITY_BELOW_STAGE_PATCH · stage.patch</AlertTitle>
-          <AlertDescription>
-            This Layout has {impact.candidateCapacity} positions for {impact.fixtureCount} patched
-            fixtures. Keep the old Stage or cancel, then increase the Layout capacity before
-            applying it. The saved Layout asset and Canvas preview remain available.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <div className="border-border flex items-center gap-2 rounded-md border p-2">
-        <ShieldCheck className="size-3.5 text-emerald-400" aria-hidden="true" />
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-medium">Revision isolation</p>
-          <p className="text-muted-foreground text-[9px]">
-            Published revisions and Live Snapshot: 0 changes. Old Stage, Cue, and Arrangement
-            revisions remain addressable.
-          </p>
+      {advanced && (
+        <div className="border-border flex items-center gap-2 rounded-md border p-2">
+          <ShieldCheck className="size-3.5 text-emerald-400" aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-medium">Revision isolation</p>
+            <p className="text-muted-foreground text-[9px]">
+              Published revisions and Live Snapshot: 0 changes. Old Stage, Cue, and Arrangement
+              revisions remain addressable.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex flex-col gap-1.5">
         {impact.compatible ? (
@@ -231,16 +279,16 @@ export function StageLayoutImpactPanel({
             <GitBranch data-icon="inline-start" aria-hidden="true" />
             Upgrade Stage + listed dependents
           </Button>
-        ) : impact.capacityFits ? (
+        ) : (
           <Button size="sm" disabled={!mappingsComplete} onClick={() => apply("remap", true)}>
             <GitBranch data-icon="inline-start" aria-hidden="true" />
             Remap + upgrade listed dependents
           </Button>
-        ) : null}
+        )}
         <Button
           size="sm"
           variant="outline"
-          disabled={!impact.capacityFits || !mappingsComplete}
+          disabled={!mappingsComplete}
           onClick={() => apply("create_stage", false)}
         >
           Create new Stage + empty Arrangement

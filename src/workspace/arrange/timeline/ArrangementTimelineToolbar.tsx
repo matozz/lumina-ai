@@ -1,6 +1,5 @@
 import { CircleHelp, Copy, Plus, Redo2, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 import type { ArrangementDocument, AssetRef, ProjectBundle } from "@/bridge/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -30,11 +29,10 @@ interface ArrangementTimelineToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   reference: AssetRef;
-  selectedCueRef: AssetRef | null;
+  selectedCueName: string | null;
 }
 
 export function ArrangementTimelineToolbar({
-  arrangement,
   beatWidth,
   bundle,
   canRedo,
@@ -49,13 +47,12 @@ export function ArrangementTimelineToolbar({
   onZoomIn,
   onZoomOut,
   reference,
-  selectedCueRef,
+  selectedCueName,
 }: ArrangementTimelineToolbarProps) {
   const refs = latestRefsById(bundle.manifest.arrangement_refs);
   const items = refs.map((candidate) => ({
     value: assetKey(candidate),
-    label:
-      exactAsset(bundle.arrangements, candidate)?.name ?? `${candidate.id} r${candidate.revision}`,
+    label: exactAsset(bundle.arrangements, candidate)?.name ?? candidate.id,
   }));
 
   return (
@@ -81,7 +78,6 @@ export function ArrangementTimelineToolbar({
           </SelectGroup>
         </SelectContent>
       </Select>
-      <Badge variant="outline">r{arrangement.revision}</Badge>
       <Button size="xs" variant="ghost" onClick={onCreate}>
         <Plus data-icon="inline-start" aria-hidden="true" />
         New
@@ -90,9 +86,14 @@ export function ArrangementTimelineToolbar({
         <Copy data-icon="inline-start" aria-hidden="true" />
         Duplicate
       </Button>
-      <Button size="xs" disabled={!selectedCueRef} onClick={onPlaceCue}>
+      <Button
+        size="xs"
+        disabled={!selectedCueName}
+        title={selectedCueName ? `Place ${selectedCueName} at the playhead` : undefined}
+        onClick={onPlaceCue}
+      >
         <Plus data-icon="inline-start" aria-hidden="true" />
-        Place selected Cue
+        Place Cue at playhead
       </Button>
       <div className="ml-auto flex items-center gap-0.5" aria-label="Timeline zoom and snap">
         <Button
