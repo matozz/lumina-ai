@@ -61,6 +61,7 @@ function WorkspaceSurface({ workspace }: { workspace: WorkspaceId }) {
         <CanvasView
           frameSource={workspace === "live" ? "live" : "preview"}
           showIntensityWithoutColor={workspace === "arrange"}
+          layoutOnly={workspace === "stage"}
         />
         {workspace === "arrange" && previewError && (
           <div className="bg-background/80 absolute inset-0 flex items-center justify-center p-6 backdrop-blur-sm">

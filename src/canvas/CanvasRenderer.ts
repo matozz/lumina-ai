@@ -10,6 +10,7 @@ export class CanvasRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private fixtures: Map<number, FixtureVisual>;
+  private layoutAppearance: CanvasLayoutAppearance = "output";
   private glowEnabled: boolean = true;
   private camera: Camera;
   private animationFrameId: number = 0;
@@ -23,6 +24,7 @@ export class CanvasRenderer {
   }
 
   initFromLayout(coords: LayoutCoord[], appearance: CanvasLayoutAppearance = "output"): void {
+    this.layoutAppearance = appearance;
     this.fixtures.clear();
     for (const { id, x, y, type, width, height, patched } of coords) {
       const visual = new FixtureVisual(id, x, y, type, width, height, patched);
@@ -132,7 +134,11 @@ export class CanvasRenderer {
     ctx.setLineDash([]);
 
     // Draw glow
-    if (this.glowEnabled && this.fixtures.size <= CANVAS_VISUAL_CONFIG.glow.fixtureLimit) {
+    if (
+      this.layoutAppearance === "output" &&
+      this.glowEnabled &&
+      this.fixtures.size <= CANVAS_VISUAL_CONFIG.glow.fixtureLimit
+    ) {
       ctx.globalCompositeOperation = "lighter";
       for (const visual of this.fixtures.values()) {
         if (visual.brightness > CANVAS_VISUAL_CONFIG.glow.minimumBrightness) {

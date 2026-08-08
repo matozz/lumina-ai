@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CanvasRenderer } from "./CanvasRenderer";
-import { CANVAS_VISUAL_CONFIG } from "./visualConfig";
 
 describe("CanvasRenderer frame budget", () => {
   let scheduled: FrameRequestCallback | undefined;
@@ -107,7 +106,7 @@ describe("CanvasRenderer frame budget", () => {
     expect(context.strokeStyle).toBe("rgba(63, 63, 70, 0.5)");
   });
 
-  it("renders a visible Layout Draft using the shared glow radius", () => {
+  it("renders a neutral Layout Draft without output glow", () => {
     const canvas = document.createElement("canvas");
     vi.spyOn(canvas, "getBoundingClientRect").mockReturnValue({
       width: 320,
@@ -121,12 +120,7 @@ describe("CanvasRenderer frame budget", () => {
     renderer.startRenderLoop();
 
     scheduled?.(0);
-    expect(context.arc).toHaveBeenCalledWith(
-      20,
-      30,
-      8 * CANVAS_VISUAL_CONFIG.glow.radiusMultiplier,
-      0,
-      Math.PI * 2,
-    );
+    expect(context.fillStyle).toBe("#59595e");
+    expect(context.arc).not.toHaveBeenCalled();
   });
 });

@@ -100,6 +100,15 @@ export const authoringTransportActions = {
       .map((session) => session.key);
     for (const key of playingKeys) authoringTransportActions.pause(key, now);
   },
+  stopAll(now = monotonicNow()) {
+    const activeKeys = Object.values(useAuthoringTransportStore.getState().sessions)
+      .filter((session) => {
+        const startTick = session.loopEnabled ? session.loopStartTick : 0;
+        return session.playback !== "stopped" || session.cursorTick !== startTick;
+      })
+      .map((session) => session.key);
+    for (const key of activeKeys) authoringTransportActions.stop(key, now);
+  },
   stop(key: string, now = monotonicNow()) {
     updateCommand(key, now, (session) => {
       session.playback = "stopped";
@@ -202,6 +211,44 @@ export const authoringTransportActions = {
     };
     useAuthoringTransportStore.setState((state) => ({
       sessions: { ...state.sessions, [target.key]: session },
+    }));
+    return session;
+  },
+  continuePlayback(sourceKey: string, target: AuthoringSessionDefaults, now = monotonicNow()) {
+    const sessions = useAuthoringTransportStore.getState().sessions;
+    const source = sessions[sourceKey];
+    if (!source || source.scope !== target.scope || source.playback !== "playing") {
+      return authoringTransportActions.ensureSession(target);
+    }
+    const durationTicks = positiveInteger(target.durationTicks);
+    const cursorTick = Math.min(source.cursorTick, durationTicks);
+    const loopStartTick = Math.min(source.loopStartTick, durationTicks - 1);
+    const existingRevision = sessions[target.key]?.commandRevision ?? 0;
+    const previousSession: AuthoringTransportSession = {
+      ...source,
+      playback: "paused",
+      anchorTick: source.cursorTick,
+      anchorTimeMs: now,
+      commandRevision: source.commandRevision + 1,
+    };
+    const session: AuthoringTransportSession = {
+      ...source,
+      key: target.key,
+      scope: target.scope,
+      durationTicks,
+      cursorTick,
+      anchorTick: cursorTick,
+      anchorTimeMs: now,
+      loopStartTick,
+      loopEndTick: Math.max(loopStartTick + 1, Math.min(source.loopEndTick, durationTicks)),
+      commandRevision: Math.max(source.commandRevision, existingRevision) + 1,
+    };
+    useAuthoringTransportStore.setState((state) => ({
+      sessions: {
+        ...state.sessions,
+        [sourceKey]: previousSession,
+        [target.key]: session,
+      },
     }));
     return session;
   },

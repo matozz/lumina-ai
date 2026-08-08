@@ -88,7 +88,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 export const workspaceActions = {
   setActiveWorkspace: (activeWorkspace: WorkspaceId) => {
     if (useWorkspaceStore.getState().activeWorkspace !== activeWorkspace) {
-      authoringTransportActions.pauseAll();
+      authoringTransportActions.stopAll();
     }
     useWorkspaceStore.setState({ activeWorkspace, advancedMode: false, statusMessage: null });
   },

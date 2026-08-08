@@ -20,19 +20,6 @@ describe("ProjectStageInspector Layout workflow", () => {
     projectActions.reset();
     workspaceActions.setAdvancedMode(true);
     commandMocks.previewLayout.mockResolvedValue([]);
-    commandMocks.previewProject.mockImplementation(({ project }) =>
-      Promise.resolve({
-        generation: 1,
-        source: { type: "authoring_draft" },
-        context: { type: "stage" },
-        project_ref: { id: project.manifest.project_id, revision: project.manifest.revision },
-        stage_ref: project.manifest.stage_ref,
-        arrangement_ref: project.manifest.arrangement_refs[0],
-        playhead_tick: 0,
-        layout_coords: [],
-        outputs: [],
-      }),
-    );
   });
 
   it("previews an isolated zero-gap Draft and applies it only after impact confirmation", async () => {
@@ -117,7 +104,7 @@ describe("ProjectStageInspector Layout workflow", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Update Stage & choose an Effect" }));
     expect(activeStage(useProjectStore.getState().bundle).patch).toEqual([
-      { profile_id: "generic-rgb", id_range: [1, 649] },
+      { profile_id: "generic-rgb", id_range: [1, 361] },
     ]);
     expect(useWorkspaceStore.getState().activeWorkspace).toBe("effect-lab");
   });
@@ -146,6 +133,8 @@ describe("ProjectStageInspector Layout workflow", () => {
     fireEvent.change(screen.getByLabelText("Gap X"), { target: { value: "7.4" } });
     expect((screen.getByLabelText("Gap X") as HTMLInputElement).value).toBe("7");
     fireEvent.click(screen.getByRole("button", { name: "Groups" }));
+
+    expect(commandMocks.previewProject).not.toHaveBeenCalled();
 
     act(() => {
       projectActions.duplicateStageGroup("all-fixtures");
@@ -214,7 +203,7 @@ describe("ProjectStageInspector Layout workflow", () => {
     await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
 
     expect(screen.getByLabelText("Rings")).toBeTruthy();
-    expect(screen.getByLabelText("Fixtures per ring step")).toHaveProperty("value", "18");
+    expect(screen.getByLabelText("Fixtures per ring step")).toHaveProperty("value", "10");
     expect(screen.getByLabelText("Fixture gap")).toBeTruthy();
     expect(screen.getByLabelText("Fixture width")).toBeTruthy();
     expect(screen.getByLabelText("Fixture height")).toBeTruthy();
@@ -228,7 +217,7 @@ describe("ProjectStageInspector Layout workflow", () => {
       expect(previewLayout.geometry).toMatchObject({
         shape: "circle",
         rings: 2,
-        increment: 18,
+        increment: 10,
       });
     });
   });

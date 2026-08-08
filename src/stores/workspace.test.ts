@@ -23,14 +23,18 @@ describe("workspace state", () => {
     });
   });
 
-  it("pauses authoring playback when the user changes workspace", () => {
+  it("stops authoring playback at the start when the user changes workspace", () => {
     const key = authoringSessionKey("effect", "pulse@1");
     authoringTransportActions.ensureSession({ key, scope: "effect", durationTicks: 3_840 });
+    authoringTransportActions.seek(key, 960);
     authoringTransportActions.play(key);
 
     workspaceActions.setActiveWorkspace("effect-lab");
 
-    expect(useAuthoringTransportStore.getState().sessions[key].playback).toBe("paused");
+    expect(useAuthoringTransportStore.getState().sessions[key]).toMatchObject({
+      playback: "stopped",
+      cursorTick: 0,
+    });
   });
 
   it("resets a removed workspace from an older development cache", async () => {

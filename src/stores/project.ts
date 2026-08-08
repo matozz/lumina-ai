@@ -79,7 +79,7 @@ export interface ProjectState {
 }
 
 const starter = createStarterProjectBundle();
-const LOCAL_WORKSPACE_STORAGE_VERSION = 11;
+const LOCAL_WORKSPACE_STORAGE_VERSION = 12;
 
 const initialState: ProjectState = {
   bundle: starter,
@@ -188,16 +188,8 @@ export const projectActions = {
       publishedBundle: structuredClone(state.bundle),
       savedHistoryCursor: state.historyCursor,
     })),
-  setSelectedEffectRef: (selectedEffectRef: AssetRef | null) => {
-    const current = useProjectStore.getState().selectedEffectRef;
-    if (
-      current?.id !== selectedEffectRef?.id ||
-      current?.revision !== selectedEffectRef?.revision
-    ) {
-      authoringTransportActions.pauseAll();
-    }
-    useProjectStore.setState({ selectedEffectRef });
-  },
+  setSelectedEffectRef: (selectedEffectRef: AssetRef | null) =>
+    useProjectStore.setState({ selectedEffectRef }),
   setSelectedLayoutRef: (selectedLayoutRef: AssetRef) =>
     useProjectStore.setState({ selectedLayoutRef }),
   duplicateLayout: (reference: AssetRef) => {
@@ -487,13 +479,8 @@ export const projectActions = {
     useProjectStore.setState(updates);
     return { stageRef: nextStageRef, cueUpgrades, arrangementUpgrades };
   },
-  setSelectedCueRef: (selectedCueRef: AssetRef | null) => {
-    const current = useProjectStore.getState().selectedCueRef;
-    if (current?.id !== selectedCueRef?.id || current?.revision !== selectedCueRef?.revision) {
-      authoringTransportActions.pauseAll();
-    }
-    useProjectStore.setState({ selectedCueRef });
-  },
+  setSelectedCueRef: (selectedCueRef: AssetRef | null) =>
+    useProjectStore.setState({ selectedCueRef }),
   setSelectedTargetSetId: (selectedTargetSetId: string) =>
     useProjectStore.setState({ selectedTargetSetId }),
   duplicateTargetSet: (targetSetId: string) => {

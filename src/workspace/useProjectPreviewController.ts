@@ -45,6 +45,7 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
   const productionCatalog = useProductionCatalogStore(productionCatalogSelectors.catalog);
   const compiledKeyRef = useRef<string | null>(null);
   const requestRef = useRef(0);
+  const previousAuthoringRef = useRef<ActiveAuthoringSession | null>(null);
 
   const materialized = useMemo(
     () =>
@@ -54,9 +55,9 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
         selectedCueRef,
         { effect: effectDraft, cue: cueDraft, comparison },
         productionCatalog,
-        workspace === "effect-lab" || workspace === "cues" || workspace === "stage"
+        workspace === "effect-lab" || workspace === "cues"
           ? {
-              scope: workspace === "effect-lab" ? "effect" : workspace === "cues" ? "cue" : "stage",
+              scope: workspace === "effect-lab" ? "effect" : "cue",
               arrangementRef: selectedArrangementRef,
             }
           : {},
@@ -77,7 +78,8 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
   const previewEffectRef = materialized.effectRef;
   const previewCueRef = materialized.cueRef;
   const arrangement = exactAsset(previewBundle.arrangements, selectedArrangementRef);
-  const previewActive = workspace !== "live" || liveViewMode === "rehearsal";
+  const previewActive =
+    workspace !== "stage" && (workspace !== "live" || liveViewMode === "rehearsal");
   const context = useMemo<RenderContext>(() => {
     if (workspace === "effect-lab" && previewEffectRef) {
       return {
@@ -121,15 +123,30 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
       : `${source.type}:${assetKey(selectedArrangementRef)}:${serializedBundle}`;
 
   useEffect(() => {
-    if (!activeAuthoring) return;
-    authoringTransportActions.ensureSession({
+    const previous = previousAuthoringRef.current;
+    if (!activeAuthoring) {
+      previousAuthoringRef.current = null;
+      return;
+    }
+    const defaults = {
       key: activeAuthoring.key,
       scope: activeAuthoring.scope,
       durationTicks:
         activeAuthoring.scope === "arrangement" ? activeAuthoring.arrangement.length_ticks : 3_840,
       clockSource: activeAuthoring.scope === "arrangement" ? "arrangement" : "local",
-    });
-  }, [activeAuthoring]);
+    } as const;
+    if (
+      previous &&
+      previous.scope === activeAuthoring.scope &&
+      previous.key !== activeAuthoring.key &&
+      (workspace === "effect-lab" || workspace === "cues")
+    ) {
+      authoringTransportActions.continuePlayback(previous.key, defaults);
+    } else {
+      authoringTransportActions.ensureSession(defaults);
+    }
+    previousAuthoringRef.current = activeAuthoring;
+  }, [activeAuthoring, workspace]);
 
   useEffect(() => {
     if (!previewActive) return;

@@ -35,7 +35,7 @@ Automation target 必须能经 Cue → Layer → Effect parameter 精确解析�
 
 ## Authoring transport
 
-Lab、Cues 和 Arrange 共用 Authoring Transport 语义：Play、Pause、Stop、Seek、Loop。页面打开、选择 Arrangement 或切换 workspace 不会自动 Play。Stop 回到 loop start；未启用 loop 时回到 tick 0。
+Lab、Cues 和 Arrange 共用 Authoring Transport 语义：Play、Pause、Stop、Seek、Loop。页面打开和资产选择不会自动 Play；Lab/Cues 中若当前 session 正在播放，选择另一个 Effect/Cue 会把 cursor、loop 与 playing 状态连续迁移到新 session。切换功能区则执行 Stop 并回到 loop start；未启用 loop 时回到 tick 0。
 
 ## 内置多分区示例
 

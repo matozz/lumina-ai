@@ -87,6 +87,27 @@ describe("AuthoringTransport session state", () => {
     expect(useAuthoringTransportStore.getState().sessions[cueKey].playback).toBe("paused");
   });
 
+  it("stops every authoring session at its start when the workspace changes", () => {
+    const cueKey = authoringSessionKey("cue", "drop@1");
+    authoringTransportActions.ensureSession({ key, scope: "effect", durationTicks: 3_840 });
+    authoringTransportActions.ensureSession({ key: cueKey, scope: "cue", durationTicks: 3_840 });
+    authoringTransportActions.seek(key, 1_200, 10);
+    authoringTransportActions.play(key, 20);
+    authoringTransportActions.seek(cueKey, 960, 10);
+    authoringTransportActions.pause(cueKey, 20);
+
+    authoringTransportActions.stopAll(30);
+
+    expect(useAuthoringTransportStore.getState().sessions[key]).toMatchObject({
+      playback: "stopped",
+      cursorTick: 0,
+    });
+    expect(useAuthoringTransportStore.getState().sessions[cueKey]).toMatchObject({
+      playback: "stopped",
+      cursorTick: 0,
+    });
+  });
+
   it("rejects Local timing for Arrangement and invalid loop ranges", () => {
     const arrangementKey = authoringSessionKey("arrangement", "house@1");
     authoringTransportActions.ensureSession({
@@ -134,6 +155,30 @@ describe("AuthoringTransport session state", () => {
       loopEnabled: true,
       loopStartTick: 960,
       loopEndTick: 7_680,
+    });
+  });
+
+  it("continues a running preview when another asset is selected in the same scope", () => {
+    const targetKey = authoringSessionKey("effect", "gradient@1");
+    authoringTransportActions.ensureSession({ key, scope: "effect", durationTicks: 3_840 });
+    authoringTransportActions.seek(key, 1_440, 10);
+    authoringTransportActions.play(key, 20);
+
+    authoringTransportActions.continuePlayback(
+      key,
+      { key: targetKey, scope: "effect", durationTicks: 3_840 },
+      30,
+    );
+
+    expect(useAuthoringTransportStore.getState().sessions[targetKey]).toMatchObject({
+      playback: "playing",
+      cursorTick: 1_440,
+      anchorTick: 1_440,
+      anchorTimeMs: 30,
+    });
+    expect(useAuthoringTransportStore.getState().sessions[key]).toMatchObject({
+      playback: "paused",
+      cursorTick: 1_440,
     });
   });
 });

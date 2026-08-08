@@ -30,7 +30,6 @@ import { analyzeStageTopology } from "@/document/stageTopology";
 import { cn } from "@/lib/utils";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/stores/workspace";
-import { materializeStagePreviewBundle } from "../authoringPreviewBundle";
 import { LayoutGeometryEditor } from "./LayoutGeometryEditor";
 import {
   StageCollectionEditorDialog,
@@ -46,7 +45,6 @@ type SaveAsState = "closed" | "open";
 export function ProjectStageInspector() {
   const bundle = useProjectStore(projectSelectors.bundle);
   const selectedLayoutRef = useProjectStore(projectSelectors.selectedLayoutRef);
-  const selectedArrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
   const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
   const stage = activeStage(bundle);
   const stageLayout = activeLayout(bundle);
@@ -82,7 +80,6 @@ export function ProjectStageInspector() {
   }, [selectedLayoutFingerprint]);
 
   useEffect(() => {
-    if (view !== "layout") return;
     if (blockingDiagnostics.length > 0) {
       setPreviewDiagnostics([]);
       setPreviewing(false);
@@ -110,30 +107,7 @@ export function ProjectStageInspector() {
       request.abort();
       window.clearTimeout(timer);
     };
-  }, [advancedMode, blockingDiagnostics.length, draft, stage, view]);
-
-  useEffect(() => {
-    if (view === "layout") return;
-    let active = true;
-    void engine
-      .previewProject({
-        project: materializeStagePreviewBundle(bundle, selectedArrangementRef),
-        arrangementRef: selectedArrangementRef,
-        source: { type: "authoring_draft" },
-        context: { type: "stage" },
-        playheadTick: 0,
-      })
-      .then((frame) => {
-        if (!active) return;
-        window.dispatchEvent(new CustomEvent("engine:project-preview-frame", { detail: frame }));
-      })
-      .catch((error) => {
-        if (active) setPreviewDiagnostics(normalizeDiagnostics(error, "stage.preview"));
-      });
-    return () => {
-      active = false;
-    };
-  }, [bundle, selectedArrangementRef, view]);
+  }, [advancedMode, blockingDiagnostics.length, draft, stage]);
 
   const runAction = (path: string, action: () => void) => {
     try {

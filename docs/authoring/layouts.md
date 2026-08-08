@@ -12,7 +12,7 @@ V1 正式支持 Matrix、Wall、Strip、Frame、Circle、Sector、Polygon、Hone
 
 坐标实现位于 `src/document/layoutDefinition.ts` 与 `src-tauri/src/document/project_layout.rs`。`catalog/builtin/generators/golden-v1.json` 锁定每个内置 Layout 的容量和坐标样本，防止两端语义漂移。
 
-Algorithm 路径按物理距离重采样：开放式 Spiral 直接求相邻灯中心的等弦长位置，避免中心拥挤；闭合 Lissajous 按等弧长分布并省略重复终点。Formula 保持对保存表达式与 `t_range` 的确定性求值。Formula/Algorithm 预设始终出现在普通 Stage Library 的 **Generated** 分组；Advanced 只增加复制、底层资产检查等操作，不是预览入口。Layout-only Canvas 使用统一的可见 Draft tint，因此未播放 Effect 时仍能辨认完整几何。
+Algorithm 路径按物理距离重采样：开放式 Spiral 直接求相邻灯中心的等弦长位置，避免中心拥挤；闭合 Lissajous 按等弧长分布并省略重复终点。Formula 保持对保存表达式与 `t_range` 的确定性求值。Formula/Algorithm 预设始终出现在普通 Stage Library 的 **Generated** 分组；Advanced 只增加复制、底层资产检查等操作，不是预览入口。Stage Canvas 只接受 Layout Preview，使用无眩光的中性灰 Draft 外观；Effect/Cue/Arrangement 的颜色输出不能进入 Stage。
 
 ## 数量与空间参数
 
@@ -42,6 +42,8 @@ Layout 预览总是生成完整容量，不受当前 Stage fixture 数量限制�
 ## 内置预设原则
 
 内置目录覆盖中大型 Matrix/Wall、横竖 Strip、多比例 Frame、不同 rings/gap 的 Circle、多个角度/密度 Sector、三至六边形 Polygon、紧凑/宽松 Honeycomb，以及稳定 Formula/Algorithm 示例。Authoring Starter 引用完整内置 Layout 集，因此每个预设都可直接预览或复制成项目资产。每个 JSON 应表达不同的舞台用途，而不是仅用微小参数差异堆数量。
+
+`circle-rings-8` 的当前基准为 8 rings、每圈递增 10 fixtures，总容量 361；`ring_gap` 与 `ring_pitch` 保持独立，不随数量参数隐式变化。
 
 ## 新增或修改 Generator
 
