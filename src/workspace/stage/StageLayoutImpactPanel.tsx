@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { AlertTriangle, ArrowRight, CheckCircle2, GitBranch, ShieldCheck, X } from "lucide-react";
-import type { AssetRef } from "@/bridge/types";
+import { AlertTriangle, CheckCircle2, GitBranch, ShieldCheck, X } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,8 +43,8 @@ export function StageLayoutImpactPanel({
     () => [
       `${impact.groups.length} Groups inspected`,
       `${impact.targetSets.length} TargetSets inspected`,
-      `${impact.cues.length} Cue revisions affected`,
-      `${impact.arrangements.length} Arrangement revisions affected indirectly`,
+      `${impact.cues.length} linked Cues`,
+      `${impact.arrangements.length} linked Arrangements`,
     ],
     [impact],
   );
@@ -96,7 +95,7 @@ export function StageLayoutImpactPanel({
         <div className="border-border flex items-center gap-2 rounded-md border p-2.5">
           <ShieldCheck className="size-4 text-emerald-400" aria-hidden="true" />
           <p className="text-muted-foreground text-xs">
-            Your published and live show will not change until you publish again.
+            Current live output stays unchanged until you click Live again.
           </p>
         </div>
 
@@ -129,9 +128,8 @@ export function StageLayoutImpactPanel({
           <p className="text-xs font-semibold">
             {impact.compatible ? "Compatible Stage upgrade" : "Topology remap required"}
           </p>
-          <p className="text-muted-foreground font-mono text-[9px]">
-            {formatRef(impact.currentLayoutRef)} <ArrowRight className="inline size-2.5" />{" "}
-            {formatRef(impact.candidateLayoutRef)}
+          <p className="text-muted-foreground text-[9px]">
+            Review how the selected Layout changes the current Stage.
           </p>
         </div>
         <Button size="icon-xs" variant="ghost" aria-label="Cancel impact review" onClick={onClose}>
@@ -220,27 +218,24 @@ export function StageLayoutImpactPanel({
         ))}
       </ImpactSection>
 
-      <ImpactSection
-        title="Pinned dependents"
-        count={impact.cues.length + impact.arrangements.length}
-      >
+      <ImpactSection title="Linked content" count={impact.cues.length + impact.arrangements.length}>
         {impact.cues.length === 0 && impact.arrangements.length === 0 ? (
-          <p className="text-muted-foreground py-1 text-[9px]">No Cue references are pinned.</p>
+          <p className="text-muted-foreground py-1 text-[9px]">No linked Cues or Arrangements.</p>
         ) : (
           <>
             {impact.cues.map((cue) => (
               <ImpactRow
-                key={formatRef(cue.reference)}
+                key={`${cue.reference.id}:${cue.reference.revision}`}
                 label={cue.name}
-                detail={`${formatRef(cue.reference)} · ${cue.layers} layers · new revision required`}
+                detail={`${cue.layers} layers · will be updated together`}
                 status="warning"
               />
             ))}
             {impact.arrangements.map((arrangement) => (
               <ImpactRow
-                key={formatRef(arrangement.reference)}
+                key={`${arrangement.reference.id}:${arrangement.reference.revision}`}
                 label={arrangement.name}
-                detail={`${formatRef(arrangement.reference)} · ${arrangement.clipCount} indirect clips · new revision required`}
+                detail={`${arrangement.clipCount} linked clips · will be updated together`}
                 status="warning"
               />
             ))}
@@ -251,10 +246,10 @@ export function StageLayoutImpactPanel({
       {changedTargets.length > 0 && (
         <Alert variant="destructive">
           <AlertTriangle aria-hidden="true" />
-          <AlertTitle>TARGET_TOPOLOGY_CHANGED · stage.target_sets</AlertTitle>
+          <AlertTitle>Fixture areas need review</AlertTitle>
           <AlertDescription>
             {changedTargets.length} TargetSets change membership or become invalid. Confirm each
-            remap below, preserve the old Stage, create a separate Stage, or cancel with no
+            remap below, keep the current Stage, create a separate Stage, or cancel with no
             modification.
           </AlertDescription>
         </Alert>
@@ -264,10 +259,9 @@ export function StageLayoutImpactPanel({
         <div className="border-border flex items-center gap-2 rounded-md border p-2">
           <ShieldCheck className="size-3.5 text-emerald-400" aria-hidden="true" />
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-medium">Revision isolation</p>
+            <p className="text-[10px] font-medium">Safe update</p>
             <p className="text-muted-foreground text-[9px]">
-              Published revisions and Live Snapshot: 0 changes. Old Stage, Cue, and Arrangement
-              revisions remain addressable.
+              Current live output stays unchanged. Existing saved content remains available.
             </p>
           </div>
         </div>
@@ -277,12 +271,12 @@ export function StageLayoutImpactPanel({
         {impact.compatible ? (
           <Button size="sm" onClick={() => apply("upgrade", true)}>
             <GitBranch data-icon="inline-start" aria-hidden="true" />
-            Upgrade Stage + listed dependents
+            Update Stage + linked Cues
           </Button>
         ) : (
           <Button size="sm" disabled={!mappingsComplete} onClick={() => apply("remap", true)}>
             <GitBranch data-icon="inline-start" aria-hidden="true" />
-            Remap + upgrade listed dependents
+            Remap + update linked Cues
           </Button>
         )}
         <Button
@@ -295,7 +289,7 @@ export function StageLayoutImpactPanel({
         </Button>
         <div className="grid grid-cols-2 gap-1.5">
           <Button size="xs" variant="ghost" onClick={onClose}>
-            Keep old Stage revision
+            Keep current Stage
           </Button>
           <Button size="xs" variant="ghost" onClick={onClose}>
             Cancel · no changes
@@ -358,8 +352,4 @@ function ImpactMetric({ label, value }: { label: string; value: string }) {
       <p className="font-mono text-[10px] tabular-nums">{value}</p>
     </div>
   );
-}
-
-function formatRef(reference: AssetRef) {
-  return `${reference.id}@${reference.revision}`;
 }

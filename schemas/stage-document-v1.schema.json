@@ -12,8 +12,8 @@
     "id": {
       "type": "string"
     },
-    "layout": {
-      "$ref": "#/$defs/LayoutDSL"
+    "layout_ref": {
+      "$ref": "#/$defs/AssetRef"
     },
     "name": {
       "type": "string"
@@ -40,6 +40,12 @@
       "items": {
         "$ref": "#/$defs/TargetSetDefinition"
       }
+    },
+    "targeting_scenes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TargetingSceneDefinition"
+      }
     }
   },
   "additionalProperties": false,
@@ -49,203 +55,33 @@
     "revision",
     "name",
     "patch",
-    "layout",
+    "layout_ref",
     "groups",
     "target_sets"
   ],
   "$defs": {
-    "CheckerboardParity": {
-      "type": "string",
-      "enum": ["even", "odd"]
-    },
-    "CustomFixturePos": {
+    "AssetRef": {
       "type": "object",
       "properties": {
         "id": {
+          "type": "string"
+        },
+        "revision": {
           "type": "integer",
           "format": "uint32",
           "minimum": 1
-        },
-        "x": {
-          "type": "number",
-          "format": "double"
-        },
-        "y": {
-          "type": "number",
-          "format": "double"
         }
       },
       "additionalProperties": false,
-      "required": ["id", "x", "y"]
+      "required": ["id", "revision"]
     },
-    "FormulaDef": {
-      "type": "object",
-      "properties": {
-        "count": {
-          "type": "integer",
-          "format": "uint32",
-          "maximum": 1000000,
-          "minimum": 1
-        },
-        "scale": {
-          "type": ["number", "null"],
-          "format": "double"
-        },
-        "t_range": {
-          "type": "array",
-          "maxItems": 2,
-          "minItems": 2,
-          "prefixItems": [
-            {
-              "type": "number",
-              "format": "double"
-            },
-            {
-              "type": "number",
-              "format": "double"
-            }
-          ]
-        },
-        "x": {
-          "type": "string"
-        },
-        "y": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "required": ["x", "y", "t_range", "count"]
+    "CenterEdgesRegion": {
+      "type": "string",
+      "enum": ["center", "edges"]
     },
-    "GeneratorDSL": {
-      "oneOf": [
-        {
-          "type": "object",
-          "properties": {
-            "columns": {
-              "type": "integer",
-              "format": "uint32",
-              "minimum": 1
-            },
-            "origin": {
-              "type": ["array", "null"],
-              "maxItems": 2,
-              "minItems": 2,
-              "prefixItems": [
-                {
-                  "type": "number",
-                  "format": "double"
-                },
-                {
-                  "type": "number",
-                  "format": "double"
-                }
-              ]
-            },
-            "rows": {
-              "type": "integer",
-              "format": "uint32",
-              "minimum": 1
-            },
-            "shape": {
-              "type": "string",
-              "const": "matrix"
-            },
-            "spacing": {
-              "type": "number",
-              "format": "double",
-              "minimum": 1e-6
-            }
-          },
-          "additionalProperties": false,
-          "required": ["shape", "rows", "columns", "spacing"]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "center": {
-              "type": ["array", "null"],
-              "maxItems": 2,
-              "minItems": 2,
-              "prefixItems": [
-                {
-                  "type": "number",
-                  "format": "double"
-                },
-                {
-                  "type": "number",
-                  "format": "double"
-                }
-              ]
-            },
-            "gap": {
-              "type": "number",
-              "format": "double",
-              "minimum": 1e-6
-            },
-            "increment": {
-              "type": "integer",
-              "format": "uint32",
-              "minimum": 1
-            },
-            "rings": {
-              "type": "integer",
-              "format": "uint32",
-              "minimum": 1
-            },
-            "shape": {
-              "type": "string",
-              "const": "circle"
-            }
-          },
-          "additionalProperties": false,
-          "required": ["shape", "rings", "increment", "gap"]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "formula": {
-              "$ref": "#/$defs/FormulaDef"
-            },
-            "shape": {
-              "type": "string",
-              "const": "formula"
-            }
-          },
-          "additionalProperties": false,
-          "required": ["shape", "formula"]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "shape": {
-              "type": "string",
-              "const": "svg_path"
-            },
-            "svgPath": {
-              "$ref": "#/$defs/SvgPathDef"
-            }
-          },
-          "additionalProperties": false,
-          "required": ["shape", "svgPath"]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "fixtures": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/CustomFixturePos"
-              }
-            },
-            "shape": {
-              "type": "string",
-              "const": "custom"
-            }
-          },
-          "additionalProperties": false,
-          "required": ["shape", "fixtures"]
-        }
-      ]
+    "CheckerboardParity": {
+      "type": "string",
+      "enum": ["even", "odd"]
     },
     "GridZone": {
       "type": "object",
@@ -329,23 +165,6 @@
       "additionalProperties": false,
       "required": ["range"]
     },
-    "LayoutDSL": {
-      "type": "object",
-      "properties": {
-        "generator": {
-          "$ref": "#/$defs/GeneratorDSL"
-        },
-        "type": {
-          "$ref": "#/$defs/LayoutType"
-        }
-      },
-      "additionalProperties": false,
-      "required": ["type", "generator"]
-    },
-    "LayoutType": {
-      "type": "string",
-      "enum": ["generator"]
-    },
     "PatchDSL": {
       "type": "object",
       "properties": {
@@ -389,26 +208,6 @@
         "x+y",
         "-(x+y)"
       ]
-    },
-    "SvgPathDef": {
-      "type": "object",
-      "properties": {
-        "d": {
-          "type": "string"
-        },
-        "sample_count": {
-          "type": "integer",
-          "format": "uint32",
-          "maximum": 1000000,
-          "minimum": 1
-        },
-        "scale": {
-          "type": ["number", "null"],
-          "format": "double"
-        }
-      },
-      "additionalProperties": false,
-      "required": ["d", "sample_count"]
     },
     "TargetSetDefinition": {
       "type": "object",
@@ -527,6 +326,25 @@
         {
           "type": "object",
           "properties": {
+            "region": {
+              "$ref": "#/$defs/CenterEdgesRegion"
+            },
+            "thickness": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "type": {
+              "type": "string",
+              "const": "center_edges"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "region", "thickness"]
+        },
+        {
+          "type": "object",
+          "properties": {
             "fixture_ids": {
               "type": "array",
               "items": {
@@ -562,6 +380,115 @@
       },
       "additionalProperties": false,
       "required": ["fixture_id", "weight"]
+    },
+    "TargetingDuration": {
+      "type": "object",
+      "properties": {
+        "unit": {
+          "$ref": "#/$defs/TargetingDurationUnit"
+        },
+        "value": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": ["value", "unit"]
+    },
+    "TargetingDurationUnit": {
+      "type": "string",
+      "enum": ["beat", "bar"]
+    },
+    "TargetingSceneDefinition": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "looped": {
+          "type": "boolean",
+          "default": false
+        },
+        "name": {
+          "type": "string"
+        },
+        "phase_continuity": {
+          "type": "boolean",
+          "default": true
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TargetingSceneStep"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "name", "steps"]
+    },
+    "TargetingSceneStep": {
+      "type": "object",
+      "properties": {
+        "duration": {
+          "$ref": "#/$defs/TargetingDuration"
+        },
+        "id": {
+          "type": "string"
+        },
+        "selection": {
+          "$ref": "#/$defs/TargetingSelection"
+        },
+        "transition": {
+          "$ref": "#/$defs/TargetingTransition"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "selection", "duration", "transition"]
+    },
+    "TargetingSelection": {
+      "type": "object",
+      "properties": {
+        "partition_index": {
+          "type": ["integer", "null"],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "target_set_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["target_set_id"]
+    },
+    "TargetingTransition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "hard"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "duration": {
+              "$ref": "#/$defs/TargetingDuration"
+            },
+            "type": {
+              "type": "string",
+              "const": "weighted"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "duration"]
+        }
+      ]
     }
   }
 }

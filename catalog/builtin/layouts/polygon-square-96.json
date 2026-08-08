@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.polygon-square-96",
+  "revision": 1,
+  "name": "Square Truss 96",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "polygon",
+    "sides": 4,
+    "fixtures_per_side": 24,
+    "fixture_size": { "width": 9, "height": 9 },
+    "radius": 240,
+    "rotation_degrees": -45,
+    "center": { "x": 0, "y": 0 }
+  }
+}

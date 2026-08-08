@@ -48,6 +48,7 @@ import {
   uniqueId,
 } from "@/document/projectModel";
 import { effectTargetCompatibility, friendlyEffectAttribute } from "@/document/effectCompatibility";
+import { generatorDescriptor } from "@/document/generatorRegistry";
 import {
   isInternalProductionCueId,
   productionRecipeCueBaseId,
@@ -261,18 +262,16 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                 selected={selectedLayoutRef}
                 advanced={advancedMode}
               />
-              {advancedMode && (
-                <LayoutLibrarySection
-                  title="Generated / Advanced"
-                  refs={latestRefsById(bundle.manifest.layout_refs).filter(
-                    (reference) =>
-                      exactAsset(bundle.layouts, reference)?.category === "generated_advanced",
-                  )}
-                  bundle={bundle}
-                  selected={selectedLayoutRef}
-                  advanced={advancedMode}
-                />
-              )}
+              <LayoutLibrarySection
+                title="Generated"
+                refs={latestRefsById(bundle.manifest.layout_refs).filter(
+                  (reference) =>
+                    exactAsset(bundle.layouts, reference)?.category === "generated_advanced",
+                )}
+                bundle={bundle}
+                selected={selectedLayoutRef}
+                advanced={advancedMode}
+              />
             </>
           )}
 
@@ -598,7 +597,9 @@ function LayoutLibrarySection({
               onClick={() => projectActions.setSelectedLayoutRef(reference)}
             >
               <span className="min-w-0 flex-1 truncate text-left">{layout.name}</span>
-              <span className="text-muted-foreground text-[9px]">{layout.geometry.shape}</span>
+              <span className="text-muted-foreground text-[9px]">
+                {generatorDescriptor(layout.geometry.shape).label}
+              </span>
             </Button>
             {advanced && (
               <Button

@@ -9,7 +9,7 @@ import type { UITimelineEvent } from "../types";
 import { EffectClipOverlapInspector } from "./EffectClipOverlapInspector";
 
 const documentFixture: FullDSL = {
-  schema_version: 4,
+  schema_version: 1,
   meta: { name: "Overlap inspector" },
   patch: [],
   layout: { type: "generator", generator: { shape: "custom", fixtures: [] } },

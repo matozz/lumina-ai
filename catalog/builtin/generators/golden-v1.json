@@ -1,0 +1,577 @@
+{
+  "layouts": [
+    {
+      "capacity": 240,
+      "id": "builtin.layout.algorithm-lissajous-240",
+      "samples": [
+        {
+          "id": 1,
+          "x": 260.0,
+          "y": 0.0
+        },
+        {
+          "id": 121,
+          "x": -260.0,
+          "y": 0.0
+        },
+        {
+          "id": 240,
+          "x": 258.019932,
+          "y": -14.80148
+        }
+      ],
+      "shape": "algorithm"
+    },
+    {
+      "capacity": 200,
+      "id": "builtin.layout.algorithm-spiral-200",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 101,
+          "x": 86.547319,
+          "y": 209.504411
+        },
+        {
+          "id": 200,
+          "x": -320.0,
+          "y": 0.0
+        }
+      ],
+      "shape": "algorithm"
+    },
+    {
+      "capacity": 127,
+      "id": "builtin.layout.circle-club-rings-6",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 64,
+          "x": 91.354546,
+          "y": 40.673664
+        },
+        {
+          "id": 127,
+          "x": 118.17693,
+          "y": -20.837781
+        }
+      ],
+      "shape": "circle"
+    },
+    {
+      "capacity": 441,
+      "id": "builtin.layout.circle-festival-halo-10",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 221,
+          "x": 112.614318,
+          "y": -70.760266
+        },
+        {
+          "id": 441,
+          "x": 189.414293,
+          "y": -14.907228
+        }
+      ],
+      "shape": "circle"
+    },
+    {
+      "capacity": 649,
+      "id": "builtin.layout.circle-rings-8",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 325,
+          "x": -179.695468,
+          "y": 10.466069
+        },
+        {
+          "id": 649,
+          "x": 239.771573,
+          "y": -10.468653
+        }
+      ],
+      "shape": "circle"
+    },
+    {
+      "capacity": 160,
+      "id": "builtin.layout.formula-arch-160",
+      "samples": [
+        {
+          "id": 1,
+          "x": -960.0,
+          "y": 224.0
+        },
+        {
+          "id": 81,
+          "x": 6.037736,
+          "y": 0.00886
+        },
+        {
+          "id": 160,
+          "x": 960.0,
+          "y": 224.0
+        }
+      ],
+      "shape": "formula"
+    },
+    {
+      "capacity": 160,
+      "id": "builtin.layout.formula-sine-160",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 81,
+          "x": 809.305881,
+          "y": 6.316122
+        },
+        {
+          "id": 160,
+          "x": 1608.495439,
+          "y": -0.0
+        }
+      ],
+      "shape": "formula"
+    },
+    {
+      "capacity": 68,
+      "id": "builtin.layout.frame-arena-12x24",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 35,
+          "x": 414.0,
+          "y": 176.0
+        },
+        {
+          "id": 68,
+          "x": 0.0,
+          "y": 16.0
+        }
+      ],
+      "shape": "frame"
+    },
+    {
+      "capacity": 56,
+      "id": "builtin.layout.frame-portrait-18x12",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 29,
+          "x": 176.0,
+          "y": 272.0
+        },
+        {
+          "id": 56,
+          "x": 0.0,
+          "y": 16.0
+        }
+      ],
+      "shape": "frame"
+    },
+    {
+      "capacity": 76,
+      "id": "builtin.layout.frame-proscenium-16x24",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 39,
+          "x": 414.0,
+          "y": 240.0
+        },
+        {
+          "id": 76,
+          "x": 0.0,
+          "y": 16.0
+        }
+      ],
+      "shape": "frame"
+    },
+    {
+      "capacity": 432,
+      "id": "builtin.layout.honeycomb-18x24",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 217,
+          "x": 9.0,
+          "y": 162.0
+        },
+        {
+          "id": 432,
+          "x": 423.0,
+          "y": 306.0
+        }
+      ],
+      "shape": "honeycomb"
+    },
+    {
+      "capacity": 320,
+      "id": "builtin.layout.honeycomb-compact-16x20",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 161,
+          "x": 0.0,
+          "y": 120.0
+        },
+        {
+          "id": 320,
+          "x": 273.0,
+          "y": 225.0
+        }
+      ],
+      "shape": "honeycomb"
+    },
+    {
+      "capacity": 216,
+      "id": "builtin.layout.honeycomb-loose-12x18",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 109,
+          "x": 0.0,
+          "y": 132.0
+        },
+        {
+          "id": 216,
+          "x": 420.0,
+          "y": 242.0
+        }
+      ],
+      "shape": "honeycomb"
+    },
+    {
+      "capacity": 192,
+      "id": "builtin.layout.matrix-festival-12x16",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 97,
+          "x": 0.0,
+          "y": 120.0
+        },
+        {
+          "id": 192,
+          "x": 300.0,
+          "y": 220.0
+        }
+      ],
+      "shape": "matrix"
+    },
+    {
+      "capacity": 400,
+      "id": "builtin.layout.matrix-main-20x20",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 201,
+          "x": 0.0,
+          "y": 200.0
+        },
+        {
+          "id": 400,
+          "x": 380.0,
+          "y": 380.0
+        }
+      ],
+      "shape": "matrix"
+    },
+    {
+      "capacity": 96,
+      "id": "builtin.layout.polygon-hex-96",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": -270.0
+        },
+        {
+          "id": 49,
+          "x": 0.0,
+          "y": 270.0
+        },
+        {
+          "id": 96,
+          "x": -14.614179,
+          "y": -261.5625
+        }
+      ],
+      "shape": "polygon"
+    },
+    {
+      "capacity": 110,
+      "id": "builtin.layout.polygon-pentagon-110",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": -260.0
+        },
+        {
+          "id": 56,
+          "x": 0.0,
+          "y": 210.344419
+        },
+        {
+          "id": 110,
+          "x": -11.239759,
+          "y": -251.833837
+        }
+      ],
+      "shape": "polygon"
+    },
+    {
+      "capacity": 96,
+      "id": "builtin.layout.polygon-square-96",
+      "samples": [
+        {
+          "id": 1,
+          "x": 169.705627,
+          "y": -169.705627
+        },
+        {
+          "id": 49,
+          "x": -169.705627,
+          "y": 169.705627
+        },
+        {
+          "id": 96,
+          "x": 155.563492,
+          "y": -169.705627
+        }
+      ],
+      "shape": "polygon"
+    },
+    {
+      "capacity": 84,
+      "id": "builtin.layout.polygon-triangle-84",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": -260.0
+        },
+        {
+          "id": 43,
+          "x": 0.0,
+          "y": 130.0
+        },
+        {
+          "id": 84,
+          "x": -8.041664,
+          "y": -246.071429
+        }
+      ],
+      "shape": "polygon"
+    },
+    {
+      "capacity": 216,
+      "id": "builtin.layout.sector-fan-8",
+      "samples": [
+        {
+          "id": 1,
+          "x": -21.250368,
+          "y": 5.694019
+        },
+        {
+          "id": 109,
+          "x": 6.908346,
+          "y": -131.819099
+        },
+        {
+          "id": 216,
+          "x": 170.002945,
+          "y": 45.552152
+        }
+      ],
+      "shape": "sector"
+    },
+    {
+      "capacity": 110,
+      "id": "builtin.layout.sector-front-wash-90",
+      "samples": [
+        {
+          "id": 1,
+          "x": -16.970563,
+          "y": -16.970563
+        },
+        {
+          "id": 56,
+          "x": 118.793939,
+          "y": -118.793939
+        },
+        {
+          "id": 110,
+          "x": 169.705627,
+          "y": -169.705627
+        }
+      ],
+      "shape": "sector"
+    },
+    {
+      "capacity": 135,
+      "id": "builtin.layout.sector-stage-wing-150",
+      "samples": [
+        {
+          "id": 1,
+          "x": -18.352591,
+          "y": -4.917562
+        },
+        {
+          "id": 68,
+          "x": -94.045202,
+          "y": -94.045202
+        },
+        {
+          "id": 135,
+          "x": 165.173316,
+          "y": -44.258057
+        }
+      ],
+      "shape": "sector"
+    },
+    {
+      "capacity": 30,
+      "id": "builtin.layout.strip-runway-30",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 16,
+          "x": 180.0,
+          "y": 0.0
+        },
+        {
+          "id": 30,
+          "x": 348.0,
+          "y": 0.0
+        }
+      ],
+      "shape": "strip"
+    },
+    {
+      "capacity": 30,
+      "id": "builtin.layout.strip-vertical-tower-30",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 16,
+          "x": 0.0,
+          "y": 210.0
+        },
+        {
+          "id": 30,
+          "x": 0.0,
+          "y": 406.0
+        }
+      ],
+      "shape": "strip"
+    },
+    {
+      "capacity": 400,
+      "id": "builtin.layout.wall-main-20x20",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 201,
+          "x": 0.0,
+          "y": 200.0
+        },
+        {
+          "id": 400,
+          "x": 380.0,
+          "y": 380.0
+        }
+      ],
+      "shape": "wall"
+    },
+    {
+      "capacity": 288,
+      "id": "builtin.layout.wall-video-12x24",
+      "samples": [
+        {
+          "id": 1,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": 145,
+          "x": 0.0,
+          "y": 108.0
+        },
+        {
+          "id": 288,
+          "x": 368.0,
+          "y": 198.0
+        }
+      ],
+      "shape": "wall"
+    }
+  ],
+  "schema_version": 1
+}

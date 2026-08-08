@@ -43,12 +43,14 @@ export function keyframeValueY(
   value: ParameterValueDSL,
   definition: ParameterDefinitionDSL,
   height: number,
+  inset = 4,
 ): number {
   if (value.type !== "scalar") return height / 2;
   const [minimum, maximum] = definition.range ?? [0, 1];
   if (maximum <= minimum) return height / 2;
   const progress = Math.max(0, Math.min(1, (value.value - minimum) / (maximum - minimum)));
-  return height - 4 - progress * (height - 8);
+  const safeInset = Math.max(0, Math.min(height / 2, inset));
+  return height - safeInset - progress * (height - safeInset * 2);
 }
 
 export function keyframeTransform(translateX: number): string {

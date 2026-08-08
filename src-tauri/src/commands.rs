@@ -4,11 +4,10 @@ use crate::compiler::diagnostic::{
 use crate::compiler::{CompiledProjectSnapshot, Compiler, LayoutCoord};
 use crate::document::{
     builtin_production_catalog, layout_authoring_capacity, layout_fixture_size_for_fixture,
-    layout_to_legacy, load_document, load_project_bundle, recover_project_bundle,
-    resolve_cue_recipe, validate_effect_draft, validate_layout_geometry,
-    validate_production_catalog, AssetRef, CueDefinition, CueRecipeRef, EffectDefinitionDocument,
-    LayoutDefinition, LayoutGeometry, MetaDSL, MigrationReport, PatchDSL, ProductionCatalog,
-    ProjectBundle, ShowDocumentV4, StageDocument,
+    layout_to_show_dsl, load_document, load_project_bundle, resolve_cue_recipe,
+    validate_effect_draft, validate_layout_geometry, validate_production_catalog, AssetRef,
+    CueDefinition, CueRecipeRef, EffectDefinitionDocument, LayoutDefinition, LayoutGeometry,
+    MetaDSL, PatchDSL, ProductionCatalog, ProjectBundle, ShowDocumentV1, StageDocument,
 };
 use crate::engine::attribute::FixtureFramePayload;
 use crate::engine::effect::{
@@ -45,13 +44,11 @@ pub struct CompileResult {
     pub sequence_names: Vec<String>,
     pub errors: Vec<Diagnostic>,
     pub warnings: Vec<Diagnostic>,
-    pub migration_report: MigrationReport,
 }
 
 #[derive(serde::Serialize)]
 pub struct LoadShowResult {
-    pub document: ShowDocumentV4,
-    pub migration_report: MigrationReport,
+    pub document: ShowDocumentV1,
 }
 
 #[derive(serde::Serialize)]
@@ -335,24 +332,19 @@ pub async fn save_project(path: String, project_json: String) -> Result<(), Stri
 }
 
 #[tauri::command]
-pub async fn load_project(path: String) -> Result<crate::document::MigratedProject, String> {
+pub async fn load_project(path: String) -> Result<ProjectBundle, String> {
     let content = tokio::fs::read_to_string(&path)
         .await
         .map_err(|error| format!("Project read error: {error}"))?;
-    recover_project_bundle(&content).map_err(|diagnostics| {
-        diagnostics
-            .into_iter()
-            .map(|diagnostic| diagnostic.to_string())
-            .collect::<Vec<_>>()
-            .join("\n")
-    })
-}
-
-#[tauri::command]
-pub fn migrate_show_project(
-    dsl_json: String,
-) -> Result<crate::document::MigratedProject, Vec<Diagnostic>> {
-    crate::document::migrate_show_to_project(&dsl_json)
+    load_project_bundle(&content)
+        .map(crate::document::ValidatedProject::into_bundle)
+        .map_err(|diagnostics| {
+            diagnostics
+                .into_iter()
+                .map(|diagnostic| diagnostic.to_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        })
 }
 
 #[tauri::command]
@@ -464,7 +456,6 @@ fn compile_dsl(
         sequence_names: vec![],
         errors: vec![],
         warnings: vec![],
-        migration_report: loaded.migration_report,
     };
 
     let compiled = match compiled {
@@ -755,7 +746,6 @@ pub async fn load_show(path: String) -> Result<LoadShowResult, String> {
     let loaded = load_document(&content).map_err(|error| error.to_string())?;
     Ok(LoadShowResult {
         document: loaded.document,
-        migration_report: loaded.migration_report,
     })
 }
 
@@ -842,13 +832,13 @@ pub fn preview_layout(
             .map(|item| item.profile_id.as_str())
             .unwrap_or("generic-rgb"),
     );
-    let document = ShowDocumentV4 {
-        schema_version: 4,
+    let document = ShowDocumentV1 {
+        schema_version: 1,
         meta: MetaDSL {
             name: format!("{} · Layout Draft", layout.name),
         },
         patch: preview_patch,
-        layout: layout_to_legacy(&layout, &preview_fixture_ids),
+        layout: layout_to_show_dsl(&layout, &preview_fixture_ids),
         groups: Vec::new(),
         effect_definitions: Vec::new(),
         effect_instances: Vec::new(),
@@ -1145,20 +1135,14 @@ mod tests {
             .await
             .expect("reopen Project");
 
-        assert_eq!(reopened.bundle.arrangements.len(), 2);
-        assert_eq!(reopened.bundle.layouts[0].name, "Saved Matrix Layout");
-        assert_eq!(reopened.bundle.stages[0].layout_ref, expected_layout_ref);
+        assert_eq!(reopened.arrangements.len(), 2);
+        assert_eq!(reopened.layouts[0].name, "Saved Matrix Layout");
+        assert_eq!(reopened.stages[0].layout_ref, expected_layout_ref);
+        assert_eq!(reopened.stages[0].target_sets[0].name, "Saved All Target");
+        assert_eq!(reopened.manifest.active_arrangement_id, "tempo-journey");
+        assert_eq!(reopened.arrangements[1].tempo_map.points.len(), 2);
         assert_eq!(
-            reopened.bundle.stages[0].target_sets[0].name,
-            "Saved All Target"
-        );
-        assert_eq!(
-            reopened.bundle.manifest.active_arrangement_id,
-            "tempo-journey"
-        );
-        assert_eq!(reopened.bundle.arrangements[1].tempo_map.points.len(), 2);
-        assert_eq!(
-            reopened.bundle.arrangements[1].tracks[0].clips[0].start_tick,
+            reopened.arrangements[1].tracks[0].clips[0].start_tick,
             expected_clip_tick
         );
         tokio::fs::remove_dir_all(directory)
@@ -1243,7 +1227,7 @@ mod tests {
     #[test]
     fn draft_preview_compiles_without_assigning_a_show_revision() {
         let source = r#"{
-          "schema_version": 4,
+          "schema_version": 1,
           "meta": { "name": "Preview" },
           "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 4] }],
           "layout": { "type": "generator", "generator": { "shape": "matrix", "rows": 2, "columns": 2, "spacing": 64 } },
@@ -1322,7 +1306,7 @@ mod tests {
     }
 
     #[test]
-    fn circle_authoring_preview_converts_legacy_density_and_keeps_fixed_ring_gap() {
+    fn circle_authoring_preview_keeps_fixture_count_and_fixed_ring_gap_independent() {
         let mut bundle = valid_bundle();
         let layout = &mut bundle.layouts[0];
         layout.geometry = LayoutGeometry::Circle {
@@ -1338,8 +1322,8 @@ mod tests {
         };
 
         let coords = preview_layout(layout.clone(), bundle.stages[0].clone())
-            .expect("legacy dense Circle previews safely");
-        assert_eq!(coords.len(), 37);
+            .expect("dense Circle previews safely");
+        assert_eq!(coords.len(), 85);
         let radii: std::collections::BTreeSet<_> = coords
             .iter()
             .map(|coord| (coord.x.hypot(coord.y)).round() as i64)
@@ -1347,10 +1331,41 @@ mod tests {
         assert_eq!(radii, [0, 22, 44, 66].into_iter().collect());
     }
 
+    #[test]
+    fn formula_and_algorithm_authoring_previews_materialize_every_position() {
+        let bundle = valid_bundle();
+        let catalog = crate::document::builtin_production_catalog().expect("catalog");
+        for layout_id in [
+            "builtin.layout.formula-sine-160",
+            "builtin.layout.formula-arch-160",
+            "builtin.layout.algorithm-lissajous-240",
+            "builtin.layout.algorithm-spiral-200",
+        ] {
+            let layout = catalog
+                .layouts
+                .iter()
+                .find(|layout| layout.id == layout_id)
+                .unwrap_or_else(|| panic!("missing {layout_id}"));
+            let coords = preview_layout(layout.clone(), bundle.stages[0].clone())
+                .unwrap_or_else(|diagnostics| panic!("{layout_id}: {diagnostics:?}"));
+            assert_eq!(
+                coords.len(),
+                crate::document::layout_authoring_capacity(layout),
+                "{layout_id}"
+            );
+            assert!(
+                coords
+                    .iter()
+                    .all(|coord| coord.x.is_finite() && coord.y.is_finite()),
+                "{layout_id}"
+            );
+        }
+    }
+
     #[tokio::test]
     async fn effect_loop_preview_renders_without_publishing() {
         let source = r##"{
-          "schema_version": 4,
+          "schema_version": 1,
           "meta": { "name": "Preview" },
           "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 1] }],
           "layout": { "type": "generator", "generator": { "shape": "matrix", "rows": 1, "columns": 1, "spacing": 64 } },

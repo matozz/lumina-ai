@@ -8,7 +8,6 @@ import type {
 import { assetKey } from "./projectModel";
 
 const METRIC_EPSILON = 0.000_001;
-export const MAX_CIRCLE_RING_DENSITY = 6;
 
 export interface LayoutDiagnostic {
   code: string;
@@ -41,9 +40,13 @@ export function layoutCapacity(layout: LayoutDefinition) {
     case "wall":
       return geometry.rows * geometry.columns;
     case "circle":
-      return (
-        1 + (circleRingDensity(geometry.increment) * geometry.rings * (geometry.rings + 1)) / 2
-      );
+      return 1 + (geometry.increment * geometry.rings * (geometry.rings + 1)) / 2;
+    case "sector":
+      return (geometry.segments * geometry.rings * (geometry.rings + 1)) / 2;
+    case "polygon":
+      return geometry.sides * geometry.fixtures_per_side;
+    case "honeycomb":
+      return geometry.rows * geometry.columns;
     case "strip":
     case "algorithm":
       return geometry.count;
@@ -60,7 +63,7 @@ export function layoutCapacity(layout: LayoutDefinition) {
 
 export function layoutGridDimensions(layout: LayoutDefinition): [number, number] | null {
   const geometry = layout.geometry;
-  if (geometry.shape === "matrix" || geometry.shape === "wall") {
+  if (geometry.shape === "matrix" || geometry.shape === "wall" || geometry.shape === "honeycomb") {
     return [geometry.rows, geometry.columns];
   }
   if (geometry.shape === "strip") {
@@ -108,6 +111,12 @@ export function layoutPositions(
       return gridPositions(geometry, fixtureIds);
     case "circle":
       return circlePositions(geometry, fixtureIds);
+    case "sector":
+      return sectorPositions(geometry, fixtureIds);
+    case "polygon":
+      return polygonPositions(geometry, fixtureIds);
+    case "honeycomb":
+      return honeycombPositions(geometry, fixtureIds);
     case "strip":
       return fixtureIds.slice(0, geometry.count).map((id, index) => ({
         id,
@@ -123,6 +132,7 @@ export function layoutPositions(
     case "algorithm":
       return algorithmPositions(geometry, fixtureIds);
     case "formula":
+      return formulaPositions(geometry, fixtureIds);
     case "svg_path":
       return [];
   }
@@ -169,7 +179,8 @@ function geometryDiagnostic(geometry: LayoutGeometry): LayoutDiagnostic | null {
     geometry.shape === "matrix" ||
     geometry.shape === "strip" ||
     geometry.shape === "wall" ||
-    geometry.shape === "frame"
+    geometry.shape === "frame" ||
+    geometry.shape === "honeycomb"
   ) {
     const values = [
       geometry.gap.x,
@@ -222,6 +233,49 @@ function geometryDiagnostic(geometry: LayoutGeometry): LayoutDiagnostic | null {
       );
     }
   }
+  if (geometry.shape === "sector") {
+    const radialError = radialMetricDiagnostic(
+      geometry.fixture_size,
+      geometry.ring_gap,
+      geometry.ring_pitch,
+    );
+    if (radialError) return radialError;
+    if (
+      geometry.rings < 1 ||
+      geometry.segments < 1 ||
+      !Number.isFinite(geometry.start_angle_degrees) ||
+      !Number.isFinite(geometry.sweep_angle_degrees) ||
+      geometry.sweep_angle_degrees <= 0 ||
+      geometry.sweep_angle_degrees > 360 ||
+      !Number.isFinite(geometry.center.x) ||
+      !Number.isFinite(geometry.center.y)
+    ) {
+      return diagnostic(
+        "LAYOUT_SECTOR_INVALID",
+        "layout.geometry",
+        "Sector counts, center, and angles must be finite; sweep must be in (0, 360].",
+        "Use positive rings and segments with a valid angular sweep.",
+      );
+    }
+  }
+  if (geometry.shape === "polygon") {
+    if (
+      geometry.sides < 3 ||
+      geometry.fixtures_per_side < 1 ||
+      !Number.isFinite(geometry.radius) ||
+      geometry.radius <= 0 ||
+      !Number.isFinite(geometry.rotation_degrees) ||
+      !Number.isFinite(geometry.center.x) ||
+      !Number.isFinite(geometry.center.y)
+    ) {
+      return diagnostic(
+        "LAYOUT_POLYGON_INVALID",
+        "layout.geometry",
+        "Polygon sides, fixture count, radius, rotation, and center must be valid.",
+        "Use at least three sides, one fixture per side, and a positive radius.",
+      );
+    }
+  }
   if (geometry.shape === "formula") {
     if (
       !geometry.formula.x.trim() ||
@@ -238,6 +292,29 @@ function geometryDiagnostic(geometry: LayoutGeometry): LayoutDiagnostic | null {
         "layout.geometry.formula",
         "Formula X/Y, an increasing t range, and a positive scale are required.",
         "Repair the formula parameters; backend preview will report expression diagnostics inline.",
+      );
+    }
+  }
+  if (geometry.shape === "algorithm") {
+    const parameters = geometry.parameters;
+    const commonInvalid =
+      geometry.count < 1 ||
+      !Number.isFinite(geometry.origin.x) ||
+      !Number.isFinite(geometry.origin.y) ||
+      Object.values(parameters).some((value) => !Number.isFinite(value));
+    const algorithmInvalid =
+      geometry.algorithm === "spiral"
+        ? (parameters.turns ?? 3) <= 0 || (parameters.radius ?? 180) <= 0
+        : (parameters.a ?? 3) <= 0 ||
+          (parameters.b ?? 2) <= 0 ||
+          (parameters.scale_x ?? 160) <= 0 ||
+          (parameters.scale_y ?? 120) <= 0;
+    if (commonInvalid || algorithmInvalid) {
+      return diagnostic(
+        "LAYOUT_ALGORITHM_INVALID",
+        "layout.geometry.algorithm",
+        "Algorithm count, origin, frequencies, turns, radius, and scale must be finite and positive.",
+        "Use a positive fixture count and positive shape parameters before previewing the Algorithm.",
       );
     }
   }
@@ -275,11 +352,7 @@ function circlePositions(
     ? [{ id: fixtureIds[0], x: geometry.center.x, y: geometry.center.y }]
     : [];
   let index = 1;
-  const ringCounts = circleRingFixtureCounts(
-    fixtureIds.length,
-    geometry.rings,
-    circleRingDensity(geometry.increment),
-  );
+  const ringCounts = circleRingFixtureCounts(fixtureIds.length, geometry.rings, geometry.increment);
   for (let ring = 1; ring <= ringCounts.length && index < fixtureIds.length; ring += 1) {
     const count = ringCounts[ring - 1];
     for (let step = 0; step < count && index < fixtureIds.length; step += 1) {
@@ -321,7 +394,113 @@ export function circleRingFixtureCounts(fixtureCount: number, rings: number, inc
 }
 
 export function circleRingDensity(increment: number) {
-  return Math.min(MAX_CIRCLE_RING_DENSITY, Math.max(1, Math.floor(increment)));
+  return Math.max(1, Math.floor(increment));
+}
+
+function sectorPositions(
+  geometry: Extract<LayoutGeometry, { shape: "sector" }>,
+  fixtureIds: number[],
+) {
+  const positions: CustomFixturePos[] = [];
+  let index = 0;
+  const fullCircle = Math.abs(geometry.sweep_angle_degrees - 360) <= METRIC_EPSILON;
+  for (let ring = 1; ring <= geometry.rings; ring += 1) {
+    const count = geometry.segments * ring;
+    const divisor = fullCircle ? count : Math.max(1, count - 1);
+    for (let step = 0; step < count && index < fixtureIds.length; step += 1) {
+      const angle =
+        ((geometry.start_angle_degrees + (geometry.sweep_angle_degrees * step) / divisor) *
+          Math.PI) /
+        180;
+      positions.push({
+        id: fixtureIds[index],
+        x: geometry.center.x + Math.cos(angle) * geometry.ring_pitch * ring,
+        y: geometry.center.y + Math.sin(angle) * geometry.ring_pitch * ring,
+      });
+      index += 1;
+    }
+  }
+  return positions;
+}
+
+function polygonPositions(
+  geometry: Extract<LayoutGeometry, { shape: "polygon" }>,
+  fixtureIds: number[],
+) {
+  const capacity = geometry.sides * geometry.fixtures_per_side;
+  const rotation = (geometry.rotation_degrees * Math.PI) / 180;
+  return fixtureIds.slice(0, capacity).map((id, index) => {
+    const side = Math.floor(index / geometry.fixtures_per_side);
+    const step = index % geometry.fixtures_per_side;
+    const startAngle = rotation + (Math.PI * 2 * side) / geometry.sides;
+    const endAngle = rotation + (Math.PI * 2 * (side + 1)) / geometry.sides;
+    const progress = step / geometry.fixtures_per_side;
+    const start = [Math.cos(startAngle) * geometry.radius, Math.sin(startAngle) * geometry.radius];
+    const end = [Math.cos(endAngle) * geometry.radius, Math.sin(endAngle) * geometry.radius];
+    return {
+      id,
+      x: geometry.center.x + start[0] + (end[0] - start[0]) * progress,
+      y: geometry.center.y + start[1] + (end[1] - start[1]) * progress,
+    };
+  });
+}
+
+function honeycombPositions(
+  geometry: Extract<LayoutGeometry, { shape: "honeycomb" }>,
+  fixtureIds: number[],
+) {
+  return fixtureIds.slice(0, geometry.rows * geometry.columns).map((id, index) => {
+    const row = Math.floor(index / geometry.columns);
+    const column = index % geometry.columns;
+    return {
+      id,
+      x: geometry.origin.x + column * geometry.pitch.x + (row % 2) * (geometry.pitch.x / 2),
+      y: geometry.origin.y + row * geometry.pitch.y,
+    };
+  });
+}
+
+function formulaPositions(
+  geometry: Extract<LayoutGeometry, { shape: "formula" }>,
+  fixtureIds: number[],
+) {
+  const ids = fixtureIds.slice(0, geometry.formula.count);
+  const divisor = Math.max(1, ids.length - 1);
+  const scale = geometry.formula.scale ?? 1;
+  return ids.map((id, index) => {
+    const progress = index / divisor;
+    const t =
+      geometry.formula.t_range[0] +
+      (geometry.formula.t_range[1] - geometry.formula.t_range[0]) * progress;
+    return {
+      id,
+      x: evaluateFormula(geometry.formula.x, t) * scale,
+      y: evaluateFormula(geometry.formula.y, t) * scale,
+    };
+  });
+}
+
+function radialMetricDiagnostic(
+  fixtureSize: { width: number; height: number },
+  ringGap: number,
+  ringPitch: number,
+) {
+  const diameter = Math.max(fixtureSize.width, fixtureSize.height);
+  if (
+    !Number.isFinite(ringGap) ||
+    !Number.isFinite(ringPitch) ||
+    ringGap < 0 ||
+    ringPitch <= 0 ||
+    Math.abs(ringPitch - diameter - ringGap) > METRIC_EPSILON
+  ) {
+    return diagnostic(
+      "LAYOUT_RADIAL_METRICS_INVALID",
+      "layout.geometry.ring_pitch",
+      "Radial spacing must equal fixture diameter plus a non-negative fixture gap.",
+      "Adjust fixture size or fixture gap; quantity fields never rewrite this spacing.",
+    );
+  }
+  return null;
 }
 
 function framePositions(
@@ -350,31 +529,231 @@ function algorithmPositions(
   geometry: Extract<LayoutGeometry, { shape: "algorithm" }>,
   fixtureIds: number[],
 ) {
-  const divisor = Math.max(1, Math.min(geometry.count, fixtureIds.length) - 1);
-  return fixtureIds.slice(0, geometry.count).map((id, index) => {
-    const progress = index / divisor;
-    if (geometry.algorithm === "spiral") {
-      const turns = geometry.parameters.turns ?? 3;
-      const radius = (geometry.parameters.radius ?? 180) * progress;
-      const angle = progress * turns * Math.PI * 2;
-      return {
-        id,
-        x: geometry.origin.x + Math.cos(angle) * radius,
-        y: geometry.origin.y + Math.sin(angle) * radius,
-      };
+  const ids = fixtureIds.slice(0, geometry.count);
+  const points =
+    geometry.algorithm === "spiral"
+      ? resampleOpenPathByChordLength(ids.length, (progress) => {
+          const turns = geometry.parameters.turns ?? 3;
+          const radius = (geometry.parameters.radius ?? 180) * progress;
+          const angle = progress * turns * Math.PI * 2;
+          return [Math.cos(angle) * radius, Math.sin(angle) * radius];
+        })
+      : resamplePathByArcLength(ids.length, true, (progress) => {
+          const angle = progress * Math.PI * 2;
+          return [
+            Math.sin(
+              (geometry.parameters.a ?? 3) * angle + (geometry.parameters.delta ?? Math.PI / 2),
+            ) * (geometry.parameters.scale_x ?? 160),
+            Math.sin((geometry.parameters.b ?? 2) * angle) * (geometry.parameters.scale_y ?? 120),
+          ];
+        });
+  return ids.map((id, index) => ({
+    id,
+    x: geometry.origin.x + points[index][0],
+    y: geometry.origin.y + points[index][1],
+  }));
+}
+
+function resampleOpenPathByChordLength(
+  count: number,
+  pointAt: (progress: number) => [number, number],
+) {
+  if (count <= 0) return [];
+  if (count === 1) return [pointAt(0)];
+
+  const segmentCount = Math.max(8192, count * 48);
+  const sampled = Array.from({ length: segmentCount + 1 }, (_, index) =>
+    pointAt(index / segmentCount),
+  );
+  let totalLength = 0;
+  for (let index = 1; index < sampled.length; index += 1) {
+    totalLength += Math.hypot(
+      sampled[index][0] - sampled[index - 1][0],
+      sampled[index][1] - sampled[index - 1][1],
+    );
+  }
+
+  const walk = (spacing: number) => {
+    const points: Array<[number, number]> = [sampled[0]];
+    let sampleIndex = 1;
+    while (points.length < count) {
+      const previous = points[points.length - 1];
+      while (
+        sampleIndex < sampled.length &&
+        Math.hypot(sampled[sampleIndex][0] - previous[0], sampled[sampleIndex][1] - previous[1]) <
+          spacing
+      ) {
+        sampleIndex += 1;
+      }
+      if (sampleIndex >= sampled.length) return { complete: false, points };
+      const start = sampled[sampleIndex - 1];
+      const end = sampled[sampleIndex];
+      let low = 0;
+      let high = 1;
+      for (let iteration = 0; iteration < 32; iteration += 1) {
+        const middle = (low + high) / 2;
+        const x = start[0] + (end[0] - start[0]) * middle;
+        const y = start[1] + (end[1] - start[1]) * middle;
+        if (Math.hypot(x - previous[0], y - previous[1]) < spacing) low = middle;
+        else high = middle;
+      }
+      points.push([start[0] + (end[0] - start[0]) * high, start[1] + (end[1] - start[1]) * high]);
     }
-    const angle = progress * Math.PI * 2;
-    return {
-      id,
-      x:
-        geometry.origin.x +
-        Math.sin(
-          (geometry.parameters.a ?? 3) * angle + (geometry.parameters.delta ?? Math.PI / 2),
-        ) *
-          (geometry.parameters.scale_x ?? 160),
-      y:
-        geometry.origin.y +
-        Math.sin((geometry.parameters.b ?? 2) * angle) * (geometry.parameters.scale_y ?? 120),
-    };
+    return { complete: true, points };
+  };
+
+  let low = 0;
+  let high = (totalLength / (count - 1)) * 2;
+  let best = resamplePathByArcLength(count, false, pointAt);
+  for (let iteration = 0; iteration < 48; iteration += 1) {
+    const middle = (low + high) / 2;
+    const candidate = walk(middle);
+    if (candidate.complete) {
+      low = middle;
+      best = candidate.points;
+    } else {
+      high = middle;
+    }
+  }
+  return best;
+}
+
+function resamplePathByArcLength(
+  count: number,
+  closed: boolean,
+  pointAt: (progress: number) => [number, number],
+) {
+  if (count <= 0) return [];
+  if (count === 1) return [pointAt(0)];
+
+  const segmentCount = Math.max(4096, count * 24);
+  const sampled = Array.from({ length: segmentCount + 1 }, (_, index) =>
+    pointAt(index / segmentCount),
+  );
+  const cumulative = [0];
+  for (let index = 1; index < sampled.length; index += 1) {
+    cumulative.push(
+      cumulative[index - 1] +
+        Math.hypot(
+          sampled[index][0] - sampled[index - 1][0],
+          sampled[index][1] - sampled[index - 1][1],
+        ),
+    );
+  }
+  const totalLength = cumulative[cumulative.length - 1];
+  if (totalLength <= METRIC_EPSILON) return Array.from({ length: count }, () => sampled[0]);
+
+  const divisor = closed ? count : count - 1;
+  let segment = 1;
+  return Array.from({ length: count }, (_, index) => {
+    const target = (totalLength * index) / divisor;
+    while (segment < cumulative.length - 1 && cumulative[segment] < target) segment += 1;
+    const previousLength = cumulative[segment - 1];
+    const segmentLength = cumulative[segment] - previousLength;
+    const progress =
+      segmentLength <= METRIC_EPSILON ? 0 : (target - previousLength) / segmentLength;
+    return [
+      sampled[segment - 1][0] + (sampled[segment][0] - sampled[segment - 1][0]) * progress,
+      sampled[segment - 1][1] + (sampled[segment][1] - sampled[segment - 1][1]) * progress,
+    ] as [number, number];
   });
+}
+
+export function evaluateFormula(source: string, t: number) {
+  const tokens: string[] = [];
+  const tokenizer =
+    /\s*(?:(\d+(?:\.\d*)?|\.\d+)(?:[eE]([+-]?\d+))?|([A-Za-z_][A-Za-z0-9_]*)|([()+\-*/^,]))/y;
+  let cursor = 0;
+  while (cursor < source.length) {
+    tokenizer.lastIndex = cursor;
+    const match = tokenizer.exec(source);
+    if (!match) throw new Error(`Unsupported formula token at ${cursor}`);
+    tokens.push(match[0].trim());
+    cursor = tokenizer.lastIndex;
+  }
+  let index = 0;
+  const peek = () => tokens[index];
+  const take = () => tokens[index++];
+  const expect = (token: string) => {
+    if (take() !== token) throw new Error(`Expected ${token}`);
+  };
+  const expression = (): number => {
+    let value = product();
+    while (peek() === "+" || peek() === "-") {
+      const operator = take();
+      const right = product();
+      value = operator === "+" ? value + right : value - right;
+    }
+    return value;
+  };
+  const product = (): number => {
+    let value = power();
+    while (peek() === "*" || peek() === "/") {
+      const operator = take();
+      const right = power();
+      value = operator === "*" ? value * right : value / right;
+    }
+    return value;
+  };
+  const power = (): number => {
+    let value = unary();
+    if (peek() === "^") {
+      take();
+      value = Math.pow(value, power());
+    }
+    return value;
+  };
+  const unary = (): number => {
+    if (peek() === "+") {
+      take();
+      return unary();
+    }
+    if (peek() === "-") {
+      take();
+      return -unary();
+    }
+    return primary();
+  };
+  const primary = (): number => {
+    const token = take();
+    if (!token) throw new Error("Formula ended unexpectedly");
+    const numeric = Number(token);
+    if (!Number.isNaN(numeric)) return numeric;
+    if (token === "(") {
+      const value = expression();
+      expect(")");
+      return value;
+    }
+    if (token === "t") return t;
+    if (token === "pi") return Math.PI;
+    if (token === "e") return Math.E;
+    if (peek() !== "(") throw new Error(`Unknown formula identifier: ${token}`);
+    take();
+    const args = [expression()];
+    while (peek() === ",") {
+      take();
+      args.push(expression());
+    }
+    expect(")");
+    const functions: Record<string, (...values: number[]) => number> = {
+      sin: Math.sin,
+      cos: Math.cos,
+      tan: Math.tan,
+      abs: Math.abs,
+      sqrt: Math.sqrt,
+      floor: Math.floor,
+      ceil: Math.ceil,
+      round: Math.round,
+      pow: Math.pow,
+      min: Math.min,
+      max: Math.max,
+    };
+    const fn = functions[token];
+    if (!fn) throw new Error(`Unsupported formula function: ${token}`);
+    return fn(...args);
+  };
+  const value = expression();
+  if (index !== tokens.length) throw new Error(`Unexpected formula token: ${peek()}`);
+  if (!Number.isFinite(value)) throw new Error("Formula produced a non-finite coordinate");
+  return value;
 }

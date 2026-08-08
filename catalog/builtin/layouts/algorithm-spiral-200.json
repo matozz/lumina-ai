@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.algorithm-spiral-200",
+  "revision": 1,
+  "name": "Spiral Sculpture 200",
+  "category": "generated_advanced",
+  "editor": {
+    "mode": "parameter_schema",
+    "parameters": [
+      {
+        "id": "turns",
+        "label": "Turns",
+        "value_type": "number",
+        "minimum": 1,
+        "maximum": 12,
+        "step": 0.25
+      },
+      {
+        "id": "radius",
+        "label": "Radius",
+        "value_type": "number",
+        "minimum": 20,
+        "maximum": 1000,
+        "step": 1
+      }
+    ]
+  },
+  "geometry": {
+    "shape": "algorithm",
+    "algorithm": "spiral",
+    "count": 200,
+    "fixture_size": { "width": 8, "height": 8 },
+    "origin": { "x": 0, "y": 0 },
+    "parameters": { "turns": 4.5, "radius": 320 }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.frame-portrait-18x12",
+  "revision": 1,
+  "name": "Portrait Portal Frame 18×12",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "frame",
+    "rows": 18,
+    "columns": 12,
+    "fixture_size": { "width": 10, "height": 8 },
+    "gap": { "x": 6, "y": 8 },
+    "pitch": { "x": 16, "y": 16 },
+    "origin": { "x": 0, "y": 0 }
+  }
+}

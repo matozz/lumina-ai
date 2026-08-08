@@ -53,7 +53,7 @@ pub enum PreviewKind {
 }
 
 impl PreviewKind {
-    pub const fn as_legacy_type(self) -> &'static str {
+    pub const fn canvas_type(self) -> &'static str {
         match self {
             Self::Pixel => "pixel",
             Self::MovingHead => "spot",

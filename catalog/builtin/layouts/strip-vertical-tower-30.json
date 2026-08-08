@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.strip-vertical-tower-30",
+  "revision": 1,
+  "name": "Vertical Tower Strip 30",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "strip",
+    "count": 30,
+    "orientation": "vertical",
+    "fixture_size": { "width": 14, "height": 8 },
+    "gap": { "x": 6, "y": 6 },
+    "pitch": { "x": 20, "y": 14 },
+    "origin": { "x": 0, "y": 0 }
+  }
+}

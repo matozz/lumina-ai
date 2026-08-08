@@ -13,6 +13,7 @@ import type {
   ProjectPreviewFrame,
   TargetSetDefinition,
   TargetingSceneDefinition,
+  UserAssetPack,
 } from "@/bridge/types";
 import {
   activeLayout,
@@ -31,8 +32,8 @@ import {
   toAssetRef,
   uniqueId,
 } from "@/document/projectModel";
-import { migrateProjectBundle } from "@/document/projectMigration";
-import { INTERNAL_PRODUCTION_CUE_PREFIX } from "@/document/productionCue";
+import { validateProjectBundle } from "@/document/projectBundle";
+import { createUserAssetPack, importUserAssetPack } from "@/document/userAssetPack";
 import { layoutCapacity } from "@/document/layoutDefinition";
 import { analyzeStageTopology, resolveTargetSet, stageForLayout } from "@/document/stageTopology";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
@@ -78,33 +79,13 @@ export interface ProjectState {
 }
 
 const starter = createStarterProjectBundle();
-const LOCAL_WORKSPACE_STORAGE_VERSION = 6;
-const LEGACY_LOCAL_EFFECT_NAMES = new Set([
-  "Breathe Custom",
-  "Gradient 2",
-  "Gradient Draft v3",
-  "Pulse 2",
-]);
-const LEGACY_LOCAL_CUE_NAMES = new Set(["Gradient Cue", "New Cue"]);
-const LEGACY_ARRANGE_RECIPE_CUES = new Map([
-  ["cue-four-on-floor", "Full-stage Drop Pulse"],
-  ["cue-row-chase", "Matrix Spatial Chase"],
-  ["cue-rainbow-wash", "Slow Atmospheric Look"],
-  ["cue-radial-bloom", "3×3 Zone Burst"],
-  ["cue-moving-sweep", "Moving Sweep"],
-  ["cue-layered-peak", "Peak Zone Chase"],
-  ["cue-strip-traveler", "Strip / Bar Traveler"],
-  ["cue-build-transition", "Blackout-safe Build / Transition"],
-  ["cue-gentle-breathe", "Gentle Breathe"],
-  ["cue-center-bloom", "Center-out Bloom"],
-  ["cue-spatial-wipe", "Spatial Wipe In"],
-]);
+const LOCAL_WORKSPACE_STORAGE_VERSION = 11;
 
 const initialState: ProjectState = {
   bundle: starter,
   publishedBundle: null,
   selectedEffectRef: null,
-  selectedLayoutRef: starter.manifest.layout_refs[0],
+  selectedLayoutRef: structuredClone(starter.stages[0].layout_ref),
   selectedCueRef: null,
   selectedArrangementRef: activeArrangementRef(starter),
   selectedTargetSetId: "all",
@@ -124,46 +105,32 @@ export const useProjectStore = create<ProjectState>()(
     name: "lumina-project-v1",
     version: LOCAL_WORKSPACE_STORAGE_VERSION,
     migrate: (persistedState, version) => {
+      if (version < LOCAL_WORKSPACE_STORAGE_VERSION) return structuredClone(initialState);
       const state = persistedState as Partial<ProjectState>;
       const persistedBundle = structuredClone(state.bundle ?? starter);
-      if (persistedBundle.schema_version === 2) normalizeProjectAssetRefs(persistedBundle);
-      let bundle = migrateProjectBundle(persistedBundle).bundle;
-      const refreshed =
-        version < LOCAL_WORKSPACE_STORAGE_VERSION && isLegacyAcceptanceWorkspace(bundle);
-      if (refreshed) bundle = createStarterProjectBundle();
-      const cleanedArrangeCopies =
-        !refreshed &&
-        version < LOCAL_WORKSPACE_STORAGE_VERSION &&
-        bundle.manifest.project_id === "lumina-project" &&
-        bundle.manifest.name === "Untitled Lighting Project"
-          ? cleanupLegacyArrangeCueCopies(bundle)
-          : false;
-      simplifyLegacyCueNames(bundle);
+      normalizeProjectAssetRefs(persistedBundle);
+      const validation = validateProjectBundle(persistedBundle);
+      const bundle = validation.success ? validation.data : createStarterProjectBundle();
       return {
         ...initialState,
         ...state,
         bundle,
-        selectedLayoutRef: refreshed
-          ? bundle.manifest.layout_refs[0]
-          : toAssetRef(state.selectedLayoutRef ?? bundle.manifest.layout_refs[0]),
-        selectedEffectRef:
-          refreshed ||
-          (cleanedArrangeCopies && !exactAsset(bundle.effects, state.selectedEffectRef ?? null))
-            ? null
-            : state.selectedEffectRef
-              ? toAssetRef(state.selectedEffectRef)
-              : null,
-        selectedCueRef:
-          refreshed ||
-          (cleanedArrangeCopies && !exactAsset(bundle.cues, state.selectedCueRef ?? null))
-            ? null
-            : state.selectedCueRef
-              ? toAssetRef(state.selectedCueRef)
-              : null,
-        selectedArrangementRef: refreshed
-          ? activeArrangementRef(bundle)
-          : toAssetRef(state.selectedArrangementRef ?? activeArrangementRef(bundle)),
-        selectedTargetSetId: refreshed ? "all" : (state.selectedTargetSetId ?? "all"),
+        selectedLayoutRef: exactAsset(bundle.layouts, state.selectedLayoutRef ?? null)
+          ? toAssetRef(state.selectedLayoutRef!)
+          : structuredClone(activeStage(bundle).layout_ref),
+        selectedEffectRef: exactAsset(bundle.effects, state.selectedEffectRef ?? null)
+          ? toAssetRef(state.selectedEffectRef!)
+          : null,
+        selectedCueRef: exactAsset(bundle.cues, state.selectedCueRef ?? null)
+          ? toAssetRef(state.selectedCueRef!)
+          : null,
+        selectedArrangementRef: exactAsset(
+          bundle.arrangements,
+          state.selectedArrangementRef ?? null,
+        )
+          ? toAssetRef(state.selectedArrangementRef!)
+          : activeArrangementRef(bundle),
+        selectedTargetSetId: state.selectedTargetSetId ?? "all",
       } satisfies ProjectState;
     },
     partialize: (state) => ({
@@ -177,89 +144,6 @@ export const useProjectStore = create<ProjectState>()(
   }),
 );
 
-export function isLegacyAcceptanceWorkspace(bundle: ProjectBundle) {
-  if (
-    bundle.manifest.project_id !== "lumina-project" ||
-    bundle.manifest.name !== "Untitled Lighting Project"
-  ) {
-    return false;
-  }
-  const hasLegacyEffect = bundle.effects.some((effect) =>
-    LEGACY_LOCAL_EFFECT_NAMES.has(effect.name),
-  );
-  const hasLegacyCue = bundle.cues.some((cue) => LEGACY_LOCAL_CUE_NAMES.has(cue.name));
-  return hasLegacyEffect && hasLegacyCue;
-}
-
-export function cleanupLegacyArrangeCueCopies(bundle: ProjectBundle) {
-  const referencedCueKeys = new Set(
-    bundle.arrangements.flatMap((arrangement) =>
-      arrangement.tracks.flatMap((track) =>
-        (track.clips ?? []).map((clip) => assetKey(clip.cue_ref)),
-      ),
-    ),
-  );
-  const replacements = new Map<string, AssetRef>();
-  const removed = new Set<string>();
-  const occupiedIds = new Set(bundle.cues.map((cue) => cue.id));
-
-  for (const cue of bundle.cues) {
-    const legacyBaseId = [...LEGACY_ARRANGE_RECIPE_CUES.entries()].find(
-      ([baseId, name]) =>
-        cue.name === name && (cue.id === baseId || cue.id.startsWith(`${baseId}-`)),
-    )?.[0];
-    if (!legacyBaseId) continue;
-    const previousRef = { id: cue.id, revision: cue.revision };
-    const previousKey = assetKey(previousRef);
-    if (!referencedCueKeys.has(previousKey)) {
-      removed.add(previousKey);
-      continue;
-    }
-    const nextId = uniqueId(`${INTERNAL_PRODUCTION_CUE_PREFIX}${cue.id.replace(/^cue-/, "")}`, [
-      ...occupiedIds,
-    ]);
-    occupiedIds.add(nextId);
-    cue.id = nextId;
-    replacements.set(previousKey, { id: nextId, revision: cue.revision });
-  }
-
-  if (replacements.size === 0 && removed.size === 0) return false;
-
-  bundle.cues = bundle.cues.filter((cue) => !removed.has(assetKey(cue)));
-  bundle.manifest.cue_refs = bundle.manifest.cue_refs.flatMap((reference) => {
-    const key = assetKey(reference);
-    if (removed.has(key)) return [];
-    return [replacements.get(key) ?? reference];
-  });
-  for (const arrangement of bundle.arrangements) {
-    for (const track of arrangement.tracks) {
-      for (const clip of track.clips ?? []) {
-        clip.cue_ref = replacements.get(assetKey(clip.cue_ref)) ?? clip.cue_ref;
-      }
-    }
-  }
-
-  const referencedEffectKeys = new Set(
-    bundle.cues.flatMap((cue) => cue.layers.map((layer) => assetKey(layer.effect_ref))),
-  );
-  bundle.effects = bundle.effects.filter(
-    (effect) => effect.source !== "built_in" || referencedEffectKeys.has(assetKey(effect)),
-  );
-  const remainingEffectKeys = new Set(bundle.effects.map(assetKey));
-  bundle.manifest.effect_refs = bundle.manifest.effect_refs.filter((reference) =>
-    remainingEffectKeys.has(assetKey(reference)),
-  );
-  return true;
-}
-
-export function simplifyLegacyCueNames(bundle: ProjectBundle) {
-  for (const cue of bundle.cues) {
-    if (cue.name !== "Pulse + Gradient" || cue.layers.length !== 1) continue;
-    const effect = exactAsset(bundle.effects, cue.layers[0].effect_ref);
-    cue.name = `${effect?.name ?? "Pulse"} Cue`;
-  }
-}
-
 export const projectActions = {
   loadBundle: (bundle: ProjectBundle) => {
     authoringTransportActions.reset();
@@ -268,11 +152,36 @@ export const projectActions = {
       ...initialState,
       bundle: structuredClone(bundle),
       selectedArrangementRef,
-      selectedLayoutRef: bundle.manifest.layout_refs[0],
+      selectedLayoutRef: structuredClone(activeStage(bundle).layout_ref),
       selectedEffectRef:
         bundle.manifest.effect_refs[bundle.manifest.effect_refs.length - 1] ?? null,
       selectedCueRef: bundle.manifest.cue_refs[bundle.manifest.cue_refs.length - 1] ?? null,
     });
+  },
+  exportAssetPack: (name?: string) => createUserAssetPack(useProjectStore.getState().bundle, name),
+  importAssetPack: (pack: UserAssetPack, onConflict: "reject" | "rename" = "reject") => {
+    authoringTransportActions.pauseAll();
+    let imported: ReturnType<typeof importUserAssetPack> | null = null;
+    transact("Import asset pack", (bundle) => {
+      imported = importUserAssetPack(bundle, pack, onConflict);
+      Object.assign(bundle, imported.bundle);
+    });
+    if (!imported) throw new Error("Asset pack could not be imported");
+    const result = imported as ReturnType<typeof importUserAssetPack>;
+    const updates: Partial<ProjectState> = {};
+    const layout = result.importedPack.layouts[result.importedPack.layouts.length - 1];
+    const effect = [...result.importedPack.effects]
+      .reverse()
+      .find((candidate) => candidate.source === "project_local");
+    const cue = result.importedPack.cues[result.importedPack.cues.length - 1];
+    const arrangement =
+      result.importedPack.arrangements[result.importedPack.arrangements.length - 1];
+    if (layout) updates.selectedLayoutRef = toAssetRef(layout);
+    if (effect) updates.selectedEffectRef = toAssetRef(effect);
+    if (cue) updates.selectedCueRef = toAssetRef(cue);
+    if (arrangement) updates.selectedArrangementRef = toAssetRef(arrangement);
+    useProjectStore.setState(updates);
+    return result;
   },
   markPublished: () =>
     useProjectStore.setState((state) => ({
@@ -318,6 +227,24 @@ export const projectActions = {
   saveLayoutDraft: (reference: AssetRef, draft: LayoutDefinition) => {
     let selected = reference;
     transact("Save Layout Draft", (bundle, published) => {
+      if (reference.id.startsWith("builtin.")) {
+        const name = uniqueLayoutName(
+          `${draft.name} Copy`,
+          bundle.layouts.map((layout) => layout.name),
+        );
+        const copy = structuredClone(draft);
+        copy.id = uniqueId(
+          slugLayoutName(name),
+          bundle.layouts.map((layout) => layout.id),
+        );
+        copy.revision = 1;
+        copy.name = name;
+        bundle.layouts.push(copy);
+        selected = toAssetRef(copy);
+        appendExactRef(bundle.manifest.layout_refs, selected);
+        bumpManifestRevision(bundle, published);
+        return;
+      }
       selected = bundle.stages.some((stage) => assetKey(stage.layout_ref) === assetKey(reference))
         ? cloneAssetRevision(bundle, "layout", reference)
         : forkAssetRevision(bundle, published, "layout", reference);
@@ -871,7 +798,7 @@ export const projectActions = {
     }),
   setPreviewError: (previewError: string) =>
     useProjectStore.setState({ previewError, previewSummary: null }),
-  createEffect: (name = "Pulse") => {
+  createEffect: (name = "Pulse"): AssetRef | null => {
     let created: AssetRef | null = null;
     transact(`Create Effect ${name}`, (bundle, published) => {
       bumpManifestRevision(bundle, published);
@@ -951,7 +878,7 @@ export const projectActions = {
     useProjectStore.setState({ selectedEffectRef: selected });
     return structuredClone(saved);
   },
-  createCue: (effectRefs: AssetRef[], name = "New Cue") => {
+  createCue: (effectRefs: AssetRef[], name = "New Cue"): AssetRef | null => {
     let created: AssetRef | null = null;
     transact(`Create Cue ${name}`, (bundle, published) => {
       bumpManifestRevision(bundle, published);
@@ -963,7 +890,7 @@ export const projectActions = {
     useProjectStore.setState({ selectedCueRef: created });
     return created;
   },
-  duplicateCue: (reference: AssetRef) => {
+  duplicateCue: (reference: AssetRef): AssetRef | null => {
     let created: AssetRef | null = null;
     transact("Duplicate Cue", (bundle, published) => {
       const cue = exactAsset(bundle.cues, reference);
@@ -1071,7 +998,7 @@ export const projectActions = {
     useProjectStore.setState({ selectedCueRef: selected });
     return structuredClone(saved);
   },
-  duplicateArrangement: (reference: AssetRef, name?: string) => {
+  duplicateArrangement: (reference: AssetRef, name?: string): AssetRef | null => {
     let created: AssetRef | null = null;
     transact("Duplicate Arrangement", (bundle, published) => {
       const arrangement = exactAsset(bundle.arrangements, reference);
@@ -1086,7 +1013,7 @@ export const projectActions = {
     useProjectStore.setState({ selectedArrangementRef: created ?? reference });
     return created;
   },
-  createArrangement: (name = "New Arrangement") => {
+  createArrangement: (name = "New Arrangement"): AssetRef | null => {
     const source = useProjectStore.getState().selectedArrangementRef;
     let created: AssetRef | null = null;
     transact("Create Arrangement", (bundle, published) => {
@@ -1201,7 +1128,16 @@ function updateArrangement(
 ) {
   let selected = reference;
   transact(label, (bundle, published) => {
-    selected = forkAssetRevision(bundle, published, "arrangement", reference);
+    if (reference.id.startsWith("builtin.")) {
+      const source = exactAsset(bundle.arrangements, reference);
+      if (!source) throw new Error("Arrangement revision is missing");
+      const copy = duplicateArrangementAsset(bundle, source, `${source.name} Custom`);
+      bundle.arrangements.push(copy);
+      selected = toAssetRef(copy);
+      appendExactRef(bundle.manifest.arrangement_refs, selected);
+    } else {
+      selected = forkAssetRevision(bundle, published, "arrangement", reference);
+    }
     const arrangement = exactAsset(bundle.arrangements, selected);
     if (!arrangement) throw new Error("Arrangement revision is missing");
     update(arrangement, bundle);
@@ -1313,10 +1249,7 @@ function repairSelections() {
       exactAsset(state.bundle.cues, state.selectedCueRef)?.id !== undefined
         ? state.selectedCueRef
         : (state.bundle.manifest.cue_refs[state.bundle.manifest.cue_refs.length - 1] ?? null),
-    selectedArrangementRef:
-      exactAsset(state.bundle.arrangements, state.selectedArrangementRef)?.id !== undefined
-        ? state.selectedArrangementRef
-        : activeArrangementRef(state.bundle),
+    selectedArrangementRef: activeArrangementRef(state.bundle),
   });
 }
 

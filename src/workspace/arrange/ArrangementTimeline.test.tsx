@@ -21,6 +21,7 @@ describe("ArrangementTimeline workflow", () => {
 
   it("materializes a selected built-in Cue only when placing it", () => {
     const scratch = useProjectStore.getState().bundle;
+    const initialCueCount = scratch.cues.length;
     const effect = createEffectAsset(scratch, "Pulse");
     effect.id = "builtin.intensity.pulse";
     effect.source = "built_in";
@@ -30,6 +31,9 @@ describe("ArrangementTimeline workflow", () => {
       schema_version: 1,
       effects: [effect],
       cue_recipes: [],
+      layouts: [],
+      arrangements: [],
+      project_templates: [],
     });
     workspaceActions.setSelectedArrangeBuiltInCue({
       recipeRef: { id: "recipe.four-on-floor", revision: 1 },
@@ -39,12 +43,13 @@ describe("ArrangementTimeline workflow", () => {
 
     render(<ArrangementTimeline />);
 
-    expect(useProjectStore.getState().bundle.cues).toHaveLength(0);
+    expect(useProjectStore.getState().bundle.cues).toHaveLength(initialCueCount);
     fireEvent.click(screen.getByRole("button", { name: "Place Cue at playhead" }));
 
     const state = useProjectStore.getState();
     const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
     const savedCue = exactAsset(state.bundle.cues, { id: cue.id, revision: cue.revision });
+    expect(state.bundle.cues).toHaveLength(initialCueCount + 1);
     expect(savedCue).toMatchObject({
       id: cue.id,
       revision: cue.revision,
@@ -90,6 +95,7 @@ describe("ArrangementTimeline workflow", () => {
         },
       ];
     });
+    const seededReference = useProjectStore.getState().selectedArrangementRef;
     const historyBefore = useProjectStore.getState().historyCursor;
     const { container } = render(<ArrangementTimeline />);
 
@@ -114,7 +120,9 @@ describe("ArrangementTimeline workflow", () => {
       expect(current.tracks[0].clips?.[0].start_tick).toBe(1_920);
     });
     expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 1);
-    expect(assetKey(useProjectStore.getState().selectedArrangementRef)).toBe(assetKey(reference));
+    expect(assetKey(useProjectStore.getState().selectedArrangementRef)).toBe(
+      assetKey(seededReference),
+    );
   });
 
   it("shows overlap failure beside the selected CueClip with a recovery action", () => {
@@ -138,6 +146,43 @@ describe("ArrangementTimeline workflow", () => {
     expect(screen.getByRole("button", { name: "Reset selection" })).toBeTruthy();
   });
 
+  it("renders layered and overlapping CueClips on distinct visual rows", () => {
+    const effect = projectActions.createEffect("Layered")!;
+    const cue = projectActions.createCue([effect], "Corner Cue")!;
+    const reference = useProjectStore.getState().selectedArrangementRef;
+    projectActions.updateArrangement(reference, "Seed layered clips", (arrangement) => {
+      arrangement.tracks[0].overlap_policy = "layer";
+      arrangement.tracks[0].clips = [
+        { id: "top-left", cue_ref: cue, start_tick: 0, duration_tick: 1_920, layer: 0 },
+        { id: "top-right", cue_ref: cue, start_tick: 960, duration_tick: 1_920, layer: 1 },
+        { id: "bottom-left", cue_ref: cue, start_tick: 1_920, duration_tick: 1_920, layer: 2 },
+        { id: "bottom-right", cue_ref: cue, start_tick: 2_880, duration_tick: 1_920, layer: 3 },
+        { id: "top-left-return", cue_ref: cue, start_tick: 4_800, duration_tick: 1_920, layer: 0 },
+      ];
+    });
+
+    const { container } = render(<ArrangementTimeline />);
+    expect(screen.getByText("5 CueClips · 4 clip layers · 4 visual rows")).toBeTruthy();
+    expect(
+      container.querySelector('[data-track-id="cues"]')?.getAttribute("data-cue-row-count"),
+    ).toBe("4");
+    expect(container.querySelector<HTMLElement>('[data-clip-id="top-left"]')?.style.top).toBe(
+      "8px",
+    );
+    expect(container.querySelector<HTMLElement>('[data-clip-id="top-right"]')?.style.top).toBe(
+      "52px",
+    );
+    expect(container.querySelector<HTMLElement>('[data-clip-id="bottom-left"]')?.style.top).toBe(
+      "96px",
+    );
+    expect(container.querySelector<HTMLElement>('[data-clip-id="bottom-right"]')?.style.top).toBe(
+      "140px",
+    );
+    expect(
+      container.querySelector<HTMLElement>('[data-clip-id="top-left-return"]')?.style.top,
+    ).toBe("8px");
+  });
+
   it("renders typed automation curves and adds a keyframe as one transaction", async () => {
     const reference = useProjectStore.getState().selectedArrangementRef;
     projectActions.updateArrangement(reference, "Seed typed automation", (arrangement) => {
@@ -153,7 +198,14 @@ describe("ArrangementTimeline workflow", () => {
     const { container } = render(<ArrangementTimeline />);
     const lane = screen.getByRole("group", { name: /Master dimmer automation lane/ });
 
-    expect(container.querySelector("svg path")).toBeTruthy();
+    const curve = container.querySelector<SVGElement>("[data-automation-curve]")!;
+    const curvePath = curve.querySelector("path")!;
+    const firstKeyframe = screen.getAllByRole("button", {
+      name: /Master dimmer keyframe at tick/,
+    })[0];
+    expect(curve.getAttribute("viewBox")?.endsWith(" 40")).toBe(true);
+    expect(curvePath.getAttribute("d")).toContain("M 0 8");
+    expect(firstKeyframe.style.top).toBe("8px");
     fireEvent.doubleClick(lane, { clientX: 96 });
 
     await waitFor(() => {

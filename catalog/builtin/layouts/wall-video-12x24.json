@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.wall-video-12x24",
+  "revision": 1,
+  "name": "Wide Video Wall 12×24",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "wall",
+    "rows": 12,
+    "columns": 24,
+    "fixture_size": { "width": 10, "height": 10 },
+    "gap": { "x": 6, "y": 8 },
+    "pitch": { "x": 16, "y": 18 },
+    "origin": { "x": 0, "y": 0 }
+  }
+}

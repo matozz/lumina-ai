@@ -50,6 +50,8 @@ describe("CueClipBlock native pointer interaction", () => {
           onSelect={vi.fn()}
           onSnapPreview={vi.fn()}
           selected
+          top={8}
+          visualRow={0}
           viewportRef={viewportRef}
         />
       </div>,

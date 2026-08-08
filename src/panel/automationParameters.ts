@@ -1,5 +1,5 @@
 import type {
-  AutomationTargetV3DSL,
+  AutomationTargetDSL,
   FullDSL,
   ParameterDefinitionDSL,
   ParameterValueDSL,
@@ -9,7 +9,7 @@ import { automationTargetParentTrack, automationTargetPath } from "@/document/au
 export interface AutomationParameterOption {
   definition: ParameterDefinitionDSL;
   initialValue: ParameterValueDSL;
-  target: AutomationTargetV3DSL;
+  target: AutomationTargetDSL;
 }
 
 const MASTER_DIMMER: ParameterDefinitionDSL = {
@@ -56,7 +56,7 @@ export function automationParameterOptions(
 
 export function resolveAutomationParameter(
   document: FullDSL | null,
-  target: AutomationTargetV3DSL,
+  target: AutomationTargetDSL,
 ): AutomationParameterOption | undefined {
   if (!document) return undefined;
   if (target.scope === "global") {

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.sector-fan-8",
+  "revision": 1,
+  "name": "Audience Fan Sector",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "sector",
+    "rings": 8,
+    "segments": 6,
+    "fixture_size": { "width": 10, "height": 10 },
+    "ring_gap": 12,
+    "ring_pitch": 22,
+    "start_angle_degrees": 165,
+    "sweep_angle_degrees": 210,
+    "center": { "x": 0, "y": 0 }
+  }
+}

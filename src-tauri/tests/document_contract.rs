@@ -1,16 +1,16 @@
 use lumina_ai_lib::compiler::diagnostic::{
     DOC_EFFECT_GRAPH_INVALID, DOC_FIXTURE_REFERENCE_NOT_FOUND, DOC_FORMULA_INVALID,
-    DOC_INVALID_COLOR, DOC_INVALID_PHASE_CONFIG, DOC_INVALID_RANGE, DOC_PARAMETER_INVALID,
-    DOC_PROFILE_NOT_FOUND, DOC_SVG_PATH_INVALID, DOC_TIMELINE_TARGET_INVALID,
+    DOC_INVALID_COLOR, DOC_INVALID_RANGE, DOC_PARAMETER_INVALID, DOC_PROFILE_NOT_FOUND,
+    DOC_SCHEMA_INVALID, DOC_SVG_PATH_INVALID, DOC_TIMELINE_TARGET_INVALID,
 };
 use lumina_ai_lib::compiler::Compiler;
 use lumina_ai_lib::document::{
-    load_document, AutomationLaneDSL, AutomationTargetV3DSL, GlobalParameterDSL, KeyframeDSL,
+    load_document, AutomationLaneDSL, AutomationTargetDSL, GlobalParameterDSL, KeyframeDSL,
     KeyframeInterpolationDSL, OverlapPolicyDSL, ParameterValueDSL,
 };
 
 const VALID_DOCUMENT: &str = r##"{
-  "schema_version": 2,
+  "schema_version": 1,
   "meta": { "name": "Strict contract" },
   "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 2] }],
   "layout": {
@@ -24,18 +24,73 @@ const VALID_DOCUMENT: &str = r##"{
     }
   },
   "groups": [{ "id": "all", "name": "All", "fixtures": [1, 2] }],
-  "phasers": [{
-    "id": "pulse",
+  "effect_definitions": [{
+    "id": "project.pulse",
     "name": "Pulse",
-    "target": "all",
-    "steps": [{ "values": { "color": "#ff0000", "dimmer": 1.0 } }],
-    "phase": { "mode": "spread", "spread": { "from": 0.0, "to": 100.0 } }
+    "revision": 1,
+    "source": "project_local",
+    "parameters": [{
+      "id": "speed",
+      "name": "Speed",
+      "value_type": "scalar",
+      "default_value": { "type": "scalar", "value": 1.0 },
+      "range": [0.25, 8.0],
+      "unit": "multiplier",
+      "ui_hint": "slider",
+      "automation": "continuous"
+    }],
+    "graph": { "nodes": [
+      { "type": "time", "id": "time" },
+      {
+        "type": "spatial_phase",
+        "id": "spatial",
+        "input": { "node_id": "time", "port": "scalar" },
+        "basis": "index",
+        "from": 0.0,
+        "to": 1.0,
+        "wrap": true
+      },
+      {
+        "type": "step_sequence",
+        "id": "sequence",
+        "phase": { "node_id": "spatial", "port": "scalar" },
+        "steps": [{ "values": { "color": "#ff0000", "dimmer": 1.0 } }]
+      },
+      {
+        "type": "attribute_writer",
+        "id": "output",
+        "input": { "node_id": "sequence", "port": "attribute_set" }
+      }
+    ] },
+    "catalog": {
+      "energy": 0.5,
+      "density": 0.5,
+      "motion": "pulse",
+      "colorfulness": 0.5,
+      "strobe_risk": "none",
+      "required_attributes": ["intensity", "color.rgb"]
+    }
+  }],
+  "effect_instances": [{
+    "id": "pulse",
+    "definition_id": "project.pulse",
+    "definition_revision": 1,
+    "target_group_id": "all",
+    "seed": "0000000000000001"
   }],
   "timeline": {
-    "events": [{
-      "beat": 0.0,
-      "duration": 1.0,
-      "action": { "type": "phaser", "phaser": "pulse" }
+    "ppq": 960,
+    "tempo_map": { "points": [{ "time_tick": 0, "bpm": 128.0 }] },
+    "tracks": [{
+      "id": "effects",
+      "name": "Effects",
+      "overlap_policy": "layer",
+      "clips": [{
+        "id": "pulse-clip",
+        "instance_id": "pulse",
+        "start_tick": 0,
+        "duration_tick": 960
+      }]
     }]
   }
 }"##;
@@ -81,15 +136,15 @@ fn rejects_bad_color_reference_range_and_formula_with_stable_diagnostics() {
 }
 
 #[test]
-fn rejects_mismatched_phase_payload_before_compilation() {
+fn rejects_unknown_graph_payload_before_compilation() {
     let source = VALID_DOCUMENT.replace(
-        "\"mode\": \"spread\", \"spread\": { \"from\": 0.0, \"to\": 100.0 }",
-        "\"mode\": \"spread\", \"grouped\": { \"group_size\": 1, \"spread\": [0, 100] }",
+        "\"phase\": { \"node_id\": \"spatial\", \"port\": \"scalar\" }",
+        "\"phase\": { \"node_id\": \"spatial\", \"port\": \"scalar\", \"grouped\": true }",
     );
-    let diagnostic = load_document(&source).expect_err("tagged phase payload must be rejected");
+    let diagnostic = load_document(&source).expect_err("unknown graph payload must be rejected");
 
-    assert_eq!(diagnostic.code, DOC_INVALID_PHASE_CONFIG);
-    assert_eq!(diagnostic.path, "phasers[0].phase");
+    assert_eq!(diagnostic.code, DOC_SCHEMA_INVALID);
+    assert_eq!(diagnostic.path, "$");
 }
 
 #[test]
@@ -107,7 +162,7 @@ fn reports_svg_layout_instead_of_silently_falling_back() {
 }
 
 fn compile_errors(
-    document: lumina_ai_lib::document::ShowDocumentV4,
+    document: lumina_ai_lib::document::ShowDocumentV1,
 ) -> Vec<lumina_ai_lib::compiler::diagnostic::Diagnostic> {
     match Compiler::compile_document(document) {
         Ok(_) => panic!("document must not compile"),
@@ -213,7 +268,7 @@ fn validates_multi_keyframes_and_preserves_layered_overlaps() {
     effect_track.clips.push(second_clip);
     effect_track.automation_lanes.push(AutomationLaneDSL {
         id: "master-dimmer".to_string(),
-        target: AutomationTargetV3DSL::Global {
+        target: AutomationTargetDSL::Global {
             parameter_id: GlobalParameterDSL::MasterDimmer,
         },
         keyframes: vec![
@@ -294,7 +349,7 @@ fn rejects_multiple_automation_lanes_for_one_typed_target() {
         .document;
     let lane = AutomationLaneDSL {
         id: "master-a".to_string(),
-        target: AutomationTargetV3DSL::Global {
+        target: AutomationTargetDSL::Global {
             parameter_id: GlobalParameterDSL::MasterDimmer,
         },
         keyframes: vec![KeyframeDSL {

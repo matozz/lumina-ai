@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateShowDocument } from "./showDocument";
 
 const document = {
-  schema_version: 4,
+  schema_version: 1,
   meta: { name: "Contract" },
   patch: [],
   layout: { type: "generator", generator: { shape: "custom", fixtures: [] } },
@@ -11,7 +11,7 @@ const document = {
   effect_instances: [],
 };
 
-describe("generated ShowDocumentV4 validator", () => {
+describe("generated ShowDocumentV1 validator", () => {
   it("accepts the current version and rejects unknown fields", () => {
     expect(validateShowDocument(document).success).toBe(true);
 

@@ -11,7 +11,7 @@ describe("effectTargetCompatibility", () => {
 
     expect(
       effectTargetCompatibility(stage, activeLayout(bundle), stage.target_sets[0], effect),
-    ).toMatchObject({ compatible: true, fixtureCount: 80, missingAttributes: [] });
+    ).toMatchObject({ compatible: true, fixtureCount: 400, missingAttributes: [] });
   });
 
   it("explains movement attributes missing from Generic RGB fixtures", () => {

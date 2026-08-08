@@ -5,6 +5,23 @@ import { analyzeStageTopology, resolveTargetSet, stageForLayout } from "./stageT
 import { activeStage, exactAsset } from "./projectModel";
 
 describe("Stage topology impact", () => {
+  it("resolves the documented 20×20 quadrant and selected 4×4 area workflows", () => {
+    const bundle = createStarterProjectBundle();
+    const stage = activeStage(bundle);
+    const layout = exactAsset(bundle.layouts, stage.layout_ref)!;
+    const resolve = (id: string) =>
+      resolveTargetSet(stage, layout, stage.target_sets.find((target) => target.id === id)!)!
+        .fixtureIds;
+
+    const quadrants = ["zone-2x2-1", "zone-2x2-2", "zone-2x2-3", "zone-2x2-4"].map(resolve);
+    expect(quadrants.map((fixtures) => fixtures.length)).toEqual([100, 100, 100, 100]);
+    expect(new Set(quadrants.flat()).size).toBe(400);
+
+    const selectedAreas = ["zone-4x4-1", "zone-4x4-4", "zone-4x4-13", "zone-4x4-16"].map(resolve);
+    expect(selectedAreas.map((fixtures) => fixtures.length)).toEqual([25, 25, 25, 25]);
+    expect(new Set(selectedAreas.flat()).size).toBe(100);
+  });
+
   it("materializes generated fixture counts from free Layout geometry", () => {
     const bundle = createStarterProjectBundle();
     const stage = activeStage(bundle);
@@ -31,7 +48,7 @@ describe("Stage topology impact", () => {
     const bundle = createStarterProjectBundle();
     const stage = activeStage(bundle);
     bundle.cues.push({
-      schema_version: 2,
+      schema_version: 1,
       id: "cue",
       revision: 1,
       name: "Cue",
@@ -44,7 +61,9 @@ describe("Stage topology impact", () => {
       risk_summary: { strobe_risk: "none" },
     });
     bundle.manifest.cue_refs.push({ id: "cue", revision: 1 });
-    bundle.arrangements[0].tracks[0].clips = [
+    bundle.arrangements.find(
+      (arrangement) => arrangement.id === bundle.manifest.active_arrangement_id,
+    )!.tracks[0].clips = [
       {
         id: "clip",
         cue_ref: { id: "cue", revision: 1 },
@@ -52,45 +71,59 @@ describe("Stage topology impact", () => {
         duration_tick: 3_840,
       },
     ];
-    const wall = bundle.manifest.layout_refs.find((reference) => reference.id === "wall-4x4")!;
+    const wall = bundle.manifest.layout_refs.find(
+      (reference) => reference.id === "builtin.layout.wall-main-20x20",
+    )!;
 
     const impact = analyzeStageTopology(bundle, wall);
 
     expect(impact.compatible).toBe(true);
     expect(impact.groups).toEqual([
-      expect.objectContaining({ id: "all-fixtures", fixtureCount: 80 }),
+      expect.objectContaining({ id: "all-fixtures", fixtureCount: 400 }),
     ]);
     expect(impact.targetSets).toHaveLength(stage.target_sets.length);
     expect(impact.targetSets.every((target) => target.valid && !target.membershipChanged)).toBe(
       true,
     );
-    expect(impact.cues).toEqual([expect.objectContaining({ name: "Cue" })]);
-    expect(impact.arrangements).toEqual([
-      expect.objectContaining({ name: "House 128", clipCount: 1 }),
-    ]);
+    expect(impact.cues).toHaveLength(bundle.cues.length);
+    expect(impact.cues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "Cue" }),
+        expect.objectContaining({ name: "Quadrant Motion Dialogue", layers: 4 }),
+      ]),
+    );
+    expect(impact.arrangements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "House 128", clipCount: 1 }),
+        expect.objectContaining({ name: "Quadrant Motion · 128", clipCount: 2 }),
+        expect.objectContaining({ name: "Four Corner Chase · 128", clipCount: 5 }),
+      ]),
+    );
   });
 
   it("requires remap when a grid TargetSet is applied to a circle", () => {
     const bundle = createStarterProjectBundle();
-    const circle = bundle.manifest.layout_refs.find((reference) => reference.id === "circle-16")!;
+    const circle = bundle.manifest.layout_refs.find(
+      (reference) => reference.id === "builtin.layout.circle-rings-8",
+    )!;
     const impact = analyzeStageTopology(bundle, circle);
     const stage = activeStage(bundle);
     const circleLayout = exactAsset(bundle.layouts, circle)!;
 
     expect(impact.compatible).toBe(false);
     expect(impact.validTargetSetIds).toEqual(["all"]);
-    expect(impact.fixtureCount).toBe(80);
-    expect(impact.candidateCapacity).toBe(37);
+    expect(impact.fixtureCount).toBe(400);
+    expect(impact.candidateCapacity).toBe(649);
     expect(impact.targetSets.find((target) => target.id === "all")).toMatchObject({
-      beforeCount: 80,
-      afterCount: 37,
+      beforeCount: 400,
+      afterCount: 649,
     });
     expect(impact.targetSets.find((target) => target.id === "zones-3x3")).toMatchObject({
       valid: false,
     });
     expect(resolveTargetSet(stage, circleLayout, stage.target_sets[0])?.fixtureIds).toHaveLength(
-      80,
+      400,
     );
-    expect(fixtureIdsForStage(stageForLayout(stage, circleLayout))).toHaveLength(37);
+    expect(fixtureIdsForStage(stageForLayout(stage, circleLayout))).toHaveLength(649);
   });
 });

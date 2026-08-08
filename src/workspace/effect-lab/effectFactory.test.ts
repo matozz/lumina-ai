@@ -10,7 +10,7 @@ import {
 } from "./effectFactory";
 
 describe("Effect Lab models", () => {
-  it("creates a deterministic red pulse that validates against V4", () => {
+  it("creates a deterministic red pulse that validates against the current V1", () => {
     const document = createStarterProject();
     const pair = createEffectPair(document);
     const next = {

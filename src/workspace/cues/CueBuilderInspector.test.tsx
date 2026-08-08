@@ -65,6 +65,7 @@ describe("Cue Builder safe authoring", () => {
   it("resolves a Production recipe into a session-only draft before save", async () => {
     const state = useProjectStore.getState();
     const bundle = structuredClone(state.bundle);
+    const initialCueRefs = bundle.cues.map(assetKey);
     bundle.manifest.layout_refs = [
       structuredClone(bundle.layouts[0]) as unknown as (typeof bundle.manifest.layout_refs)[number],
     ];
@@ -75,7 +76,7 @@ describe("Cue Builder safe authoring", () => {
     fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
 
     await waitFor(() => expect(screen.getByLabelText("Cue name")).toBeTruthy());
-    expect(useProjectStore.getState().bundle.cues).toHaveLength(0);
+    expect(useProjectStore.getState().bundle.cues.map(assetKey)).toEqual(initialCueRefs);
     expect(useAuthoringDraftStore.getState().cue?.mode).toBe("new");
     expect(screen.getByText("Production Recipes")).toBeTruthy();
     expect(
@@ -92,6 +93,8 @@ describe("Cue Builder safe authoring", () => {
   });
 
   it("selects a built-in Cue for Arrange without copying it into the Project", async () => {
+    const initialCueRefs = useProjectStore.getState().bundle.cues.map(assetKey);
+    const initialEffectRefs = useProjectStore.getState().bundle.effects.map(assetKey);
     render(<WorkspaceLibrary workspace="arrange" />);
 
     expect(screen.getByText("Built-in Cues")).toBeTruthy();
@@ -105,15 +108,15 @@ describe("Cue Builder safe authoring", () => {
     );
     const state = useProjectStore.getState();
     expect(state.selectedCueRef).toBeNull();
-    expect(state.bundle.cues).toHaveLength(0);
-    expect(state.bundle.effects).toHaveLength(0);
+    expect(state.bundle.cues.map(assetKey)).toEqual(initialCueRefs);
+    expect(state.bundle.effects.map(assetKey)).toEqual(initialEffectRefs);
     expect(useWorkspaceStore.getState().selectedArrangeBuiltInCue?.cue.id).toMatch(
       /^__builtin-cue-four-on-floor/,
     );
     expect(useAuthoringDraftStore.getState().cue).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
-    expect(useProjectStore.getState().bundle.cues).toHaveLength(0);
+    expect(useProjectStore.getState().bundle.cues.map(assetKey)).toEqual(initialCueRefs);
     expect(bridge.resolveProductionCueRecipe).toHaveBeenCalledTimes(1);
   });
 
@@ -130,6 +133,7 @@ describe("Cue Builder safe authoring", () => {
   });
 
   it("keeps mute, solo, overrides, and automation local until one immutable save", async () => {
+    const initialCueRefs = useProjectStore.getState().bundle.cues.map(assetKey);
     render(<Harness />);
     fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
 
@@ -138,7 +142,7 @@ describe("Cue Builder safe authoring", () => {
     fireEvent.click(screen.getByRole("button", { name: "Solo layer 1" }));
     fireEvent.click(screen.getAllByRole("button", { name: "Add automation" })[0]);
 
-    expect(useProjectStore.getState().bundle.cues).toHaveLength(0);
+    expect(useProjectStore.getState().bundle.cues.map(assetKey)).toEqual(initialCueRefs);
     expect(useAuthoringDraftStore.getState().cue).toMatchObject({
       mutedLayerIds: [cue.layers[1].id],
       soloLayerId: cue.layers[0].id,
@@ -150,7 +154,7 @@ describe("Cue Builder safe authoring", () => {
     fireEvent.click(save);
 
     const project = useProjectStore.getState();
-    expect(project.bundle.cues).toHaveLength(1);
+    expect(project.bundle.cues).toHaveLength(initialCueRefs.length + 1);
     expect(project.bundle.effects.some((effect) => effect.id === catalog.effects[0].id)).toBe(true);
     expect(project.historyCursor).toBe(1);
   });
@@ -251,6 +255,9 @@ function cueFixture() {
   cue.layers[1].mix_overrides = [{ attribute_id: "intensity", policy: "htp" }];
   const catalog: ProductionCatalog = {
     schema_version: 1,
+    layouts: [],
+    arrangements: [],
+    project_templates: [],
     effects: [effect satisfies EffectDefinitionDocument, strobe satisfies EffectDefinitionDocument],
     cue_recipes: [
       {

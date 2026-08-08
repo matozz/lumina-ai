@@ -88,7 +88,7 @@ export function ArrangementTimeline() {
     if (!cue || !cueRef) {
       setDiagnostic(
         authoringDiagnostic(
-          new Error("The selected pinned Cue revision is missing."),
+          new Error("The selected Cue is no longer available."),
           "arrangement.toolbar.place_cue",
         ),
       );

@@ -3,36 +3,6 @@
     {
       "declared_capabilities": ["any"],
       "effect_ref": {
-        "id": "builtin.intensity.pulse",
-        "revision": 1
-      },
-      "layouts": {
-        "circle": {
-          "matched_capability": "any",
-          "status": "universal",
-          "supported": true
-        },
-        "frame": {
-          "matched_capability": "any",
-          "status": "universal",
-          "supported": true
-        },
-        "matrix": {
-          "matched_capability": "any",
-          "status": "universal",
-          "supported": true
-        },
-        "strip_bar": {
-          "matched_capability": "any",
-          "status": "universal",
-          "supported": true
-        }
-      },
-      "name": "Pulse"
-    },
-    {
-      "declared_capabilities": ["any"],
-      "effect_ref": {
         "id": "builtin.intensity.breathe",
         "revision": 1
       },
@@ -89,6 +59,66 @@
         }
       },
       "name": "Alternating Grid Chase"
+    },
+    {
+      "declared_capabilities": ["matrix", "coordinates"],
+      "effect_ref": {
+        "id": "builtin.spatial.column-ping-pong",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        }
+      },
+      "name": "Column Ping-Pong"
+    },
+    {
+      "declared_capabilities": ["matrix", "coordinates"],
+      "effect_ref": {
+        "id": "builtin.spatial.column-rain",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        }
+      },
+      "name": "Seeded Column Rain"
     },
     {
       "declared_capabilities": ["coordinates"],

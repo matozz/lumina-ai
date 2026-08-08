@@ -168,7 +168,7 @@ export function ProjectGroupEditor() {
 
         {diagnostic && (
           <Alert variant="destructive">
-            <AlertTitle>GROUP_ACTION_FAILED · stage.groups.{draft.id}</AlertTitle>
+            <AlertTitle>Fixture group could not be updated</AlertTitle>
             <AlertDescription>
               {diagnostic} Restore a valid fixture selection and retry here.
             </AlertDescription>

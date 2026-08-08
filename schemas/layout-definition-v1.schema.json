@@ -277,6 +277,140 @@
         {
           "type": "object",
           "properties": {
+            "center": {
+              "$ref": "#/$defs/LayoutPoint"
+            },
+            "fixture_size": {
+              "$ref": "#/$defs/LayoutSize"
+            },
+            "ring_gap": {
+              "type": "number",
+              "format": "double",
+              "minimum": 0.0
+            },
+            "ring_pitch": {
+              "type": "number",
+              "format": "double",
+              "minimum": 1e-6
+            },
+            "rings": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "segments": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "shape": {
+              "type": "string",
+              "const": "sector"
+            },
+            "start_angle_degrees": {
+              "type": "number",
+              "format": "double"
+            },
+            "sweep_angle_degrees": {
+              "type": "number",
+              "format": "double",
+              "maximum": 360.0,
+              "minimum": 1e-6
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "shape",
+            "rings",
+            "segments",
+            "fixture_size",
+            "ring_gap",
+            "ring_pitch",
+            "start_angle_degrees",
+            "sweep_angle_degrees",
+            "center"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "center": {
+              "$ref": "#/$defs/LayoutPoint"
+            },
+            "fixture_size": {
+              "$ref": "#/$defs/LayoutSize"
+            },
+            "fixtures_per_side": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "radius": {
+              "type": "number",
+              "format": "double",
+              "minimum": 1e-6
+            },
+            "rotation_degrees": {
+              "type": "number",
+              "format": "double"
+            },
+            "shape": {
+              "type": "string",
+              "const": "polygon"
+            },
+            "sides": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 3
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "shape",
+            "sides",
+            "fixtures_per_side",
+            "fixture_size",
+            "radius",
+            "rotation_degrees",
+            "center"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "columns": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "fixture_size": {
+              "$ref": "#/$defs/LayoutSize"
+            },
+            "gap": {
+              "$ref": "#/$defs/LayoutGap"
+            },
+            "origin": {
+              "$ref": "#/$defs/LayoutPoint"
+            },
+            "pitch": {
+              "$ref": "#/$defs/LayoutPitch"
+            },
+            "rows": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "shape": {
+              "type": "string",
+              "const": "honeycomb"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["shape", "rows", "columns", "fixture_size", "gap", "pitch", "origin"]
+        },
+        {
+          "type": "object",
+          "properties": {
             "count": {
               "type": "integer",
               "format": "uint32",

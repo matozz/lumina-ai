@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CanvasRenderer } from "./CanvasRenderer";
+import { CANVAS_VISUAL_CONFIG } from "./visualConfig";
 
 describe("CanvasRenderer frame budget", () => {
   let scheduled: FrameRequestCallback | undefined;
@@ -104,5 +105,28 @@ describe("CanvasRenderer frame budget", () => {
     scheduled?.(0);
     expect(context.setLineDash).toHaveBeenCalledWith(expect.arrayContaining([expect.any(Number)]));
     expect(context.strokeStyle).toBe("rgba(63, 63, 70, 0.5)");
+  });
+
+  it("renders a visible Layout Draft using the shared glow radius", () => {
+    const canvas = document.createElement("canvas");
+    vi.spyOn(canvas, "getBoundingClientRect").mockReturnValue({
+      width: 320,
+      height: 180,
+    } as DOMRect);
+    const renderer = new CanvasRenderer(canvas);
+    renderer.initFromLayout(
+      [{ id: 1, x: 20, y: 30, type: "spot", width: 16, height: 16, patched: true }],
+      "layout-draft",
+    );
+    renderer.startRenderLoop();
+
+    scheduled?.(0);
+    expect(context.arc).toHaveBeenCalledWith(
+      20,
+      30,
+      8 * CANVAS_VISUAL_CONFIG.glow.radiusMultiplier,
+      0,
+      Math.PI * 2,
+    );
   });
 });

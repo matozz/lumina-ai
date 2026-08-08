@@ -1,0 +1,471 @@
+{
+  "schema_version": 1,
+  "id": "builtin.project-template.authoring-starter",
+  "name": "Authoring Starter",
+  "stage": {
+    "schema_version": 1,
+    "id": "main-stage",
+    "revision": 1,
+    "name": "Main Stage",
+    "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 400] }],
+    "layout_ref": { "id": "builtin.layout.matrix-main-20x20", "revision": 1 },
+    "groups": [
+      {
+        "id": "all-fixtures",
+        "name": "All fixtures",
+        "fixtures": { "range": [1, 400] },
+        "sort_by": "none"
+      }
+    ],
+    "target_sets": [
+      { "id": "all", "name": "All", "selector": { "type": "all" } },
+      {
+        "id": "rows",
+        "name": "Rows",
+        "selector": {
+          "type": "rows",
+          "indices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+        }
+      },
+      {
+        "id": "columns",
+        "name": "Columns",
+        "selector": {
+          "type": "columns",
+          "indices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+        }
+      },
+      {
+        "id": "zone-2x2-1",
+        "name": "2×2 · Top left",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 2,
+          "columns": 2,
+          "zones": [{ "row": 0, "column": 0 }]
+        }
+      },
+      {
+        "id": "zone-2x2-2",
+        "name": "2×2 · Top right",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 2,
+          "columns": 2,
+          "zones": [{ "row": 0, "column": 1 }]
+        }
+      },
+      {
+        "id": "zone-2x2-3",
+        "name": "2×2 · Bottom left",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 2,
+          "columns": 2,
+          "zones": [{ "row": 1, "column": 0 }]
+        }
+      },
+      {
+        "id": "zone-2x2-4",
+        "name": "2×2 · Bottom right",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 2,
+          "columns": 2,
+          "zones": [{ "row": 1, "column": 1 }]
+        }
+      },
+      {
+        "id": "zone-4x4-1",
+        "name": "4×4 · Top left",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 4,
+          "columns": 4,
+          "zones": [{ "row": 0, "column": 0 }]
+        }
+      },
+      {
+        "id": "zone-4x4-4",
+        "name": "4×4 · Top right",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 4,
+          "columns": 4,
+          "zones": [{ "row": 0, "column": 3 }]
+        }
+      },
+      {
+        "id": "zone-4x4-13",
+        "name": "4×4 · Bottom left",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 4,
+          "columns": 4,
+          "zones": [{ "row": 3, "column": 0 }]
+        }
+      },
+      {
+        "id": "zone-4x4-16",
+        "name": "4×4 · Bottom right",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 4,
+          "columns": 4,
+          "zones": [{ "row": 3, "column": 3 }]
+        }
+      },
+      {
+        "id": "zones-3x3",
+        "name": "3×3 Sequence Zones",
+        "selector": {
+          "type": "grid_zones",
+          "rows": 3,
+          "columns": 3,
+          "zones": [
+            { "row": 0, "column": 0 },
+            { "row": 0, "column": 1 },
+            { "row": 0, "column": 2 },
+            { "row": 1, "column": 0 },
+            { "row": 1, "column": 1 },
+            { "row": 1, "column": 2 },
+            { "row": 2, "column": 0 },
+            { "row": 2, "column": 1 },
+            { "row": 2, "column": 2 }
+          ]
+        }
+      },
+      {
+        "id": "checkerboard",
+        "name": "Checkerboard",
+        "selector": { "type": "checkerboard", "parity": "even" }
+      },
+      {
+        "id": "center",
+        "name": "Center",
+        "selector": { "type": "center_edges", "region": "center", "thickness": 5 }
+      },
+      {
+        "id": "edges",
+        "name": "Edges",
+        "selector": { "type": "center_edges", "region": "edges", "thickness": 2 }
+      }
+    ],
+    "targeting_scenes": [
+      {
+        "id": "all-zones-all",
+        "name": "All → 3×3 Zones → All",
+        "looped": false,
+        "phase_continuity": true,
+        "steps": [
+          {
+            "id": "all-in",
+            "selection": { "target_set_id": "all" },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-1",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 0 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-2",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 1 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-3",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 2 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-4",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 3 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-5",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 4 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-6",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 5 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-7",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 6 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-8",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 7 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "zone-9",
+            "selection": { "target_set_id": "zones-3x3", "partition_index": 8 },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "hard" }
+          },
+          {
+            "id": "all-out",
+            "selection": { "target_set_id": "all" },
+            "duration": { "value": 1, "unit": "bar" },
+            "transition": { "type": "weighted", "duration": { "value": 1, "unit": "beat" } }
+          }
+        ]
+      }
+    ]
+  },
+  "cues": [
+    {
+      "schema_version": 1,
+      "id": "starter.cue.quadrant-motion",
+      "revision": 1,
+      "name": "Quadrant Motion Dialogue",
+      "compatible_stage_ref": { "id": "main-stage", "revision": 1 },
+      "nominal_length_ticks": 15360,
+      "layers": [
+        {
+          "id": "top-left-ping",
+          "effect_ref": { "id": "builtin.spatial.column-ping-pong", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-1"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "intensity": { "type": "scalar", "value": 0.9 }
+          },
+          "phase": 0,
+          "seed": "2100000000000001",
+          "layer": 0,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        },
+        {
+          "id": "top-right-rain",
+          "effect_ref": { "id": "builtin.spatial.column-rain", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-2"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "intensity": { "type": "scalar", "value": 0.85 }
+          },
+          "phase": 0,
+          "seed": "2100000000000002",
+          "layer": 1,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        },
+        {
+          "id": "bottom-left-gradient",
+          "effect_ref": { "id": "builtin.color.dual-sweep", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-3"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "phase": { "type": "scalar", "value": 0 }
+          },
+          "phase": 0,
+          "seed": "2100000000000003",
+          "layer": 2,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        },
+        {
+          "id": "bottom-right-breathe",
+          "effect_ref": { "id": "builtin.intensity.breathe", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-4"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "intensity": { "type": "scalar", "value": 0.7 }
+          },
+          "phase": 0,
+          "seed": "2100000000000004",
+          "layer": 3,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "bar" },
+      "capability_summary": { "required_attributes": ["color.rgb", "intensity"] },
+      "risk_summary": { "strobe_risk": "none" }
+    },
+    {
+      "schema_version": 1,
+      "id": "starter.cue.corner-top-left",
+      "revision": 1,
+      "name": "Corner · Top Left Ping-Pong",
+      "compatible_stage_ref": { "id": "main-stage", "revision": 1 },
+      "nominal_length_ticks": 7680,
+      "layers": [
+        {
+          "id": "corner-top-left",
+          "effect_ref": { "id": "builtin.spatial.column-ping-pong", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-1"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "intensity": { "type": "scalar", "value": 0.9 }
+          },
+          "phase": 0,
+          "seed": "2200000000000001",
+          "layer": 0,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "beat" },
+      "capability_summary": { "required_attributes": ["intensity"] },
+      "risk_summary": { "strobe_risk": "none" }
+    },
+    {
+      "schema_version": 1,
+      "id": "starter.cue.corner-top-right",
+      "revision": 1,
+      "name": "Corner · Top Right Rain",
+      "compatible_stage_ref": { "id": "main-stage", "revision": 1 },
+      "nominal_length_ticks": 7680,
+      "layers": [
+        {
+          "id": "corner-top-right",
+          "effect_ref": { "id": "builtin.spatial.column-rain", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-2"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "intensity": { "type": "scalar", "value": 0.85 }
+          },
+          "phase": 0,
+          "seed": "2200000000000002",
+          "layer": 0,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "beat" },
+      "capability_summary": { "required_attributes": ["intensity"] },
+      "risk_summary": { "strobe_risk": "none" }
+    },
+    {
+      "schema_version": 1,
+      "id": "starter.cue.corner-bottom-left",
+      "revision": 1,
+      "name": "Corner · Bottom Left Gradient",
+      "compatible_stage_ref": { "id": "main-stage", "revision": 1 },
+      "nominal_length_ticks": 7680,
+      "layers": [
+        {
+          "id": "corner-bottom-left",
+          "effect_ref": { "id": "builtin.color.dual-sweep", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-3"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "phase": { "type": "scalar", "value": 0 }
+          },
+          "phase": 0,
+          "seed": "2200000000000003",
+          "layer": 0,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "beat" },
+      "capability_summary": { "required_attributes": ["color.rgb", "intensity"] },
+      "risk_summary": { "strobe_risk": "none" }
+    },
+    {
+      "schema_version": 1,
+      "id": "starter.cue.corner-bottom-right",
+      "revision": 1,
+      "name": "Corner · Bottom Right Breathe",
+      "compatible_stage_ref": { "id": "main-stage", "revision": 1 },
+      "nominal_length_ticks": 7680,
+      "layers": [
+        {
+          "id": "corner-bottom-right",
+          "effect_ref": { "id": "builtin.intensity.breathe", "revision": 1 },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-4"
+          },
+          "parameter_overrides": {
+            "speed": { "type": "scalar", "value": 1 },
+            "intensity": { "type": "scalar", "value": 0.7 }
+          },
+          "phase": 0,
+          "seed": "2200000000000004",
+          "layer": 0,
+          "priority": 0,
+          "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+        }
+      ],
+      "trigger_policy": { "mode": "timeline", "quantize": "beat" },
+      "capability_summary": { "required_attributes": ["intensity"] },
+      "risk_summary": { "strobe_risk": "none" }
+    }
+  ],
+  "layout_refs": [
+    { "id": "builtin.layout.matrix-main-20x20", "revision": 1 },
+    { "id": "builtin.layout.matrix-festival-12x16", "revision": 1 },
+    { "id": "builtin.layout.wall-video-12x24", "revision": 1 },
+    { "id": "builtin.layout.wall-main-20x20", "revision": 1 },
+    { "id": "builtin.layout.strip-runway-30", "revision": 1 },
+    { "id": "builtin.layout.strip-vertical-tower-30", "revision": 1 },
+    { "id": "builtin.layout.frame-arena-12x24", "revision": 1 },
+    { "id": "builtin.layout.frame-proscenium-16x24", "revision": 1 },
+    { "id": "builtin.layout.frame-portrait-18x12", "revision": 1 },
+    { "id": "builtin.layout.circle-rings-8", "revision": 1 },
+    { "id": "builtin.layout.circle-club-rings-6", "revision": 1 },
+    { "id": "builtin.layout.circle-festival-halo-10", "revision": 1 },
+    { "id": "builtin.layout.sector-fan-8", "revision": 1 },
+    { "id": "builtin.layout.sector-front-wash-90", "revision": 1 },
+    { "id": "builtin.layout.sector-stage-wing-150", "revision": 1 },
+    { "id": "builtin.layout.polygon-hex-96", "revision": 1 },
+    { "id": "builtin.layout.polygon-triangle-84", "revision": 1 },
+    { "id": "builtin.layout.polygon-square-96", "revision": 1 },
+    { "id": "builtin.layout.polygon-pentagon-110", "revision": 1 },
+    { "id": "builtin.layout.honeycomb-18x24", "revision": 1 },
+    { "id": "builtin.layout.honeycomb-compact-16x20", "revision": 1 },
+    { "id": "builtin.layout.honeycomb-loose-12x18", "revision": 1 },
+    { "id": "builtin.layout.formula-sine-160", "revision": 1 },
+    { "id": "builtin.layout.formula-arch-160", "revision": 1 },
+    { "id": "builtin.layout.algorithm-lissajous-240", "revision": 1 },
+    { "id": "builtin.layout.algorithm-spiral-200", "revision": 1 }
+  ],
+  "arrangement_ref": { "id": "builtin.arrangement.house-128", "revision": 1 }
+}

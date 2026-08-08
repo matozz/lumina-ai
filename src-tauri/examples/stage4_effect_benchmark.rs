@@ -105,7 +105,7 @@ fn benchmark_show() -> lumina_ai_lib::compiler::CompiledShow {
         })
         .collect();
     let source = serde_json::json!({
-        "schema_version": 4,
+        "schema_version": 1,
         "meta": { "name": "Stage 4 layered effect benchmark" },
         "patch": [{ "profile_id": "generic-rgb", "id_range": [1, FIXTURE_COUNT] }],
         "layout": { "type": "generator", "generator": {

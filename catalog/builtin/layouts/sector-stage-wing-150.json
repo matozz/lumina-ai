@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.sector-stage-wing-150",
+  "revision": 1,
+  "name": "Stage Wing Sector 150°",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "sector",
+    "rings": 9,
+    "segments": 3,
+    "fixture_size": { "width": 9, "height": 9 },
+    "ring_gap": 10,
+    "ring_pitch": 19,
+    "start_angle_degrees": 195,
+    "sweep_angle_degrees": 150,
+    "center": { "x": 0, "y": 0 }
+  }
+}

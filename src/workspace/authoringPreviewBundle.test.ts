@@ -1,12 +1,24 @@
 import { describe, expect, it } from "vitest";
 import type { ProductionCatalog } from "@/bridge/types";
-import { createCueAsset, createEffectAsset, exactAsset } from "@/document/projectModel";
+import { fixtureIdsForStage, layoutPositions } from "@/document/layoutDefinition";
+import {
+  activeLayout,
+  activeStage,
+  createCueAsset,
+  createEffectAsset,
+  exactAsset,
+} from "@/document/projectModel";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
-import { materializeAuthoringPreview, materializeCueDraftBundle } from "./authoringPreviewBundle";
+import {
+  materializeAuthoringPreview,
+  materializeCueDraftBundle,
+  materializeStagePreviewBundle,
+} from "./authoringPreviewBundle";
 
 describe("authoring preview materialization", () => {
   it("uses Last Known Good and leaves the persisted bundle untouched", () => {
     const bundle = createStarterProjectBundle();
+    const persistedEffects = structuredClone(bundle.effects);
     const pinned = createEffectAsset(bundle, "Pulse");
     pinned.id = "builtin.intensity.pulse";
     pinned.source = "built_in";
@@ -18,6 +30,9 @@ describe("authoring preview materialization", () => {
       schema_version: 1,
       effects: [pinned],
       cue_recipes: [],
+      layouts: [],
+      arrangements: [],
+      project_templates: [],
     };
 
     const result = materializeAuthoringPreview(
@@ -43,7 +58,7 @@ describe("authoring preview materialization", () => {
         result.bundle.manifest.effect_refs[result.bundle.manifest.effect_refs.length - 1],
       ),
     ).toEqual(["id", "revision"]);
-    expect(bundle.effects).toHaveLength(0);
+    expect(bundle.effects).toEqual(persistedEffects);
   });
 
   it("applies Cue mute and solo only to the preview copy", () => {
@@ -131,5 +146,36 @@ describe("authoring preview materialization", () => {
     expect(result.effects.map((candidate) => candidate.id)).toEqual([effect.id]);
     expect(result.manifest.cue_refs).toEqual([{ id: cue.id, revision: cue.revision }]);
     expect(result.arrangements[0].tracks.every((track) => track.clips?.length === 0)).toBe(true);
+  });
+
+  it("keeps Stage, Lab, Cue, and Arrange on the exact same Layout geometry", () => {
+    const bundle = createStarterProjectBundle();
+    const effect = createEffectAsset(bundle, "Cross-workspace pulse");
+    bundle.effects.push(effect);
+    bundle.manifest.effect_refs.push({ id: effect.id, revision: effect.revision });
+    const cue = createCueAsset(bundle, [effect], "Cross-workspace cue");
+    bundle.cues.push(cue);
+    bundle.manifest.cue_refs.push({ id: cue.id, revision: cue.revision });
+    const draft = { comparison: "working", effect: null, cue: null } as const;
+
+    const previews = [
+      materializeStagePreviewBundle(bundle),
+      materializeAuthoringPreview(bundle, effect, null, draft, null, {
+        scope: "effect",
+        arrangementRef: bundle.manifest.arrangement_refs[0],
+      }).bundle,
+      materializeAuthoringPreview(bundle, effect, cue, draft, null, {
+        scope: "cue",
+        arrangementRef: bundle.manifest.arrangement_refs[0],
+      }).bundle,
+      materializeAuthoringPreview(bundle, effect, cue, draft, null).bundle,
+    ];
+    const geometries = previews.map((preview) => {
+      const stage = activeStage(preview);
+      return layoutPositions(activeLayout(preview), fixtureIdsForStage(stage));
+    });
+
+    expect(geometries.map((positions) => positions.length)).toEqual([400, 400, 400, 400]);
+    expect(geometries.slice(1)).toEqual([geometries[0], geometries[0], geometries[0]]);
   });
 });

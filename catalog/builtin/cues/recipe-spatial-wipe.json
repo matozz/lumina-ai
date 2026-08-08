@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "recipe.spatial-wipe",
+  "revision": 1,
+  "name": "Spatial Wipe In",
+  "description": "A readable single-layer wipe for entering a new section without stacked effects.",
+  "nominal_length_ticks": 15360,
+  "layers": [
+    {
+      "id": "wipe",
+      "effect_ref": {
+        "id": "builtin.transition.wipe",
+        "revision": 1
+      },
+      "target": {
+        "type": "any_compatible"
+      },
+      "parameter_overrides": {
+        "speed": {
+          "type": "scalar",
+          "value": 0.5
+        },
+        "phase": {
+          "type": "scalar",
+          "value": 0
+        },
+        "intensity": {
+          "type": "scalar",
+          "value": 0.8
+        }
+      },
+      "phase": 0,
+      "seed": "b00000000000000b",
+      "layer": 0,
+      "priority": 0
+    }
+  ],
+  "trigger_policy": {
+    "mode": "timeline",
+    "quantize": "bar"
+  }
+}

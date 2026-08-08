@@ -72,7 +72,6 @@ pub fn run() {
             commands::load_show,
             commands::save_project,
             commands::load_project,
-            commands::migrate_show_project,
             commands::set_sequencer_mode,
             commands::get_layout_coords,
             commands::preview_layout,

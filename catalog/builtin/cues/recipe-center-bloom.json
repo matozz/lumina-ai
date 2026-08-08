@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "recipe.center-bloom",
+  "revision": 1,
+  "name": "Center-out Bloom",
+  "description": "A single center-out intensity bloom resolved to a compatible Stage area.",
+  "nominal_length_ticks": 15360,
+  "layers": [
+    {
+      "id": "bloom",
+      "effect_ref": {
+        "id": "builtin.spatial.radial-bloom",
+        "revision": 1
+      },
+      "target": {
+        "type": "any_compatible"
+      },
+      "parameter_overrides": {
+        "speed": {
+          "type": "scalar",
+          "value": 0.5
+        },
+        "intensity": {
+          "type": "scalar",
+          "value": 0.8
+        },
+        "direction": {
+          "type": "direction",
+          "value": "forward"
+        }
+      },
+      "phase": 0,
+      "seed": "a00000000000000a",
+      "layer": 0,
+      "priority": 0
+    }
+  ],
+  "trigger_policy": {
+    "mode": "timeline",
+    "quantize": "bar"
+  }
+}

@@ -7,6 +7,7 @@ import {
   addAutomationKeyframe,
   addAutomationLane,
   automationOptions,
+  cueTrackVisualLayout,
   deleteCueClip,
   moveAutomationKeyframes,
   moveCueClip,
@@ -21,7 +22,9 @@ describe("Arrangement timeline model", () => {
 
   beforeEach(() => {
     bundle = createStarterProjectBundle();
-    arrangement = bundle.arrangements[0];
+    arrangement = bundle.arrangements.find(
+      (candidate) => candidate.id === bundle.manifest.active_arrangement_id,
+    )!;
     arrangement.tracks[0].clips = [
       {
         id: "clip-a",
@@ -39,7 +42,9 @@ describe("Arrangement timeline model", () => {
       start_tick: 1_920,
       duration_tick: 3_840,
     });
-    expect(() => resizeCueClip(arrangement, "clip-a", 100_000)).toThrow(/inside/);
+    expect(() => resizeCueClip(arrangement, "clip-a", arrangement.length_ticks + 1)).toThrow(
+      /inside/,
+    );
   });
 
   it("enforces reject overlap policy with a recoverable diagnostic", () => {
@@ -51,6 +56,46 @@ describe("Arrangement timeline model", () => {
       duration_tick: 1_000,
     });
     expect(() => moveCueClip(arrangement, "clip-a", 3_900)).toThrow(/rejects overlap/);
+  });
+
+  it("keeps semantic layers separate and packs same-layer overlaps into extra visual rows", () => {
+    const layout = cueTrackVisualLayout([
+      {
+        id: "layer-0-a",
+        cue_ref: { id: "cue-a", revision: 1 },
+        start_tick: 0,
+        duration_tick: 1_920,
+        layer: 0,
+      },
+      {
+        id: "layer-0-overlap",
+        cue_ref: { id: "cue-b", revision: 1 },
+        start_tick: 960,
+        duration_tick: 1_920,
+        layer: 0,
+      },
+      {
+        id: "layer-0-follow",
+        cue_ref: { id: "cue-c", revision: 1 },
+        start_tick: 2_880,
+        duration_tick: 960,
+        layer: 0,
+      },
+      {
+        id: "layer-3",
+        cue_ref: { id: "cue-d", revision: 1 },
+        start_tick: 0,
+        duration_tick: 960,
+        layer: 3,
+      },
+    ]);
+
+    expect(layout.layerCount).toBe(2);
+    expect(layout.rowCount).toBe(3);
+    expect(layout.placements.get("layer-0-a")).toMatchObject({ row: 0, subrow: 0 });
+    expect(layout.placements.get("layer-0-overlap")).toMatchObject({ row: 1, subrow: 1 });
+    expect(layout.placements.get("layer-0-follow")).toMatchObject({ row: 0, subrow: 0 });
+    expect(layout.placements.get("layer-3")).toMatchObject({ row: 2, semanticLayer: 3 });
   });
 
   it("resolves typed global and CueLayer parameters and removes dependent lanes with a clip", () => {
@@ -103,8 +148,9 @@ describe("Arrangement timeline model", () => {
     projectActions.updateArrangement(reference, "Seed clip", (draft) => {
       draft.tracks[0].clips = structuredClone(arrangement.tracks[0].clips);
     });
+    const workingReference = useProjectStore.getState().selectedArrangementRef;
     const historyBefore = useProjectStore.getState().historyCursor;
-    projectActions.updateArrangement(reference, "Move CueClip", (draft) => {
+    projectActions.updateArrangement(workingReference, "Move CueClip", (draft) => {
       moveCueClip(draft, "clip-a", 5_760);
     });
     expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 1);

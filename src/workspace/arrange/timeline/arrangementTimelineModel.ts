@@ -29,6 +29,70 @@ export interface ArrangementAutomationOption {
   target: ArrangementAutomationTarget;
 }
 
+export const CUE_CLIP_HEIGHT = 40;
+export const CUE_TRACK_MIN_HEIGHT = 64;
+export const CUE_TRACK_PADDING = 8;
+export const CUE_TRACK_ROW_PITCH = 44;
+
+export interface CueClipVisualPlacement {
+  row: number;
+  semanticLayer: number;
+  subrow: number;
+}
+
+export interface CueTrackVisualLayout {
+  height: number;
+  layerCount: number;
+  placements: Map<string, CueClipVisualPlacement>;
+  rowCount: number;
+}
+
+export function cueTrackVisualLayout(clips: CueClip[]): CueTrackVisualLayout {
+  const byLayer = new Map<number, CueClip[]>();
+  for (const clip of clips) {
+    const layer = clip.layer ?? 0;
+    const entries = byLayer.get(layer) ?? [];
+    entries.push(clip);
+    byLayer.set(layer, entries);
+  }
+
+  const placements = new Map<string, CueClipVisualPlacement>();
+  let rowOffset = 0;
+  for (const [semanticLayer, entries] of [...byLayer.entries()].sort(
+    ([left], [right]) => left - right,
+  )) {
+    const rowEnds: number[] = [];
+    const ordered = [...entries].sort(
+      (left, right) =>
+        left.start_tick - right.start_tick ||
+        left.duration_tick - right.duration_tick ||
+        left.id.localeCompare(right.id),
+    );
+    for (const clip of ordered) {
+      const start = clip.start_tick;
+      let subrow = rowEnds.findIndex((end) => end <= start);
+      if (subrow < 0) {
+        subrow = rowEnds.length;
+        rowEnds.push(0);
+      }
+      rowEnds[subrow] = start + clip.duration_tick;
+      placements.set(clip.id, { row: rowOffset + subrow, semanticLayer, subrow });
+    }
+    rowOffset += Math.max(1, rowEnds.length);
+  }
+
+  const rowCount = Math.max(1, rowOffset);
+  return {
+    height: Math.max(
+      CUE_TRACK_MIN_HEIGHT,
+      CUE_TRACK_PADDING * 2 + CUE_CLIP_HEIGHT + (rowCount - 1) * CUE_TRACK_ROW_PITCH,
+    ),
+    layerCount: byLayer.size,
+    placements,
+    rowCount,
+  };
+}
+
 export const MASTER_DIMMER_DEFINITION: ParameterDefinitionDSL = {
   id: "master_dimmer",
   name: "Master dimmer",
@@ -47,7 +111,7 @@ export function findCueClip(arrangement: ArrangementDocument, clipId: string) {
   }
   throw timelineError(
     "ARRANGEMENT_CLIP_MISSING",
-    `CueClip ${clipId} is no longer present in this Arrangement revision.`,
+    `CueClip ${clipId} is no longer present in this Arrangement.`,
     "Select an existing CueClip and retry the edit.",
   );
 }

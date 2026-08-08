@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "recipe.four-on-floor",
+  "revision": 1,
+  "name": "Full-stage Beat Breathe",
+  "description": "A beat-synced intensity breathe across the active Stage.",
+  "nominal_length_ticks": 15360,
+  "layers": [
+    {
+      "id": "breathe",
+      "effect_ref": {
+        "id": "builtin.intensity.breathe",
+        "revision": 1
+      },
+      "target": {
+        "type": "all"
+      },
+      "parameter_overrides": {
+        "speed": {
+          "type": "scalar",
+          "value": 2
+        },
+        "intensity": {
+          "type": "scalar",
+          "value": 0.8
+        }
+      },
+      "phase": 0,
+      "seed": "1000000000000001",
+      "layer": 0,
+      "priority": 0
+    }
+  ],
+  "trigger_policy": {
+    "mode": "timeline",
+    "quantize": "beat"
+  }
+}

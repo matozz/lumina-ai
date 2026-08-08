@@ -22,13 +22,20 @@ export function createCueDraftFromEffect(
   bundle: ProjectBundle,
   effectRef: { id: string; revision: number },
   catalog: ProductionCatalog | null,
+  targetSetId?: string,
 ) {
   const scratch = structuredClone(bundle);
   const productionEffect = exactAsset(catalog?.effects ?? [], effectRef);
   if (productionEffect && !exactAsset(scratch.effects, effectRef)) {
     scratch.effects.push(structuredClone(productionEffect));
   }
-  return createCueAsset(scratch, [effectRef]);
+  const cue = createCueAsset(scratch, [effectRef]);
+  const stage = exactAsset(scratch.stages, cue.compatible_stage_ref);
+  const layer = cue.layers[0];
+  if (layer && targetSetId && stage?.target_sets.some((target) => target.id === targetSetId)) {
+    layer.target_set_ref.target_set_id = targetSetId;
+  }
+  return cue;
 }
 
 export function collectCueEffects(bundle: ProjectBundle, catalog: ProductionCatalog | null) {

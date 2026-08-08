@@ -1,9 +1,9 @@
 import type {
-  AutomationTargetV3DSL,
+  AutomationTargetDSL,
   ParameterValueDSL,
-  ShowDocumentV4,
-  TimelineV4DSL,
-} from "@/generated/show-document-v4";
+  ShowDocumentV1,
+  TimelineV1DSL,
+} from "@/generated/show-document-v1";
 
 export type {
   AutomationLaneDSL,
@@ -17,7 +17,7 @@ export type {
   LayoutDSL,
   MetaDSL,
   PatchDSL,
-  AutomationTargetV3DSL,
+  AutomationTargetDSL,
   EffectCatalogDSL,
   EffectDefinitionDSL,
   EffectGraphDSL,
@@ -27,28 +27,29 @@ export type {
   EffectPortRefDSL,
   ParameterDefinitionDSL,
   ParameterValueDSL,
-  PhaserStepDSL,
+  SequenceStepDSL,
   EffectClipDSL,
   KeyframeDSL,
   KeyframeInterpolationDSL,
   KeyframeTangentDSL,
   OverlapPolicyDSL,
   OscillatorWaveformDSL,
-  ShowDocumentV4,
+  ShowDocumentV1,
   SortByDSL,
   StepValuesDSL,
   SvgPathDef,
   TempoMapDSL,
   TempoPointDSL,
   TimelineTrackDSL,
-  TimelineV4DSL,
-} from "@/generated/show-document-v4";
+  TimelineV1DSL,
+} from "@/generated/show-document-v1";
 
 export type {
   CueRecipeDefinition,
   CueRecipeLayer,
   CueRecipeSceneDSL,
   CueRecipeTargetDSL,
+  ProjectTemplateDefinition,
   ProductionCatalog,
 } from "@/generated/production-catalog-v1";
 
@@ -104,10 +105,12 @@ export type {
   TargetingSelection,
   TargetingTransition,
   TimeSignaturePoint,
-} from "@/generated/project-contract-v2";
+} from "@/generated/project-contract-v1";
 
-export type FullDSL = ShowDocumentV4;
-export type TimelineDSL = TimelineV4DSL;
+export type { UserAssetPack } from "@/generated/user-asset-pack-v1";
+
+export type FullDSL = ShowDocumentV1;
+export type TimelineDSL = TimelineV1DSL;
 export interface CueRecipeRef {
   id: string;
   revision: number;
@@ -116,7 +119,7 @@ export type FromTo = ParameterValueDSL["value"];
 export type Easing = "hold" | "linear" | "ease_in" | "ease_out" | "ease_in_out" | "bezier";
 export type TimelineActionDSL =
   | { type: "effect"; instance_id: string }
-  | { type: "animate"; target: AutomationTargetV3DSL; from: FromTo; to: FromTo; easing?: Easing };
+  | { type: "animate"; target: AutomationTargetDSL; from: FromTo; to: FromTo; easing?: Easing };
 export interface TimelineEventDSL {
   id?: string;
   beat: number;
@@ -172,24 +175,10 @@ export interface CompileResult {
   sequence_names: string[];
   errors: Diagnostic[];
   warnings: Diagnostic[];
-  migration_report: MigrationReport;
-}
-
-export interface MigrationChange {
-  code: string;
-  path: string;
-  message: string;
-}
-
-export interface MigrationReport {
-  from_version: number | null;
-  to_version: number;
-  changes: MigrationChange[];
 }
 
 export interface LoadShowResult {
-  document: ShowDocumentV4;
-  migration_report: MigrationReport;
+  document: ShowDocumentV1;
 }
 
 export interface ShowSnapshotState {
@@ -282,26 +271,6 @@ export interface ProjectCompileResult {
   fixture_count: number;
   layout_coords: LayoutCoord[];
   errors: Diagnostic[];
-}
-
-export interface ProjectMigrationReport {
-  source_schema_version: number | null;
-  project_bundle_schema_version: number;
-  changes: MigrationChange[];
-}
-
-export interface MigratedProject {
-  bundle: import("@/generated/project-contract-v2").ProjectBundle;
-  migration_report: ProjectMigrationReport;
-  quarantined_assets?: QuarantinedProjectAsset[];
-}
-
-export interface QuarantinedProjectAsset {
-  kind: "effect" | "cue";
-  id: string | null;
-  revision: number | null;
-  source: unknown;
-  diagnostics: Diagnostic[];
 }
 
 export type TransportState = "stopped" | "playing" | "paused" | "seeking" | "error";

@@ -1,6 +1,6 @@
 import Ajv2020, { type ErrorObject } from "ajv/dist/2020.js";
-import schema from "../../schemas/project-bundle-v2.schema.json";
-import type { ProjectBundle } from "@/generated/project-contract-v2";
+import schema from "../../schemas/project-bundle-v1.schema.json";
+import type { ProjectBundle } from "@/generated/project-contract-v1";
 import type { SchemaIssue } from "./showDocument";
 
 export type ProjectBundleValidation =
@@ -27,7 +27,7 @@ validator.addFormat("double", { type: "number", validate: Number.isFinite });
 const validate = validator.compile<ProjectBundle>(schema);
 
 export const projectBundleSchema = schema;
-export const projectBundleSchemaUri = "https://lumina.local/schema/project-bundle-v2.json";
+export const projectBundleSchemaUri = "https://lumina.local/schema/project-bundle-v1.json";
 
 export function validateProjectBundle(value: unknown): ProjectBundleValidation {
   if (validate(value)) return { success: true, data: value, issues: [] };
@@ -43,6 +43,6 @@ function toSchemaIssue(error: ErrorObject): SchemaIssue {
   return {
     keyword: error.keyword,
     path: error.instancePath || "$",
-    message: error.message ?? "does not match ProjectBundle v2",
+    message: error.message ?? "does not match ProjectBundle V1",
   };
 }

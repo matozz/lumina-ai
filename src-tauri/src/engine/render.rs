@@ -211,9 +211,11 @@ pub(crate) fn render_resolved(
                 ) {
                     values[handle.index()] = Some(AttributeValue::Color([red, green, blue]));
                 }
+                let intensity_handle =
+                    super::attribute::resolve_attribute(fixture.profile, INTENSITY_ATTRIBUTE);
                 apply_intensity_control(
                     &mut values,
-                    super::attribute::resolve_attribute(fixture.profile, INTENSITY_ATTRIBUTE),
+                    intensity_handle,
                     resolve_effect_scalar(
                         definition,
                         instance,
@@ -229,6 +231,9 @@ pub(crate) fn render_resolved(
                         parameters,
                         INTENSITY_PARAMETER_ID,
                     ),
+                    intensity_handle.is_some_and(|handle| {
+                        effect_graph_writes_attribute(definition, fixture.profile, handle)
+                    }),
                 );
                 apply_scalar_override(
                     &mut values,
@@ -362,19 +367,52 @@ fn apply_intensity_control(
     handle: Option<AttributeHandle>,
     scale: f64,
     explicit_override: Option<f64>,
+    graph_writes_intensity: bool,
 ) {
     let Some(handle) = handle else {
         return;
     };
     match values.get_mut(handle.index()) {
         Some(Some(AttributeValue::Scalar(value))) => *value *= scale as f32,
-        Some(slot @ None) => {
+        Some(slot @ None) if !graph_writes_intensity => {
             if let Some(value) = explicit_override {
                 *slot = Some(AttributeValue::Scalar(value as f32));
             }
         }
         _ => {}
     }
+}
+
+fn effect_graph_writes_attribute(
+    definition: &crate::engine::effect::EffectDefinition,
+    profile: crate::engine::profile::FixtureProfileHandle,
+    attribute: AttributeHandle,
+) -> bool {
+    definition.graph.writers.iter().any(|writer| {
+        let Some(crate::engine::effect::CompiledEffectNode::AttributeWriter {
+            input,
+            attributes,
+            ..
+        }) = definition.graph.nodes.get(writer.index())
+        else {
+            return false;
+        };
+        if attributes.get(&profile).copied().flatten() == Some(attribute) {
+            return true;
+        }
+        let Some(crate::engine::effect::CompiledEffectNode::StepSequence { profiles, .. }) =
+            definition.graph.nodes.get(input.index())
+        else {
+            return false;
+        };
+        profiles.get(&profile).is_some_and(|sequence| {
+            sequence.steps.iter().any(|step| {
+                step.values
+                    .get(attribute.index())
+                    .is_some_and(Option::is_some)
+            })
+        })
+    })
 }
 
 fn resolve_timeline_at(
@@ -463,36 +501,60 @@ mod tests {
     fn compiled_show() -> crate::compiler::CompiledShow {
         let dsl = crate::document::load_document(
             r##"{
-                "schema_version": 2,
+                "schema_version": 1,
                 "meta": { "name": "render at" },
                 "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 1] }],
                 "layout": { "type": "generator", "generator": {
                     "shape": "matrix", "rows": 1, "columns": 1, "spacing": 1
                 }},
                 "groups": [{ "id": "all", "name": "All", "fixtures": [1] }],
-                "phasers": [{
-                    "id": "pulse", "name": "Pulse", "target": "all", "multiplier": 1,
-                    "steps": [
-                        { "values": { "color": "#ffffff", "dimmer": 1 }, "width": 50, "transition": 0 },
-                        { "values": { "color": "#000000", "dimmer": 0 }, "width": 50, "transition": 0 }
-                    ],
-                    "phase": { "mode": "spread", "spread": { "from": 0, "to": 0 } }
+                "effect_definitions": [{
+                    "id": "project.pulse", "name": "Pulse", "revision": 1, "source": "project_local",
+                    "parameters": [{
+                        "id": "speed", "name": "Speed", "value_type": "scalar",
+                        "default_value": { "type": "scalar", "value": 1.0 }, "range": [0.25, 8.0],
+                        "unit": "multiplier", "ui_hint": "slider", "automation": "continuous"
+                    }],
+                    "graph": { "nodes": [
+                        { "type": "time", "id": "time" },
+                        { "type": "step_sequence", "id": "sequence", "phase": { "node_id": "time", "port": "scalar" }, "steps": [
+                            { "values": { "color": "#ffffff", "dimmer": 1 }, "width": 50, "transition": 0 },
+                            { "values": { "color": "#000000", "dimmer": 0 }, "width": 50, "transition": 0 }
+                        ]},
+                        { "type": "attribute_writer", "id": "output", "input": { "node_id": "sequence", "port": "attribute_set" } }
+                    ]},
+                    "catalog": { "energy": 0.5, "density": 0.5, "motion": "pulse", "colorfulness": 0.5, "strobe_risk": "none", "required_attributes": ["intensity", "color.rgb"] }
                 }],
-                "timeline": { "events": [
-                    { "beat": 0, "duration": 4, "action": { "type": "phaser", "phaser": "pulse" } },
-                    { "beat": 0, "duration": 2, "action": {
-                        "type": "animate", "target": {
-                            "scope": "effect_instance", "instance_id": "pulse", "parameter_id": "multiplier"
-                        },
-                        "from": 1, "to": 3, "easing": "linear"
-                    }},
-                    { "beat": 0, "duration": 2, "action": {
-                        "type": "animate", "target": {
-                            "scope": "global", "parameter_id": "master_dimmer"
-                        },
-                        "from": 1, "to": 0.5, "easing": "linear"
-                    }}
-                ]}
+                "effect_instances": [{
+                    "id": "pulse", "definition_id": "project.pulse", "definition_revision": 1,
+                    "target_group_id": "all", "seed": "0000000000000001"
+                }],
+                "timeline": {
+                    "ppq": 960,
+                    "tempo_map": { "points": [{ "time_tick": 0, "bpm": 128 }] },
+                    "tracks": [{
+                        "id": "effects", "name": "Effects", "overlap_policy": "layer",
+                        "clips": [{ "id": "pulse-clip", "instance_id": "pulse", "start_tick": 0, "duration_tick": 3840 }],
+                        "automation_lanes": [
+                            {
+                                "id": "pulse-speed",
+                                "target": { "scope": "effect_instance", "instance_id": "pulse", "parameter_id": "speed" },
+                                "keyframes": [
+                                    { "id": "speed-0", "time_tick": 0, "value": { "type": "scalar", "value": 1 }, "interpolation": "linear" },
+                                    { "id": "speed-1", "time_tick": 1920, "value": { "type": "scalar", "value": 3 }, "interpolation": "hold" }
+                                ]
+                            },
+                            {
+                                "id": "master-dimmer",
+                                "target": { "scope": "global", "parameter_id": "master_dimmer" },
+                                "keyframes": [
+                                    { "id": "master-0", "time_tick": 0, "value": { "type": "scalar", "value": 1 }, "interpolation": "linear" },
+                                    { "id": "master-1", "time_tick": 1920, "value": { "type": "scalar", "value": 0.5 }, "interpolation": "hold" }
+                                ]
+                            }
+                        ]
+                    }]
+                }
             }"##,
         )
         .expect("test DSL")
@@ -635,27 +697,34 @@ mod tests {
     fn moving_head_effects_render_profile_specific_angle_attributes() {
         let dsl = crate::document::load_document(
             r##"{
-                "schema_version": 2,
+                "schema_version": 1,
                 "meta": { "name": "moving attributes" },
                 "patch": [{ "profile_id": "generic-moving-head", "id_range": [1, 1] }],
                 "layout": { "type": "generator", "generator": {
                     "shape": "matrix", "rows": 1, "columns": 1, "spacing": 1
                 }},
                 "groups": [{ "id": "all", "name": "All", "fixtures": [1] }],
-                "phasers": [{
-                    "id": "position", "name": "Position", "target": "all",
-                    "steps": [{
-                        "values": {
-                            "color": "#ff0000", "dimmer": 0.8, "pan": 90, "tilt": -45
-                        },
-                        "width": 100, "transition": 0
-                    }],
-                    "phase": { "mode": "spread", "spread": { "from": 0, "to": 0 } }
+                "effect_definitions": [{
+                    "id": "project.position", "name": "Position", "revision": 1, "source": "project_local",
+                    "parameters": [],
+                    "graph": { "nodes": [
+                        { "type": "time", "id": "time" },
+                        { "type": "step_sequence", "id": "sequence", "phase": { "node_id": "time", "port": "scalar" }, "steps": [{
+                            "values": { "color": "#ff0000", "dimmer": 0.8, "pan": 90, "tilt": -45 },
+                            "width": 100, "transition": 0
+                        }]},
+                        { "type": "attribute_writer", "id": "output", "input": { "node_id": "sequence", "port": "attribute_set" } }
+                    ]},
+                    "catalog": { "energy": 0.5, "density": 0.5, "motion": "sweep", "colorfulness": 0.5, "strobe_risk": "none", "required_attributes": ["intensity", "color.rgb", "position.pan", "position.tilt"] }
                 }],
-                "timeline": { "events": [{
-                    "beat": 0, "duration": 2,
-                    "action": { "type": "phaser", "phaser": "position" }
-                }]}
+                "effect_instances": [{ "id": "position", "definition_id": "project.position", "definition_revision": 1, "target_group_id": "all", "seed": "0000000000000001" }],
+                "timeline": {
+                    "ppq": 960,
+                    "tempo_map": { "points": [{ "time_tick": 0, "bpm": 128 }] },
+                    "tracks": [{ "id": "effects", "name": "Effects", "overlap_policy": "layer", "clips": [
+                        { "id": "position-clip", "instance_id": "position", "start_tick": 0, "duration_tick": 1920 }
+                    ]}]
+                }
             }"##,
         )
         .expect("moving-head DSL")
@@ -677,37 +746,45 @@ mod tests {
     fn overlapping_effects_use_htp_intensity_and_stable_ltp_color() {
         let dsl = crate::document::load_document(
             r##"{
-                "schema_version": 2,
+                "schema_version": 1,
                 "meta": { "name": "mixed attributes" },
                 "patch": [{ "profile_id": "generic-rgb", "id_range": [1, 1] }],
                 "layout": { "type": "generator", "generator": {
                     "shape": "matrix", "rows": 1, "columns": 1, "spacing": 1
                 }},
                 "groups": [{ "id": "all", "name": "All", "fixtures": [1] }],
-                "phasers": [
+                "effect_definitions": [
                     {
-                        "id": "red", "name": "Red", "target": "all",
-                        "steps": [{
-                            "values": { "color": "#ff0000", "dimmer": 0.25 },
-                            "width": 100, "transition": 0
-                        }],
-                        "phase": { "mode": "spread", "spread": { "from": 0, "to": 0 } }
+                        "id": "project.red", "name": "Red", "revision": 1, "source": "project_local", "parameters": [],
+                        "graph": { "nodes": [
+                            { "type": "time", "id": "time" },
+                            { "type": "step_sequence", "id": "sequence", "phase": { "node_id": "time", "port": "scalar" }, "steps": [{ "values": { "color": "#ff0000", "dimmer": 0.25 }, "width": 100, "transition": 0 }]},
+                            { "type": "attribute_writer", "id": "output", "input": { "node_id": "sequence", "port": "attribute_set" } }
+                        ]},
+                        "catalog": { "energy": 0.25, "density": 0.5, "motion": "static", "colorfulness": 1.0, "strobe_risk": "none", "required_attributes": ["intensity", "color.rgb"] }
                     },
                     {
-                        "id": "blue", "name": "Blue", "target": "all",
-                        "steps": [{
-                            "values": { "color": "#0000ff", "dimmer": 0.8 },
-                            "width": 100, "transition": 0
-                        }],
-                        "phase": { "mode": "spread", "spread": { "from": 0, "to": 0 } }
+                        "id": "project.blue", "name": "Blue", "revision": 1, "source": "project_local", "parameters": [],
+                        "graph": { "nodes": [
+                            { "type": "time", "id": "time" },
+                            { "type": "step_sequence", "id": "sequence", "phase": { "node_id": "time", "port": "scalar" }, "steps": [{ "values": { "color": "#0000ff", "dimmer": 0.8 }, "width": 100, "transition": 0 }]},
+                            { "type": "attribute_writer", "id": "output", "input": { "node_id": "sequence", "port": "attribute_set" } }
+                        ]},
+                        "catalog": { "energy": 0.8, "density": 0.5, "motion": "static", "colorfulness": 1.0, "strobe_risk": "none", "required_attributes": ["intensity", "color.rgb"] }
                     }
                 ],
-                "timeline": { "events": [
-                    { "beat": 0, "duration": 2,
-                      "action": { "type": "phaser", "phaser": "red" } },
-                    { "beat": 0, "duration": 2,
-                      "action": { "type": "phaser", "phaser": "blue" } }
-                ]}
+                "effect_instances": [
+                    { "id": "red", "definition_id": "project.red", "definition_revision": 1, "target_group_id": "all", "seed": "0000000000000001" },
+                    { "id": "blue", "definition_id": "project.blue", "definition_revision": 1, "target_group_id": "all", "seed": "0000000000000002" }
+                ],
+                "timeline": {
+                    "ppq": 960,
+                    "tempo_map": { "points": [{ "time_tick": 0, "bpm": 128 }] },
+                    "tracks": [{ "id": "effects", "name": "Effects", "overlap_policy": "layer", "clips": [
+                        { "id": "red-clip", "instance_id": "red", "start_tick": 0, "duration_tick": 1920, "layer": 0 },
+                        { "id": "blue-clip", "instance_id": "blue", "start_tick": 0, "duration_tick": 1920, "layer": 1 }
+                    ]}]
+                }
             }"##,
         )
         .expect("mixed DSL")

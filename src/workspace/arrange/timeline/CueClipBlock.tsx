@@ -21,6 +21,8 @@ interface CueClipBlockProps {
   onSelect: () => void;
   onSnapPreview: (tick: number | null) => void;
   selected: boolean;
+  top: number;
+  visualRow: number;
   viewportRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -44,6 +46,8 @@ export const CueClipBlock = memo(function CueClipBlock({
   onSelect,
   onSnapPreview,
   selected,
+  top,
+  visualRow,
   viewportRef,
 }: CueClipBlockProps) {
   const elementRef = useRef<HTMLButtonElement>(null);
@@ -136,18 +140,21 @@ export const CueClipBlock = memo(function CueClipBlock({
       ref={elementRef}
       type="button"
       className={cn(
-        "border-primary/50 bg-primary text-primary-foreground group absolute top-2 h-10 touch-none overflow-hidden rounded-md border px-2 text-left text-[10px] shadow-sm will-change-transform",
+        "border-primary/50 bg-primary text-primary-foreground group absolute h-10 touch-none overflow-hidden rounded-md border px-2 text-left text-[10px] shadow-sm will-change-transform",
         "cursor-grab focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing",
         selected && "ring-primary/40 ring-2",
       )}
       style={{
         left: ticksToPixels(clip.start_tick, geometry),
+        top,
         width: Math.max(20, ticksToPixels(clip.duration_tick, geometry)),
       }}
-      aria-label={`${cueName}, starts at tick ${clip.start_tick}, duration ${clip.duration_tick} ticks`}
+      aria-label={`${cueName}, starts at tick ${clip.start_tick}, duration ${clip.duration_tick} ticks, layer ${clip.layer ?? 0}, visual row ${visualRow + 1}`}
       aria-pressed={selected}
       aria-keyshortcuts="ArrowLeft ArrowRight Alt+ArrowLeft Alt+ArrowRight Delete Backspace Control+D Meta+D"
       data-clip-id={clip.id}
+      data-clip-layer={clip.layer ?? 0}
+      data-visual-row={visualRow}
       onPointerDown={(event) => start(event, "move")}
       onPointerMove={(event) => {
         if (!interactionRef.current) return;

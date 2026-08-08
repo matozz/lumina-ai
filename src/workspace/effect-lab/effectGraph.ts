@@ -4,7 +4,7 @@ import type {
   OscillatorWaveformDSL,
   ParameterDefinitionDSL,
   ParameterValueDSL,
-  PhaserStepDSL,
+  SequenceStepDSL,
 } from "@/bridge/types";
 import type { EffectFormValues } from "./effectFactory";
 
@@ -73,7 +73,7 @@ export function waveformFromDefinition(
   return waveform && waveforms.includes(waveform) ? waveform : "pulse";
 }
 
-function waveformSteps(values: EffectFormValues): PhaserStepDSL[] {
+function waveformSteps(values: EffectFormValues): SequenceStepDSL[] {
   const sampleCount = values.waveform === "pulse" ? 8 : 16;
   return Array.from({ length: sampleCount }, (_, index) => {
     const phase = index / sampleCount;

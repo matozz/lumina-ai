@@ -23,9 +23,9 @@ describe("TargetSetEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Preview" }));
 
     const outputs = preview.mock.calls[0][0].detail as FixtureFramePayload[];
-    expect(outputs).toHaveLength(80);
+    expect(outputs).toHaveLength(400);
     expect(outputs[0].attributes[0].value).toEqual({ type: "scalar", value: 0.04 });
-    expect(outputs[10].attributes[0].value).toEqual({ type: "scalar", value: 1 });
+    expect(outputs[20].attributes[0].value).toEqual({ type: "scalar", value: 1 });
 
     fireEvent.click(screen.getByRole("button", { name: "Save area" }));
     const state = useProjectStore.getState();
@@ -34,8 +34,12 @@ describe("TargetSetEditor", () => {
       revision: 1,
     })?.target_sets.find((target) => target.id === "rows");
     const nextRows = activeStage(state.bundle).target_sets.find((target) => target.id === "rows");
-    expect(oldRows?.selector).toMatchObject({ indices: [0, 1, 2, 3, 4, 5, 6, 7] });
-    expect(nextRows?.selector).toMatchObject({ indices: [1, 2, 3, 4, 5, 6, 7] });
+    expect(oldRows?.selector).toMatchObject({
+      indices: Array.from({ length: 20 }, (_, index) => index),
+    });
+    expect(nextRows?.selector).toMatchObject({
+      indices: Array.from({ length: 19 }, (_, index) => index + 1),
+    });
     expect(activeStage(state.bundle).revision).toBe(2);
 
     window.removeEventListener("workspace:test-fixtures", preview);

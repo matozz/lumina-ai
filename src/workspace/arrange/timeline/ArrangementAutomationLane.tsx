@@ -52,6 +52,9 @@ interface KeyframeInteraction {
   startScrollLeft: number;
 }
 
+const AUTOMATION_ROW_HEIGHT = 40;
+const AUTOMATION_VALUE_INSET = 8;
+
 export const ArrangementAutomationLane = memo(function ArrangementAutomationLane({
   arrangement,
   definition,
@@ -215,6 +218,8 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
             definition={definition}
             ppq={arrangement.ppq}
             beatWidth={geometry.beatWidth}
+            height={AUTOMATION_ROW_HEIGHT}
+            valueInset={AUTOMATION_VALUE_INSET}
           />
         );
       })}
@@ -229,7 +234,9 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
             inspectorOpen={inspectorId === keyframe.id}
             keyframe={keyframe}
             keyframes={lane.keyframes}
+            rowHeight={AUTOMATION_ROW_HEIGHT}
             selected={selected}
+            valueInset={AUTOMATION_VALUE_INSET}
             onElement={(element) => {
               if (element) keyframeRefs.current.set(keyframe.id, element);
               else keyframeRefs.current.delete(keyframe.id);

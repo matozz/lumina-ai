@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.matrix-main-20x20",
+  "revision": 1,
+  "name": "Main Matrix 20×20",
+  "category": "basic",
+  "editor": { "mode": "form" },
+  "geometry": {
+    "shape": "matrix",
+    "rows": 20,
+    "columns": 20,
+    "fixture_size": { "width": 12, "height": 12 },
+    "gap": { "x": 8, "y": 8 },
+    "pitch": { "x": 20, "y": 20 },
+    "origin": { "x": 0, "y": 0 }
+  }
+}

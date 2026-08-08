@@ -24,6 +24,12 @@
         "$ref": "#/$defs/AssetRef"
       }
     },
+    "layout_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AssetRef"
+      }
+    },
     "name": {
       "type": "string"
     },
@@ -52,6 +58,7 @@
     "revision",
     "name",
     "stage_ref",
+    "layout_refs",
     "effect_refs",
     "cue_refs",
     "arrangement_refs",

@@ -265,7 +265,7 @@ export function ArrangementInspector() {
           </Button>
 
           <Separator />
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-1 gap-1.5">
             <Button
               size="xs"
               variant="outline"

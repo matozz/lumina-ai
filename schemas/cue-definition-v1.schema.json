@@ -79,6 +79,22 @@
       "additionalProperties": false,
       "required": ["id", "revision"]
     },
+    "ColorStopDSL": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string"
+        },
+        "position": {
+          "type": "number",
+          "format": "double",
+          "maximum": 1.0,
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false,
+      "required": ["position", "color"]
+    },
     "CueAutomationLane": {
       "type": "object",
       "properties": {
@@ -163,6 +179,16 @@
         },
         "target_set_ref": {
           "$ref": "#/$defs/TargetSetRef"
+        },
+        "targeting_scene_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TargetingSceneRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "trigger_policy": {
           "$ref": "#/$defs/CueTriggerPolicy"
@@ -332,6 +358,51 @@
           },
           "additionalProperties": false,
           "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "enum"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "color_stops"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ColorStopDSL"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
         }
       ]
     },
@@ -356,6 +427,24 @@
       },
       "additionalProperties": false,
       "required": ["stage_id", "stage_revision", "target_set_id"]
+    },
+    "TargetingSceneRef": {
+      "type": "object",
+      "properties": {
+        "stage_id": {
+          "type": "string"
+        },
+        "stage_revision": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        },
+        "targeting_scene_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["stage_id", "stage_revision", "targeting_scene_id"]
     }
   }
 }

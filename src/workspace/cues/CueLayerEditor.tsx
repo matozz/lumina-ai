@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { friendlyEffectAttribute } from "@/document/effectCompatibility";
 import { assetKey } from "@/document/projectModel";
 import type { CueLayerUpdate } from "./cueAuthoring";
 import { CueOverrideControls } from "./CueOverrideControls";
@@ -236,24 +237,28 @@ export function CueLayerEditor({
 
       {advanced && (
         <div className="grid grid-cols-2 gap-2">
-          <SelectField
-            label="Intensity mix"
-            value={
-              layer.mix_overrides?.find((item) => item.attribute_id === "intensity")?.policy ??
-              "htp"
-            }
-            items={MIX_ITEMS}
-            onChange={(value) =>
-              onUpdate((draftLayer) => {
-                draftLayer.mix_overrides = [
-                  ...(draftLayer.mix_overrides ?? []).filter(
-                    (item) => item.attribute_id !== "intensity",
-                  ),
-                  { attribute_id: "intensity", policy: value as MixPolicy },
-                ];
-              })
-            }
-          />
+          {(effect.catalog.required_attributes ?? []).map((attribute) => (
+            <SelectField
+              key={attribute}
+              label={`${friendlyEffectAttribute(attribute)} mix`}
+              value={
+                layer.mix_overrides?.find((item) => item.attribute_id === attribute)?.policy ??
+                "unset"
+              }
+              items={MIX_ITEMS}
+              onChange={(value) =>
+                onUpdate((draftLayer) => {
+                  const remaining = (draftLayer.mix_overrides ?? []).filter(
+                    (item) => item.attribute_id !== attribute,
+                  );
+                  draftLayer.mix_overrides =
+                    value === "unset"
+                      ? remaining
+                      : [...remaining, { attribute_id: attribute, policy: value as MixPolicy }];
+                })
+              }
+            />
+          ))}
           <SelectField
             label="Trigger"
             value={layer.trigger_policy.mode}
@@ -354,10 +359,13 @@ function ValueSelect({
   );
 }
 
-const MIX_ITEMS = ["htp", "ltp", "add", "multiply", "mask"].map((value) => ({
-  value,
-  label: value.toUpperCase(),
-}));
+const MIX_ITEMS = [
+  { value: "unset", label: "Choose when overlapping" },
+  ...["htp", "ltp", "add", "multiply", "mask"].map((value) => ({
+    value,
+    label: value.toUpperCase(),
+  })),
+];
 const TRIGGER_ITEMS = ["timeline", "toggle", "momentary", "one_shot"].map((value) => ({
   value,
   label: value.replace("_", " "),

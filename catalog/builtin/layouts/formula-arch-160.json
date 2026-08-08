@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.formula-arch-160",
+  "revision": 1,
+  "name": "Parabolic Arch 160",
+  "category": "generated_advanced",
+  "editor": {
+    "mode": "parameter_schema",
+    "parameters": [
+      {
+        "id": "count",
+        "label": "Fixtures",
+        "value_type": "integer",
+        "minimum": 1,
+        "maximum": 2000,
+        "step": 1
+      },
+      {
+        "id": "scale",
+        "label": "Scale",
+        "value_type": "number",
+        "minimum": 0.1,
+        "maximum": 20,
+        "step": 0.1
+      }
+    ]
+  },
+  "geometry": {
+    "shape": "formula",
+    "formula": {
+      "x": "t * 12",
+      "y": "pow(t, 2) * 0.035",
+      "t_range": [-80, 80],
+      "count": 160,
+      "scale": 1
+    },
+    "fixture_size": { "width": 8, "height": 8 }
+  }
+}

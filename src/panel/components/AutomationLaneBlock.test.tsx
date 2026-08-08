@@ -9,7 +9,7 @@ import { AutomationLaneBlock } from "./AutomationLaneBlock";
 
 function documentFixture(): FullDSL {
   return {
-    schema_version: 4,
+    schema_version: 1,
     meta: { name: "Automation row" },
     patch: [],
     layout: { type: "generator", generator: { shape: "custom", fixtures: [] } },

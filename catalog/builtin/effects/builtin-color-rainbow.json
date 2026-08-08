@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "id": "builtin.color.rainbow",
+  "name": "Slow Color Shimmer",
+  "revision": 1,
+  "source": "built_in",
+  "parameters": [
+    {
+      "id": "speed",
+      "name": "Speed",
+      "value_type": "scalar",
+      "default_value": {
+        "type": "scalar",
+        "value": 0.5
+      },
+      "range": [0.25, 8],
+      "step": 0.25,
+      "required": true,
+      "help": "Beat-synced color travel speed.",
+      "safe_fallback": {
+        "type": "scalar",
+        "value": 0.5
+      },
+      "override_policy": "cue_override",
+      "advanced": false,
+      "unit": "multiplier",
+      "ui_hint": "slider",
+      "automation": "continuous"
+    },
+    {
+      "id": "phase",
+      "name": "Phase",
+      "value_type": "scalar",
+      "default_value": {
+        "type": "scalar",
+        "value": 0
+      },
+      "range": [-1, 1],
+      "step": 0.05,
+      "required": true,
+      "help": "Color cycle offset.",
+      "safe_fallback": {
+        "type": "scalar",
+        "value": 0
+      },
+      "override_policy": "cue_override",
+      "advanced": false,
+      "unit": "cycles",
+      "ui_hint": "slider",
+      "automation": "continuous"
+    },
+    {
+      "id": "palette",
+      "name": "Palette",
+      "value_type": "color_stops",
+      "default_value": {
+        "type": "color_stops",
+        "value": [
+          {
+            "position": 0,
+            "color": "#FF245D"
+          },
+          {
+            "position": 0.33,
+            "color": "#FFD84A"
+          },
+          {
+            "position": 0.66,
+            "color": "#36E6A5"
+          },
+          {
+            "position": 1,
+            "color": "#5B7CFF"
+          }
+        ]
+      },
+      "required": true,
+      "help": "Ordered colors used by the flow.",
+      "safe_fallback": {
+        "type": "color_stops",
+        "value": [
+          {
+            "position": 0,
+            "color": "#FF245D"
+          },
+          {
+            "position": 1,
+            "color": "#5B7CFF"
+          }
+        ]
+      },
+      "override_policy": "effect_only",
+      "advanced": true,
+      "graph_binding": {
+        "node_id": "gradient",
+        "property": "color_stops"
+      },
+      "unit": "color_stops",
+      "ui_hint": "color_stops",
+      "automation": "disabled"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "type": "time",
+        "id": "time"
+      },
+      {
+        "type": "spatial_phase",
+        "id": "spatial",
+        "input": {
+          "node_id": "time",
+          "port": "scalar"
+        },
+        "basis": "x",
+        "from": 0,
+        "to": 1,
+        "wrap": true,
+        "custom_order": []
+      },
+      {
+        "type": "color_gradient",
+        "id": "gradient",
+        "input": {
+          "node_id": "spatial",
+          "port": "scalar"
+        },
+        "stops": [
+          {
+            "position": 0,
+            "color": "#FF245D"
+          },
+          {
+            "position": 0.33,
+            "color": "#FFD84A"
+          },
+          {
+            "position": 0.66,
+            "color": "#36E6A5"
+          },
+          {
+            "position": 1,
+            "color": "#5B7CFF"
+          }
+        ]
+      },
+      {
+        "type": "attribute_writer",
+        "id": "writer",
+        "input": {
+          "node_id": "gradient",
+          "port": "color"
+        },
+        "attribute_id": "color.rgb"
+      },
+      {
+        "type": "constant",
+        "id": "visible-intensity",
+        "value": {
+          "type": "scalar",
+          "value": 1
+        }
+      },
+      {
+        "type": "attribute_writer",
+        "id": "intensity-writer",
+        "input": {
+          "node_id": "visible-intensity",
+          "port": "scalar"
+        },
+        "attribute_id": "intensity"
+      }
+    ]
+  },
+  "catalog": {
+    "family": "color",
+    "category": "Color Motion",
+    "visibility": "standard",
+    "mood": ["festival", "bright"],
+    "energy": 0.7,
+    "density": 0.85,
+    "motion": "sweep",
+    "colorfulness": 1,
+    "strobe_risk": "none",
+    "required_attributes": ["color.rgb", "intensity"],
+    "layout_capabilities": ["coordinates"],
+    "parameter_summary": ["speed", "phase"],
+    "deprecated": false
+  }
+}

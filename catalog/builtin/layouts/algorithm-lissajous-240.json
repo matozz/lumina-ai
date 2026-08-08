@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "builtin.layout.algorithm-lissajous-240",
+  "revision": 1,
+  "name": "Lissajous Sculpture 240",
+  "category": "generated_advanced",
+  "editor": {
+    "mode": "parameter_schema",
+    "parameters": [
+      {
+        "id": "a",
+        "label": "Horizontal frequency",
+        "value_type": "number",
+        "minimum": 1,
+        "maximum": 9,
+        "step": 1
+      },
+      {
+        "id": "b",
+        "label": "Vertical frequency",
+        "value_type": "number",
+        "minimum": 1,
+        "maximum": 9,
+        "step": 1
+      },
+      {
+        "id": "scale_x",
+        "label": "Width",
+        "value_type": "number",
+        "minimum": 1,
+        "maximum": 1000,
+        "step": 1
+      },
+      {
+        "id": "scale_y",
+        "label": "Height",
+        "value_type": "number",
+        "minimum": 1,
+        "maximum": 1000,
+        "step": 1
+      }
+    ]
+  },
+  "geometry": {
+    "shape": "algorithm",
+    "algorithm": "lissajous",
+    "count": 240,
+    "fixture_size": { "width": 8, "height": 8 },
+    "origin": { "x": 0, "y": 0 },
+    "parameters": { "a": 3, "b": 2, "delta": 1.5707963267948966, "scale_x": 260, "scale_y": 180 }
+  }
+}

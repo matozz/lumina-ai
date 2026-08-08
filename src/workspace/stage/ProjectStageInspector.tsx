@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { engine } from "@/bridge/commands";
 import type { Diagnostic, LayoutDefinition } from "@/bridge/types";
+import { publishLayoutPreview } from "@/canvas/previewBus";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import {
   fixtureIdsForStage,
   layoutCapacity,
 } from "@/document/layoutDefinition";
+import { generatorDescriptor } from "@/document/generatorRegistry";
 import { activeLayout, activeStage, assetKey, exactAsset } from "@/document/projectModel";
 import { analyzeStageTopology } from "@/document/stageTopology";
 import { cn } from "@/lib/utils";
@@ -94,7 +96,7 @@ export function ProjectStageInspector() {
         .then((coords) => {
           if (request.signal.aborted) return;
           setPreviewDiagnostics([]);
-          window.dispatchEvent(new CustomEvent("engine:layout-draft-coords", { detail: coords }));
+          publishLayoutPreview(coords);
         })
         .catch((error) => {
           if (request.signal.aborted) return;
@@ -108,7 +110,7 @@ export function ProjectStageInspector() {
       request.abort();
       window.clearTimeout(timer);
     };
-  }, [blockingDiagnostics.length, draft, stage, view]);
+  }, [advancedMode, blockingDiagnostics.length, draft, stage, view]);
 
   useEffect(() => {
     if (view === "layout") return;
@@ -205,10 +207,10 @@ export function ProjectStageInspector() {
           </div>
           {usedOnStage && <Badge variant="secondary">On Stage</Badge>}
           {pinnedOnStage && !usedOnStage && <Badge variant="outline">Needs sync</Badge>}
-          {advancedMode && <Badge variant="outline">{draft.editor.mode}</Badge>}
+          {advancedMode && <Badge variant="outline">{editable ? "Editable" : "Read only"}</Badge>}
         </div>
         <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border">
-          <Metric label="Shape" value={draft.geometry.shape} />
+          <Metric label="Generator" value={generatorDescriptor(draft.geometry.shape).label} />
           <Metric label="Positions" value={String(layoutCapacity(draft))} />
           <Metric label="Stage fixtures" value={String(fixtureIds.length)} />
         </div>
@@ -219,7 +221,7 @@ export function ProjectStageInspector() {
             onClick={() =>
               runAction("layout.save_draft", () => {
                 const reference = projectActions.saveLayoutDraft(selectedLayoutRef, draft);
-                setDraft({ ...draft, revision: reference.revision });
+                setDraft({ ...draft, id: reference.id, revision: reference.revision });
               })
             }
           >
@@ -266,7 +268,7 @@ export function ProjectStageInspector() {
                 variant="outline"
                 className="text-destructive hover:text-destructive"
                 disabled={pinnedOnStage}
-                title={pinnedOnStage ? "The current Stage pins this Layout revision." : undefined}
+                title={pinnedOnStage ? "The current Stage uses this Layout." : undefined}
                 onClick={() =>
                   runAction("layout.delete", () => projectActions.deleteLayout(selectedLayoutRef))
                 }

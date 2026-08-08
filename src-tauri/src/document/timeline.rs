@@ -1,4 +1,4 @@
-use super::{AutomationTargetV3DSL, ParameterValueDSL};
+use super::{AutomationTargetDSL, ParameterValueDSL};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -6,7 +6,7 @@ pub const DOCUMENT_DEFAULT_PPQ: u32 = 960;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct TimelineV4DSL {
+pub struct TimelineV1DSL {
     #[schemars(range(min = 1))]
     pub ppq: u32,
     pub tempo_map: TempoMapDSL,
@@ -76,7 +76,7 @@ pub enum ClipPlaybackDSL {
 #[serde(deny_unknown_fields)]
 pub struct AutomationLaneDSL {
     pub id: String,
-    pub target: AutomationTargetV3DSL,
+    pub target: AutomationTargetDSL,
     pub keyframes: Vec<KeyframeDSL>,
 }
 

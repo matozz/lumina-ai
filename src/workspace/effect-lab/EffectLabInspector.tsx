@@ -198,6 +198,7 @@ export function EffectLabInspector() {
       currentBundle,
       { id: saved.id, revision: saved.revision },
       catalog,
+      targetSetId,
     );
     authoringDraftActions.beginNewCue(cue);
     projectActions.setSelectedEffectRef({ id: saved.id, revision: saved.revision });
@@ -248,7 +249,6 @@ export function EffectLabInspector() {
           <div className="flex flex-col gap-3 p-3">
             {advancedMode && (
               <AuthoringSignalSpine
-                revision={session.pinned.revision}
                 status={session.status}
                 comparison={comparison}
                 onComparisonChange={authoringDraftActions.setComparison}
@@ -477,7 +477,7 @@ export function EffectLabInspector() {
                 onClick={authoringDraftActions.discardEffect}
               >
                 <Undo2 data-icon="inline-start" aria-hidden="true" />
-                Discard working draft
+                Discard changes
               </Button>
             )}
           </div>

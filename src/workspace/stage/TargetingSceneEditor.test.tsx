@@ -11,7 +11,7 @@ describe("TargetingSceneEditor", () => {
     projectActions.reset();
   });
 
-  it("previews a partition and saves loop/phase scene controls as a new Stage revision", () => {
+  it("previews a partition and saves loop/phase scene controls", () => {
     const preview = vi.fn();
     window.addEventListener("workspace:test-fixtures", preview);
     render(<TargetingSceneEditor />);
@@ -24,10 +24,10 @@ describe("TargetingSceneEditor", () => {
         output.attributes[0].value.type === "scalar" && output.attributes[0].value.value === 1,
     );
     expect(selected.length).toBeGreaterThan(0);
-    expect(selected.length).toBeLessThan(16);
+    expect(selected.length).toBeLessThan(100);
 
     fireEvent.click(screen.getByRole("button", { name: "Loop scene" }));
-    fireEvent.click(screen.getByRole("button", { name: "Save revision" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save pattern" }));
 
     const stage = activeStage(useProjectStore.getState().bundle);
     expect(stage.revision).toBe(2);
