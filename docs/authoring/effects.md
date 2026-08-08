@@ -26,6 +26,17 @@ render 中的每个 node 都是 tick 与 fixture context 的确定性函数。�
 - 参数 UI 只读取当前 Effect 的 parameter schema，不能按 Effect 名称写分支。
 - 默认 speed 以及 Cue override 只接受 0.25×、0.5×、1×、2×、4×、8×。
 
+## 内置效果取舍
+
+内置库按可观察的视觉意图区分，而不是按参数微调重复收录。V1 保留柔和、可塑形的 **Breathe**，删除与其图结构和输出过于接近的旧 **Pulse**；需要短促节拍时使用 **Short Color Burst** 或安全等级明确的 **Safe Strobe Pulse**。
+
+矩阵空间效果包含：
+
+- **Column Ping-Pong**：窄列在左右边界之间往返，不会退化为整场同步亮度变化。
+- **Seeded Column Rain**：用 Cue Layer seed 对每个唯一 X 坐标生成稳定相位，同一列保持一致，并沿 Y 轴由上到下滚动。相同 seed、布局和 tick 必须重放一致。
+
+`random_x` 是 SpatialPhase 的确定性空间 basis，只随机化列相位，不使用共享可变 RNG，也不按 fixture 逐个制造噪点。
+
 ## Mix 与安全
 
 Effect 写入 typed fixture attributes。Profile 提供默认 HTP/LTP policy，但当多个 Cue Layer 或重叠 CueClip 在同一 fixture 上写同一属性时，作者必须在 Cue Layer 明确选择 MixPolicy；Add、Multiply 和 Mask 永不因重叠自动启用。

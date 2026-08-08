@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "id": "builtin.spatial.column-ping-pong",
+  "name": "Column Ping-Pong",
+  "revision": 1,
+  "source": "built_in",
+  "parameters": [
+    {
+      "id": "speed",
+      "name": "Speed",
+      "value_type": "scalar",
+      "default_value": { "type": "scalar", "value": 1 },
+      "range": [0.25, 8],
+      "step": 0.25,
+      "required": true,
+      "help": "Beat-synced left-to-right and right-to-left travel speed.",
+      "safe_fallback": { "type": "scalar", "value": 0.5 },
+      "override_policy": "cue_override",
+      "advanced": false,
+      "unit": "multiplier",
+      "ui_hint": "slider",
+      "automation": "continuous"
+    },
+    {
+      "id": "intensity",
+      "name": "Intensity",
+      "value_type": "scalar",
+      "default_value": { "type": "scalar", "value": 0.9 },
+      "range": [0, 1],
+      "step": 0.05,
+      "required": true,
+      "help": "Peak output of the traveling column.",
+      "safe_fallback": { "type": "scalar", "value": 0.5 },
+      "override_policy": "cue_override",
+      "advanced": false,
+      "unit": "normalized",
+      "ui_hint": "slider",
+      "automation": "continuous"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      { "type": "time", "id": "time" },
+      {
+        "type": "oscillator",
+        "id": "travel-position",
+        "waveform": "triangle",
+        "phase": { "node_id": "time", "port": "scalar" }
+      },
+      {
+        "type": "spatial_phase",
+        "id": "column-distance",
+        "input": { "node_id": "travel-position", "port": "scalar" },
+        "basis": "x",
+        "from": 0,
+        "to": 1,
+        "wrap": false,
+        "custom_order": []
+      },
+      {
+        "type": "fixture_mask",
+        "id": "traveling-column",
+        "input": { "node_id": "column-distance", "port": "scalar" },
+        "min": -0.065,
+        "max": 0.065
+      },
+      { "type": "constant", "id": "level", "value": { "type": "scalar", "value": 1 } },
+      {
+        "type": "attribute_writer",
+        "id": "writer",
+        "input": { "node_id": "level", "port": "scalar" },
+        "mask": { "node_id": "traveling-column", "port": "mask" },
+        "attribute_id": "intensity"
+      }
+    ]
+  },
+  "catalog": {
+    "family": "spatial",
+    "category": "Chases",
+    "visibility": "standard",
+    "mood": ["playful", "kinetic"],
+    "energy": 0.7,
+    "density": 0.3,
+    "motion": "chase",
+    "colorfulness": 0,
+    "strobe_risk": "none",
+    "required_attributes": ["intensity"],
+    "layout_capabilities": ["matrix", "coordinates"],
+    "parameter_summary": ["speed", "intensity"],
+    "deprecated": false
+  }
+}

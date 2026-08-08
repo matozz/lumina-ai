@@ -1,7 +1,8 @@
 [
-  "builtin.intensity.pulse",
   "builtin.intensity.breathe",
   "builtin.intensity.chase",
+  "builtin.spatial.column-ping-pong",
+  "builtin.spatial.column-rain",
   "builtin.intensity.wave",
   "builtin.color.rainbow",
   "builtin.color.dual-sweep",

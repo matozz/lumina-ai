@@ -15,6 +15,18 @@ fn checked_in_multi_tick_golden_matches_deterministic_rendering() {
         .arrangements
         .iter()
         .any(|arrangement| arrangement.id == "builtin.arrangement.house-128"));
+    assert!(catalog
+        .effects
+        .iter()
+        .any(|effect| effect.id == "builtin.spatial.column-ping-pong"));
+    assert!(catalog
+        .effects
+        .iter()
+        .any(|effect| effect.id == "builtin.spatial.column-rain"));
+    assert!(!catalog
+        .effects
+        .iter()
+        .any(|effect| effect.id == "builtin.intensity.pulse"));
     assert!(catalog.project_templates.iter().any(|template| {
         template.id == "builtin.project-template.authoring-starter"
             && template.stage.patch[0].id_range == (1, 400)

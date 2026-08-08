@@ -840,7 +840,7 @@
     },
     "SpatialBasisDSL": {
       "type": "string",
-      "enum": ["index", "x", "y", "distance", "angle", "custom"]
+      "enum": ["index", "x", "random_x", "y", "distance", "angle", "custom"]
     },
     "StepValuesDSL": {
       "type": "object",

@@ -1529,7 +1529,7 @@ mod tests {
             1,
             "Resolved Cue".to_string(),
         )
-        .expect("starter Stage resolves pulse recipe");
+        .expect("starter Stage resolves beat-breathe recipe");
         let replay = resolve_cue_recipe(
             &catalog,
             &bundle,

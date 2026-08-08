@@ -657,7 +657,7 @@ export type SortByDSL =
   | "x+y"
   | "-(x+y)";
 
-export type SpatialBasisDSL = "index" | "x" | "y" | "distance" | "angle" | "custom";
+export type SpatialBasisDSL = "index" | "x" | "random_x" | "y" | "distance" | "angle" | "custom";
 
 export interface StageDocument {
   groups: Array<GroupDSL>;

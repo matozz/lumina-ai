@@ -431,6 +431,7 @@ pub enum OscillatorWaveformDSL {
 pub enum SpatialBasisDSL {
     Index,
     X,
+    RandomX,
     Y,
     Distance,
     Angle,

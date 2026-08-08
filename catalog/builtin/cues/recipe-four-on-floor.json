@@ -2,14 +2,14 @@
   "schema_version": 1,
   "id": "recipe.four-on-floor",
   "revision": 1,
-  "name": "Full-stage Drop Pulse",
-  "description": "A steady intensity pulse across the active Stage.",
+  "name": "Full-stage Beat Breathe",
+  "description": "A beat-synced intensity breathe across the active Stage.",
   "nominal_length_ticks": 15360,
   "layers": [
     {
-      "id": "pulse",
+      "id": "breathe",
       "effect_ref": {
-        "id": "builtin.intensity.pulse",
+        "id": "builtin.intensity.breathe",
         "revision": 1
       },
       "target": {
@@ -18,7 +18,7 @@
       "parameter_overrides": {
         "speed": {
           "type": "scalar",
-          "value": 1
+          "value": 2
         },
         "intensity": {
           "type": "scalar",

@@ -361,6 +361,7 @@ pub enum OscillatorWaveform {
 pub enum SpatialBasis {
     Index,
     X,
+    RandomX,
     Y,
     Distance,
     Angle,

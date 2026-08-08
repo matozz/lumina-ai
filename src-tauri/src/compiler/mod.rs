@@ -9,13 +9,13 @@ use crate::engine::animation::AnimatableValue;
 use crate::engine::attribute::{resolve_attribute, AttributeHandle};
 use crate::engine::color::parse_hex_color;
 use crate::engine::effect::{
-    AutomationPolicy, CatalogVisibility, CompiledColorStop, CompiledEffectGraph,
-    CompiledEffectNode, CompiledEffectStep, CompiledProfileSequence, Direction, EffectCatalog,
-    EffectCatalogMatch, EffectCatalogQuery, EffectDefinition, EffectDefinitionHandle, EffectFamily,
-    EffectInstance, EffectNodeHandle, EffectReplacement, EffectSource, LayoutCapability,
-    MathOperation, MotionTag, OscillatorWaveform, ParameterDefinition, ParameterHandle,
-    ParameterOverridePolicy, ParameterUiHint, ParameterUnit, ParameterValue, ParameterValueType,
-    SpatialBasis, StrobeRisk,
+    deterministic_random, AutomationPolicy, CatalogVisibility, CompiledColorStop,
+    CompiledEffectGraph, CompiledEffectNode, CompiledEffectStep, CompiledProfileSequence,
+    Direction, EffectCatalog, EffectCatalogMatch, EffectCatalogQuery, EffectDefinition,
+    EffectDefinitionHandle, EffectFamily, EffectInstance, EffectNodeHandle, EffectReplacement,
+    EffectSource, LayoutCapability, MathOperation, MotionTag, OscillatorWaveform,
+    ParameterDefinition, ParameterHandle, ParameterOverridePolicy, ParameterUiHint, ParameterUnit,
+    ParameterValue, ParameterValueType, SpatialBasis, StrobeRisk,
 };
 use crate::engine::musical_time::{MusicalTime, TempoMap, TempoPoint};
 use crate::engine::profile::{
@@ -1445,6 +1445,7 @@ fn compile_effect_node(
             basis: match basis {
                 SpatialBasisDSL::Index => SpatialBasis::Index,
                 SpatialBasisDSL::X => SpatialBasis::X,
+                SpatialBasisDSL::RandomX => SpatialBasis::RandomX,
                 SpatialBasisDSL::Y => SpatialBasis::Y,
                 SpatialBasisDSL::Distance => SpatialBasis::Distance,
                 SpatialBasisDSL::Angle => SpatialBasis::Angle,
@@ -1619,7 +1620,11 @@ fn compile_spatial_offsets(
                     .iter()
                     .position(|id| id == fixture_id)
                     .unwrap_or(group_index) as f64,
-                SpatialBasis::X | SpatialBasis::Y | SpatialBasis::Distance | SpatialBasis::Angle => {
+                SpatialBasis::X
+                | SpatialBasis::RandomX
+                | SpatialBasis::Y
+                | SpatialBasis::Distance
+                | SpatialBasis::Angle => {
                     let Some(coord) = coords.get(fixture_id) else {
                         errors.push(Diagnostic::error(
                             DOC_EFFECT_GRAPH_INVALID,
@@ -1631,6 +1636,11 @@ fn compile_spatial_offsets(
                     };
                     match basis {
                         SpatialBasis::X => coord.x,
+                        SpatialBasis::RandomX => {
+                            let bits = coord.x.to_bits();
+                            let coordinate_key = (bits ^ (bits >> 32)) as u32;
+                            deterministic_random(instance.seed, handle, coordinate_key, 0.0)
+                        }
                         SpatialBasis::Y => coord.y,
                         SpatialBasis::Distance => {
                             (coord.x - center.0).hypot(coord.y - center.1)
@@ -1945,6 +1955,33 @@ mod tests {
         let timeline = show.timeline.expect("compiled timeline");
         assert_eq!(timeline.tracks.len(), 1);
         assert_eq!(timeline.tracks[0].clips.len(), 1);
+    }
+
+    #[test]
+    fn random_x_spatial_basis_keeps_each_matrix_column_in_phase() {
+        let source = VALID_SHOW
+            .replace("\"id_range\": [1, 2]", "\"id_range\": [1, 4]")
+            .replace(
+                "\"rows\": 1,\n          \"columns\": 2",
+                "\"rows\": 2,\n          \"columns\": 2",
+            )
+            .replace("\"range\": [1, 2]", "\"range\": [1, 4]")
+            .replace("\"basis\": \"index\"", "\"basis\": \"random_x\"");
+        let document = crate::document::load_document(&source)
+            .expect("random-x document")
+            .document;
+        let show = Compiler::compile_document(document).expect("random-x effect compiles");
+        let instance = show.effect_instances.get("pulse").expect("effect instance");
+        let offsets = instance
+            .spatial_offsets
+            .values()
+            .next()
+            .expect("random-x offsets");
+
+        assert_eq!(offsets.len(), 4);
+        assert_eq!(offsets[0], offsets[2]);
+        assert_eq!(offsets[1], offsets[3]);
+        assert_ne!(offsets[0], offsets[1]);
     }
 
     #[test]
