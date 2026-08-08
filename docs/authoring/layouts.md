@@ -12,7 +12,7 @@ V1 正式支持 Matrix、Wall、Strip、Frame、Circle、Sector、Polygon、Hone
 
 坐标实现位于 `src/document/layoutDefinition.ts` 与 `src-tauri/src/document/project_layout.rs`。`catalog/builtin/generators/golden-v1.json` 锁定每个内置 Layout 的容量和坐标样本，防止两端语义漂移。
 
-Algorithm 路径按物理距离重采样：开放式 Spiral 直接求相邻灯中心的等弦长位置，避免中心拥挤；闭合 Lissajous 按等弧长分布并省略重复终点。Formula 保持对保存表达式与 `t_range` 的确定性求值。Formula/Algorithm 预设始终出现在普通 Stage Library 的 **Generated** 分组；Advanced 只增加复制、底层资产检查等操作，不是预览入口。Stage Canvas 只接受 Layout Preview，使用无眩光的中性灰 Draft 外观；Effect/Cue/Arrangement 的颜色输出不能进入 Stage。
+Algorithm 路径按物理距离重采样：开放式 Spiral 直接求相邻灯中心的等弦长位置，避免中心拥挤；闭合 Lissajous 按等弧长分布并省略重复终点。Formula 保持对保存表达式与 `t_range` 的确定性求值。Formula/Algorithm 预设始终出现在普通 Stage Library 的 **Generated** 分组；Advanced 只增加复制、底层资产检查等操作，不是预览入口。Stage Canvas 只接受 Layout Preview，以未点亮的黑色空帧和清晰边框展示灯位，不显示填充色或眩光；Effect/Cue/Arrangement 的颜色输出不能进入 Stage。
 
 ## 数量与空间参数
 

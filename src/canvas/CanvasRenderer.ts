@@ -28,10 +28,6 @@ export class CanvasRenderer {
     this.fixtures.clear();
     for (const { id, x, y, type, width, height, patched } of coords) {
       const visual = new FixtureVisual(id, x, y, type, width, height, patched);
-      if (appearance === "layout-draft") {
-        const [r, g, b] = CANVAS_VISUAL_CONFIG.layoutDraft.color;
-        visual.applyOutput(r, g, b, CANVAS_VISUAL_CONFIG.layoutDraft.intensity);
-      }
       this.fixtures.set(id, visual);
     }
     this.camera.fitToContent(coords);
@@ -114,7 +110,10 @@ export class CanvasRenderer {
       ctx.fill();
     }
 
-    ctx.strokeStyle = "rgba(82, 82, 91, 0.5)";
+    ctx.strokeStyle =
+      this.layoutAppearance === "layout-draft"
+        ? CANVAS_VISUAL_CONFIG.layoutDraft.patchedBorder
+        : "rgba(82, 82, 91, 0.5)";
     ctx.lineWidth = 0.5 / scale;
     ctx.beginPath();
     for (const visual of this.fixtures.values()) {
@@ -123,7 +122,10 @@ export class CanvasRenderer {
     }
     ctx.stroke();
 
-    ctx.strokeStyle = "rgba(63, 63, 70, 0.5)";
+    ctx.strokeStyle =
+      this.layoutAppearance === "layout-draft"
+        ? CANVAS_VISUAL_CONFIG.layoutDraft.unpatchedBorder
+        : "rgba(63, 63, 70, 0.5)";
     ctx.setLineDash([2 / scale, 2 / scale]);
     ctx.beginPath();
     for (const visual of this.fixtures.values()) {

@@ -106,7 +106,7 @@ describe("CanvasRenderer frame budget", () => {
     expect(context.strokeStyle).toBe("rgba(63, 63, 70, 0.5)");
   });
 
-  it("renders a neutral Layout Draft without output glow", () => {
+  it("renders an unlit Layout Draft with visible borders and no output glow", () => {
     const canvas = document.createElement("canvas");
     vi.spyOn(canvas, "getBoundingClientRect").mockReturnValue({
       width: 320,
@@ -120,7 +120,7 @@ describe("CanvasRenderer frame budget", () => {
     renderer.startRenderLoop();
 
     scheduled?.(0);
-    expect(context.fillStyle).toBe("#59595e");
+    expect(context.fillStyle).toBe("#000000");
     expect(context.arc).not.toHaveBeenCalled();
   });
 });
