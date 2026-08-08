@@ -49,3 +49,6 @@ jobs:
 
       - name: Run Rust checks
         run: pnpm check:rust
+
+      - name: Run Rust performance budgets
+        run: cargo test --release --manifest-path src-tauri/Cargo.toml 60hz -- --test-threads=1
