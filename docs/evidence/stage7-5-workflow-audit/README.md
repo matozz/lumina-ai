@@ -14,5 +14,5 @@
 | 5    | Cue Builder 与预览       | 一般     | [`05-cues-current.jpg`](./05-cues-current.jpg)               |
 | 6    | Live 完整 transport 对照 | 基础可用 | [`06-live-controls.jpg`](./06-live-controls.jpg)             |
 
-详细结论、代码原因、替换边界和 Stage 7.5 调整见
-[`../../stage7-workflow-audit.md`](../../stage7-workflow-audit.md)。
+这些截图仅保留为历史基线，表中的问题不描述当前 V1。当前工作流、代码边界和验收要求见
+[`../../authoring/README.md`](../../authoring/README.md)。
