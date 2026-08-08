@@ -18,6 +18,8 @@ Graph 连接使用结构化 node/port 引用。Rust compiler 在 render 前完�
 
 render 中的每个 node 都是 tick 与 fixture context 的确定性函数。相同 snapshot、tick、seed 和参数必须得到相同输出；Random 不得依赖共享可变 RNG。
 
+Random 将 phase 0 保留为停止状态的静态预览；Transport 离开零点时立即进入第一个 seeded cycle，随后按整数 beat 周期稳定切换，避免播放开始后额外停留一拍。
+
 ## Authoring
 
 - 内置 Effect 只读；**Customize** 复制为新的项目 Effect，并分配独立 ID。

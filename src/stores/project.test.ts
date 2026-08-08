@@ -70,7 +70,7 @@ describe("Stage 7 Project state", () => {
     const cachedBundle = structuredClone(useProjectStore.getState().bundle);
     const migrate = useProjectStore.persist.getOptions().migrate;
     const migrated = (await Promise.resolve(
-      migrate?.({ bundle: cachedBundle, selectedEffectRef: effect }, 10),
+      migrate?.({ bundle: cachedBundle, selectedEffectRef: effect }, 11),
     )) as ReturnType<typeof useProjectStore.getState>;
 
     expect(migrated.bundle.schema_version).toBe(1);
@@ -92,7 +92,7 @@ describe("Stage 7 Project state", () => {
     expect(migrated.bundle.manifest.layout_refs).toHaveLength(26);
   });
 
-  it("pauses the current preview before selecting another Effect", () => {
+  it("does not interrupt the current preview when selecting another Effect", () => {
     const first = projectActions.createEffect("First")!;
     const second = projectActions.createEffect("Second")!;
     const key = authoringSessionKey("effect", assetKey(first));
@@ -102,7 +102,7 @@ describe("Stage 7 Project state", () => {
 
     projectActions.setSelectedEffectRef(second);
 
-    expect(useAuthoringTransportStore.getState().sessions[key].playback).toBe("paused");
+    expect(useAuthoringTransportStore.getState().sessions[key].playback).toBe("playing");
   });
 
   it("exports and reimports a project asset closure without starting playback", () => {
@@ -349,7 +349,7 @@ describe("Stage 7 Project state", () => {
       partition_index: 0,
     });
     expect(upgradedStage.target_sets.map((target) => target.id)).toEqual(["all"]);
-    expect(upgradedStage.patch).toEqual([{ profile_id: "generic-rgb", id_range: [1, 649] }]);
+    expect(upgradedStage.patch).toEqual([{ profile_id: "generic-rgb", id_range: [1, 361] }]);
     expect(upgradedStage.targeting_scenes?.[0].steps[1].selection).toEqual({
       target_set_id: "all",
       partition_index: null,

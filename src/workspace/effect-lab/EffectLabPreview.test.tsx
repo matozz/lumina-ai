@@ -1,6 +1,10 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { authoringSessionKey, authoringTransportActions } from "@/authoring/transport";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  authoringSessionKey,
+  authoringTransportActions,
+  useAuthoringTransportStore,
+} from "@/authoring/transport";
 import { assetKey } from "@/document/projectModel";
 import { projectActions, useProjectStore } from "@/stores/project";
 import { useProjectPreviewController } from "../useProjectPreviewController";
@@ -25,6 +29,8 @@ describe("EffectLabPreview", () => {
     localStorage.clear();
     projectActions.reset();
   });
+
+  afterEach(() => vi.unstubAllGlobals());
 
   it("previews the selected Effect Draft through an isolated Authoring Preview session", async () => {
     const reference = projectActions.createEffect("Pulse")!;
@@ -63,6 +69,7 @@ describe("EffectLabPreview", () => {
       durationTicks: 3_840,
     });
     authoringTransportActions.play(sessionKey);
+    authoringTransportActions.publishCursor(sessionKey, 960);
     vi.stubGlobal("requestAnimationFrame", vi.fn().mockReturnValue(1));
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
     commandMocks.previewProject.mockImplementation(
@@ -79,12 +86,18 @@ describe("EffectLabPreview", () => {
     render(<Harness />);
     await waitFor(() => expect(commandMocks.previewProject).toHaveBeenCalledOnce());
 
+    let gradient: ReturnType<typeof projectActions.createEffect> = null;
     act(() => {
-      projectActions.createEffect("Gradient");
+      gradient = projectActions.createEffect("Gradient");
     });
 
     await waitFor(() => expect(commandMocks.previewProject).toHaveBeenCalledTimes(2));
     expect(screen.getByText("Gradient · Main Stage")).toBeTruthy();
+    expect(
+      useAuthoringTransportStore.getState().sessions[
+        authoringSessionKey("effect", assetKey(gradient!))
+      ],
+    ).toMatchObject({ playback: "playing", cursorTick: 960 });
   });
 });
 

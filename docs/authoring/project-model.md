@@ -52,5 +52,5 @@ Stage、Lab、Cues 和 Arrange 使用隔离的 Authoring PreviewSession。编辑
 
 - 保存/重开、Undo/Redo 和 workspace cache reset 不改变 tick 或引用语义。
 - 缺失、陈旧、重复或循环引用 fail closed，并定位到资产字段。
-- 切换工作区或资产后 transport 仍保持 stopped，除非用户此前明确播放。
+- 页面打开时 transport 保持 stopped；切换功能区会 Stop/reset。Lab/Cues 内选择资产不会自行播放，但会延续用户已明确启动且当前仍为 playing 的同 scope 预览。
 - Go Live 失败不替换当前 Live snapshot。

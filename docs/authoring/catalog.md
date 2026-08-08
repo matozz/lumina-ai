@@ -49,7 +49,7 @@ Header 的 **Assets** 菜单支持导出项目资产依赖闭包和导入 `user-
 
 Reset defaults 恢复 starter Project Template、工作区选择和 Authoring transport 默认值。它不会删除浏览器下载目录中的资产包，也不会执行 origin-wide `localStorage.clear()` 或文件系统宽泛删除。
 
-当受源码管理的 starter 资产集合发生身份或依赖变化时，只提升 `lumina-project-v1` 的作用域缓存版本；旧开发缓存会在该 Zustand storage boundary 重建为当前模板，不触碰其他 origin storage 或用户显式导出的文件。
+当受源码管理的 starter/Catalog 资产集合、参数基准、身份或依赖发生不兼容变化时，只提升 `lumina-project-v1` 的 scoped storage version；旧开发缓存通过 Zustand migration 在该 storage boundary 重建为当前模板，不触碰其他 origin storage 或用户显式导出的资产包。
 
 ## 关键实现
 

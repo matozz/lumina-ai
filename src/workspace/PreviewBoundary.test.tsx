@@ -1,5 +1,5 @@
 import { act, render, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   authoringSessionKey,
   authoringTransportActions,
@@ -37,6 +37,8 @@ describe("PreviewSession boundary state machine", () => {
         Promise.resolve(frame({ type: "authoring_draft" }, context, playheadTick)),
     );
   });
+
+  afterEach(() => vi.unstubAllGlobals());
 
   it("preserves authoring state while isolating Draft, Published rehearsal, and Live", async () => {
     const effect = projectActions.createEffect("Pulse")!;
@@ -98,6 +100,43 @@ describe("PreviewSession boundary state machine", () => {
         }),
       ),
     );
+  });
+
+  it("does not compile or publish Effect output for the Stage layout surface", async () => {
+    render(<Harness workspace="stage" />);
+
+    await Promise.resolve();
+    expect(commandMocks.previewProject).not.toHaveBeenCalled();
+    expect(commandMocks.renderProjectPreview).not.toHaveBeenCalled();
+  });
+
+  it("continues Cue playback when the selected Cue changes inside Cues", async () => {
+    const effect = projectActions.createEffect("Sweep")!;
+    const first = projectActions.createCue([effect], "First Cue")!;
+    const second = projectActions.createCue([effect], "Second Cue")!;
+    projectActions.setSelectedCueRef(first);
+    const firstKey = authoringSessionKey("cue", assetKey(first));
+    authoringTransportActions.ensureSession({
+      key: firstKey,
+      scope: "cue",
+      durationTicks: 3_840,
+    });
+    authoringTransportActions.seek(firstKey, 1_920, 10);
+    authoringTransportActions.play(firstKey, 20);
+    vi.stubGlobal("requestAnimationFrame", vi.fn().mockReturnValue(1));
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    render(<Harness workspace="cues" />);
+    await waitFor(() => expect(commandMocks.previewProject).toHaveBeenCalledOnce());
+
+    act(() => projectActions.setSelectedCueRef(second));
+
+    const secondKey = authoringSessionKey("cue", assetKey(second));
+    await waitFor(() =>
+      expect(useAuthoringTransportStore.getState().sessions[secondKey]).toMatchObject({
+        playback: "playing",
+      }),
+    );
+    expect(useAuthoringTransportStore.getState().sessions[secondKey].cursorTick).toBe(1_920);
   });
 });
 

@@ -1,7 +1,7 @@
 export const CANVAS_VISUAL_CONFIG = {
   layoutDraft: {
-    color: [139, 119, 255] as [number, number, number],
-    intensity: 0.45,
+    patchedBorder: "rgba(161, 161, 170, 0.72)",
+    unpatchedBorder: "rgba(113, 113, 122, 0.65)",
   },
   glow: {
     radiusMultiplier: 2.5,

@@ -13,9 +13,11 @@ const INTENSITY_PREVIEW_COLOR: [number, number, number] = [139, 119, 255];
 export const CanvasView = ({
   frameSource = "live",
   showIntensityWithoutColor = false,
+  layoutOnly = false,
 }: {
   frameSource?: "preview" | "live";
   showIntensityWithoutColor?: boolean;
+  layoutOnly?: boolean;
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CanvasRenderer | null>(null);
@@ -43,7 +45,7 @@ export const CanvasView = ({
         : Promise.resolve(() => undefined);
 
     const handleProjectPreview = (event: Event) => {
-      if (frameSource !== "preview") return;
+      if (frameSource !== "preview" || layoutOnly) return;
       const frame = (event as CustomEvent<ProjectPreviewFrame>).detail;
       renderer.initFromLayout(frame.layout_coords);
       renderer.applyFrame(
@@ -63,7 +65,7 @@ export const CanvasView = ({
       const snapshot = latestAuthoringPreview();
       if (snapshot?.type === "layout") {
         renderer.initFromLayout(snapshot.coords, "layout-draft");
-      } else if (snapshot?.type === "project") {
+      } else if (snapshot?.type === "project" && !layoutOnly) {
         renderer.initFromLayout(snapshot.frame.layout_coords);
         renderer.applyFrame(
           snapshot.frame.outputs,
@@ -79,7 +81,7 @@ export const CanvasView = ({
       window.removeEventListener("engine:project-preview-frame", handleProjectPreview);
       window.removeEventListener("engine:layout-draft-coords", handleLayoutDraft);
     };
-  }, [frameSource, showIntensityWithoutColor]);
+  }, [frameSource, layoutOnly, showIntensityWithoutColor]);
 
   // Expose a way to init layout (e.g. from parent component or global event)
   useEffect(() => {

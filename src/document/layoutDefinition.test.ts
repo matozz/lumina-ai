@@ -45,7 +45,7 @@ describe("LayoutDefinition geometry", () => {
       "builtin.layout.wall-main-20x20": 400,
       "builtin.layout.strip-runway-30": 30,
       "builtin.layout.frame-arena-12x24": 68,
-      "builtin.layout.circle-rings-8": 649,
+      "builtin.layout.circle-rings-8": 361,
       "builtin.layout.sector-fan-8": 216,
       "builtin.layout.polygon-hex-96": 96,
       "builtin.layout.honeycomb-18x24": 432,
@@ -82,8 +82,8 @@ describe("LayoutDefinition geometry", () => {
     );
     const positions = layoutPositions(circle, fixtureIds).slice(1);
 
-    expect(counts).toEqual([18, 36, 54, 72, 90, 108, 126, 144]);
-    expect(positions).toHaveLength(648);
+    expect(counts).toEqual([10, 20, 30, 40, 50, 60, 70, 80]);
+    expect(positions).toHaveLength(360);
     let offset = 0;
     for (const [ringIndex, count] of counts.entries()) {
       const ring = positions.slice(offset, offset + count);

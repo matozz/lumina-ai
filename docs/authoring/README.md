@@ -29,7 +29,7 @@ Layout
 4. 在 **Arrange** 放置 CueClip，设置位置、时长、重叠策略和 typed automation。CueClip 不直接重新选择 TargetSet。
 5. 在 **Live** 检查当前 Arrangement；只有明确的 **Go Live** 操作会验证、编译并激活新的 immutable runtime snapshot。
 
-Stage、Lab、Cues 和 Arrange 的默认节拍均为 128 BPM。打开页面、切换工作区或选择资产只更新选择与预览上下文，不自动播放。
+Stage、Lab、Cues 和 Arrange 的默认节拍均为 128 BPM。打开页面默认不播放；切换功能区会停止 Authoring Transport 并回到 loop start（未启用 loop 时为 tick 0）。Lab/Cues 内选择另一个 Effect/Cue 不会自行开始播放，但若当前预览正在播放，新资产会继承 cursor 与 playing 状态，便于连续比较。
 
 ## 工程约束
 

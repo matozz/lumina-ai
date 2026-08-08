@@ -8,7 +8,7 @@
   "geometry": {
     "shape": "circle",
     "rings": 8,
-    "increment": 18,
+    "increment": 10,
     "fixture_size": { "width": 10, "height": 10 },
     "ring_gap": 20,
     "ring_pitch": 30,
