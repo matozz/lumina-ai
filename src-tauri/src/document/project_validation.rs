@@ -542,7 +542,6 @@ fn validate_cue_summary(
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let mut required_attributes = BTreeSet::new();
-    let mut strobe_risk = super::StrobeRiskDSL::None;
     for layer in &cue.layers {
         let Some(effect) = exact_asset(&bundle.effects, &layer.effect_ref, |asset| {
             (&asset.id, asset.revision)
@@ -550,9 +549,6 @@ fn validate_cue_summary(
             continue;
         };
         required_attributes.extend(effect.catalog.required_attributes.iter().cloned());
-        if strobe_rank(effect.catalog.strobe_risk) > strobe_rank(strobe_risk) {
-            strobe_risk = effect.catalog.strobe_risk;
-        }
     }
     let expected_attributes: Vec<_> = required_attributes.into_iter().collect();
     let mut actual_attributes = cue.capability_summary.required_attributes.clone();
@@ -572,30 +568,6 @@ fn validate_cue_summary(
                 Some(format!("{path}.capability_summary")),
             ),
         );
-    }
-    if strobe_risk != cue.risk_summary.strobe_risk {
-        diagnostics.push(
-            Diagnostic::error(
-                PROJECT_SCHEMA_INVALID,
-                format!("{path}.risk_summary"),
-                "Cue strobe risk does not match the highest pinned Effect risk.",
-                "Recompute the risk summary from exact Effect revision metadata.",
-            )
-            .with_recovery(
-                "recompute_cue_summary",
-                "Recompute Cue summary",
-                Some(format!("{path}.risk_summary")),
-            ),
-        );
-    }
-}
-
-fn strobe_rank(risk: super::StrobeRiskDSL) -> u8 {
-    match risk {
-        super::StrobeRiskDSL::None => 0,
-        super::StrobeRiskDSL::Low => 1,
-        super::StrobeRiskDSL::Medium => 2,
-        super::StrobeRiskDSL::High => 3,
     }
 }
 
@@ -2167,6 +2139,15 @@ pub(crate) mod tests {
             validated.into_bundle().manifest.active_arrangement_id,
             "arrangement-1"
         );
+    }
+
+    #[test]
+    fn cue_risk_summary_does_not_have_to_mirror_the_highest_effect_risk() {
+        let mut bundle = valid_bundle();
+        bundle.cues[0].risk_summary.strobe_risk = super::super::StrobeRiskDSL::None;
+
+        ValidatedProject::validate(bundle)
+            .expect("Effect metadata remains authoritative for runtime strobe safety");
     }
 
     #[test]
