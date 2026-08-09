@@ -28,23 +28,45 @@ Random 将 phase 0 保留为停止状态的静态预览；Transport 离开零点
 - 参数 UI 只读取当前 Effect 的 parameter schema，不能按 Effect 名称写分支。
 - 默认 speed 以及 Cue override 只接受 0.25×、0.5×、1×、2×、4×、8×。
 
+### Parameter contract
+
+参数只声明一份类型事实，并用最大 authoring scope 推导可用入口：
+
+```json
+{
+  "id": "speed",
+  "name": "Speed",
+  "schema": {
+    "type": "scalar",
+    "default": 1,
+    "range": { "min": 0.25, "max": 8, "step": 0.25 },
+    "unit": "multiplier"
+  },
+  "scope": "arrangement",
+  "section": "main",
+  "help": "Beat-synced playback speed."
+}
+```
+
+- `schema` 是 tagged union；scalar 的 default/range/unit、enum 的 default/values、Color 的可选 default 都只存在于对应分支。
+- `scope: effect` 只允许 Lab 编辑；`cue` 额外允许 Cue Layer override；`arrangement` 再额外允许 Arrangement automation。
+- Arrangement scalar/Color 自动得到 continuous automation；direction/boolean/enum 自动得到 discrete automation；`color_stops` 固定为 Effect scope 且不可 automation。
+- `section` 只控制 Main/Advanced 分区；`help` 是 UI、Tooltip、aria 和 Skill 共同使用的作者说明。
+- `graph_binding` 仅在参数直接绑定 EffectGraph node property 时声明，不承担 authoring policy。
+
+旧的 `value_type`、typed `default_value`、`required`、`safe_fallback`、`override_policy`、`automation`、`advanced`、`ui_hint`、平铺 `range/step/unit/enum_values` 都已删除。它们或与类型重复，或允许互相矛盾的组合。表单 last-known-good 属于编辑会话状态，不再伪装成资产内的 `safe_fallback`；控件形态从 `schema.type` 和 unit 推导。
+
+Effect Catalog 继续保留 `source/revision` 供 exact reference，保留 energy/density/motion/colorfulness/strobe risk 供发现和风险过滤，并保留 `required_attributes/layout_capabilities` 做 fail-closed 兼容性校验。后两项不能仅从 Graph 猜测：通用 attribute-set writer、Targeting Scene 和布局语义都可能使静态推断不完整。普通 UI 不展示 source、revision 或 raw capability token。
+
 ### Standard Color override
 
-Production Catalog 中的每个 Effect 都声明标准参数 `color`，使颜色编辑和自动化入口保持一致：
+每个可进入 Project 的 Effect 都声明标准参数 `color`：`schema.type: color`、`scope: arrangement`、`section: main`，值为严格的 `#RRGGBB`。该参数使 Lab、Cue Layer override 和单 CueClip Arrangement Color automation 使用同一个 typed target；Color lane 在 runtime 使用 Lab 插值并精确保留 endpoint。
 
-- `value_type: color`，值为严格的 `#RRGGBB`；
-- `unit/ui_hint: color`；
-- `override_policy: cue_override`；
-- `automation: continuous`；
-- 完整的 `required`、`help`、`safe_fallback` 和 `advanced` 元数据。
+Color `schema.default` 是唯一的显式默认色开关：存在时 Effect 默认覆盖最终 `color.rgb`，缺省时保留 EffectGraph 自己的 Palette/颜色，或者让纯 intensity Effect 不写颜色。Lab 和 Cue UI 可选择颜色，也可清除回 Effect authored/fallback 行为；编辑器为 color picker 提供的临时白色不是文档默认值，也不构成 writer。旧 `default_enabled` 不再存在。
 
-该参数是 Effect 最终 `color.rgb` 输出的可选单色覆盖，可从 Lab、Cue Layer override 和 Arrangement Color automation 到达。Color lane 在 runtime 使用 Lab 插值；endpoint 精确保留。`default_enabled` 缺省或为 `true` 时使用参数默认色；`false` 时保留 EffectGraph 自己的 Palette/颜色，或者让纯 intensity Effect 不写颜色。Lab 和 Cue UI 可以显式启用颜色，也可以清除颜色回到上述 Effect authored/fallback 行为；禁用的默认值本身不构成 `color.rgb` writer，只有显式 Cue/Arrangement override 或 automation 才构成。
+结构性 Palette 继续使用 `color_stops`，只在 Lab 中编辑。本版本不在 runtime 改变 stop 数量，也不做 stop-by-stop Arrangement automation。
 
-载入旧 ProjectBundle 或 User Asset Pack 时，前端文档边界会为完全缺失 `color` 的 Effect 补入 `default_enabled: false` 的标准 Color 参数。该兼容迁移保留 Effect ID、revision、Graph 和引用，不直接访问持久化实现，也不会把兜底白色变成默认输出。
-
-结构性 Palette 继续使用 `color_stops`，只在 Lab 中编辑，并保持 `override_policy: effect_only`、`automation: disabled`。本版本不在 runtime 改变 stop 数量，也不做 stop-by-stop Arrangement automation。
-
-兼容现有 Schema、参数和引用的 Catalog 修复直接更新当前源文件，不机械增加 revision。只有无法兼容、必须让新旧行为并存时才增加 revision，并同步更新需要迁移的 Cue exact ref。standard Color 兼容入口直接落在现有 Effect 源文件，Catalog 内不保留重复 rev2。
+当前受源码管理的 Effect、Cue、Arrangement、starter Project 与测试 fixture 必须在同一变更中完整迁移到新参数结构。运行时不读取或补写旧字段：含旧结构、缺少标准 Color 或含 unknown field 的 Project/User Asset Pack fail closed；旧开发缓存只在 scoped storage boundary 重建 starter。Catalog 行为修复直接更新当前源文件，不机械增加 revision；只有确实需要新旧 identity 并存时才新增 revision，并同步重映射所有 exact refs。
 
 ## 内置效果取舍
 

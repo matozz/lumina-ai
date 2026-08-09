@@ -55,7 +55,7 @@ App WebView 默认禁止页面级文本选择、浏览器导航/刷新/打印/�
 
 ### Context menu 与 typed automation
 
-- CueClip 右键从该 Clip 精确引用的 Cue/Effect 建立菜单，只显示 `automation !== disabled` 且 `override_policy: cue_override` 的参数。可直接 Add/Reveal automation、Duplicate、Copy 或 Delete。
+- CueClip 右键从该 Clip 精确引用的 Cue/Effect 建立菜单，只显示 `scope: arrangement` 的非结构参数；连续/离散 interpolation 从 parameter schema type 推导。可直接 Add/Reveal automation、Duplicate、Copy 或 Delete。
 - 这里创建的是 **单个 CueClip instance** 的 Arrangement automation，typed target 包含 `clip_id`。同一 Cue（例如 FullFlash）在时间轴上出现多次时，每个需要单独变化的 Clip 都要分别添加；若希望所有使用该 Cue 的 Clip 继承同一曲线，应在 Cue Builder 中创建一次 Cue-local automation。
 - 新 lane 在右键 context tick 的当前 Snap 格创建一个使用当前有效值的 keyframe；已有 typed target lane 会被定位，并在该格补点或聚焦已有点。创建、定位和拖动都不自动打开编辑器，只有直接点击关键点才打开；这些操作不移动 playhead，也不改变 transport。
 - 空白 Cue row 提供 **Place selected Cue here** 与 **Paste here**。Automation row/keyframe 提供 Add、Edit、Interpolation、Copy/Paste、Delete selected 和 Delete lane；离散参数只允许 hold。

@@ -34,7 +34,9 @@ Cue recipe 与 Project Template 中的 Layer ID 也是持久化引用。新声�
 6. runtime sampled output 与 determinism 检查；
 7. Production render、compatibility 和 Generator coordinate Golden 比对。
 
-修改经过审查后运行 `pnpm catalog:golden:update`，并提交 `catalog/production-compatibility-v1.json`、Generator Golden 和 Rust production Golden 的有意差异。新增或调整 standard Color 参数时还要验证 parameter metadata、Cue/Arrangement exact target、Lab midpoint/endpoints、清除后的 fallback 与实际 `color.rgb` 输出；兼容修改直接更新现有源文件，不为此机械新增 revision。
+修改经过审查后运行 `pnpm catalog:golden:update`，并提交 `catalog/production-compatibility-v1.json`、Generator Golden 和 Rust production Golden 的有意差异。新增或调整 standard Color 参数时还要验证 typed schema、scope、Cue/Arrangement exact target、Lab midpoint/endpoints、清除后的 fallback 与实际 `color.rgb` 输出；兼容修改直接更新现有源文件，不为此机械新增 revision。
+
+Effect parameter 不再在 Catalog metadata 中维护 `parameter_summary`，也不维护与 parameter schema 重复的 type/default/policy 字段。Catalog discovery 只保留作者可理解的 family/category/visibility/mood/energy/density/motion/colorfulness/strobe risk；`required_attributes` 和 `layout_capabilities` 是显式兼容性承诺，由完整 Project validation 与 Golden 交叉验证。
 
 ## 用户资产包
 
@@ -42,7 +44,7 @@ Header 的 **Assets** 菜单支持导出项目资产依赖闭包和导入 `user-
 
 导入流程：
 
-1. JSON Schema + semantic/reference validation。
+1. JSON Schema + semantic/reference validation；Effect 必须已经使用当前 parameter contract 并声明标准 Color，不在导入时迁移或补字段。
 2. 检测目标项目中的 ID 冲突。
 3. 用户选择拒绝导入，或整体 rename；rename 会同步重写包内所有引用。
 4. 单次 transaction 写入 ProjectBundle。

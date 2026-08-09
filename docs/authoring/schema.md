@@ -6,6 +6,8 @@
 
 这个 V1 以当前领域模型为内容基础，不是早期数据结构的恢复。旧格式、迁移器、恢复分支、生成类型、Schema 和 fixtures 不属于运行时或测试矩阵；声明为其他版本、缺少版本或含未知字段的输入 fail closed。
 
+不提供旧格式 runtime compatibility 不等于保留仓库内旧配置。每次内部 breaking contract 变更都必须同步迁移受源码管理的 Catalog Effect、Cue/Arrangement 参数引用、starter template、fixtures 和 Golden；全库不能同时存在两套字段语义。
+
 正式发布后如需不兼容升级，必须先设计新的版本、migration、loss report 与回滚策略。不得继续沿用“内部开发期只接受当前 V1”的例外。
 
 ## 权威与生成链
@@ -34,6 +36,8 @@ pnpm schema:check
 5. compile 为 typed handles、caches 和 immutable runtime snapshot。
 
 同版本非法输入不会被“修复”后继续加载。UI normalization 只能处理不改变语义的显示细节，且必须可见。
+
+Effect parameter 的类型事实只来自 tagged `schema`，Cue override 与 Arrangement automation 从最大 `scope` 派生。Project/User Asset Pack 中的每个 Effect 还必须声明标准 Color；validator 不根据 Graph、Effect name 或缺失字段猜默认色。
 
 ## 本地缓存重置
 
