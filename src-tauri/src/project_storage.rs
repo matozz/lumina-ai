@@ -1,5 +1,5 @@
 use crate::document::{load_project_bundle, ProjectBundle};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -9,6 +9,7 @@ const LATEST_PROJECT_FILE: &str = "lumina-project.json";
 const HISTORY_DIRECTORY: &str = "history";
 const HISTORY_FILE_PREFIX: &str = "lumina-project-";
 const MAX_HISTORY_FILES: usize = 50;
+const STORAGE_PREFERENCE_FILE: &str = "project-storage.json";
 
 static PROJECT_STORAGE_LOCK: Mutex<()> = Mutex::const_new(());
 static HISTORY_SEQUENCE: AtomicU64 = AtomicU64::new(1);
@@ -25,6 +26,33 @@ pub struct ProjectStorageLoadResult {
     pub project: ProjectBundle,
     pub latest_path: String,
     pub history_count: usize,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct ProjectStoragePreference {
+    directory: String,
+}
+
+#[tauri::command]
+pub async fn load_project_storage_preference(
+    app: tauri::AppHandle,
+) -> Result<Option<String>, String> {
+    load_storage_preference(&app_config_directory(&app)?).await
+}
+
+#[tauri::command]
+pub async fn save_project_storage_preference(
+    app: tauri::AppHandle,
+    directory: String,
+) -> Result<(), String> {
+    existing_directory(&directory).await?;
+    save_storage_preference(&app_config_directory(&app)?, &directory).await
+}
+
+#[tauri::command]
+pub async fn clear_project_storage_preference(app: tauri::AppHandle) -> Result<(), String> {
+    clear_storage_preference(&app_config_directory(&app)?).await
 }
 
 #[tauri::command]
@@ -144,6 +172,63 @@ async fn existing_directory(directory: &str) -> Result<PathBuf, String> {
     Ok(path)
 }
 
+fn app_config_directory(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    use tauri::Manager;
+    app.path()
+        .app_config_dir()
+        .map_err(|error| format!("Project storage preference path is unavailable: {error}"))
+}
+
+async fn load_storage_preference(config_directory: &Path) -> Result<Option<String>, String> {
+    let path = config_directory.join(STORAGE_PREFERENCE_FILE);
+    if !tokio::fs::try_exists(&path)
+        .await
+        .map_err(|error| format!("Project storage preference check failed: {error}"))?
+    {
+        return Ok(None);
+    }
+    let content = tokio::fs::read_to_string(&path)
+        .await
+        .map_err(|error| format!("Project storage preference read failed: {error}"))?;
+    let preference = serde_json::from_str::<ProjectStoragePreference>(&content)
+        .map_err(|error| format!("Project storage preference is invalid: {error}"))?;
+    if preference.directory.trim().is_empty() {
+        return Err("Project storage preference is empty.".to_string());
+    }
+    Ok(Some(preference.directory))
+}
+
+async fn save_storage_preference(config_directory: &Path, directory: &str) -> Result<(), String> {
+    tokio::fs::create_dir_all(config_directory)
+        .await
+        .map_err(|error| {
+            format!("Project storage preference directory creation failed: {error}")
+        })?;
+    let mut serialized = serde_json::to_string_pretty(&ProjectStoragePreference {
+        directory: directory.to_string(),
+    })
+    .map_err(|error| format!("Project storage preference serialization failed: {error}"))?;
+    serialized.push('\n');
+    atomic_write(
+        &config_directory.join(STORAGE_PREFERENCE_FILE),
+        serialized.as_bytes(),
+    )
+    .await
+}
+
+async fn clear_storage_preference(config_directory: &Path) -> Result<(), String> {
+    let path = config_directory.join(STORAGE_PREFERENCE_FILE);
+    if tokio::fs::try_exists(&path)
+        .await
+        .map_err(|error| format!("Project storage preference check failed: {error}"))?
+    {
+        tokio::fs::remove_file(path)
+            .await
+            .map_err(|error| format!("Project storage preference removal failed: {error}"))?;
+    }
+    Ok(())
+}
+
 async fn prune_history(directory: &Path) -> Result<usize, String> {
     let mut files = history_files(directory).await?;
     files.sort();
@@ -220,7 +305,10 @@ fn display_path(path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{load_project_storage, save_project_storage, MAX_HISTORY_FILES};
+    use super::{
+        clear_storage_preference, load_project_storage, load_storage_preference,
+        save_project_storage, save_storage_preference, MAX_HISTORY_FILES,
+    };
     use crate::document::valid_bundle;
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -314,6 +402,34 @@ mod tests {
                 .await
                 .expect("preserved invalid latest"),
             "{\"schema_version\":null}\n"
+        );
+
+        tokio::fs::remove_dir_all(directory)
+            .await
+            .expect("test cleanup");
+    }
+
+    #[tokio::test]
+    async fn stores_and_clears_the_project_folder_preference() {
+        let directory = test_directory("preference").await;
+        save_storage_preference(&directory, "/shows/house")
+            .await
+            .expect("save storage preference");
+
+        assert_eq!(
+            load_storage_preference(&directory)
+                .await
+                .expect("load storage preference"),
+            Some("/shows/house".to_string())
+        );
+        clear_storage_preference(&directory)
+            .await
+            .expect("clear storage preference");
+        assert_eq!(
+            load_storage_preference(&directory)
+                .await
+                .expect("load cleared preference"),
+            None
         );
 
         tokio::fs::remove_dir_all(directory)

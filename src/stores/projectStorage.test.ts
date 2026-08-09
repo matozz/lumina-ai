@@ -3,7 +3,6 @@ import { engine } from "@/bridge/commands";
 import type { ProjectBundle } from "@/bridge/types";
 import { projectActions, useProjectStore } from "@/stores/project";
 import {
-  PROJECT_STORAGE_DIRECTORY_KEY,
   ProjectAutosaveController,
   projectStorageActions,
   type ProjectStorageState,
@@ -17,6 +16,9 @@ describe("project folder storage", () => {
     localStorage.clear();
     projectActions.reset();
     useProjectStorageStore.setState(storageState("booting"), true);
+    vi.spyOn(engine, "loadProjectStoragePreference").mockResolvedValue(null);
+    vi.spyOn(engine, "saveProjectStoragePreference").mockResolvedValue(undefined);
+    vi.spyOn(engine, "clearProjectStoragePreference").mockResolvedValue(undefined);
   });
 
   it("blocks startup when no project folder has been selected", async () => {
@@ -25,6 +27,26 @@ describe("project folder storage", () => {
     expect(useProjectStorageStore.getState()).toMatchObject({
       phase: "needs_directory",
       directory: null,
+    });
+  });
+
+  it("reopens the cached authoritative folder during startup", async () => {
+    const project = structuredClone(useProjectStore.getState().bundle);
+    project.manifest.name = "Reopened Project";
+    vi.mocked(engine.loadProjectStoragePreference).mockResolvedValue("/remembered");
+    vi.spyOn(engine, "loadProjectStorage").mockResolvedValue({
+      project,
+      latest_path: "/remembered/lumina-project.json",
+      history_count: 3,
+    });
+
+    await projectStorageActions.initialize();
+
+    expect(useProjectStore.getState().bundle.manifest.name).toBe("Reopened Project");
+    expect(useProjectStorageStore.getState()).toMatchObject({
+      phase: "ready",
+      directory: "/remembered",
+      historyCount: 3,
     });
   });
 
@@ -45,7 +67,7 @@ describe("project folder storage", () => {
       directory: "/shows",
       historyCount: 7,
     });
-    expect(localStorage.getItem(PROJECT_STORAGE_DIRECTORY_KEY)).toBe("/shows");
+    expect(engine.saveProjectStoragePreference).toHaveBeenCalledWith("/shows");
   });
 
   it("initializes an empty folder from the current recovery bundle", async () => {
@@ -65,7 +87,7 @@ describe("project folder storage", () => {
       directory: "/new",
       latestPath: "/new/lumina-project.json",
     });
-    expect(localStorage.getItem(PROJECT_STORAGE_DIRECTORY_KEY)).toBe("/new");
+    expect(engine.saveProjectStoragePreference).toHaveBeenCalledWith("/new");
   });
 
   it("does not cache or overwrite a folder that fails to open", async () => {
@@ -75,7 +97,7 @@ describe("project folder storage", () => {
     await projectStorageActions.activateDirectory("/broken");
 
     expect(save).not.toHaveBeenCalled();
-    expect(localStorage.getItem(PROJECT_STORAGE_DIRECTORY_KEY)).toBeNull();
+    expect(engine.saveProjectStoragePreference).not.toHaveBeenCalled();
     expect(useProjectStorageStore.getState()).toMatchObject({
       phase: "error",
       directory: null,

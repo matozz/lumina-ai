@@ -41,5 +41,5 @@ All persisted references include stable ID and internal revision. Display names 
 - The UI may hide internal revisions, but validators and compiler always resolve them exactly.
 - A user-selected Project folder is the durable authority: `lumina-project.json` contains the validated latest ProjectBundle and `history/` retains at most 50 validated prior versions. Writes are atomic and trailing-debounced by two seconds after ProjectBundle transactions.
 - Startup is gated until a folder is available. A cached folder path is only a scoped preference; an existing latest file wins over the browser recovery shadow, while an empty folder may be initialized from that shadow or the starter.
-- localStorage caches the validated folder preference, a recovery shadow, and selection/session UI state. Exported asset packs remain explicit cross-project transfer artifacts.
+- The app config cache stores the validated folder preference. localStorage caches only a recovery shadow and selection/session UI state. Exported asset packs remain explicit cross-project transfer artifacts.
 - Full ownership and user workflows are documented in [`../authoring/project-model.md`](../authoring/project-model.md).

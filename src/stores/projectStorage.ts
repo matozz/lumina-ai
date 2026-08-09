@@ -4,7 +4,6 @@ import type { ProjectBundle } from "@/bridge/types";
 import { engine, type ProjectStorageSaveResult } from "@/bridge/commands";
 import { projectActions, useProjectStore } from "@/stores/project";
 
-export const PROJECT_STORAGE_DIRECTORY_KEY = "lumina-project-storage-directory-v1";
 export const PROJECT_STORAGE_SAVE_DELAY_MS = 2_000;
 
 export type ProjectStoragePhase = "booting" | "needs_directory" | "loading" | "ready" | "error";
@@ -41,12 +40,20 @@ export const projectStorageActions = {
     if (useProjectStorageStore.getState().phase !== "booting") return Promise.resolve();
     if (bootstrapPromise) return bootstrapPromise;
     bootstrapPromise = (async () => {
-      const cachedDirectory = localStorage.getItem(PROJECT_STORAGE_DIRECTORY_KEY)?.trim();
-      if (!cachedDirectory) {
-        useProjectStorageStore.setState({ phase: "needs_directory" });
-        return;
+      try {
+        const cachedDirectory = (await engine.loadProjectStoragePreference())?.trim();
+        if (!cachedDirectory) {
+          useProjectStorageStore.setState({ phase: "needs_directory" });
+          return;
+        }
+        await projectStorageActions.activateDirectory(cachedDirectory, true);
+      } catch (error) {
+        await engine.clearProjectStoragePreference().catch(() => undefined);
+        useProjectStorageStore.setState({
+          phase: "error",
+          error: errorMessage(error, "The saved project folder preference could not be opened."),
+        });
       }
-      await projectStorageActions.activateDirectory(cachedDirectory, true);
     })().finally(() => {
       bootstrapPromise = null;
     });
@@ -77,7 +84,7 @@ export const projectStorageActions = {
 
       if (loaded) {
         projectActions.loadBundle(loaded.project);
-        localStorage.setItem(PROJECT_STORAGE_DIRECTORY_KEY, directory);
+        await engine.saveProjectStoragePreference(directory);
         useProjectStorageStore.setState({
           phase: "ready",
           directory,
@@ -93,12 +100,12 @@ export const projectStorageActions = {
 
       const saved = await engine.saveProjectStorage(directory, useProjectStore.getState().bundle);
       if (sequence !== activationSequence) return false;
-      localStorage.setItem(PROJECT_STORAGE_DIRECTORY_KEY, directory);
+      await engine.saveProjectStoragePreference(directory);
       applySaveResult(directory, saved);
       return true;
     } catch (error) {
       if (sequence !== activationSequence) return false;
-      if (fromCache) localStorage.removeItem(PROJECT_STORAGE_DIRECTORY_KEY);
+      if (fromCache) await engine.clearProjectStoragePreference().catch(() => undefined);
       useProjectStorageStore.setState({
         phase: "error",
         directory: null,

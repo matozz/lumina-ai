@@ -153,6 +153,13 @@ export const engine = {
   loadProjectStorage: (directory: string) =>
     invoke<ProjectStorageLoadResult | null>("load_project_storage", { directory }),
 
+  loadProjectStoragePreference: () => invoke<string | null>("load_project_storage_preference"),
+
+  saveProjectStoragePreference: (directory: string) =>
+    invoke("save_project_storage_preference", { directory }),
+
+  clearProjectStoragePreference: () => invoke("clear_project_storage_preference"),
+
   saveProjectStorage: (directory: string, project: ProjectBundle) =>
     invoke<ProjectStorageSaveResult>("save_project_storage", {
       directory,

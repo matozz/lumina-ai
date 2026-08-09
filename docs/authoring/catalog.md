@@ -49,7 +49,7 @@ Header 的 **Assets** 菜单显示当前 Project 文件夹及历史数量，并�
 3. 用户选择拒绝导入，或整体 rename；rename 会同步重写包内所有引用。
 4. 单次 transaction 写入 ProjectBundle。
 
-导出的文件用于跨项目迁移；Project 文件夹中的 latest + 最近 50 版 history 是当前项目的持续备份来源。localStorage 只缓存已验证的文件夹路径、recovery shadow 和 UI 状态。
+导出的文件用于跨项目迁移；Project 文件夹中的 latest + 最近 50 版 history 是当前项目的持续备份来源。app config cache 只记忆已验证的文件夹路径；localStorage 只保留 recovery shadow 和 UI 状态。
 
 ## Reset defaults
 

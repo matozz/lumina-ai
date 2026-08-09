@@ -37,9 +37,9 @@ Stage、Lab、Cues 和 Arrange 使用隔离的 Authoring PreviewSession。编辑
 ## 存储
 
 - 用户选择的 Project 文件夹是当前项目的权威持久化边界。`lumina-project.json` 保存最新、经完整校验的 `ProjectBundle`；每次有内容变化的替换会先把上一版写入 `history/lumina-project-<timestamp>-<sequence>.json`，只保留最近 50 版。最新文件和历史文件都使用临时文件 + rename 原子提交，已有但无效的 latest 会 fail closed，不能被覆盖。
-- App 首次打开时保存路径为空，必须在阻塞弹窗中选择文件夹后才能继续。路径只在成功加载已有 latest 或成功初始化空文件夹后写入 scoped `localStorage`；缓存路径失效时重新进入选择弹窗。已有 latest 始终优先于浏览器缓存；空文件夹才使用当前 recovery cache/starter 初始化。
+- App 首次打开时保存路径为空，必须在阻塞弹窗中选择文件夹后才能继续。路径只在成功加载已有 latest 或成功初始化空文件夹后原子写入 app config cache；缓存路径失效时清除该偏好并重新进入选择弹窗。已有 latest 始终优先于浏览器 recovery cache；空文件夹才使用当前 recovery cache/starter 初始化。
 - ProjectBundle transaction 后使用 trailing 2 秒合并保存；连续编辑只提交最后状态，进行中的写入串行完成。workspace 选择、播放头、Zoom/Snap 和 transport session 不属于 ProjectBundle，不触发项目版本。
-- `lumina-project-v1` 的 `localStorage` 仍保留工作区 recovery shadow 和资产选择，用于首次升级选择空文件夹时避免丢失当前编辑，但不是重开项目的权威来源。storage version 只负责一次性拒绝旧 contract 缓存并恢复当前 starter bundle；不会扫描或宽泛删除浏览器存储。
+- `lumina-project-v1` 的 `localStorage` 仍保留工作区 recovery shadow 和资产选择，用于首次升级选择空文件夹时避免丢失当前编辑，但不是重开项目或记忆文件夹的权威来源。storage version 只负责一次性拒绝旧 contract 缓存并恢复当前 starter bundle；不会扫描或宽泛删除浏览器存储。
 - 用户显式下载的资产包位于浏览器下载位置，不受 Reset defaults 影响。
 - Reset defaults 作为普通 ProjectBundle transaction 恢复内置 starter template，并在 2 秒后保存为 latest；被替换的用户项目进入历史。它不删除项目文件夹、历史或下载的资产包。
 
