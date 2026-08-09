@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { createCueAsset, createEffectAsset } from "@/document/projectModel";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
+import type { CueLayerUpdate } from "./cueAuthoring";
 import { CueOverrideControls } from "./CueOverrideControls";
 
 describe("CueOverrideControls Color", () => {
@@ -38,8 +39,7 @@ describe("CueOverrideControls Color", () => {
     color.default_enabled = false;
     const cue = createCueAsset(bundle, [effect]);
     const layer = cue.layers[0];
-    const onUpdate = (update: (layer: typeof layer, cue: typeof cue) => void) =>
-      update(layer, cue);
+    const onUpdate = (update: CueLayerUpdate) => update(layer, cue);
     const { rerender } = render(
       <CueOverrideControls
         cue={cue}
