@@ -176,6 +176,10 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
       setResolvingRecipeId(null);
       return;
     }
+    if (workspace === "arrange") {
+      workspaceActions.setSelectedArrangeBuiltInCue(null);
+      projectActions.setSelectedCueRef(null);
+    }
     const baseCueId = productionRecipeCueBaseId(recipeId);
     const cueId =
       workspace === "arrange"

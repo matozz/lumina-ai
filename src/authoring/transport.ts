@@ -73,7 +73,7 @@ export const authoringTransportActions = {
       const loopCoveredDuration =
         session.loopStartTick === 0 && session.loopEndTick === session.durationTicks;
       session.durationTicks = nextDuration;
-      session.cursorTick = clampTick(session.cursorTick, session.durationTicks);
+      session.cursorTick = clampAuthoringTick(session.cursorTick, session.durationTicks);
       session.loopStartTick = Math.min(session.loopStartTick, session.durationTicks - 1);
       session.loopEndTick = loopCoveredDuration
         ? session.durationTicks
@@ -117,7 +117,7 @@ export const authoringTransportActions = {
   },
   seek(key: string, cursorTick: number, now = monotonicNow()) {
     updateCommand(key, now, (session) => {
-      session.cursorTick = clampTick(cursorTick, session.durationTicks);
+      session.cursorTick = clampAuthoringTick(cursorTick, session.durationTicks);
     });
   },
   setLoop(
@@ -138,7 +138,7 @@ export const authoringTransportActions = {
       session.loopEnabled = loop.enabled;
       session.loopStartTick = startTick;
       session.loopEndTick = endTick;
-      session.cursorTick = clampTick(session.cursorTick, session.durationTicks);
+      session.cursorTick = clampAuthoringTick(session.cursorTick, session.durationTicks);
     });
   },
   setClockSource(key: string, clockSource: PreviewClockSource, now = monotonicNow()) {
@@ -156,7 +156,7 @@ export const authoringTransportActions = {
         session.durationTicks = durationTicks;
         session.loopStartTick = 0;
         session.loopEndTick = durationTicks;
-        session.cursorTick = clampTick(session.cursorTick, durationTicks);
+        session.cursorTick = clampAuthoringTick(session.cursorTick, durationTicks);
       }
     });
   },
@@ -176,7 +176,7 @@ export const authoringTransportActions = {
       if (session.clockSource === "local") {
         const durationTicks = createLocalPreviewClock(timing).durationTicks;
         session.durationTicks = durationTicks;
-        session.cursorTick = clampTick(session.cursorTick, durationTicks);
+        session.cursorTick = clampAuthoringTick(session.cursorTick, durationTicks);
         if (loopCoveredDuration) session.loopEndTick = durationTicks;
       }
     });
@@ -185,7 +185,7 @@ export const authoringTransportActions = {
     const session = requiredSession(key);
     const next = {
       ...session,
-      cursorTick: clampTick(cursorTick, session.durationTicks),
+      cursorTick: clampAuthoringTick(cursorTick, session.durationTicks),
       playback: ended ? ("stopped" as const) : session.playback,
     };
     useAuthoringTransportStore.setState((state) => ({
@@ -341,8 +341,10 @@ function positiveInteger(value: number) {
   return Math.max(1, Math.floor(value));
 }
 
-function clampTick(value: number, durationTicks: number) {
-  return Math.max(0, Math.min(Math.floor(value), durationTicks));
+export function clampAuthoringTick(value: number, durationTicks: number) {
+  const maximum = Number.isFinite(durationTicks) ? Math.max(0, Math.floor(durationTicks)) : 0;
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(Math.floor(value), maximum));
 }
 
 function monotonicNow() {

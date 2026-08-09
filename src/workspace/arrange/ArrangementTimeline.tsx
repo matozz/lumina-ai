@@ -4,6 +4,7 @@ import { authoringDiagnostic } from "@/authoring/diagnostics";
 import {
   authoringSessionKey,
   authoringTransportActions,
+  clampAuthoringTick,
   useAuthoringTransportStore,
 } from "@/authoring/transport";
 import { activeStage, appendExactRef, assetKey, exactAsset } from "@/document/projectModel";
@@ -184,10 +185,21 @@ export function ArrangementTimeline() {
       );
       return;
     }
+    if (!Number.isInteger(cue.nominal_length_ticks) || cue.nominal_length_ticks < 1) {
+      setDiagnostic(
+        authoringDiagnostic(
+          new Error("The selected Cue has an invalid nominal length."),
+          "arrangement.toolbar.place_cue",
+        ),
+      );
+      return;
+    }
     const durationTick = Math.min(arrangement.length_ticks, cue.nominal_length_ticks);
-    const cursorTick =
-      requestedTick ?? useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick ?? 0;
-    const startTick = Math.min(arrangement.length_ticks - durationTick, cursorTick);
+    const rawCursorTick =
+      typeof requestedTick === "number"
+        ? requestedTick
+        : (useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick ?? 0);
+    const startTick = clampAuthoringTick(rawCursorTick, arrangement.length_ticks - durationTick);
     const placed = runCommand(
       `Place Cue ${cue.name}`,
       "arrangement.toolbar.place_cue",

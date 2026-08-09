@@ -137,6 +137,57 @@ describe("ArrangementTimeline workflow", () => {
     expect(state.historyCursor).toBe(historyBefore + 1);
   });
 
+  it("places a Cue at a valid tick even when the transport cursor was non-finite", () => {
+    const effect = projectActions.createEffect("Safe Place Effect")!;
+    const cue = projectActions.createCue([effect], "Safe Place Cue")!;
+    render(<ArrangementTimeline />);
+    const sessionKey = authoringSessionKey(
+      "arrangement",
+      assetKey(useProjectStore.getState().selectedArrangementRef),
+    );
+    useAuthoringTransportStore.setState((state) => ({
+      sessions: {
+        ...state.sessions,
+        [sessionKey]: { ...state.sessions[sessionKey], cursorTick: Number.NaN },
+      },
+    }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Place Cue" }));
+
+    const state = useProjectStore.getState();
+    const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
+    const placed = arrangement.tracks
+      .flatMap((track) => track.clips ?? [])
+      .find((clip) => assetKey(clip.cue_ref) === assetKey(cue));
+    expect(placed).toMatchObject({
+      start_tick: 0,
+      duration_tick: expect.any(Number),
+      source_offset_tick: 0,
+    });
+    expect(Number.isInteger(placed?.duration_tick)).toBe(true);
+    expect(JSON.stringify(placed)).not.toContain(":null");
+  });
+
+  it("places a Cue at the current playhead from the toolbar", () => {
+    const effect = projectActions.createEffect("Playhead Place Effect")!;
+    const cue = projectActions.createCue([effect], "Playhead Place Cue")!;
+    render(<ArrangementTimeline />);
+    const sessionKey = authoringSessionKey(
+      "arrangement",
+      assetKey(useProjectStore.getState().selectedArrangementRef),
+    );
+    authoringTransportActions.seek(sessionKey, 12_480);
+
+    fireEvent.click(screen.getByRole("button", { name: "Place Cue" }));
+
+    const state = useProjectStore.getState();
+    const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
+    const placed = arrangement.tracks
+      .flatMap((track) => track.clips ?? [])
+      .find((clip) => assetKey(clip.cue_ref) === assetKey(cue));
+    expect(placed?.start_tick).toBe(12_480);
+  });
+
   it("renders multi-meter ruler marks, zoom snap, selection inspector, and one-step keyboard edits", async () => {
     const effect = projectActions.createEffect("Pulse")!;
     const cue = projectActions.createCue([effect], "Pulse Cue")!;

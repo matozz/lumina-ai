@@ -108,7 +108,7 @@ export function ArrangementTimelineToolbar({
         size="xs"
         disabled={!selectedCueName}
         title={selectedCueName ? `Place ${selectedCueName} at the playhead` : undefined}
-        onClick={onPlaceCue}
+        onClick={() => onPlaceCue()}
       >
         <Plus data-icon="inline-start" aria-hidden="true" />
         Place Cue
