@@ -49,7 +49,7 @@ export function ArrangementKeyframeControl({
             size="icon-xs"
             variant="default"
             className={cn(
-              "border-primary-foreground/20 absolute z-10 size-3 touch-none rounded-full border shadow-sm will-change-transform",
+              "border-primary-foreground/20 absolute z-10 size-2.5 touch-none rounded-full border shadow-sm will-change-transform",
               !selected && "bg-primary/80 hover:bg-primary",
               selected && "ring-primary/40 ring-2",
             )}

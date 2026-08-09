@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shortcutTargetIsBlocked } from "./useArrangementEditorShortcuts";
+import { shortcutEventIsBlocked, shortcutTargetIsBlocked } from "./useArrangementEditorShortcuts";
 
 describe("Arrange shortcut focus rules", () => {
   it("blocks editor shortcuts inside form fields and overlay content", () => {
@@ -15,5 +15,17 @@ describe("Arrange shortcut focus rules", () => {
     expect(shortcutTargetIsBlocked(dialogButton)).toBe(true);
     expect(shortcutTargetIsBlocked(selectTrigger)).toBe(true);
     expect(shortcutTargetIsBlocked(document.createElement("button"))).toBe(false);
+  });
+
+  it("checks every target in a composed event path", () => {
+    const input = document.createElement("input");
+    const event = new KeyboardEvent("keydown", { key: "Delete", bubbles: true, composed: true });
+    input.addEventListener("keydown", (current) => {
+      expect(shortcutEventIsBlocked(current)).toBe(true);
+    });
+
+    document.body.append(input);
+    input.dispatchEvent(event);
+    input.remove();
   });
 });

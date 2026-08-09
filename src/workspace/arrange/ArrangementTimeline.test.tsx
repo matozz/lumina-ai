@@ -130,14 +130,14 @@ describe("ArrangementTimeline workflow", () => {
       expect.arrayContaining(["1", "1.2", "1.3", "2", "2.2", "2.3", "3"]),
     );
     expect(container.querySelector('[title="96 BPM at tick 5760"]')).toBeTruthy();
-    expect(
-      screen.getByRole("combobox", { name: "Arrangement timeline snap" }).textContent,
-    ).toContain("Snap ½ beat");
+    expect(screen.getByRole("combobox", { name: "Arrangement timeline snap" }).textContent).toBe(
+      "½ beat",
+    );
     const historyBeforeZoom = useProjectStore.getState().historyCursor;
     fireEvent.click(screen.getByRole("button", { name: "Zoom Arrangement timeline out" }));
-    expect(
-      screen.getByRole("combobox", { name: "Arrangement timeline snap" }).textContent,
-    ).toContain("Snap ½ beat");
+    expect(screen.getByRole("combobox", { name: "Arrangement timeline snap" }).textContent).toBe(
+      "½ beat",
+    );
     expect(useProjectStore.getState().historyCursor).toBe(historyBeforeZoom);
 
     const clip = screen.getByRole("button", { name: /Pulse Cue, starts at tick 960/ });
@@ -379,6 +379,7 @@ describe("ArrangementTimeline workflow", () => {
     })[0];
     expect(curve.getAttribute("viewBox")?.endsWith(" 32")).toBe(true);
     expect(curvePath.getAttribute("d")).toContain("M 0 6");
+    expect(firstKeyframe.className).toContain("size-2.5");
     expect(firstKeyframe.style.top).toBe("6px");
     fireEvent.doubleClick(lane, { clientX: 96 });
 

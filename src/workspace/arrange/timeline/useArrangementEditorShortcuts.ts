@@ -45,7 +45,7 @@ export function useArrangementEditorShortcuts({
 }: ArrangementEditorShortcutOptions) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat || shortcutTargetIsBlocked(event.target)) return;
+      if (event.repeat || shortcutEventIsBlocked(event)) return;
       const command = event.metaKey || event.ctrlKey;
       const key = event.key.toLowerCase();
 
@@ -130,6 +130,10 @@ export function useArrangementEditorShortcuts({
     sessionKey,
     snapTicks,
   ]);
+}
+
+export function shortcutEventIsBlocked(event: KeyboardEvent) {
+  return event.composedPath().some(shortcutTargetIsBlocked);
 }
 
 export function shortcutTargetIsBlocked(target: EventTarget | null) {

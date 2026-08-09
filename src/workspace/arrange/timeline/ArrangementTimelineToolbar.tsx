@@ -225,9 +225,9 @@ function Shortcut({ keys, action }: { keys: string; action: string }) {
 }
 
 const SNAP_OPTIONS: Array<{ label: string; value: ArrangementSnapPreset }> = [
-  { value: "bar", label: "Snap 1 bar" },
-  { value: "beat", label: "Snap 1 beat" },
-  { value: "half", label: "Snap ½ beat" },
-  { value: "quarter", label: "Snap ¼ beat" },
-  { value: "eighth", label: "Snap ⅛ beat" },
+  { value: "bar", label: "1 bar" },
+  { value: "beat", label: "1 beat" },
+  { value: "half", label: "½ beat" },
+  { value: "quarter", label: "¼ beat" },
+  { value: "eighth", label: "⅛ beat" },
 ];

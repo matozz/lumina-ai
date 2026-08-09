@@ -43,6 +43,41 @@ function renderInspector(definition: ParameterDefinitionDSL, onApply = vi.fn()) 
 }
 
 describe("AutomationKeyframeInspector", () => {
+  it("keeps Delete and Backspace inside the editor instead of bubbling to the timeline", () => {
+    const onTimelineKeyDown = vi.fn();
+    render(
+      <div onKeyDown={onTimelineKeyDown}>
+        <Popover open>
+          <PopoverTrigger render={<button>Keyframe</button>} />
+          <PopoverContent>
+            <AutomationKeyframeInspector
+              canDelete
+              definition={masterDimmer}
+              keyframe={{
+                id: "key-0",
+                time_tick: 0,
+                value: masterDimmer.default_value,
+                interpolation: "linear",
+              }}
+              minimumTick={0}
+              maximumTick={960}
+              ppq={960}
+              tempoMap={{ points: [{ time_tick: 0, bpm: 120 }] }}
+              onApply={vi.fn()}
+              onDelete={vi.fn()}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>,
+    );
+
+    const valueInput = screen.getByLabelText("Master dimmer (%)");
+    fireEvent.keyDown(valueInput, { key: "Delete" });
+    fireEvent.keyDown(valueInput, { key: "Backspace" });
+
+    expect(onTimelineKeyDown).not.toHaveBeenCalled();
+  });
+
   it("edits normalized percent values in user-facing percent units", () => {
     const onApply = renderInspector(masterDimmer);
     const input = screen.getByLabelText("Master dimmer (%)");
