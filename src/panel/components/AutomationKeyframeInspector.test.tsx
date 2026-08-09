@@ -45,9 +45,10 @@ function renderInspector(definition: ParameterDefinitionDSL, onApply = vi.fn()) 
 describe("AutomationKeyframeInspector", () => {
   it("keeps Delete and Backspace inside the editor instead of bubbling to the timeline", () => {
     const onTimelineKeyDown = vi.fn();
+    const onPopoverOpenChange = vi.fn();
     render(
       <div onKeyDown={onTimelineKeyDown}>
-        <Popover open>
+        <Popover open onOpenChange={onPopoverOpenChange}>
           <PopoverTrigger render={<button>Keyframe</button>} />
           <PopoverContent>
             <AutomationKeyframeInspector
@@ -76,6 +77,9 @@ describe("AutomationKeyframeInspector", () => {
     fireEvent.keyDown(valueInput, { key: "Backspace" });
 
     expect(onTimelineKeyDown).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(valueInput, { key: "Escape" });
+    expect(onPopoverOpenChange.mock.calls[0]?.[0]).toBe(false);
   });
 
   it("edits normalized percent values in user-facing percent units", () => {

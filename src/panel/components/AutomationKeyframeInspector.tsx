@@ -83,7 +83,9 @@ export const AutomationKeyframeInspector = ({
     <div
       className="flex flex-col gap-3"
       onClick={(event) => event.stopPropagation()}
-      onKeyDown={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        if (event.key === "Delete" || event.key === "Backspace") event.stopPropagation();
+      }}
       onPointerDown={(event) => event.stopPropagation()}
     >
       <PopoverHeader>
