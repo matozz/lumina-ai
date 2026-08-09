@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   authoringSessionKey,
   authoringTransportActions,
@@ -18,6 +18,10 @@ import {
 import { ArrangementTimeline } from "./ArrangementTimeline";
 
 describe("ArrangementTimeline workflow", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   beforeEach(() => {
     localStorage.clear();
     projectActions.reset();
@@ -277,6 +281,48 @@ describe("ArrangementTimeline workflow", () => {
     expect(useWorkspaceStore.getState().arrangeTimelineFocus).toBe(true);
     expect(screen.getByRole("button", { name: "Exit Timeline focus mode" })).toBeTruthy();
     expect(useProjectStore.getState().historyCursor).toBe(historyBefore);
+  });
+
+  it("refreshes the virtualized viewport after the first focus layout resize", async () => {
+    const effect = projectActions.createEffect("Focus Resize Effect")!;
+    const cue = projectActions.createCue([effect], "Focus Resize Cue")!;
+    const reference = useProjectStore.getState().selectedArrangementRef;
+    projectActions.updateArrangement(reference, "Seed focus resize clips", (arrangement) => {
+      arrangement.tracks[0].clips = [
+        { id: "near", cue_ref: cue, start_tick: 0, duration_tick: 960 },
+        { id: "far", cue_ref: cue, start_tick: 96_000, duration_tick: 960 },
+      ];
+    });
+    workspaceActions.setArrangeTimelineBeatWidth(2.6);
+    let resize: ResizeObserverCallback | null = null;
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: ResizeObserverCallback) {
+          resize = callback;
+        }
+
+        observe = observe;
+        disconnect = disconnect;
+      },
+    );
+    const { container } = render(<ArrangementTimeline />);
+    const scroll = container.querySelector<HTMLElement>("[data-arrangement-timeline-scroll]")!;
+    Object.defineProperty(scroll, "clientWidth", { configurable: true, value: 1_200 });
+
+    expect(
+      screen.queryByRole("button", { name: /Focus Resize Cue, starts at tick 96000/ }),
+    ).toBeNull();
+    act(() => resize?.([], {} as ResizeObserver));
+
+    expect(
+      await screen.findByRole("button", { name: /Focus Resize Cue, starts at tick 96000/ }),
+    ).toBeTruthy();
+    expect(observe).toHaveBeenCalledWith(scroll);
+    expect(useWorkspaceStore.getState().arrangeTimelineBeatWidth).toBe(2.6);
+    expect(disconnect).not.toHaveBeenCalled();
   });
 
   it("shows overlap failure beside the selected CueClip with a recovery action", () => {

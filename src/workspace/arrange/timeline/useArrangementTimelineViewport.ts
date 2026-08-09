@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   clampBeatWidth,
   createTimelineGeometry,
@@ -52,13 +52,21 @@ export function useArrangementTimelineViewport(
     [beatWidth],
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const scroll = scrollRef.current;
+    if (!scroll) return;
     const update = () => {
-      if (scrollRef.current) updateViewport(scrollRef.current);
+      updateViewport(scroll);
     };
     update();
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => update());
+    observer?.observe(scroll);
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", update);
+    };
   }, [updateViewport]);
 
   const zoomTo = useCallback(
