@@ -29,6 +29,7 @@ import {
   exactAsset,
   forkAssetRevision,
   normalizeProjectAssetRefs,
+  normalizeProjectEffectParameters,
   toAssetRef,
   uniqueId,
 } from "@/document/projectModel";
@@ -80,7 +81,7 @@ export interface ProjectState {
 }
 
 const starter = createStarterProjectBundle();
-const LOCAL_WORKSPACE_STORAGE_VERSION = 12;
+const LOCAL_WORKSPACE_STORAGE_VERSION = 13;
 
 const initialState: ProjectState = {
   bundle: starter,
@@ -106,12 +107,14 @@ export const useProjectStore = create<ProjectState>()(
     name: "lumina-project-v1",
     version: LOCAL_WORKSPACE_STORAGE_VERSION,
     migrate: (persistedState, version) => {
-      if (version < LOCAL_WORKSPACE_STORAGE_VERSION) return structuredClone(initialState);
+      if (version < 12) return structuredClone(initialState);
       const state = persistedState as Partial<ProjectState>;
       const persistedBundle = structuredClone(state.bundle ?? starter);
       normalizeProjectAssetRefs(persistedBundle);
       const validation = validateProjectBundle(persistedBundle);
-      const bundle = validation.success ? validation.data : createStarterProjectBundle();
+      const bundle = validation.success
+        ? normalizeProjectEffectParameters(validation.data)
+        : createStarterProjectBundle();
       return {
         ...initialState,
         ...state,
@@ -148,15 +151,18 @@ export const useProjectStore = create<ProjectState>()(
 export const projectActions = {
   loadBundle: (bundle: ProjectBundle) => {
     authoringTransportActions.reset();
-    const selectedArrangementRef = activeArrangementRef(bundle);
+    const normalizedBundle = normalizeProjectEffectParameters(structuredClone(bundle));
+    const selectedArrangementRef = activeArrangementRef(normalizedBundle);
     useProjectStore.setState({
       ...initialState,
-      bundle: structuredClone(bundle),
+      bundle: normalizedBundle,
       selectedArrangementRef,
-      selectedLayoutRef: structuredClone(activeStage(bundle).layout_ref),
+      selectedLayoutRef: structuredClone(activeStage(normalizedBundle).layout_ref),
       selectedEffectRef:
-        bundle.manifest.effect_refs[bundle.manifest.effect_refs.length - 1] ?? null,
-      selectedCueRef: bundle.manifest.cue_refs[bundle.manifest.cue_refs.length - 1] ?? null,
+        normalizedBundle.manifest.effect_refs[normalizedBundle.manifest.effect_refs.length - 1] ??
+        null,
+      selectedCueRef:
+        normalizedBundle.manifest.cue_refs[normalizedBundle.manifest.cue_refs.length - 1] ?? null,
     });
   },
   exportAssetPack: (name?: string) => createUserAssetPack(useProjectStore.getState().bundle, name),

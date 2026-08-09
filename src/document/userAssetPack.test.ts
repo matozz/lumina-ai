@@ -82,6 +82,23 @@ describe("UserAssetPack V1", () => {
     expect(imported.bundle.manifest.arrangement_refs).toContainEqual(toRef(arrangement));
   });
 
+  it("adds disabled standard Color metadata when importing a legacy Effect", () => {
+    const { bundle, effectRef } = projectWithPortableAssets();
+    const pack = createUserAssetPack(bundle, "Legacy Package");
+    const legacyEffect = exactAsset(pack.effects, effectRef)!;
+    legacyEffect.parameters = legacyEffect.parameters.filter(
+      (parameter) => parameter.id !== "color",
+    );
+
+    const imported = importUserAssetPack(createStarterProjectBundle(), pack);
+    const color = exactAsset(imported.bundle.effects, effectRef)?.parameters.find(
+      (parameter) => parameter.id === "color",
+    );
+
+    expect(color).toMatchObject({ value_type: "color", default_enabled: false });
+    expect(exactAsset(imported.importedPack.effects, effectRef)?.parameters).toContainEqual(color);
+  });
+
   it("rejects malformed packs and missing transitive dependencies", () => {
     const { bundle } = projectWithPortableAssets();
     const pack = createUserAssetPack(bundle);

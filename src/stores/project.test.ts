@@ -5,7 +5,7 @@ import {
   authoringTransportActions,
   useAuthoringTransportStore,
 } from "@/authoring/transport";
-import { activeStage, assetKey, exactAsset } from "@/document/projectModel";
+import { activeStage, assetKey, exactAsset, toAssetRef } from "@/document/projectModel";
 import { isOpaqueCueLayerId } from "@/document/cueLayerIdentity";
 import { PREVIEW_DARK_FRAME_NOTICE_THRESHOLD, projectActions, useProjectStore } from "./project";
 
@@ -143,6 +143,29 @@ describe("Stage 7 Project state", () => {
     );
     expect(migrated.bundle.layouts).toHaveLength(26);
     expect(migrated.bundle.manifest.layout_refs).toHaveLength(26);
+  });
+
+  it("preserves a version 12 workspace while adding optional Color to legacy Effects", async () => {
+    const cachedBundle = structuredClone(useProjectStore.getState().bundle);
+    cachedBundle.manifest.name = "Keep my authored workspace";
+    const legacyEffect = cachedBundle.effects[0];
+    legacyEffect.parameters = legacyEffect.parameters.filter(
+      (parameter) => parameter.id !== "color",
+    );
+    const migrate = useProjectStore.persist.getOptions().migrate;
+    const migrated = (await Promise.resolve(
+      migrate?.({ bundle: cachedBundle, selectedEffectRef: toAssetRef(legacyEffect) }, 12),
+    )) as ReturnType<typeof useProjectStore.getState>;
+
+    expect(migrated.bundle.manifest.name).toBe("Keep my authored workspace");
+    expect(exactAsset(migrated.bundle.effects, legacyEffect)?.parameters).toContainEqual(
+      expect.objectContaining({
+        id: "color",
+        value_type: "color",
+        default_enabled: false,
+      }),
+    );
+    expect(migrated.selectedEffectRef).toEqual(toAssetRef(legacyEffect));
   });
 
   it("does not interrupt the current preview when selecting another Effect", () => {

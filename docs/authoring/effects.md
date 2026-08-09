@@ -40,6 +40,8 @@ Production Catalog 中的每个 Effect 都声明标准参数 `color`，使颜色
 
 该参数是 Effect 最终 `color.rgb` 输出的可选单色覆盖，可从 Lab、Cue Layer override 和 Arrangement Color automation 到达。Color lane 在 runtime 使用 Lab 插值；endpoint 精确保留。`default_enabled` 缺省或为 `true` 时使用参数默认色；`false` 时保留 EffectGraph 自己的 Palette/颜色，或者让纯 intensity Effect 不写颜色。Lab 和 Cue UI 可以显式启用颜色，也可以清除颜色回到上述 Effect authored/fallback 行为；禁用的默认值本身不构成 `color.rgb` writer，只有显式 Cue/Arrangement override 或 automation 才构成。
 
+载入旧 ProjectBundle 或 User Asset Pack 时，前端文档边界会为完全缺失 `color` 的 Effect 补入 `default_enabled: false` 的标准 Color 参数。该兼容迁移保留 Effect ID、revision、Graph 和引用，不直接访问持久化实现，也不会把兜底白色变成默认输出。
+
 结构性 Palette 继续使用 `color_stops`，只在 Lab 中编辑，并保持 `override_policy: effect_only`、`automation: disabled`。本版本不在 runtime 改变 stop 数量，也不做 stop-by-stop Arrangement automation。
 
 兼容现有 Schema、参数和引用的 Catalog 修复直接更新当前源文件，不机械增加 revision。只有无法兼容、必须让新旧行为并存时才增加 revision，并同步更新需要迁移的 Cue exact ref。standard Color 兼容入口直接落在现有 Effect 源文件，Catalog 内不保留重复 rev2。

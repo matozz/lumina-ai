@@ -2,7 +2,7 @@ import Ajv2020, { type ErrorObject } from "ajv/dist/2020.js";
 import schema from "../../schemas/user-asset-pack-v1.schema.json";
 import type { AssetRef, ProjectBundle, UserAssetPack } from "@/bridge/types";
 import { validateProjectBundle } from "./projectBundle";
-import { assetKey, exactAsset, uniqueId } from "./projectModel";
+import { assetKey, ensureStandardColorParameter, exactAsset, uniqueId } from "./projectModel";
 
 type PackAssetKind = "stage" | "layout" | "effect" | "cue" | "arrangement";
 
@@ -146,6 +146,7 @@ export function importUserAssetPack(
     throw new Error(validation.issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n"));
   }
   const pack = structuredClone(validation.data);
+  for (const effect of pack.effects) ensureStandardColorParameter(effect);
   const conflicts = assetPackConflicts(bundle, pack);
   if (conflicts.length > 0 && onConflict === "reject") {
     throw new Error(
