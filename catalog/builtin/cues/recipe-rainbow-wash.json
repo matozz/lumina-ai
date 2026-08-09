@@ -7,7 +7,7 @@
   "nominal_length_ticks": 30720,
   "layers": [
     {
-      "id": "rainbow",
+      "id": "layer_efuulqng6hc66vwy",
       "effect_ref": {
         "id": "builtin.color.rainbow",
         "revision": 1

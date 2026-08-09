@@ -42,7 +42,7 @@ export function CueLayerList({
             >
               {advanced && <Badge variant="outline">L{index + 1}</Badge>}
               <span className="min-w-0 flex-1 truncate text-left">
-                {definition?.name ?? layer.id}
+                {definition?.name ?? `Missing Effect · Layer ${index + 1}`}
               </span>
               {advanced && (
                 <span className="text-muted-foreground text-[9px]">P{layer.priority ?? 0}</span>

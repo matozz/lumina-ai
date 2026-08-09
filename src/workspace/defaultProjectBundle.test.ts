@@ -2,9 +2,25 @@ import { describe, expect, it } from "vitest";
 import { validateProjectBundle } from "@/document/projectBundle";
 import { activeLayout, activeStage, exactAsset } from "@/document/projectModel";
 import { resolveTargetSet } from "@/document/stageTopology";
+import { isOpaqueCueLayerId } from "@/document/cueLayerIdentity";
 import { createStarterProjectBundle } from "./defaultProjectBundle";
 
 describe("Authoring Starter ProjectBundle", () => {
+  it("keeps committed built-in Cue Layer identities opaque and stable across builds", () => {
+    const first = createStarterProjectBundle();
+    const second = createStarterProjectBundle();
+    const identities = (bundle: ReturnType<typeof createStarterProjectBundle>) =>
+      bundle.cues.map((cue) => ({
+        cue: `${cue.id}@${cue.revision}`,
+        layers: cue.layers.map((layer) => layer.id),
+      }));
+
+    expect(identities(first)).toEqual(identities(second));
+    expect(
+      first.cues.flatMap((cue) => cue.layers).every((layer) => isOpaqueCueLayerId(layer.id)),
+    ).toBe(true);
+  });
+
   it("materializes dependency-complete multi-region Arrangement examples", () => {
     const bundle = createStarterProjectBundle();
 

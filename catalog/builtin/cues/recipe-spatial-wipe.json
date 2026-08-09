@@ -7,7 +7,7 @@
   "nominal_length_ticks": 15360,
   "layers": [
     {
-      "id": "wipe",
+      "id": "layer_bi6wk62dwmspvjfd",
       "effect_ref": {
         "id": "builtin.transition.wipe",
         "revision": 1

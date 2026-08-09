@@ -7,7 +7,7 @@
   "nominal_length_ticks": 15360,
   "layers": [
     {
-      "id": "zones",
+      "id": "layer_twdwqdtcj7iufquw",
       "effect_ref": {
         "id": "builtin.intensity.chase",
         "revision": 1

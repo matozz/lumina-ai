@@ -6,10 +6,63 @@ import {
   useAuthoringTransportStore,
 } from "@/authoring/transport";
 import { activeStage, assetKey, exactAsset } from "@/document/projectModel";
+import { isOpaqueCueLayerId } from "@/document/cueLayerIdentity";
 import { PREVIEW_DARK_FRAME_NOTICE_THRESHOLD, projectActions, useProjectStore } from "./project";
 
 describe("Stage 7 Project state", () => {
   beforeEach(() => projectActions.reset());
+
+  it("preserves Layer identity while editing and restores the full edit on Undo", () => {
+    const effect = projectActions.createEffect("Identity-safe Pulse")!;
+    const cueRef = projectActions.createCue([effect], "Identity-safe Cue")!;
+    const before = exactAsset(useProjectStore.getState().bundle.cues, cueRef)!;
+    const layerId = before.layers[0].id;
+
+    projectActions.updateCueLayer(cueRef, layerId, {
+      id: "corner-bottom-left",
+      phase: 0.25,
+    });
+    const editedRef = useProjectStore.getState().selectedCueRef!;
+    const edited = exactAsset(useProjectStore.getState().bundle.cues, editedRef)!;
+    expect(edited.layers[0].id).toBe(layerId);
+    expect(edited.layers[0].phase).toBe(0.25);
+
+    projectActions.undo();
+    const restored = exactAsset(useProjectStore.getState().bundle.cues, cueRef)!;
+    expect(restored.layers[0].id).toBe(layerId);
+    expect(restored.layers[0].phase).toBe(0);
+  });
+
+  it("duplicates a Cue with fresh opaque Layer identities and exact automation remapping", () => {
+    const effect = projectActions.createEffect("Duplicated Pulse")!;
+    const cueRef = projectActions.createCue([effect, effect], "Layered Cue")!;
+    const source = structuredClone(exactAsset(useProjectStore.getState().bundle.cues, cueRef)!);
+    source.automation_lanes = source.layers.map((layer, index) => ({
+      id: `lane-${index + 1}`,
+      target: { layer_id: layer.id, parameter_id: "intensity" },
+      keyframes: [
+        {
+          id: `keyframe-${index + 1}`,
+          time_tick: 0,
+          value: { type: "scalar" as const, value: index },
+          interpolation: "linear" as const,
+        },
+      ],
+    }));
+    const saved = projectActions.saveCueWorkingDraft(source);
+
+    const copiedRef = projectActions.duplicateCue(saved)!;
+    const copied = exactAsset(useProjectStore.getState().bundle.cues, copiedRef)!;
+    const sourceIds = new Set(source.layers.map((layer) => layer.id));
+    const copiedIds = new Set(copied.layers.map((layer) => layer.id));
+
+    expect(copied.layers.every((layer) => isOpaqueCueLayerId(layer.id))).toBe(true);
+    expect(copiedIds.size).toBe(copied.layers.length);
+    expect([...copiedIds].some((id) => sourceIds.has(id))).toBe(false);
+    expect(copied.automation_lanes?.map((lane) => lane.target.layer_id)).toEqual(
+      copied.layers.map((layer) => layer.id),
+    );
+  });
 
   it("keeps per-Arrangement playhead and loop state while switching", () => {
     const house = useProjectStore.getState().selectedArrangementRef;

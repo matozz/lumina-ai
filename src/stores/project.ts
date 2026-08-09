@@ -37,6 +37,7 @@ import { createUserAssetPack, importUserAssetPack } from "@/document/userAssetPa
 import { layoutCapacity } from "@/document/layoutDefinition";
 import { analyzeStageTopology, resolveTargetSet, stageForLayout } from "@/document/stageTopology";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
+import { createOpaqueCueLayerId } from "@/document/cueLayerIdentity";
 
 export const PREVIEW_DARK_FRAME_NOTICE_THRESHOLD = 45;
 
@@ -890,11 +891,21 @@ export const projectActions = {
       );
       copy.nominal_length_ticks = cue.nominal_length_ticks;
       copy.layers = structuredClone(cue.layers);
+      const layerIdMap = new Map<string, string>();
+      const occupiedLayerIds: string[] = [];
       copy.layers.forEach((layer, index) => {
-        layer.id = `${copy.id}-layer-${index + 1}`;
+        const sourceLayerId = layer.id;
+        layer.id = createOpaqueCueLayerId(occupiedLayerIds);
+        occupiedLayerIds.push(layer.id);
+        layerIdMap.set(sourceLayerId, layer.id);
         layer.seed = stableSeed(`${copy.id}:${layer.id}`);
+        layer.layer = index;
       });
       copy.automation_lanes = structuredClone(cue.automation_lanes ?? []);
+      copy.automation_lanes.forEach((lane) => {
+        const remappedLayerId = layerIdMap.get(lane.target.layer_id);
+        if (remappedLayerId) lane.target.layer_id = remappedLayerId;
+      });
       bundle.cues.push(copy);
       created = { id: copy.id, revision: copy.revision };
       appendExactRef(bundle.manifest.cue_refs, created);
@@ -933,13 +944,15 @@ export const projectActions = {
     updateCue(reference, "Update Cue layer", (cue) => {
       const layer = cue.layers.find((candidate) => candidate.id === layerId);
       if (!layer) throw new Error("Cue layer is missing");
+      const stableLayerId = layer.id;
       Object.assign(layer, structuredClone(update));
+      layer.id = stableLayerId;
     }),
   addCueLayer: (reference: AssetRef, effectRef: AssetRef) =>
     updateCue(reference, "Add Cue layer", (cue, bundle) => {
       const stage = exactAsset(bundle.stages, cue.compatible_stage_ref);
       if (!stage) throw new Error("Cue Stage revision is missing");
-      const layerId = `${effectRef.id}-layer-${cue.layers.length + 1}`;
+      const layerId = createOpaqueCueLayerId(cue.layers.map((layer) => layer.id));
       cue.layers.push({
         id: layerId,
         effect_ref: effectRef,
@@ -961,6 +974,9 @@ export const projectActions = {
     updateCue(reference, "Remove Cue layer", (cue) => {
       if (cue.layers.length <= 1) throw new Error("A Cue requires at least one layer");
       cue.layers = cue.layers.filter((layer) => layer.id !== layerId);
+      cue.automation_lanes = (cue.automation_lanes ?? []).filter(
+        (lane) => lane.target.layer_id !== layerId,
+      );
     }),
   saveCueWorkingDraft: (
     draft: CueDefinition,
