@@ -4,9 +4,9 @@ import {
   createTimelineGeometry,
   snapTicksForPreset,
   ticksToPixels,
-  type ArrangementSnapPreset,
 } from "@/panel/timelineGeometry";
 import { viewportFromScroll, type TimelineViewport } from "@/panel/virtualization";
+import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/stores/workspace";
 
 const DEFAULT_BEAT_WIDTH = 48;
 const MAX_ARRANGEMENT_BEAT_WIDTH = 384;
@@ -18,8 +18,10 @@ export function useArrangementTimelineViewport(
   lengthTicks: number,
   timeSignature = { numerator: 4, denominator: 4 },
 ) {
-  const [beatWidth, setBeatWidth] = useState(DEFAULT_BEAT_WIDTH);
-  const [snapPreset, setSnapPreset] = useState<ArrangementSnapPreset>("half");
+  const beatWidth = useWorkspaceStore(workspaceSelectors.arrangeTimelineBeatWidth);
+  const snapPreset = useWorkspaceStore(workspaceSelectors.arrangeTimelineSnapPreset);
+  const setBeatWidth = workspaceActions.setArrangeTimelineBeatWidth;
+  const setSnapPreset = workspaceActions.setArrangeTimelineSnapPreset;
   const [viewport, setViewport] = useState<TimelineViewport>({
     startBeat: 0,
     endBeat: 40,

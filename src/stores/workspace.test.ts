@@ -95,10 +95,14 @@ describe("workspace state", () => {
   it("keeps Arrange focus and splitter size in workspace preferences", () => {
     workspaceActions.setArrangeTimelineFocus(true);
     workspaceActions.setArrangePreviewSize(44);
+    workspaceActions.setArrangeTimelineBeatWidth(3.5);
+    workspaceActions.setArrangeTimelineSnapPreset("quarter");
 
     expect(useWorkspaceStore.getState()).toMatchObject({
       arrangeTimelineFocus: true,
       arrangePreviewSize: 44,
+      arrangeTimelineBeatWidth: 3.5,
+      arrangeTimelineSnapPreset: "quarter",
     });
   });
 });

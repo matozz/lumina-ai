@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { authoringTransportActions } from "@/authoring/transport";
 import type { AssetRef, CueDefinition, ShowSnapshotState } from "@/bridge/types";
+import type { ArrangementSnapPreset } from "@/panel/timelineGeometry";
 
 export type WorkspaceId = "stage" | "effect-lab" | "cues" | "arrange" | "live";
 export type PublishStatus = "idle" | "publishing" | "activating" | "error";
@@ -31,6 +32,8 @@ export interface WorkspaceState {
   inspectorVisible: boolean;
   arrangeTimelineFocus: boolean;
   arrangePreviewSize: number;
+  arrangeTimelineBeatWidth: number;
+  arrangeTimelineSnapPreset: ArrangementSnapPreset;
   selectedEffectId: string | null;
   selectedLiveEffectId: string | null;
   selectedArrangeBuiltInCue: ArrangeBuiltInCueSelection | null;
@@ -51,6 +54,8 @@ const initialState: WorkspaceState = {
   inspectorVisible: true,
   arrangeTimelineFocus: false,
   arrangePreviewSize: 38,
+  arrangeTimelineBeatWidth: 48,
+  arrangeTimelineSnapPreset: "half",
   selectedEffectId: null,
   selectedLiveEffectId: null,
   selectedArrangeBuiltInCue: null,
@@ -83,6 +88,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       inspectorVisible: state.inspectorVisible,
       arrangeTimelineFocus: state.arrangeTimelineFocus,
       arrangePreviewSize: state.arrangePreviewSize,
+      arrangeTimelineBeatWidth: state.arrangeTimelineBeatWidth,
+      arrangeTimelineSnapPreset: state.arrangeTimelineSnapPreset,
       favoriteEffectIds: state.favoriteEffectIds,
       livePadQuantize: state.livePadQuantize,
       livePadConfigs: state.livePadConfigs,
@@ -108,6 +115,10 @@ export const workspaceActions = {
     useWorkspaceStore.setState({
       arrangePreviewSize: Math.max(20, Math.min(70, arrangePreviewSize)),
     }),
+  setArrangeTimelineBeatWidth: (arrangeTimelineBeatWidth: number) =>
+    useWorkspaceStore.setState({ arrangeTimelineBeatWidth }),
+  setArrangeTimelineSnapPreset: (arrangeTimelineSnapPreset: ArrangementSnapPreset) =>
+    useWorkspaceStore.setState({ arrangeTimelineSnapPreset }),
   setSelectedEffectId: (selectedEffectId: string | null) =>
     useWorkspaceStore.setState({ selectedEffectId }),
   setSelectedLiveEffectId: (selectedLiveEffectId: string | null) =>
@@ -170,6 +181,8 @@ export const workspaceSelectors = {
   inspectorVisible: (state: WorkspaceState) => state.inspectorVisible,
   arrangeTimelineFocus: (state: WorkspaceState) => state.arrangeTimelineFocus,
   arrangePreviewSize: (state: WorkspaceState) => state.arrangePreviewSize,
+  arrangeTimelineBeatWidth: (state: WorkspaceState) => state.arrangeTimelineBeatWidth,
+  arrangeTimelineSnapPreset: (state: WorkspaceState) => state.arrangeTimelineSnapPreset,
   selectedEffectId: (state: WorkspaceState) => state.selectedEffectId,
   selectedLiveEffectId: (state: WorkspaceState) => state.selectedLiveEffectId,
   selectedArrangeBuiltInCue: (state: WorkspaceState) => state.selectedArrangeBuiltInCue,
