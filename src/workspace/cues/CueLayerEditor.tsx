@@ -201,7 +201,7 @@ export function CueLayerEditor({
       </Field>
 
       {advanced && (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid min-w-0 grid-cols-[repeat(3,minmax(0,1fr))] gap-2">
           <NumberField
             label="Phase"
             value={layer.phase}
@@ -256,7 +256,10 @@ export function CueLayerEditor({
       )}
 
       {advanced && (
-        <div className="grid grid-cols-2 gap-2">
+        <div
+          className="grid min-w-0 grid-cols-[repeat(2,minmax(0,1fr))] gap-2"
+          data-layout-region="cue-mix-controls"
+        >
           {(effect.catalog.required_attributes ?? []).map((attribute) => (
             <SelectField
               key={attribute}
@@ -320,7 +323,7 @@ function NumberField({
   onChange: (value: number) => void;
 }) {
   return (
-    <Field>
+    <Field className="min-w-0">
       <FieldLabel>{label}</FieldLabel>
       <Input
         type="number"
@@ -345,7 +348,7 @@ function SelectField({
   onChange: (value: string) => void;
 }) {
   return (
-    <Field>
+    <Field className="min-w-0">
       <FieldLabel>{label}</FieldLabel>
       <ValueSelect {...props} />
     </Field>

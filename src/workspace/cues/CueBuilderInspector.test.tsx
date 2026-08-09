@@ -219,6 +219,34 @@ describe("Cue Builder safe authoring", () => {
     expect(value?.className).toContain("min-w-0");
     expect(value?.className).toContain("truncate");
   });
+
+  it("wraps advanced Cue actions and metadata inside a narrow inspector", async () => {
+    render(<Harness />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
+    await waitFor(() => expect(screen.getByText("Selected Effect")).toBeTruthy());
+
+    const actionRows = document.querySelectorAll<HTMLElement>(
+      '[data-layout-region="cue-override-actions"]',
+    );
+    const parameterHeaders = document.querySelectorAll<HTMLElement>(
+      '[data-layout-region="effect-parameter-header"]',
+    );
+    const mixControls = document.querySelector<HTMLElement>(
+      '[data-layout-region="cue-mix-controls"]',
+    );
+
+    expect(actionRows.length).toBeGreaterThan(0);
+    expect(parameterHeaders.length).toBeGreaterThan(0);
+    for (const row of [...actionRows, ...parameterHeaders]) {
+      expect(row.className).toContain("min-w-0");
+      expect(row.className).toContain("flex-wrap");
+    }
+    expect(mixControls?.className).toContain("grid-cols-[repeat(2,minmax(0,1fr))]");
+    expect(screen.getAllByRole("button", { name: "Add automation" })[0]?.className).toContain(
+      "max-w-full",
+    );
+  });
 });
 
 function cueFixture() {

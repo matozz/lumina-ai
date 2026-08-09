@@ -23,7 +23,7 @@ export function EffectParameterControls({
   onRestoreFallback: (parameterId: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-w-0 flex-col gap-3">
       {parameters.map((parameter, index) => {
         const sourceIndex = parameterIndices?.[parameter.id] ?? index;
         const parameterDiagnostics = diagnostics.filter((diagnostic) =>
@@ -32,10 +32,13 @@ export function EffectParameterControls({
         return (
           <Field
             key={parameter.id}
-            className="border-border bg-background/40 rounded-md border p-2.5"
+            className="border-border bg-background/40 min-w-0 rounded-md border p-2.5"
             aria-invalid={parameterDiagnostics.length > 0}
           >
-            <div className="flex items-center gap-1.5">
+            <div
+              className="flex min-w-0 flex-wrap items-center gap-1.5"
+              data-layout-region="effect-parameter-header"
+            >
               <FieldLabel htmlFor={`effect-parameter-${parameter.id}`} className="text-xs">
                 {parameter.name}
               </FieldLabel>

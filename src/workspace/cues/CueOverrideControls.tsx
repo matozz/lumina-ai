@@ -31,7 +31,7 @@ export function CueOverrideControls({
     return <FieldDescription>This Effect exposes no Cue-overridable parameters.</FieldDescription>;
   }
   return (
-    <div className="grid gap-2">
+    <div className="grid min-w-0 gap-2">
       {overrideable.map((parameter) => {
         const override = layer.parameter_overrides?.[parameter.id];
         const lane = cue.automation_lanes?.find(
@@ -44,9 +44,12 @@ export function CueOverrideControls({
           default_value: structuredClone(override ?? parameter.default_value),
         };
         return (
-          <div key={parameter.id} className="grid gap-1.5">
+          <div key={parameter.id} className="grid min-w-0 gap-1.5">
             {advanced && (
-              <div className="flex items-center gap-1.5">
+              <div
+                className="flex min-w-0 flex-wrap items-center gap-1.5"
+                data-layout-region="cue-override-actions"
+              >
                 <Badge variant={override ? "secondary" : "outline"}>
                   {override ? "override" : "Effect default"}
                 </Badge>
@@ -69,7 +72,7 @@ export function CueOverrideControls({
                   <Button
                     size="xs"
                     variant={lane ? "secondary" : "outline"}
-                    className="ml-auto"
+                    className="ml-auto max-w-full"
                     onClick={() =>
                       onUpdate((draftLayer, draftCue) =>
                         toggleAutomation(draftLayer, draftCue, parameter, override, lane?.id),

@@ -40,7 +40,7 @@ export function EffectParameterInput({
   }
   if (value.type === "color") {
     return (
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
+      <div className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)] gap-2">
         <Input
           id={`effect-parameter-${parameter.id}`}
           aria-label={`${parameter.name} color picker`}
@@ -119,7 +119,7 @@ function ScalarInput({
   if (value.type !== "scalar") return null;
   const [minimum, maximum] = parameter.range ?? [0, 1];
   return (
-    <div className="grid grid-cols-[1fr_4.5rem] items-center gap-2">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_4.5rem] items-center gap-2">
       {parameter.range ? (
         <Slider
           id={`effect-parameter-${parameter.id}`}
