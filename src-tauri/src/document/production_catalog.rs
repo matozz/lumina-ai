@@ -1795,6 +1795,8 @@ mod tests {
         let top_right = (0..10)
             .flat_map(|row| (10..20).map(move |column| row * 20 + column + 1))
             .collect::<BTreeSet<_>>();
+        let top_left_leftmost = (0..10).map(|row| row * 20 + 1).collect::<BTreeSet<_>>();
+        let top_left_rightmost = (0..10).map(|row| row * 20 + 10).collect::<BTreeSet<_>>();
         let visible_target = |beat: f64, fixture_ids: &BTreeSet<u32>| {
             render_at(&snapshot.show, RenderTime { beat }, RenderSource::Timeline)
                 .iter()
@@ -1821,6 +1823,14 @@ mod tests {
         assert!(
             ping_patterns.len() >= 10,
             "Ping-Pong must travel across columns"
+        );
+        assert!(
+            top_left_leftmost.is_subset(&visible_target(0.05, &top_left)),
+            "Ping-Pong must dwell on the leftmost column across nearby render samples"
+        );
+        assert!(
+            top_left_rightmost.is_subset(&visible_target(0.45, &top_left)),
+            "Ping-Pong must dwell on the rightmost column across nearby render samples"
         );
 
         let mut rain_patterns = BTreeSet::new();
