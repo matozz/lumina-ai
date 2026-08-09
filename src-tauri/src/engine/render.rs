@@ -200,13 +200,19 @@ pub(crate) fn render_resolved(
                     values[handle.index()] = Some(value);
                 }
 
+                let color_handle =
+                    super::attribute::resolve_attribute(fixture.profile, COLOR_RGB_ATTRIBUTE);
+                let graph_writes_color = color_handle.is_some_and(|handle| {
+                    effect_graph_writes_attribute(definition, fixture.profile, handle)
+                });
                 if let (Some(handle), Some((red, green, blue))) = (
-                    super::attribute::resolve_attribute(fixture.profile, COLOR_RGB_ATTRIBUTE),
-                    resolve_effect_color_override(
+                    color_handle,
+                    resolve_effect_color(
                         definition,
                         instance,
                         &active.instance,
                         parameters,
+                        !graph_writes_color,
                     ),
                 ) {
                     values[handle.index()] = Some(AttributeValue::Color([red, green, blue]));
@@ -336,11 +342,12 @@ fn resolve_effect_scalar_override(
         })
 }
 
-fn resolve_effect_color_override(
+fn resolve_effect_color(
     definition: &crate::engine::effect::EffectDefinition,
     instance: &crate::engine::effect::EffectInstance,
     instance_handle: &EffectInstanceHandle,
     parameters: &ParameterContext,
+    use_default: bool,
 ) -> Option<(u8, u8, u8)> {
     let handle = definition.parameter_handle(COLOR_PARAMETER_ID)?;
     parameters
@@ -348,6 +355,15 @@ fn resolve_effect_color_override(
         .or_else(|| match instance.parameter_overrides.get(&handle)? {
             ParameterValue::Color(color) => Some((color[0], color[1], color[2])),
             _ => None,
+        })
+        .or_else(|| {
+            if !use_default {
+                return None;
+            }
+            match instance.resolve_parameter(definition, handle)? {
+                ParameterValue::Color(color) => Some((color[0], color[1], color[2])),
+                _ => None,
+            }
         })
 }
 

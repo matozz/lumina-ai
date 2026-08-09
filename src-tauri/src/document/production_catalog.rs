@@ -994,6 +994,19 @@ fn frame_intensity(frame: &crate::engine::attribute::FixtureFrame) -> Option<f64
         })
 }
 
+#[cfg(test)]
+fn frame_color(frame: &crate::engine::attribute::FixtureFrame) -> Option<[u8; 3]> {
+    frame
+        .to_payload()
+        .attributes
+        .into_iter()
+        .find(|attribute| attribute.id == "color.rgb")
+        .and_then(|attribute| match attribute.value {
+            AttributeValue::Color(value) => Some(value),
+            _ => None,
+        })
+}
+
 fn compatibility_status(
     declared: &[LayoutCapabilityDSL],
     native: LayoutCapabilityDSL,
@@ -1571,6 +1584,60 @@ mod tests {
 
         assert!(minimum < maximum, "traveler must retain spatial variation");
         assert!(maximum <= 0.5 + f64::EPSILON, "override is a maximum");
+    }
+
+    #[test]
+    fn intensity_only_catalog_graphs_render_their_default_color() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        for effect_id in [
+            "builtin.spatial.radial-bloom",
+            "builtin.transition.fade-crossfade",
+            "builtin.transition.blackout-safe",
+        ] {
+            let effect = catalog
+                .effects
+                .iter()
+                .find(|effect| effect.id == effect_id)
+                .expect("catalog effect");
+            let show = Compiler::compile_document(effect_sample_document(effect, BTreeMap::new()))
+                .expect("effect compiles");
+            let active = effect_sample_live(&show);
+            let color = render_at(
+                &show,
+                RenderTime { beat: 0.25 },
+                RenderSource::Live(&active),
+            )
+            .first()
+            .and_then(frame_color)
+            .expect("effect writes color");
+
+            assert_ne!(
+                color,
+                [0, 0, 0],
+                "{effect_id} must not render a black frame"
+            );
+        }
+    }
+
+    #[test]
+    fn graph_authored_color_is_not_replaced_by_the_parameter_default() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        let burst = catalog
+            .effects
+            .iter()
+            .find(|effect| effect.id == "builtin.color.pulse")
+            .expect("Short Color Burst");
+        let show = Compiler::compile_document(effect_sample_document(burst, BTreeMap::new()))
+            .expect("Short Color Burst compiles");
+        let active = effect_sample_live(&show);
+        let colors = [0.0, 0.25].map(|beat| {
+            render_at(&show, RenderTime { beat }, RenderSource::Live(&active))
+                .first()
+                .and_then(frame_color)
+                .expect("Short Color Burst writes color")
+        });
+
+        assert_ne!(colors[0], colors[1], "graph color must remain animated");
     }
 
     #[test]
