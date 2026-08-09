@@ -1221,6 +1221,10 @@ mod tests {
                 attribute_id: INTENSITY_ATTRIBUTE.to_string(),
                 policy: CueMixPolicy::Htp,
             });
+            layer.mix_overrides.push(CueMixOverride {
+                attribute_id: COLOR_RGB_ATTRIBUTE.to_string(),
+                policy: CueMixPolicy::Ltp,
+            });
             cue.layers.push(layer);
         }
         cue.capability_summary.required_attributes =
@@ -1756,7 +1760,10 @@ mod tests {
         let pinned_bundle = production_catalog_project();
         assert_eq!(pinned_bundle.cues[0].layers.len(), 5);
         let mut working_bundle = pinned_bundle.clone();
-        working_bundle.cues[0].layers[1].phase += 0.25;
+        working_bundle.cues[0].layers[4].parameter_overrides.insert(
+            crate::engine::effect::COLOR_PARAMETER_ID.to_string(),
+            crate::document::ParameterValueDSL::Color("#FF0000".to_string()),
+        );
 
         let pinned = Compiler::compile_active_project(
             ValidatedProject::validate(pinned_bundle).expect("pinned Production Project validates"),

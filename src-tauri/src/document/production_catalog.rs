@@ -17,8 +17,9 @@ use crate::compiler::diagnostic::{
     CUE_LAYER_ATTRIBUTE_CONFLICT, CUE_RECIPE_INVALID, CUE_RECIPE_UNRESOLVED,
 };
 use crate::compiler::Compiler;
+use crate::engine::effect::COLOR_PARAMETER_ID;
 use crate::engine::profile::profile_by_id;
-use crate::engine::profile::AttributeValue;
+use crate::engine::profile::{AttributeValue, COLOR_RGB_ATTRIBUTE};
 use crate::engine::render::{render_at, LivePhaser, RenderSource, RenderTime};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -1222,6 +1223,13 @@ fn effect_writer_attributes(effect: &EffectDefinitionDocument) -> BTreeSet<Strin
     }
     if has_attribute_set_writer || attributes.is_empty() {
         attributes.extend(effect.catalog.required_attributes.iter().cloned());
+    }
+    if effect
+        .parameters
+        .iter()
+        .any(|parameter| parameter.id == COLOR_PARAMETER_ID)
+    {
+        attributes.insert(COLOR_RGB_ATTRIBUTE.to_string());
     }
     attributes
 }

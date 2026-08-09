@@ -14,8 +14,8 @@ use crate::compiler::diagnostic::{
     PROJECT_REFERENCE_CYCLE, PROJECT_REFERENCE_NOT_FOUND, PROJECT_REVISION_MISMATCH,
     PROJECT_SCHEMA_INVALID, TARGET_SET_INVALID,
 };
-use crate::engine::effect::is_beat_sync_speed_multiplier;
-use crate::engine::profile::profile_by_id;
+use crate::engine::effect::{is_beat_sync_speed_multiplier, COLOR_PARAMETER_ID};
+use crate::engine::profile::{profile_by_id, COLOR_RGB_ATTRIBUTE};
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone)]
@@ -481,6 +481,13 @@ fn effect_writer_attributes(effect: &EffectDefinitionDocument) -> BTreeSet<Strin
     }
     if has_attribute_set_writer || attributes.is_empty() {
         attributes.extend(effect.catalog.required_attributes.iter().cloned());
+    }
+    if effect
+        .parameters
+        .iter()
+        .any(|parameter| parameter.id == COLOR_PARAMETER_ID)
+    {
+        attributes.insert(COLOR_RGB_ATTRIBUTE.to_string());
     }
     attributes
 }
@@ -2227,6 +2234,52 @@ pub(crate) mod tests {
         disjoint.cues[0].layers.push(disjoint_layer);
         ValidatedProject::validate(disjoint)
             .expect("the same attribute may target disjoint fixtures without a mix policy");
+    }
+
+    #[test]
+    fn standard_color_parameters_participate_in_layer_conflict_validation() {
+        let mut bundle = valid_bundle();
+        bundle.effects[0].parameters.push(
+            serde_json::from_value(serde_json::json!({
+                "id": "color",
+                "name": "Color",
+                "value_type": "color",
+                "default_value": { "type": "color", "value": "#FFFFFF" },
+                "required": true,
+                "help": "Single-color output.",
+                "safe_fallback": { "type": "color", "value": "#FFFFFF" },
+                "override_policy": "cue_override",
+                "advanced": false,
+                "unit": "color",
+                "ui_hint": "color",
+                "automation": "continuous"
+            }))
+            .expect("standard Color parameter"),
+        );
+        bundle.effects[0]
+            .catalog
+            .required_attributes
+            .push(COLOR_RGB_ATTRIBUTE.to_string());
+        bundle.cues[0]
+            .capability_summary
+            .required_attributes
+            .push(COLOR_RGB_ATTRIBUTE.to_string());
+        let mut second_layer = bundle.cues[0].layers[0].clone();
+        second_layer.id = "second-color".to_string();
+        second_layer.layer = 1;
+        second_layer.priority = 1;
+        second_layer.mix_overrides = vec![CueMixOverride {
+            attribute_id: "intensity".to_string(),
+            policy: crate::document::MixPolicy::Htp,
+        }];
+        bundle.cues[0].layers.push(second_layer);
+
+        let diagnostics = ValidatedProject::validate(bundle)
+            .expect_err("runtime Color writes require an explicit mix policy");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == CUE_LAYER_ATTRIBUTE_CONFLICT
+                && diagnostic.message.contains(COLOR_RGB_ATTRIBUTE)
+        }));
     }
 
     #[test]
