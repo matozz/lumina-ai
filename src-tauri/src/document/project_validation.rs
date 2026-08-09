@@ -387,13 +387,7 @@ fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
                     .iter()
                     .find(|target| target.id == layer.target_set_ref.target_set_id)
                 {
-                    validate_explicit_color_capability(
-                        stage,
-                        layout,
-                        target,
-                        &path,
-                        diagnostics,
-                    );
+                    validate_explicit_color_capability(stage, layout, target, &path, diagnostics);
                 }
             }
             validate_keyframes(
@@ -440,10 +434,8 @@ fn validate_cue_layer_composition(
             continue;
         };
         let left_fixtures = cue_layer_fixture_ids(stage, layout, left);
-        let left_attributes = effect_writer_attributes(
-            left_effect,
-            cue_layer_has_explicit_color(cue, left),
-        );
+        let left_attributes =
+            effect_writer_attributes(left_effect, cue_layer_has_explicit_color(cue, left));
         for (right_index, right) in cue.layers.iter().enumerate().skip(left_index + 1) {
             let Some(right_effect) = exact_asset(&bundle.effects, &right.effect_ref, |asset| {
                 (&asset.id, asset.revision)
@@ -454,10 +446,8 @@ fn validate_cue_layer_composition(
             if left_fixtures.is_disjoint(&right_fixtures) {
                 continue;
             }
-            let right_attributes = effect_writer_attributes(
-                right_effect,
-                cue_layer_has_explicit_color(cue, right),
-            );
+            let right_attributes =
+                effect_writer_attributes(right_effect, cue_layer_has_explicit_color(cue, right));
             let conflicts = left_attributes
                 .intersection(&right_attributes)
                 .filter(|attribute| !has_explicit_mix_policy(right, attribute))
@@ -954,9 +944,10 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
                                 exact_asset(&bundle.layouts, &stage.layout_ref, |asset| {
                                     (&asset.id, asset.revision)
                                 }),
-                                stage.target_sets.iter().find(|target| {
-                                    target.id == layer.target_set_ref.target_set_id
-                                }),
+                                stage
+                                    .target_sets
+                                    .iter()
+                                    .find(|target| target.id == layer.target_set_ref.target_set_id),
                             ) {
                                 validate_explicit_color_capability(
                                     stage,
@@ -1096,12 +1087,7 @@ fn validate_arrangement_clip_composition(
                 };
                 let left_attributes = effect_writer_attributes(
                     left_effect,
-                    clip_layer_has_explicit_color(
-                        arrangement,
-                        left.cue,
-                        left.clip,
-                        left_layer,
-                    ),
+                    clip_layer_has_explicit_color(arrangement, left.cue, left.clip, left_layer),
                 );
                 for right_layer in &right.cue.layers {
                     let right_fixtures = cue_layer_fixture_ids(stage, layout, right_layer);

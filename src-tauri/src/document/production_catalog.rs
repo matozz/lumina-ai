@@ -1575,7 +1575,12 @@ mod tests {
                 .iter()
                 .find(|parameter| parameter.id == COLOR_PARAMETER_ID)
                 .unwrap_or_else(|| panic!("{} has no standard Color parameter", effect.id));
-            assert_eq!(color.value_type, ParameterValueTypeDSL::Color, "{}", effect.id);
+            assert_eq!(
+                color.value_type,
+                ParameterValueTypeDSL::Color,
+                "{}",
+                effect.id
+            );
             assert!(
                 matches!(
                     color.override_policy,
