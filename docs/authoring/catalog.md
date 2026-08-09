@@ -40,7 +40,7 @@ Effect parameter 不再在 Catalog metadata 中维护 `parameter_summary`，也�
 
 ## 用户资产包
 
-Header 的 **Assets** 菜单支持导出项目资产依赖闭包和导入 `user-asset-pack.json`。包包含 Layout、Effect、Cue 和 Arrangement；不包含 localStorage、Live snapshot 或内置 Catalog 文件。
+Header 的 **Assets** 菜单显示当前 Project 文件夹及历史数量，并允许切换文件夹；目标中已有 `lumina-project.json` 时打开该项目，空文件夹则以当前 ProjectBundle 初始化。相同菜单支持导出项目资产依赖闭包和导入 `user-asset-pack.json`。包包含 Layout、Effect、Cue 和 Arrangement；不包含 localStorage、Live snapshot 或受源码管理的 Catalog 目录。
 
 导入流程：
 
@@ -49,11 +49,11 @@ Header 的 **Assets** 菜单支持导出项目资产依赖闭包和导入 `user-
 3. 用户选择拒绝导入，或整体 rename；rename 会同步重写包内所有引用。
 4. 单次 transaction 写入 ProjectBundle。
 
-导出的文件是跨项目迁移和长期备份来源。localStorage 只是工作区缓存。
+导出的文件用于跨项目迁移；Project 文件夹中的 latest + 最近 50 版 history 是当前项目的持续备份来源。localStorage 只缓存已验证的文件夹路径、recovery shadow 和 UI 状态。
 
 ## Reset defaults
 
-Reset defaults 恢复 starter Project Template、工作区选择和 Authoring transport 默认值。它不会删除浏览器下载目录中的资产包，也不会执行 origin-wide `localStorage.clear()` 或文件系统宽泛删除。
+Reset defaults 恢复 starter Project Template、工作区选择和 Authoring transport 默认值。恢复后的 ProjectBundle 会按普通编辑保存，旧 latest 进入 history；它不会删除 Project 文件夹、history、浏览器下载目录中的资产包，也不会执行 origin-wide `localStorage.clear()` 或文件系统宽泛删除。
 
 当受源码管理的 starter/Catalog 资产集合、参数基准、身份或依赖发生不兼容变化时，只提升 `lumina-project-v1` 的 scoped storage version；旧开发缓存通过 Zustand migration 在该 storage boundary 重建为当前模板，不触碰其他 origin storage 或用户显式导出的资产包。
 
@@ -63,6 +63,7 @@ Reset defaults 恢复 starter Project Template、工作区选择和 Authoring tr
 - Runtime validation：`src-tauri/src/document/production_catalog.rs`
 - Frontend loader：`src/catalog/builtinCatalog.ts`
 - User pack：`src/document/userAssetPack.ts`、`src/document/userAssetPackFile.ts`
+- Project folder storage：`src/stores/projectStorage.ts`、`src-tauri/src/project_storage.rs`
 - UI：`src/workspace/WorkspaceAssetPackMenu.tsx`
 
 ## 验收
@@ -70,4 +71,5 @@ Reset defaults 恢复 starter Project Template、工作区选择和 Authoring tr
 - 所有内置 JSON 可单独 review，且聚合后 Catalog schema/semantic/Golden 均通过。
 - 复制内置资产后 ID 独立，修改不改变源文件或其他项目。
 - 用户包闭包完整；跨项目 reject/rename 冲突路径均有测试。
+- Assets 可切换 Project 文件夹；已有 latest 优先加载，空文件夹安全初始化，失败路径不写入缓存或覆盖文件。
 - Reset 后 starter 正常、transport stopped，之前导出的资产包仍可重新导入。

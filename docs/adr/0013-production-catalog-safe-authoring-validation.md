@@ -34,9 +34,9 @@
 
 ### User assets and Reset
 
-- ProjectBundle is the user asset source; localStorage is only a current-workspace cache.
+- The validated ProjectBundle in the selected Project folder is the user asset source. The latest JSON is atomically replaced after a two-second edit burst, with at most 50 prior versions; localStorage is only a scoped path preference, recovery shadow and current-workspace cache.
 - User asset packs support dependency-closed export, strict import validation, ID conflict detection and whole-pack rename with reference rewriting.
-- Reset defaults restores the built-in starter and workspace state but cannot delete downloaded asset-pack files.
+- Reset defaults restores the built-in starter and workspace state as a normal persisted Project change, preserving the replaced latest in history; it cannot delete Project history or downloaded asset-pack files.
 
 ## Consequences
 

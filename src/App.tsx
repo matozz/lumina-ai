@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { onStateChange } from "./bridge/events";
 import { engineActions } from "./stores/engine";
 import { WorkspaceShell } from "./workspace/WorkspaceShell";
+import { ProjectStorageBoundary } from "./workspace/ProjectStorageBoundary";
 import { useWorkspaceBootstrap } from "./workspace/useWorkspaceBootstrap";
 import "./App.css";
 
@@ -18,7 +19,11 @@ function App() {
     };
   }, []);
 
-  return <WorkspaceShell />;
+  return (
+    <ProjectStorageBoundary>
+      <WorkspaceShell />
+    </ProjectStorageBoundary>
+  );
 }
 
 export default App;

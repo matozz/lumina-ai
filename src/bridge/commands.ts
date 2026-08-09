@@ -23,6 +23,18 @@ import type {
   StageDocument,
 } from "./types";
 
+export interface ProjectStorageLoadResult {
+  project: ProjectBundle;
+  latest_path: string;
+  history_count: number;
+}
+
+export interface ProjectStorageSaveResult {
+  latest_path: string;
+  history_count: number;
+  changed: boolean;
+}
+
 export const engine = {
   loadDSL: (json: string) => invoke<CompileResult>("load_dsl", { dslJson: json }),
 
@@ -137,6 +149,15 @@ export const engine = {
     invoke("save_project", { path, projectJson: JSON.stringify(project) }),
 
   loadProject: (path: string) => invoke<ProjectBundle>("load_project", { path }),
+
+  loadProjectStorage: (directory: string) =>
+    invoke<ProjectStorageLoadResult | null>("load_project_storage", { directory }),
+
+  saveProjectStorage: (directory: string, project: ProjectBundle) =>
+    invoke<ProjectStorageSaveResult>("save_project_storage", {
+      directory,
+      projectJson: JSON.stringify(project),
+    }),
 
   setSequencerMode: (mode: "live" | "timeline") => invoke("set_sequencer_mode", { mode }),
 
