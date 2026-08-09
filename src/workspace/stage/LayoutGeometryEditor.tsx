@@ -709,7 +709,7 @@ function NumberField({
         min={min}
         max={max}
         step={integer ? 1 : (step ?? 0.1)}
-        className="h-7 font-mono text-xs tabular-nums"
+        className="h-6 font-mono text-xs tabular-nums"
         onChange={(event) => {
           const next = Number(event.target.value);
           onChange(integer ? Math.round(next) : next);
@@ -735,7 +735,7 @@ function TextField({
       <Input
         id={id}
         value={value}
-        className="h-7 font-mono text-xs"
+        className="h-6 font-mono text-xs"
         onChange={(event) => onChange(event.target.value)}
       />
     </Field>

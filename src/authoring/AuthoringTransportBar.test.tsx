@@ -137,10 +137,10 @@ describe("AuthoringTransportBar", () => {
       <AuthoringTransportBar scope="effect" reference={reference} arrangement={arrangement} />,
     );
 
-    expect(screen.getByText("128 BPM").className).toContain("w-[5.25rem]");
-    expect(screen.getByText("4/4").className).toContain("w-12");
-    expect(screen.getByLabelText("Musical position").className).toContain("w-[5.25rem]");
-    expect(screen.getByLabelText("Beat 1 of 4").className).toContain("w-[4.5rem]");
+    expect(screen.getByText("128 BPM").className).toContain("w-18");
+    expect(screen.getByText("4/4").className).toContain("w-10");
+    expect(screen.getByLabelText("Musical position").className).toContain("w-18");
+    expect(screen.getByLabelText("Beat 1 of 4").className).toContain("w-14");
   });
 });
 

@@ -4,6 +4,12 @@ import { describe, expect, it } from "vitest";
 import { Input } from "./input";
 
 describe("Input", () => {
+  it("uses the compact 24px control height", () => {
+    render(<Input aria-label="Compact input" />);
+
+    expect(screen.getByLabelText("Compact input").className).toContain("h-6");
+  });
+
   it("removes redundant leading zeros before updating controlled numeric state", () => {
     function ControlledNumberInput() {
       const [value, setValue] = useState(0);

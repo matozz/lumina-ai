@@ -44,7 +44,7 @@ export function EffectParameterInput({
         <Input
           id={`effect-parameter-${parameter.id}`}
           aria-label={`${parameter.name} color picker`}
-          className="h-8 p-1"
+          className="h-6 p-0.5"
           type="color"
           value={validColorInput(value.value) ? value.value : "#000000"}
           disabled={readOnly}
@@ -52,7 +52,7 @@ export function EffectParameterInput({
         />
         <Input
           aria-label={`${parameter.name} color value`}
-          className="h-8 font-mono text-[10px]"
+          className="h-6 font-mono text-[10px]"
           value={value.value}
           disabled={readOnly}
           onChange={(event) => onChange({ type: "color", value: event.currentTarget.value })}
@@ -140,7 +140,7 @@ function ScalarInput({
       )}
       <Input
         aria-label={`${parameter.name} numeric value`}
-        className="h-7 font-mono text-[10px] tabular-nums"
+        className="h-6 font-mono text-[10px] tabular-nums"
         type="number"
         min={parameter.range?.[0]}
         max={parameter.range?.[1]}
@@ -215,7 +215,7 @@ function ColorStopsInput({
         <div key={index} className="grid grid-cols-[2.5rem_1fr_4rem_auto] items-center gap-1.5">
           <Input
             aria-label={`Color stop ${index + 1} color`}
-            className="h-7 p-1"
+            className="h-6 p-0.5"
             type="color"
             value={validColorInput(stop.color) ? stop.color : "#000000"}
             disabled={readOnly}
@@ -236,7 +236,7 @@ function ColorStopsInput({
           />
           <Input
             aria-label={`Color stop ${index + 1} numeric position`}
-            className="h-7 font-mono text-[10px]"
+            className="h-6 font-mono text-[10px]"
             type="number"
             min={0}
             max={1}

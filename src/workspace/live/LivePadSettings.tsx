@@ -1,6 +1,14 @@
 import type { LiveEffectInfo } from "@/bridge/types";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   type LivePadMode,
   useWorkspaceStore,
@@ -8,6 +16,12 @@ import {
   workspaceSelectors,
 } from "@/stores/workspace";
 import { configFor } from "./livePadConfig";
+
+const PAD_MODE_ITEMS: Array<{ label: string; value: LivePadMode }> = [
+  { label: "Toggle", value: "toggle" },
+  { label: "Momentary", value: "momentary" },
+  { label: "One-shot", value: "one_shot" },
+];
 
 export function LivePadSettings({
   effects,
@@ -36,38 +50,45 @@ export function LivePadSettings({
           <p className="text-muted-foreground text-[9px]">Fixtures: {effect.target_group_id}</p>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1 text-[10px] text-zinc-400">
-          Pad behavior
-          <select
+      <FieldGroup className="grid grid-cols-2 gap-2">
+        <Field className="gap-1">
+          <FieldLabel className="text-zinc-400">Pad behavior</FieldLabel>
+          <Select
+            items={PAD_MODE_ITEMS}
             value={config.mode}
-            onChange={(event) => update({ mode: event.target.value as LivePadMode })}
-            className="border-input bg-background focus-visible:ring-ring h-8 rounded-md border px-2 text-xs focus-visible:ring-2 focus-visible:outline-none"
-            aria-label="Live Pad behavior"
+            onValueChange={(value) => value && update({ mode: value })}
           >
-            <option value="toggle">Toggle</option>
-            <option value="momentary">Momentary</option>
-            <option value="one_shot">One-shot</option>
-          </select>
-        </label>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="exclusive-group" className="text-[10px] text-zinc-400">
+            <SelectTrigger size="sm" className="w-full" aria-label="Live Pad behavior">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={false}>
+              <SelectGroup>
+                {PAD_MODE_ITEMS.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field className="gap-1">
+          <FieldLabel htmlFor="exclusive-group" className="text-zinc-400">
             Exclusive group
-          </Label>
+          </FieldLabel>
           <Input
             id="exclusive-group"
             value={config.exclusiveGroup}
             placeholder="Optional"
-            className="h-8 text-xs"
             onChange={(event) => update({ exclusiveGroup: event.target.value })}
           />
-        </div>
-      </div>
+        </Field>
+      </FieldGroup>
       {config.mode === "one_shot" && (
-        <div className="mt-2 flex items-center gap-2">
-          <Label htmlFor="one-shot-beats" className="text-[10px] text-zinc-400">
+        <Field orientation="horizontal" className="mt-2 justify-start gap-2">
+          <FieldLabel htmlFor="one-shot-beats" className="text-zinc-400">
             One-shot beats
-          </Label>
+          </FieldLabel>
           <Input
             id="one-shot-beats"
             type="number"
@@ -75,7 +96,7 @@ export function LivePadSettings({
             max={256}
             step={0.25}
             value={config.oneShotBeats}
-            className="h-7 w-20 text-xs"
+            className="h-6 w-20 text-xs"
             onChange={(event) => {
               const value = Number(event.target.value);
               if (Number.isFinite(value)) {
@@ -83,7 +104,7 @@ export function LivePadSettings({
               }
             }}
           />
-        </div>
+        </Field>
       )}
     </section>
   );
