@@ -202,9 +202,18 @@ pub(crate) fn render_resolved(
 
                 let color_handle =
                     super::attribute::resolve_attribute(fixture.profile, COLOR_RGB_ATTRIBUTE);
+                let graph_writes_color = color_handle.is_some_and(|handle| {
+                    effect_graph_writes_attribute(definition, fixture.profile, handle)
+                });
                 if let (Some(handle), Some((red, green, blue))) = (
                     color_handle,
-                    resolve_effect_color(definition, instance, &active.instance, parameters),
+                    resolve_effect_color(
+                        definition,
+                        instance,
+                        &active.instance,
+                        parameters,
+                        !graph_writes_color,
+                    ),
                 ) {
                     values[handle.index()] = Some(AttributeValue::Color([red, green, blue]));
                 }
@@ -338,6 +347,7 @@ fn resolve_effect_color(
     instance: &crate::engine::effect::EffectInstance,
     instance_handle: &EffectInstanceHandle,
     parameters: &ParameterContext,
+    legacy_default_enabled: bool,
 ) -> Option<(u8, u8, u8)> {
     let handle = definition.parameter_handle(COLOR_PARAMETER_ID)?;
     parameters
@@ -347,7 +357,11 @@ fn resolve_effect_color(
             _ => None,
         })
         .or_else(|| {
-            if !definition.parameter(handle)?.default_enabled {
+            if !definition
+                .parameter(handle)?
+                .default_enabled
+                .unwrap_or(legacy_default_enabled)
+            {
                 return None;
             }
             match instance.resolve_parameter(definition, handle)? {

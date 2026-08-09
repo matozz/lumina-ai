@@ -1695,7 +1695,7 @@ fn compile_parameter_definition(
             ParameterValueTypeDSL::ColorStops => ParameterValueType::ColorStops,
         },
         default_value,
-        default_enabled: parameter.default_enabled.unwrap_or(true),
+        default_enabled: parameter.default_enabled,
         range: parameter.range,
         step: parameter.step,
         required: parameter.required,
