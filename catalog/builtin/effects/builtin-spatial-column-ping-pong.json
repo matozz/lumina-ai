@@ -36,6 +36,27 @@
       "unit": "normalized",
       "ui_hint": "slider",
       "automation": "continuous"
+    },
+    {
+      "id": "color",
+      "name": "Color",
+      "value_type": "color",
+      "default_value": {
+        "type": "color",
+        "value": "#FFFFFF"
+      },
+      "default_enabled": false,
+      "required": true,
+      "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback.",
+      "safe_fallback": {
+        "type": "color",
+        "value": "#FFFFFF"
+      },
+      "override_policy": "cue_override",
+      "advanced": false,
+      "unit": "color",
+      "ui_hint": "color",
+      "automation": "continuous"
     }
   ],
   "graph": {

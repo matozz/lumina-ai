@@ -2165,6 +2165,9 @@
         "automation": {
           "$ref": "#/$defs/AutomationPolicyDSL"
         },
+        "default_enabled": {
+          "type": ["boolean", "null"]
+        },
         "default_value": {
           "$ref": "#/$defs/ParameterValueDSL"
         },

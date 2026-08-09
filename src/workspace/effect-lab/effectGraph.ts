@@ -20,6 +20,7 @@ export function buildCommonParameters(values: EffectFormValues): ParameterDefini
       name: "Color",
       value_type: "color",
       default_value: { type: "color", value: values.color },
+      default_enabled: values.attributeMode === "intensity_color",
       required: true,
       help: "Single-color output used by this Effect and available to Cue or Arrangement overrides.",
       safe_fallback: { type: "color", value: "#FFFFFF" },

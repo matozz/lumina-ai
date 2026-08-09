@@ -67,7 +67,7 @@ Automation header、row、curve 和 hit geometry 统一为 32 px，关键点使�
 
 `hold` 使用“前一点保持到边界、在边界点立即写入新值”的阶梯路径，不需要 `boundary + 1 tick`。既有数据不会被静默重写。
 
-Color automation 使用 typed `color` 值：keyframe 是实际色块，segment 是居中的端点色带，Inspector 同时提供 native color picker 和 `#RRGGBB` 输入。Color 点在纵向中线，不伪装成标量高低曲线；runtime 使用 Lab 插值并将结果写入 `color.rgb`。只有 Effect 正式声明 standard Color 参数时，Context menu 才提供 Color。
+Color automation 使用 typed `color` 值：keyframe 是实际色块，segment 是居中的端点色带，Inspector 同时提供 native color picker 和 `#RRGGBB` 输入。Color 点在纵向中线，不伪装成标量高低曲线；runtime 使用 Lab 插值并将结果写入 `color.rgb`。Production Effect 都声明 standard Color 参数，因此 Context menu 可从具体 CueClip 创建 Color lane；即使该 Effect 默认不写颜色，lane 也是只对该 CueClip 的显式颜色覆盖。
 
 ### Track、Layer 与视觉行
 

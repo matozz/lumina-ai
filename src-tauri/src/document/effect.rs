@@ -32,6 +32,8 @@ pub struct ParameterDefinitionDSL {
     pub value_type: ParameterValueTypeDSL,
     pub default_value: ParameterValueDSL,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub range: Option<(f64, f64)>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub step: Option<f64>,

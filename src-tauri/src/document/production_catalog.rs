@@ -1176,14 +1176,20 @@ fn validate_recipe_layer_composition(
         }) else {
             continue;
         };
-        let left_attributes = effect_writer_attributes(left_effect);
+        let left_attributes = effect_writer_attributes(
+            left_effect,
+            left.parameter_overrides.contains_key(COLOR_PARAMETER_ID),
+        );
         for (right_index, right) in recipe.layers.iter().enumerate().skip(left_index + 1) {
             let Some(right_effect) = catalog.effects.iter().find(|effect| {
                 effect.id == right.effect_ref.id && effect.revision == right.effect_ref.revision
             }) else {
                 continue;
             };
-            let right_attributes = effect_writer_attributes(right_effect);
+            let right_attributes = effect_writer_attributes(
+                right_effect,
+                right.parameter_overrides.contains_key(COLOR_PARAMETER_ID),
+            );
             let conflicts = left_attributes
                 .intersection(&right_attributes)
                 .cloned()
@@ -1209,7 +1215,10 @@ fn validate_recipe_layer_composition(
     }
 }
 
-fn effect_writer_attributes(effect: &EffectDefinitionDocument) -> BTreeSet<String> {
+fn effect_writer_attributes(
+    effect: &EffectDefinitionDocument,
+    has_explicit_color: bool,
+) -> BTreeSet<String> {
     let mut attributes = BTreeSet::new();
     let mut has_attribute_set_writer = false;
     for node in &effect.graph.nodes {
@@ -1224,11 +1233,10 @@ fn effect_writer_attributes(effect: &EffectDefinitionDocument) -> BTreeSet<Strin
     if has_attribute_set_writer || attributes.is_empty() {
         attributes.extend(effect.catalog.required_attributes.iter().cloned());
     }
-    if effect
-        .parameters
-        .iter()
-        .any(|parameter| parameter.id == COLOR_PARAMETER_ID)
-    {
+    if effect.parameters.iter().any(|parameter| {
+        parameter.id == COLOR_PARAMETER_ID
+            && (parameter.default_enabled.unwrap_or(true) || has_explicit_color)
+    }) {
         attributes.insert(COLOR_RGB_ATTRIBUTE.to_string());
     }
     attributes
@@ -1545,7 +1553,7 @@ pub const DEFAULT_CUE_TRIGGER: CueTriggerPolicy = CueTriggerPolicy {
 mod tests {
     use super::*;
     use crate::compiler::diagnostic::CUE_RECIPE_UNRESOLVED;
-    use crate::document::valid_bundle;
+    use crate::document::{valid_bundle, AutomationPolicyDSL, ParameterValueTypeDSL};
 
     #[test]
     fn checked_in_catalog_meets_production_contract() {
@@ -1556,6 +1564,83 @@ mod tests {
         assert!(diagnostics.is_empty(), "{diagnostics:#?}");
         let runtime_diagnostics = validate_production_catalog_runtime(&catalog);
         assert!(runtime_diagnostics.is_empty(), "{runtime_diagnostics:#?}");
+    }
+
+    #[test]
+    fn every_catalog_effect_exposes_a_typed_optional_color_override() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        for effect in &catalog.effects {
+            let color = effect
+                .parameters
+                .iter()
+                .find(|parameter| parameter.id == COLOR_PARAMETER_ID)
+                .unwrap_or_else(|| panic!("{} has no standard Color parameter", effect.id));
+            assert_eq!(color.value_type, ParameterValueTypeDSL::Color, "{}", effect.id);
+            assert!(
+                matches!(
+                    color.override_policy,
+                    Some(ParameterOverridePolicyDSL::CueOverride)
+                ),
+                "{}",
+                effect.id
+            );
+            assert!(
+                matches!(color.automation, AutomationPolicyDSL::Continuous),
+                "{}",
+                effect.id
+            );
+        }
+    }
+
+    #[test]
+    fn optional_color_only_writes_when_explicitly_overridden() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        let effect = catalog
+            .effects
+            .iter()
+            .find(|effect| effect.id == "builtin.intensity.wave")
+            .expect("Intensity Wave");
+        let color = effect
+            .parameters
+            .iter()
+            .find(|parameter| parameter.id == COLOR_PARAMETER_ID)
+            .expect("standard Color");
+        assert_eq!(color.default_enabled, Some(false));
+
+        let show = Compiler::compile_document(effect_sample_document(effect, BTreeMap::new()))
+            .expect("optional Color compiles");
+        let active = effect_sample_live(&show);
+        assert_eq!(
+            render_at(
+                &show,
+                RenderTime { beat: 0.25 },
+                RenderSource::Live(&active),
+            )
+            .first()
+            .and_then(frame_color),
+            Some([0, 0, 0]),
+            "disabled Color default must preserve intensity-only output"
+        );
+
+        let show = Compiler::compile_document(effect_sample_document(
+            effect,
+            BTreeMap::from([(
+                COLOR_PARAMETER_ID.to_string(),
+                ParameterValueDSL::Color("#12ABEF".to_string()),
+            )]),
+        ))
+        .expect("Color override compiles");
+        let active = effect_sample_live(&show);
+        assert_eq!(
+            render_at(
+                &show,
+                RenderTime { beat: 0.25 },
+                RenderSource::Live(&active),
+            )
+            .first()
+            .and_then(frame_color),
+            Some([0x12, 0xAB, 0xEF])
+        );
     }
 
     #[test]

@@ -30,7 +30,7 @@ Random 将 phase 0 保留为停止状态的静态预览；Transport 离开零点
 
 ### Standard Color override
 
-适合单色覆盖的 Effect revision 可以声明标准参数 `color`：
+Production Catalog 中的每个 Effect 都声明标准参数 `color`，使颜色编辑和自动化入口保持一致：
 
 - `value_type: color`，值为严格的 `#RRGGBB`；
 - `unit/ui_hint: color`；
@@ -38,11 +38,11 @@ Random 将 phase 0 保留为停止状态的静态预览；Transport 离开零点
 - `automation: continuous`；
 - 完整的 `required`、`help`、`safe_fallback` 和 `advanced` 元数据。
 
-该参数是 Effect 最终 `color.rgb` 输出的单色覆盖，可从 Lab、Cue Layer override 和 Arrangement Color automation 到达。Color lane 在 runtime 使用 Lab 插值；endpoint 精确保留。没有声明 standard Color 的 Effect 不获得万能颜色入口。
+该参数是 Effect 最终 `color.rgb` 输出的可选单色覆盖，可从 Lab、Cue Layer override 和 Arrangement Color automation 到达。Color lane 在 runtime 使用 Lab 插值；endpoint 精确保留。`default_enabled` 缺省或为 `true` 时使用参数默认色；`false` 时保留 EffectGraph 自己的 Palette/颜色，或者让纯 intensity Effect 不写颜色。Lab 和 Cue UI 可以显式启用颜色，也可以清除颜色回到上述 Effect authored/fallback 行为；禁用的默认值本身不构成 `color.rgb` writer，只有显式 Cue/Arrangement override 或 automation 才构成。
 
 结构性 Palette 继续使用 `color_stops`，只在 Lab 中编辑，并保持 `override_policy: effect_only`、`automation: disabled`。本版本不在 runtime 改变 stop 数量，也不做 stop-by-stop Arrangement automation。
 
-兼容现有 Schema、参数和引用的 Catalog 修复直接更新当前源文件，不机械增加 revision。只有无法兼容、必须让新旧行为并存时才增加 revision，并同步更新需要迁移的 Cue exact ref。当前 4 个 standard Color Effect 都只保留 revision 1，Catalog 内不保留重复 rev2。
+兼容现有 Schema、参数和引用的 Catalog 修复直接更新当前源文件，不机械增加 revision。只有无法兼容、必须让新旧行为并存时才增加 revision，并同步更新需要迁移的 Cue exact ref。standard Color 兼容入口直接落在现有 Effect 源文件，Catalog 内不保留重复 rev2。
 
 ## 内置效果取舍
 
@@ -75,6 +75,6 @@ Effect 写入 typed fixture attributes。Profile 提供默认 HTP/LTP policy，�
 
 - 内置 Effect 修改不会改变 Catalog 文件或已存在项目资产。
 - 参数变化在 Canvas 可见；无效参数不会替换最后有效预览。
-- standard Color 在 Lab、Cue override、Arrangement lane 和 `color.rgb` render output 间保持 typed round-trip；`color_stops` 不出现在 automation 菜单。
+- standard Color 在 Lab、Cue override、Arrangement lane 和 `color.rgb` render output 间保持 typed round-trip；清除后恢复 Effect authored/fallback 行为；`color_stops` 不出现在 automation 菜单。
 - Effect 不包含任何 Stage/TargetSet identity。
 - 1,000 fixtures × 多 Effect layers 仍保持确定性并满足 60Hz 预算。

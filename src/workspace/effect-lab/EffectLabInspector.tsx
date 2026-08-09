@@ -162,6 +162,13 @@ export function EffectLabInspector() {
     });
   };
 
+  const updateParameterDefaultEnabled = (parameterId: string, enabled: boolean) => {
+    authoringDraftActions.updateEffect((draft) => {
+      const parameter = draft.parameters.find((candidate) => candidate.id === parameterId);
+      if (parameter?.value_type === "color") parameter.default_enabled = enabled;
+    });
+  };
+
   const customize = () => {
     const custom = structuredClone(session.pinned);
     custom.id = uniqueId(
@@ -367,6 +374,7 @@ export function EffectLabInspector() {
               readOnly={readOnly}
               parameterIndices={parameterIndices}
               onChange={updateParameter}
+              onDefaultEnabledChange={updateParameterDefaultEnabled}
               onRestoreFallback={authoringDraftActions.restoreEffectFallback}
               showMetadata={advancedMode}
             />
@@ -394,6 +402,7 @@ export function EffectLabInspector() {
                     readOnly={readOnly}
                     parameterIndices={parameterIndices}
                     onChange={updateParameter}
+                    onDefaultEnabledChange={updateParameterDefaultEnabled}
                     onRestoreFallback={authoringDraftActions.restoreEffectFallback}
                     showMetadata={advancedMode}
                   />

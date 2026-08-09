@@ -1,4 +1,4 @@
-import { RotateCcw } from "lucide-react";
+import { Palette, RotateCcw, X } from "lucide-react";
 import type { Diagnostic, ParameterDefinitionDSL, ParameterValueDSL } from "@/bridge/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ export function EffectParameterControls({
   parameterIndices,
   showMetadata = false,
   onChange,
+  onDefaultEnabledChange,
   onRestoreFallback,
 }: {
   parameters: ParameterDefinitionDSL[];
@@ -20,6 +21,7 @@ export function EffectParameterControls({
   parameterIndices?: Record<string, number>;
   showMetadata?: boolean;
   onChange: (parameterId: string, value: ParameterValueDSL) => void;
+  onDefaultEnabledChange?: (parameterId: string, enabled: boolean) => void;
   onRestoreFallback: (parameterId: string) => void;
 }) {
   return (
@@ -29,6 +31,8 @@ export function EffectParameterControls({
         const parameterDiagnostics = diagnostics.filter((diagnostic) =>
           diagnostic.path.includes(`parameters[${sourceIndex}]`),
         );
+        const optionalColorDisabled =
+          parameter.value_type === "color" && parameter.default_enabled === false;
         return (
           <Field
             key={parameter.id}
@@ -52,11 +56,48 @@ export function EffectParameterControls({
                 </>
               )}
             </div>
-            <EffectParameterInput
-              parameter={parameter}
-              readOnly={readOnly}
-              onChange={(value) => onChange(parameter.id, value)}
-            />
+            {optionalColorDisabled ? (
+              <div className="border-border/70 bg-muted/20 flex h-7 min-w-0 items-center gap-2 rounded-md border px-2">
+                <Palette className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
+                <span className="text-muted-foreground min-w-0 flex-1 truncate text-[10px]">
+                  Use Effect color
+                </span>
+                {onDefaultEnabledChange && (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    className="h-5 px-1.5 text-[10px]"
+                    disabled={readOnly}
+                    onClick={() => onDefaultEnabledChange(parameter.id, true)}
+                  >
+                    Choose color
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="flex min-w-0 items-center gap-1.5">
+                <div className="min-w-0 flex-1">
+                  <EffectParameterInput
+                    parameter={parameter}
+                    readOnly={readOnly}
+                    onChange={(value) => onChange(parameter.id, value)}
+                  />
+                </div>
+                {parameter.value_type === "color" && onDefaultEnabledChange && (
+                  <Button
+                    size="icon-xs"
+                    variant="ghost"
+                    className="text-muted-foreground shrink-0"
+                    disabled={readOnly}
+                    aria-label={`Clear ${parameter.name} color`}
+                    title="Use Effect color"
+                    onClick={() => onDefaultEnabledChange(parameter.id, false)}
+                  >
+                    <X aria-hidden="true" />
+                  </Button>
+                )}
+              </div>
+            )}
             {parameter.help && <FieldDescription>{parameter.help}</FieldDescription>}
             {showMetadata && parameter.graph_binding && (
               <FieldDescription>

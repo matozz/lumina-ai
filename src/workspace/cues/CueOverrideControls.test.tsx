@@ -30,4 +30,53 @@ describe("CueOverrideControls Color", () => {
     expect(layer.parameter_overrides?.color).toEqual({ type: "color", value: "#12ABEF" });
     expect(layer.id).toBe(layerId);
   });
+
+  it("adds and clears an optional Color override while preserving the Effect fallback", () => {
+    const bundle = createStarterProjectBundle();
+    const effect = createEffectAsset(bundle, "Intensity-only Pulse");
+    const color = effect.parameters.find((parameter) => parameter.id === "color")!;
+    color.default_enabled = false;
+    const cue = createCueAsset(bundle, [effect]);
+    const layer = cue.layers[0];
+    const onUpdate = (update: (layer: typeof layer, cue: typeof cue) => void) =>
+      update(layer, cue);
+    const { rerender } = render(
+      <CueOverrideControls
+        cue={cue}
+        layer={layer}
+        effect={effect}
+        advanced={false}
+        onUpdate={onUpdate}
+      />,
+    );
+
+    expect(screen.queryByLabelText("Color color picker")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Choose color" }));
+    expect(layer.parameter_overrides?.color).toEqual(color.default_value);
+
+    rerender(
+      <CueOverrideControls
+        cue={cue}
+        layer={layer}
+        effect={effect}
+        advanced={false}
+        onUpdate={onUpdate}
+      />,
+    );
+    expect(screen.getByLabelText("Color color picker")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Clear Color color" }));
+    expect(layer.parameter_overrides?.color).toBeUndefined();
+
+    rerender(
+      <CueOverrideControls
+        cue={cue}
+        layer={layer}
+        effect={effect}
+        advanced={false}
+        onUpdate={onUpdate}
+      />,
+    );
+    expect(screen.queryByLabelText("Color color picker")).toBeNull();
+    expect(screen.getByText("Use Effect color")).toBeTruthy();
+  });
 });

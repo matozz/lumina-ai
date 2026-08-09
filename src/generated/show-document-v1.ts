@@ -302,6 +302,7 @@ export type OverlapPolicyDSL = "layer" | "replace" | "reject" | "crossfade";
 export interface ParameterDefinitionDSL {
   advanced?: boolean | null;
   automation: AutomationPolicyDSL;
+  default_enabled?: boolean | null;
   default_value: ParameterValueDSL;
   enum_values?: Array<string>;
   graph_binding?: ParameterGraphBindingDSL | null;

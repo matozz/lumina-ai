@@ -381,6 +381,21 @@ fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
                 continue;
             };
             validate_layer_parameter(bundle, layer, &lane.target.parameter_id, &path, diagnostics);
+            if lane.target.parameter_id == COLOR_PARAMETER_ID {
+                if let Some(target) = stage
+                    .target_sets
+                    .iter()
+                    .find(|target| target.id == layer.target_set_ref.target_set_id)
+                {
+                    validate_explicit_color_capability(
+                        stage,
+                        layout,
+                        target,
+                        &path,
+                        diagnostics,
+                    );
+                }
+            }
             validate_keyframes(
                 &lane.keyframes,
                 cue.nominal_length_ticks,
@@ -425,7 +440,10 @@ fn validate_cue_layer_composition(
             continue;
         };
         let left_fixtures = cue_layer_fixture_ids(stage, layout, left);
-        let left_attributes = effect_writer_attributes(left_effect);
+        let left_attributes = effect_writer_attributes(
+            left_effect,
+            cue_layer_has_explicit_color(cue, left),
+        );
         for (right_index, right) in cue.layers.iter().enumerate().skip(left_index + 1) {
             let Some(right_effect) = exact_asset(&bundle.effects, &right.effect_ref, |asset| {
                 (&asset.id, asset.revision)
@@ -436,7 +454,10 @@ fn validate_cue_layer_composition(
             if left_fixtures.is_disjoint(&right_fixtures) {
                 continue;
             }
-            let right_attributes = effect_writer_attributes(right_effect);
+            let right_attributes = effect_writer_attributes(
+                right_effect,
+                cue_layer_has_explicit_color(cue, right),
+            );
             let conflicts = left_attributes
                 .intersection(&right_attributes)
                 .filter(|attribute| !has_explicit_mix_policy(right, attribute))
@@ -467,7 +488,10 @@ fn validate_cue_layer_composition(
     }
 }
 
-fn effect_writer_attributes(effect: &EffectDefinitionDocument) -> BTreeSet<String> {
+fn effect_writer_attributes(
+    effect: &EffectDefinitionDocument,
+    has_explicit_color: bool,
+) -> BTreeSet<String> {
     let mut attributes = BTreeSet::new();
     let mut has_attribute_set_writer = false;
     for node in &effect.graph.nodes {
@@ -482,14 +506,49 @@ fn effect_writer_attributes(effect: &EffectDefinitionDocument) -> BTreeSet<Strin
     if has_attribute_set_writer || attributes.is_empty() {
         attributes.extend(effect.catalog.required_attributes.iter().cloned());
     }
-    if effect
-        .parameters
-        .iter()
-        .any(|parameter| parameter.id == COLOR_PARAMETER_ID)
-    {
+    if effect.parameters.iter().any(|parameter| {
+        parameter.id == COLOR_PARAMETER_ID
+            && (parameter.default_enabled.unwrap_or(true) || has_explicit_color)
+    }) {
         attributes.insert(COLOR_RGB_ATTRIBUTE.to_string());
     }
     attributes
+}
+
+fn cue_layer_has_explicit_color(cue: &CueDefinition, layer: &CueLayer) -> bool {
+    layer.parameter_overrides.contains_key(COLOR_PARAMETER_ID)
+        || cue.automation_lanes.iter().any(|lane| {
+            lane.target.layer_id == layer.id && lane.target.parameter_id == COLOR_PARAMETER_ID
+        })
+}
+
+fn clip_layer_has_explicit_color(
+    arrangement: &ArrangementDocument,
+    cue: &CueDefinition,
+    clip: &super::CueClip,
+    layer: &CueLayer,
+) -> bool {
+    cue_layer_has_explicit_color(cue, layer)
+        || clip.layer_overrides.iter().any(|layer_override| {
+            layer_override.layer_id == layer.id
+                && layer_override
+                    .parameter_overrides
+                    .contains_key(COLOR_PARAMETER_ID)
+        })
+        || arrangement.tracks.iter().any(|track| {
+            track.automation_lanes.iter().any(|lane| {
+                matches!(
+                    &lane.target,
+                    super::ArrangementAutomationTarget::CueLayer {
+                        clip_id,
+                        layer_id,
+                        parameter_id,
+                    } if clip_id == &clip.id
+                        && layer_id == &layer.id
+                        && parameter_id == COLOR_PARAMETER_ID
+                )
+            })
+        })
 }
 
 fn has_explicit_mix_policy(layer: &CueLayer, attribute_id: &str) -> bool {
@@ -688,6 +747,15 @@ fn validate_cue_layer(
             diagnostics,
         );
     }
+    if layer.parameter_overrides.contains_key(COLOR_PARAMETER_ID) {
+        validate_explicit_color_capability(
+            stage,
+            layout,
+            target_set,
+            &format!("{path}.parameter_overrides.{COLOR_PARAMETER_ID}"),
+            diagnostics,
+        );
+    }
     validate_mix_overrides(
         stage,
         layout,
@@ -809,6 +877,20 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
                                 .iter()
                                 .find(|target| target.id == layer.target_set_ref.target_set_id),
                         ) {
+                            if layer_override
+                                .parameter_overrides
+                                .contains_key(COLOR_PARAMETER_ID)
+                            {
+                                validate_explicit_color_capability(
+                                    stage,
+                                    layout,
+                                    target,
+                                    &format!(
+                                        "{override_path}.parameter_overrides.{COLOR_PARAMETER_ID}"
+                                    ),
+                                    diagnostics,
+                                );
+                            }
                             validate_mix_overrides(
                                 stage,
                                 layout,
@@ -862,6 +944,30 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
                         &format!("{lane_path}.target.parameter_id"),
                         diagnostics,
                     );
+                    if parameter_id == COLOR_PARAMETER_ID {
+                        if let Some(stage) =
+                            exact_asset(&bundle.stages, &cue.compatible_stage_ref, |asset| {
+                                (&asset.id, asset.revision)
+                            })
+                        {
+                            if let (Some(layout), Some(target)) = (
+                                exact_asset(&bundle.layouts, &stage.layout_ref, |asset| {
+                                    (&asset.id, asset.revision)
+                                }),
+                                stage.target_sets.iter().find(|target| {
+                                    target.id == layer.target_set_ref.target_set_id
+                                }),
+                            ) {
+                                validate_explicit_color_capability(
+                                    stage,
+                                    layout,
+                                    target,
+                                    &format!("{lane_path}.target.parameter_id"),
+                                    diagnostics,
+                                );
+                            }
+                        }
+                    }
                     if let Some(effect) = exact_asset(&bundle.effects, &layer.effect_ref, |asset| {
                         (&asset.id, asset.revision)
                     }) {
@@ -988,7 +1094,15 @@ fn validate_arrangement_clip_composition(
                 else {
                     continue;
                 };
-                let left_attributes = effect_writer_attributes(left_effect);
+                let left_attributes = effect_writer_attributes(
+                    left_effect,
+                    clip_layer_has_explicit_color(
+                        arrangement,
+                        left.cue,
+                        left.clip,
+                        left_layer,
+                    ),
+                );
                 for right_layer in &right.cue.layers {
                     let right_fixtures = cue_layer_fixture_ids(stage, layout, right_layer);
                     if left_fixtures.is_disjoint(&right_fixtures) {
@@ -1001,7 +1115,15 @@ fn validate_arrangement_clip_composition(
                     else {
                         continue;
                     };
-                    let right_attributes = effect_writer_attributes(right_effect);
+                    let right_attributes = effect_writer_attributes(
+                        right_effect,
+                        clip_layer_has_explicit_color(
+                            arrangement,
+                            right.cue,
+                            right.clip,
+                            right_layer,
+                        ),
+                    );
                     let conflicts = left_attributes
                         .intersection(&right_attributes)
                         .filter(|attribute| {
@@ -1475,6 +1597,38 @@ fn validate_effect_capability(
                 ));
                 break;
             }
+        }
+    }
+}
+
+fn validate_explicit_color_capability(
+    stage: &StageDocument,
+    layout: &LayoutDefinition,
+    target: &TargetSetDefinition,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let fixture_profiles = stage_fixture_profile_map(stage);
+    for fixture_id in target_fixture_ids(stage, layout, target) {
+        let supported = fixture_profiles
+            .get(&fixture_id)
+            .and_then(|profile_id| profile_by_id(profile_id))
+            .is_some_and(|profile| {
+                profile
+                    .attributes
+                    .iter()
+                    .any(|attribute| attribute.id == COLOR_RGB_ATTRIBUTE)
+            });
+        if !supported {
+            diagnostics.push(Diagnostic::error(
+                PROJECT_CAPABILITY_MISMATCH,
+                path,
+                format!(
+                    "Fixture {fixture_id} does not support color.rgb required by the explicit Color override."
+                ),
+                "Clear the Color override or choose a TargetSet whose fixtures support color.rgb.",
+            ));
+            break;
         }
     }
 }

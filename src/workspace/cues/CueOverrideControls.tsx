@@ -42,7 +42,13 @@ export function CueOverrideControls({
         const displayed: ParameterDefinitionDSL = {
           ...parameter,
           default_value: structuredClone(override ?? parameter.default_value),
+          ...(parameter.value_type === "color"
+            ? { default_enabled: override ? true : parameter.default_enabled }
+            : {}),
         };
+        const canToggleColor =
+          parameter.value_type === "color" &&
+          (override !== undefined || parameter.default_enabled === false);
         return (
           <div key={parameter.id} className="grid min-w-0 gap-1.5">
             {advanced && (
@@ -95,6 +101,20 @@ export function CueOverrideControls({
                     [parameter.id]: structuredClone(value),
                   };
                 })
+              }
+              onDefaultEnabledChange={
+                canToggleColor
+                  ? (_, enabled) =>
+                      onUpdate((draftLayer) => {
+                        const overrides = { ...(draftLayer.parameter_overrides ?? {}) };
+                        if (enabled) {
+                          overrides[parameter.id] = structuredClone(parameter.default_value);
+                        } else {
+                          delete overrides[parameter.id];
+                        }
+                        draftLayer.parameter_overrides = overrides;
+                      })
+                  : undefined
               }
               onRestoreFallback={() => undefined}
               showMetadata={advanced}

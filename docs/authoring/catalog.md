@@ -34,7 +34,7 @@ Cue recipe 与 Project Template 中的 Layer ID 也是持久化引用。新声�
 6. runtime sampled output 与 determinism 检查；
 7. Production render、compatibility 和 Generator coordinate Golden 比对。
 
-修改经过审查后运行 `pnpm catalog:golden:update`，并提交 `catalog/production-compatibility-v1.json`、Generator Golden 和 Rust production Golden 的有意差异。新增 Color revision 时还要验证 standard parameter metadata、Cue/Arrangement exact target、Lab midpoint/endpoints 与实际 `color.rgb` 输出。
+修改经过审查后运行 `pnpm catalog:golden:update`，并提交 `catalog/production-compatibility-v1.json`、Generator Golden 和 Rust production Golden 的有意差异。新增或调整 standard Color 参数时还要验证 parameter metadata、Cue/Arrangement exact target、Lab midpoint/endpoints、清除后的 fallback 与实际 `color.rgb` 输出；兼容修改直接更新现有源文件，不为此机械新增 revision。
 
 ## 用户资产包
 

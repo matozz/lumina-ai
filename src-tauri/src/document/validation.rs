@@ -396,6 +396,16 @@ fn validate_parameter_schema(
                 "Use a typed default value matching value_type.",
             ));
         }
+        if parameter.default_enabled == Some(false)
+            && !matches!(parameter.value_type, ParameterValueTypeDSL::Color)
+        {
+            diagnostics.push(Diagnostic::error(
+                DOC_PARAMETER_INVALID,
+                format!("{path}.default_enabled"),
+                "Only Color parameters can disable their default output.",
+                "Remove default_enabled or use it on the standard Color parameter.",
+            ));
+        }
         if parameter.name.trim().is_empty() {
             diagnostics.push(Diagnostic::error(
                 CATALOG_PARAMETER_INVALID,
