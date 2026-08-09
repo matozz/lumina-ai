@@ -9,9 +9,6 @@ import {
   ContextMenuLabel,
   ContextMenuSeparator,
   ContextMenuShortcut,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import type { TimelineGeometry } from "@/panel/timelineGeometry";
@@ -66,7 +63,7 @@ export function CueClipContextMenu({
             <ContextMenuLabel>CueClip at tick {tick}</ContextMenuLabel>
           </ContextMenuGroup>
           {missing.length > 0 && (
-            <AutomationOptionsSubmenu
+            <AutomationOptionsGroup
               label="Add automation"
               options={missing}
               onSelect={(option) => onAutomation(option, tick)}
@@ -78,7 +75,7 @@ export function CueClipContextMenu({
               Reveal existing automation
             </ContextMenuItem>
           ) : existing.length > 1 ? (
-            <AutomationOptionsSubmenu
+            <AutomationOptionsGroup
               icon={<Eye aria-hidden="true" />}
               label="Reveal existing automation"
               options={existing}
@@ -182,7 +179,7 @@ export function TimelineContextSurface({
   );
 }
 
-function AutomationOptionsSubmenu({
+function AutomationOptionsGroup({
   icon,
   label,
   onSelect,
@@ -193,77 +190,40 @@ function AutomationOptionsSubmenu({
   onSelect: (option: ArrangementAutomationOption) => void;
   options: ArrangementAutomationOption[];
 }) {
-  const [open, setOpen] = useState(false);
-  const layerGroups = new Map<string, ArrangementAutomationOption[]>();
-  for (const option of options) {
-    const label = option.layerLabel ?? "Layer";
-    layerGroups.set(label, [...(layerGroups.get(label) ?? []), option]);
-  }
   const grouped = options.some((option) => (option.layerCount ?? 1) > 1);
   return (
-    <ContextMenuSub open={open} onOpenChange={setOpen}>
-      <ContextMenuSubTrigger onClick={() => setOpen(true)}>
+    <ContextMenuGroup>
+      <ContextMenuLabel className="flex items-center gap-1.5">
         {icon}
         {label}
-      </ContextMenuSubTrigger>
-      <ContextMenuSubContent className="w-64">
-        {grouped
-          ? [...layerGroups.entries()].map(([layerLabel, layerOptions]) => (
-              <AutomationLayerSubmenu
-                key={layerLabel}
-                label={layerLabel}
-                onSelect={onSelect}
-                options={layerOptions}
-              />
-            ))
-          : options.map((option) => (
-              <AutomationOptionItem
-                key={automationTargetKey(option.target)}
-                option={option}
-                onSelect={onSelect}
-              />
-            ))}
-      </ContextMenuSubContent>
-    </ContextMenuSub>
-  );
-}
-
-function AutomationLayerSubmenu({
-  label,
-  onSelect,
-  options,
-}: {
-  label: string;
-  onSelect: (option: ArrangementAutomationOption) => void;
-  options: ArrangementAutomationOption[];
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <ContextMenuSub open={open} onOpenChange={setOpen}>
-      <ContextMenuSubTrigger onClick={() => setOpen(true)}>{label}</ContextMenuSubTrigger>
-      <ContextMenuSubContent className="w-56">
-        {options.map((option) => (
-          <AutomationOptionItem
-            key={automationTargetKey(option.target)}
-            option={option}
-            onSelect={onSelect}
-          />
-        ))}
-      </ContextMenuSubContent>
-    </ContextMenuSub>
+      </ContextMenuLabel>
+      {options.map((option) => (
+        <AutomationOptionItem
+          key={automationTargetKey(option.target)}
+          option={option}
+          onSelect={onSelect}
+          showLayerLabel={grouped}
+        />
+      ))}
+    </ContextMenuGroup>
   );
 }
 
 function AutomationOptionItem({
   onSelect,
   option,
+  showLayerLabel,
 }: {
   onSelect: (option: ArrangementAutomationOption) => void;
   option: ArrangementAutomationOption;
+  showLayerLabel: boolean;
 }) {
   return (
     <ContextMenuItem onClick={() => onSelect(option)}>
-      <span className="min-w-0 truncate">{option.definition.name}</span>
+      <span className="min-w-0 truncate">
+        {showLayerLabel && option.layerLabel ? `${option.layerLabel} · ` : ""}
+        {option.definition.name}
+      </span>
       <span className="text-muted-foreground ml-auto text-[10px]">
         {option.definition.value_type}
       </span>

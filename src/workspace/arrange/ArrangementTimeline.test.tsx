@@ -461,8 +461,7 @@ describe("ArrangementTimeline workflow", () => {
     );
 
     fireEvent.contextMenu(clip, { clientX: 72, clientY: 80 });
-    const addAutomation = await screen.findByRole("menuitem", { name: "Add automation" });
-    fireEvent.click(addAutomation);
+    expect(await screen.findByText("Add automation")).toBeTruthy();
     const speed = await screen.findByRole("menuitem", { name: /Speed.*scalar/ });
     fireEvent.click(speed);
 
