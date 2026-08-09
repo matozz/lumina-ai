@@ -54,13 +54,13 @@ export function useArrangementEditorShortcuts({
       const key = event.key.toLowerCase();
 
       if (!command && event.key === "Escape") {
-        event.preventDefault();
+        claimShortcut(event);
         onEscape();
         return;
       }
 
       if (!command && (event.code === "Space" || event.key === " ")) {
-        event.preventDefault();
+        claimShortcut(event);
         const session = useAuthoringTransportStore.getState().sessions[sessionKey];
         if (!session) return;
         if (session.playback === "playing") authoringTransportActions.pause(sessionKey);
@@ -69,10 +69,10 @@ export function useArrangementEditorShortcuts({
       }
       if (!command) {
         if (hasSelection && (event.key === "Delete" || event.key === "Backspace")) {
-          event.preventDefault();
+          claimShortcut(event);
           onDelete();
         } else if (hasSelection && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
-          event.preventDefault();
+          claimShortcut(event);
           const direction = event.key === "ArrowLeft" ? -1 : 1;
           const deltaTick = direction * (event.shiftKey ? ppq : snapTicks);
           if (event.altKey) onResizeSelection(deltaTick);
@@ -82,44 +82,44 @@ export function useArrangementEditorShortcuts({
       }
 
       if (key === "a") {
-        event.preventDefault();
+        claimShortcut(event);
         if (event.shiftKey) onClearSelection();
         else onSelectAll();
       } else if (key === "c" && hasSelection) {
-        event.preventDefault();
+        claimShortcut(event);
         onCopy();
       } else if (key === "v") {
-        event.preventDefault();
+        claimShortcut(event);
         onPaste();
       } else if (key === "d" && hasSelection) {
-        event.preventDefault();
+        claimShortcut(event);
         onDuplicate();
       } else if (key === "z") {
-        event.preventDefault();
+        claimShortcut(event);
         if (event.shiftKey) onRedo();
         else onUndo();
       } else if (key === "y") {
-        event.preventDefault();
+        claimShortcut(event);
         onRedo();
       } else if (event.key === "ArrowUp") {
-        event.preventDefault();
+        claimShortcut(event);
         onZoomIn();
       } else if (event.key === "ArrowDown") {
-        event.preventDefault();
+        claimShortcut(event);
         onZoomOut();
       } else if (event.key === "ArrowLeft") {
-        event.preventDefault();
+        claimShortcut(event);
         onJumpToStart();
       } else if (event.key === "ArrowRight") {
-        event.preventDefault();
+        claimShortcut(event);
         onJumpToLastCue();
       } else if (event.key === "0") {
-        event.preventDefault();
+        claimShortcut(event);
         onFit();
       }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [
     hasSelection,
     onClearSelection,
@@ -145,18 +145,47 @@ export function useArrangementEditorShortcuts({
 }
 
 export function shortcutEventIsBlocked(event: KeyboardEvent) {
-  return event.composedPath().some(shortcutTargetIsBlocked);
+  return (
+    event.composedPath().some(shortcutTargetIsBlocked) ||
+    arrangementShortcutOverlayIsOpen(eventDocument(event))
+  );
 }
 
 export function shortcutTargetIsBlocked(target: EventTarget | null) {
   if (isTextEditingTarget(target)) return true;
   if (!(target instanceof Element)) return false;
-  return (
-    target.closest(
-      '[role="combobox"], [aria-haspopup="listbox"], [aria-haspopup="menu"], [aria-haspopup="dialog"]',
-    ) !== null ||
-    target.closest(
-      '[role="dialog"], [role="menu"], [data-slot="popover-content"], [data-slot="select-content"]',
-    ) !== null
-  );
+  return target.closest(ARRANGEMENT_OVERLAY_CONTENT_SELECTOR) !== null;
 }
+
+export function arrangementShortcutOverlayIsOpen(document: Document) {
+  return document.querySelector(ARRANGEMENT_OPEN_OVERLAY_SELECTOR) !== null;
+}
+
+function claimShortcut(event: KeyboardEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function eventDocument(event: KeyboardEvent) {
+  const target = event.composedPath()[0];
+  return target instanceof Node ? (target.ownerDocument ?? document) : document;
+}
+
+const ARRANGEMENT_OVERLAY_CONTENT_SELECTOR = [
+  '[role="dialog"]',
+  '[role="menu"]',
+  '[role="listbox"]',
+  '[data-slot="dialog-content"]',
+  '[data-slot="popover-content"]',
+  '[data-slot="select-content"]',
+  '[data-slot="context-menu-content"]',
+  '[data-slot="context-menu-sub-content"]',
+].join(", ");
+
+const ARRANGEMENT_OPEN_OVERLAY_SELECTOR = [
+  '[data-slot="dialog-content"][data-open]',
+  '[data-slot="popover-content"][data-open]',
+  '[data-slot="select-content"][data-open]',
+  '[data-slot="context-menu-content"][data-open]',
+  '[data-slot="context-menu-sub-content"][data-open]',
+].join(", ");

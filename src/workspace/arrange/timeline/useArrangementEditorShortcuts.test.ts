@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { shortcutEventIsBlocked, shortcutTargetIsBlocked } from "./useArrangementEditorShortcuts";
+import {
+  arrangementShortcutOverlayIsOpen,
+  shortcutEventIsBlocked,
+  shortcutTargetIsBlocked,
+} from "./useArrangementEditorShortcuts";
 
 describe("Arrange shortcut focus rules", () => {
   it("blocks editor shortcuts inside form fields and overlay content", () => {
@@ -13,8 +17,25 @@ describe("Arrange shortcut focus rules", () => {
 
     expect(shortcutTargetIsBlocked(input)).toBe(true);
     expect(shortcutTargetIsBlocked(dialogButton)).toBe(true);
-    expect(shortcutTargetIsBlocked(selectTrigger)).toBe(true);
+    expect(shortcutTargetIsBlocked(selectTrigger)).toBe(false);
     expect(shortcutTargetIsBlocked(document.createElement("button"))).toBe(false);
+  });
+
+  it("blocks an actually open overlay without permanently blocking its trigger", () => {
+    const trigger = document.createElement("button");
+    trigger.setAttribute("role", "combobox");
+    const popover = document.createElement("div");
+    popover.dataset.slot = "popover-content";
+    popover.setAttribute("data-open", "");
+    document.body.append(trigger, popover);
+
+    expect(shortcutTargetIsBlocked(trigger)).toBe(false);
+    expect(arrangementShortcutOverlayIsOpen(document)).toBe(true);
+
+    popover.removeAttribute("data-open");
+    expect(arrangementShortcutOverlayIsOpen(document)).toBe(false);
+    trigger.remove();
+    popover.remove();
   });
 
   it("checks every target in a composed event path", () => {

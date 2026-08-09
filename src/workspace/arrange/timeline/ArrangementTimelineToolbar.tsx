@@ -10,7 +10,6 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { useRef } from "react";
 import type { AssetRef, ProjectBundle } from "@/bridge/types";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
@@ -68,7 +67,6 @@ export function ArrangementTimelineToolbar({
   snapPreset,
   focusMode,
 }: ArrangementTimelineToolbarProps) {
-  const arrangementTriggerRef = useRef<HTMLButtonElement>(null);
   const refs = latestRefsById(bundle.manifest.arrangement_refs);
   const items = refs.map((candidate) => ({
     value: assetKey(candidate),
@@ -80,31 +78,12 @@ export function ArrangementTimelineToolbar({
       <Select
         items={items}
         value={assetKey(reference)}
-        onOpenChangeComplete={(open) => {
-          if (open) return;
-          const trigger = arrangementTriggerRef.current;
-          const activeElement = document.activeElement;
-          const focusStayedInSelect =
-            activeElement === trigger ||
-            activeElement === document.body ||
-            (activeElement instanceof Element &&
-              activeElement.closest('[data-slot="select-content"]') !== null);
-          if (!trigger || !focusStayedInSelect) return;
-          const timeline = trigger.closest<HTMLElement>('[aria-label="Arrangement timeline"]');
-          if (timeline) timeline.focus();
-          else trigger.blur();
-        }}
         onValueChange={(value) => {
           const selected = refs.find((candidate) => assetKey(candidate) === value);
           if (selected) onSelectArrangement(selected);
         }}
       >
-        <SelectTrigger
-          ref={arrangementTriggerRef}
-          size="sm"
-          className="w-40"
-          aria-label="Arrangement"
-        >
+        <SelectTrigger size="sm" className="w-40" aria-label="Arrangement">
           <SelectValue />
         </SelectTrigger>
         <SelectContent alignItemWithTrigger={false}>

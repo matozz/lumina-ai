@@ -73,9 +73,8 @@ describe("ArrangementTimeline workflow", () => {
     expect(cueHeader.firstElementChild?.firstElementChild?.className).toContain("justify-center");
   });
 
-  it("returns focus to the timeline after switching Arrangements", async () => {
+  it("keeps shortcuts routed after switching Arrangements", async () => {
     render(<ArrangementTimeline />);
-    const timeline = screen.getByRole("region", { name: "Arrangement timeline" });
     const arrangementSelect = screen.getByRole("combobox", { name: "Arrangement" });
     const beatWidthBefore = useWorkspaceStore.getState().arrangeTimelineBeatWidth;
 
@@ -84,9 +83,46 @@ describe("ArrangementTimeline workflow", () => {
     fireEvent.mouseMove(option);
     fireEvent.click(option);
 
-    await waitFor(() => expect(document.activeElement).toBe(timeline));
-    fireEvent.keyDown(timeline, { key: "ArrowUp", metaKey: true });
+    arrangementSelect.focus();
+    fireEvent.keyDown(arrangementSelect, { key: "ArrowUp", metaKey: true });
 
+    expect(useWorkspaceStore.getState().arrangeTimelineBeatWidth).toBeGreaterThan(beatWidthBefore);
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  it("restores Space and Command arrows after closing toolbar overlays", async () => {
+    render(<ArrangementTimeline />);
+    const sessionKey = authoringSessionKey(
+      "arrangement",
+      assetKey(useProjectStore.getState().selectedArrangementRef),
+    );
+    const shortcuts = screen.getByRole("button", { name: "Arrangement timeline shortcuts" });
+
+    fireEvent.click(shortcuts);
+    const shortcutTitle = screen.getByText("Arrange controls");
+    expect(shortcutTitle).toBeTruthy();
+    fireEvent.keyDown(shortcutTitle, { key: " ", code: "Space" });
+    expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("stopped");
+    fireEvent.click(shortcuts);
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="popover-content"][data-open]')).toBeNull(),
+    );
+    shortcuts.focus();
+    expect(fireEvent.keyDown(shortcuts, { key: " ", code: "Space" })).toBe(false);
+    expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("playing");
+    expect(screen.queryByText("Arrange controls")).toBeNull();
+
+    const snapSelect = screen.getByRole("combobox", { name: "Arrangement timeline snap" });
+    const beatWidthBefore = useWorkspaceStore.getState().arrangeTimelineBeatWidth;
+    fireEvent.click(snapSelect);
+    const quarterBeat = screen.getByRole("option", { name: "¼ beat" });
+    fireEvent.mouseMove(quarterBeat);
+    fireEvent.click(quarterBeat);
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="select-content"][data-open]')).toBeNull(),
+    );
+    snapSelect.focus();
+    expect(fireEvent.keyDown(snapSelect, { key: "ArrowUp", metaKey: true })).toBe(false);
     expect(useWorkspaceStore.getState().arrangeTimelineBeatWidth).toBeGreaterThan(beatWidthBefore);
     expect(screen.queryByRole("listbox")).toBeNull();
   });
@@ -297,14 +333,17 @@ describe("ArrangementTimeline workflow", () => {
     fireEvent.pointerDown(clip, { button: 0, pointerId: 11, clientX: 48 });
     fireEvent.pointerUp(clip, { pointerId: 11, clientX: 48 });
     const input = screen.getByLabelText("Start tick");
+    const beatWidthBefore = useWorkspaceStore.getState().arrangeTimelineBeatWidth;
     const sessionKey = authoringSessionKey(
       "arrangement",
       assetKey(useProjectStore.getState().selectedArrangementRef),
     );
 
     fireEvent.keyDown(input, { key: " ", code: "Space" });
+    fireEvent.keyDown(input, { key: "ArrowUp", metaKey: true });
 
     expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("stopped");
+    expect(useWorkspaceStore.getState().arrangeTimelineBeatWidth).toBe(beatWidthBefore);
   });
 
   it("toggles Timeline focus mode as a workspace-only preference", () => {

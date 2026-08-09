@@ -50,9 +50,9 @@ TargetSet 选择仍属于 Cue Layer。Arrangement 只负责调度 Cue；Clip sch
 | Cmd/Ctrl+↑ / ↓ / 0           | Zoom in / Zoom out / Fit             |
 | Cmd/Ctrl+A；Shift+Cmd/Ctrl+A | 选择当前编辑范围全部项目 / 清除选择  |
 
-输入框、Select、Popover、Dialog、菜单和 `contenteditable` 获得焦点时不劫持文本编辑快捷键。自动化数值弹窗内的 Delete/Backspace 只编辑当前输入值，不删除 Timeline 选择；Escape 仍关闭弹窗。按键 repeat 不得重复创建 history transaction。
+输入框、`contenteditable` 和当前打开的 Select、Popover、Dialog、Context menu 保留自身键盘行为。弹层关闭后即使焦点返回其 trigger，Space 与 Cmd/Ctrl 方向键也立即恢复 Timeline 语义，不依赖某个组件手动把焦点抢回 Timeline。自动化数值弹窗内的 Delete/Backspace 只编辑当前输入值，不删除 Timeline 选择；Escape 仍关闭弹窗。按键 repeat 不得重复创建 history transaction。
 
-App WebView 默认禁止页面级文本选择、浏览器导航/刷新/打印/保存快捷键，以及非显式元素的原生 HTML drag/drop。输入控件和标记为可复制的 JSON/诊断表面恢复文本选择；只有声明 `draggable` 的资源与声明 drop target 的轨道保留原生拖放。应用自身快捷键仍继续冒泡到对应 workspace controller。
+App WebView 默认禁止页面级文本选择、浏览器导航/刷新/打印/保存快捷键，以及非显式元素的原生 HTML drag/drop。输入控件和标记为可复制的 JSON/诊断表面恢复文本选择；只有声明 `draggable` 的资源与声明 drop target 的轨道保留原生拖放。Arrange 快捷键在 window capture 边界先于 closed trigger 的原生行为路由到 Timeline controller。
 
 ### Context menu 与 typed automation
 
