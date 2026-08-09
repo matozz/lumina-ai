@@ -8,8 +8,8 @@ use crate::document::{
     AutomationLaneDSL, AutomationTargetDSL, ClipPlaybackDSL, CueAutomationLane,
     CueCapabilitySummary, CueDefinition, CueLayer, CueMixOverride, CueRiskSummary,
     CueTriggerPolicy, EffectClipDSL, EffectDefinitionDSL, EffectInstanceDSL, GroupDSL,
-    GroupFixturesDSL, LayoutDefinition, MetaDSL, MixPolicy as CueMixPolicy, ProjectBundle,
-    ShowDocumentV1, StageDocument, TargetingDuration, TargetingDurationUnit,
+    GroupFixturesDSL, LayoutDefinition, MetaDSL, MixPolicy as CueMixPolicy, OverlapPolicyDSL,
+    ProjectBundle, ShowDocumentV1, StageDocument, TargetingDuration, TargetingDurationUnit,
     TargetingSceneDefinition, TargetingTransition, TimeSignaturePoint, TimelineTrackDSL,
     TimelineV1DSL, ValidatedProject,
 };
@@ -326,8 +326,8 @@ impl Compiler {
             }
             timeline_tracks.push(TimelineTrackDSL {
                 id: track.id.clone(),
-                name: track.name.clone(),
-                overlap_policy: track.overlap_policy,
+                name: "Cues".to_string(),
+                overlap_policy: OverlapPolicyDSL::Layer,
                 clips,
                 automation_lanes: Vec::new(),
             });
@@ -1865,6 +1865,21 @@ mod tests {
                 .tempo_map
                 .micros_at(MusicalTime::from_ticks(9_600))
         );
+    }
+
+    #[test]
+    fn arrangement_tracks_compile_with_fixed_layering_semantics() {
+        let mut bundle = matrix_project();
+        bundle.arrangements[0].tracks[0].name = "Legacy editable name".to_string();
+        bundle.arrangements[0].tracks[0].overlap_policy = OverlapPolicyDSL::Reject;
+
+        let snapshot = Compiler::compile_active_project(
+            ValidatedProject::validate(bundle).expect("legacy track metadata validates"),
+        )
+        .expect("Arrangement compiles");
+
+        let track = &snapshot.show.timeline.as_ref().expect("timeline").tracks[0];
+        assert_eq!(track.overlap_policy, OverlapPolicyDSL::Layer);
     }
 
     #[test]

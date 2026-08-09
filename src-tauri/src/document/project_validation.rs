@@ -1018,7 +1018,6 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
 struct ArrangementClipContext<'a> {
     track_index: usize,
     clip_index: usize,
-    track: &'a super::CueTrack,
     clip: &'a super::CueClip,
     cue: &'a CueDefinition,
 }
@@ -1045,7 +1044,6 @@ fn validate_arrangement_clip_composition(
                     .map(|cue| ArrangementClipContext {
                         track_index,
                         clip_index,
-                        track,
                         clip,
                         cue,
                     })
@@ -1073,17 +1071,6 @@ fn validate_arrangement_clip_composition(
                 "{path}.tracks[{}].clips[{}]",
                 right.track_index, right.clip_index
             );
-            if left.track_index == right.track_index
-                && right.track.overlap_policy == super::OverlapPolicyDSL::Reject
-            {
-                diagnostics.push(Diagnostic::error(
-                    PROJECT_SCHEMA_INVALID,
-                    format!("{right_path}.start_tick"),
-                    "CueClips overlap on a track whose overlap policy is reject.",
-                    "Move or trim one CueClip, or explicitly choose a compositing overlap policy.",
-                ));
-                continue;
-            }
             if left.cue.compatible_stage_ref != right.cue.compatible_stage_ref {
                 continue;
             }

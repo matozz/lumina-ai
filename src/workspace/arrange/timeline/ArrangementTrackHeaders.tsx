@@ -1,6 +1,5 @@
 import { Trash2 } from "lucide-react";
 import type { ArrangementDocument, ProjectBundle } from "@/bridge/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ArrangementAutomationOption } from "./arrangementTimelineModel";
@@ -42,21 +41,18 @@ export function ArrangementTrackHeaders({
         return (
           <div key={track.id}>
             <div
-              className="border-border flex flex-col gap-1 border-b px-2 py-2"
+              className="border-border flex items-center border-b px-2"
               style={{ height: layout.height }}
             >
-              <div className="flex items-center gap-1">
-                <span className="truncate text-xs font-medium">{track.name}</span>
-                <Badge variant="outline" className="ml-auto text-[9px]">
-                  {track.overlap_policy === "layer" ? "Layered overlap" : "No overlap"}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground min-w-0 flex-1 truncate text-[10px]">
-                  {countLabel(clips.length, "CueClip")} ·{" "}
-                  {countLabel(layout.layerCount, "clip layer")} ·{" "}
-                  {countLabel(layout.rowCount, "visual row")}
-                </span>
+              <div className="flex w-full items-center gap-1">
+                <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+                  <span className="truncate text-xs leading-none font-medium">Cues</span>
+                  <span className="text-muted-foreground truncate text-[10px] leading-none">
+                    {countLabel(clips.length, "CueClip")} ·{" "}
+                    {countLabel(layout.layerCount, "clip layer")} ·{" "}
+                    {countLabel(layout.rowCount, "visual row")}
+                  </span>
+                </div>
                 <ArrangementAutomationMenu
                   options={options}
                   onSelect={(option) => onAddAutomation(track.id, option)}

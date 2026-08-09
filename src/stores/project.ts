@@ -28,6 +28,7 @@ import {
   duplicateArrangementAsset,
   exactAsset,
   forkAssetRevision,
+  latestRefsById,
   normalizeProjectAssetRefs,
   toAssetRef,
   uniqueId,
@@ -148,7 +149,7 @@ export const useProjectStore = create<ProjectState>()(
 export const projectActions = {
   loadBundle: (bundle: ProjectBundle) => {
     authoringTransportActions.reset();
-    const loadedBundle = structuredClone(bundle);
+    const loadedBundle = normalizeProjectAssetRefs(structuredClone(bundle));
     const selectedArrangementRef = activeArrangementRef(loadedBundle);
     useProjectStore.setState({
       ...initialState,
@@ -1055,6 +1056,39 @@ export const projectActions = {
     });
     useProjectStore.setState({ selectedArrangementRef: created ?? source });
     return created;
+  },
+  deleteArrangement: (reference: AssetRef): AssetRef => {
+    const state = useProjectStore.getState();
+    const arrangementRefs = latestRefsById(state.bundle.manifest.arrangement_refs);
+    const deletedIndex = arrangementRefs.findIndex((candidate) => candidate.id === reference.id);
+    if (deletedIndex < 0 || !exactAsset(state.bundle.arrangements, reference)) {
+      throw new Error("Arrangement revision is missing");
+    }
+    if (arrangementRefs.length <= 1) {
+      throw new Error("A Project requires at least one Arrangement");
+    }
+
+    const remainingRefs = arrangementRefs.filter((candidate) => candidate.id !== reference.id);
+    const selected = remainingRefs[Math.min(deletedIndex, remainingRefs.length - 1)];
+    const bundle = structuredClone(state.bundle);
+    bundle.manifest.arrangement_refs = bundle.manifest.arrangement_refs.filter(
+      (candidate) => candidate.id !== reference.id,
+    );
+    bundle.arrangements = bundle.arrangements.filter(
+      (arrangement) => arrangement.id !== reference.id,
+    );
+    bundle.manifest.active_arrangement_id = selected.id;
+    bumpManifestRevision(bundle, state.publishedBundle);
+    normalizeProjectAssetRefs(bundle);
+    authoringTransportActions.pauseAll();
+    useProjectStore.setState({
+      bundle,
+      selectedArrangementRef: selected,
+      history: [],
+      historyCursor: 0,
+      savedHistoryCursor: -1,
+    });
+    return selected;
   },
   renameArrangement: (reference: AssetRef, name: string) =>
     updateArrangement(reference, "Rename Arrangement", (arrangement) => {

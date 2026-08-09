@@ -16,6 +16,7 @@ TargetSet 选择仍属于 Cue Layer。Arrangement 只负责调度 Cue；Clip sch
 ## Timeline 交互
 
 - place、move、resize、duplicate、delete、nudge、source offset 和 automation 都通过 Arrangement transaction。
+- Arrangement inspector 提供带确认的删除入口；删除按 Arrangement identity 移除其全部工作修订和时间轴数据，不写入编辑器 Undo，并清空旧的全量快照以防已删除资产被恢复。Project 必须保留至少一个 Arrangement，删除后选择相邻资产。
 - Pointer move 只更新 DOM transform/width 和 snap guide；pointer up 最多提交一次 Project command 和一个 Undo entry。
 - playhead 用独立 clock subscription 与 DOM ref 更新，不能让整个 Timeline 以 60Hz 重渲染。
 - viewport 只挂载可见内容和 overscan，beat grid 使用常数节点/CSS pattern。
@@ -71,7 +72,7 @@ Color automation 使用 typed `color` 值：keyframe 是实际色块，segment �
 
 ### Track、Layer 与视觉行
 
-- 一个 Arrangement 可以包含多个 CueTrack；每个 CueTrack 保存 CueClip、`overlap_policy`，以及附属于该 Track 的 typed automation lanes。当前 Authoring Starter 的内置 Arrangement 都只使用一个 CueTrack，但这不是 Schema 限制。
+- 一个 Arrangement 可以包含多个 CueTrack；每个 CueTrack 保存 CueClip 及附属于该 Track 的 typed automation lanes。当前编辑器将这些轨道统一呈现为 **Cues**，CueClip 始终允许按语义 Layer 重叠并自动装箱到视觉行；历史 `name` / `overlap_policy` 字段会规范化为 `Cues` / `layer`，不再形成编辑行为分支。
 - `CueClip.layer` 是保存到文档中的语义 Layer，用于调度顺序和混合优先级；它不等同于固定的屏幕行。
 - Timeline 先按语义 Layer 分组。同一 Layer 内不重叠的 CueClip 复用同一视觉行；时间重叠的 CueClip 自动稳定装箱到额外视觉行。不同语义 Layer 始终分行展示。
 - 视觉行只防止编辑器中的 CueClip 互相遮挡，不改写 `CueClip.layer`、Track、MixPolicy 或编译结果。Track 标题会同时显示 CueClip 数、语义 Layer 数和实际视觉行数。

@@ -56,6 +56,41 @@ describe("ArrangementTimeline workflow", () => {
     expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("paused");
   });
 
+  it("keeps the fixed two-line Cues header compact and vertically centered", () => {
+    const { container } = render(<ArrangementTimeline />);
+    const cueRow = container.querySelector<HTMLElement>('[data-track-id="cues"]')!;
+    const headers = screen.getByLabelText("Arrangement track headers");
+    const cueHeader = headers.children[1]!.firstElementChild as HTMLElement;
+
+    expect(screen.getByText("Cues")).toBeTruthy();
+    expect(screen.queryByText("Layered overlap")).toBeNull();
+    expect(cueRow.style.height).toBe("56px");
+    expect(cueHeader.style.height).toBe("56px");
+    expect(cueHeader.className).toContain("items-center");
+    expect(cueHeader.firstElementChild?.className).toContain("items-center");
+    expect(cueHeader.firstElementChild?.className).not.toContain("translate-y");
+    expect(cueHeader.firstElementChild?.firstElementChild?.className).toContain("flex-col");
+    expect(cueHeader.firstElementChild?.firstElementChild?.className).toContain("justify-center");
+  });
+
+  it("returns focus to the timeline after switching Arrangements", async () => {
+    render(<ArrangementTimeline />);
+    const timeline = screen.getByRole("region", { name: "Arrangement timeline" });
+    const arrangementSelect = screen.getByRole("combobox", { name: "Arrangement" });
+    const beatWidthBefore = useWorkspaceStore.getState().arrangeTimelineBeatWidth;
+
+    fireEvent.click(arrangementSelect);
+    const option = screen.getByRole("option", { name: "Quadrant Motion · 128" });
+    fireEvent.mouseMove(option);
+    fireEvent.click(option);
+
+    await waitFor(() => expect(document.activeElement).toBe(timeline));
+    fireEvent.keyDown(timeline, { key: "ArrowUp", metaKey: true });
+
+    expect(useWorkspaceStore.getState().arrangeTimelineBeatWidth).toBeGreaterThan(beatWidthBefore);
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
   it("uses Command/Ctrl plus horizontal arrows to jump to the start or last CueClip", () => {
     const effect = projectActions.createEffect("Jump Effect")!;
     const cue = projectActions.createCue([effect], "Jump Cue")!;
@@ -325,33 +360,13 @@ describe("ArrangementTimeline workflow", () => {
     expect(disconnect).not.toHaveBeenCalled();
   });
 
-  it("shows overlap failure beside the selected CueClip with a recovery action", () => {
-    const effect = projectActions.createEffect("Pulse")!;
-    const cue = projectActions.createCue([effect], "Pulse Cue")!;
-    const reference = useProjectStore.getState().selectedArrangementRef;
-    projectActions.updateArrangement(reference, "Seed rejecting track", (arrangement) => {
-      arrangement.tracks[0].overlap_policy = "reject";
-      arrangement.tracks[0].clips = [
-        { id: "clip-a", cue_ref: cue, start_tick: 960, duration_tick: 1_920 },
-        { id: "clip-b", cue_ref: cue, start_tick: 3_000, duration_tick: 960 },
-      ];
-    });
-    render(<ArrangementTimeline />);
-    const clip = screen.getByRole("button", { name: /Pulse Cue, starts at tick 960/ });
-    fireEvent.pointerDown(clip, { button: 0, pointerId: 2, clientX: 48 });
-    fireEvent.pointerUp(clip, { pointerId: 2, clientX: 48 });
-    fireEvent.keyDown(clip, { key: "ArrowRight" });
-
-    expect(screen.getByText(/ARRANGEMENT_CLIP_OVERLAP_REJECTED/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Dismiss and retry" })).toBeTruthy();
-  });
-
   it("renders layered and overlapping CueClips on distinct visual rows", () => {
     const effect = projectActions.createEffect("Layered")!;
     const cue = projectActions.createCue([effect], "Corner Cue")!;
     const reference = useProjectStore.getState().selectedArrangementRef;
     projectActions.updateArrangement(reference, "Seed layered clips", (arrangement) => {
-      arrangement.tracks[0].overlap_policy = "layer";
+      arrangement.tracks[0].name = "Legacy editable name";
+      arrangement.tracks[0].overlap_policy = "reject";
       arrangement.tracks[0].clips = [
         { id: "top-left", cue_ref: cue, start_tick: 0, duration_tick: 1_920, layer: 0 },
         { id: "top-right", cue_ref: cue, start_tick: 960, duration_tick: 1_920, layer: 1 },
@@ -362,6 +377,9 @@ describe("ArrangementTimeline workflow", () => {
     });
 
     const { container } = render(<ArrangementTimeline />);
+    expect(screen.queryByText("Layered overlap")).toBeNull();
+    expect(screen.queryByText("Legacy editable name")).toBeNull();
+    expect(screen.getByText("Cues")).toBeTruthy();
     expect(screen.getByText("5 CueClips · 4 clip layers · 4 visual rows")).toBeTruthy();
     expect(
       container.querySelector('[data-track-id="cues"]')?.getAttribute("data-cue-row-count"),

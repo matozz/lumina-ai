@@ -35,14 +35,14 @@ describe("Arrangement bulk commands", () => {
     );
   });
 
-  it("rejects an invalid group atomically without partially moving clips", () => {
-    const arrangement = rejectingArrangement();
-    const before = structuredClone(arrangement);
+  it("allows a group move to overlap regardless of legacy track policy metadata", () => {
+    const arrangement = legacyRejectArrangement();
 
-    expect(() => moveArrangementSelection(arrangement, clipSelection("clip-a"), 1_440)).toThrow(
-      /rejects overlap/,
+    moveArrangementSelection(arrangement, clipSelection("clip-a"), 1_440);
+
+    expect(arrangement.tracks[0].clips?.find((clip) => clip.id === "clip-a")?.start_tick).toBe(
+      1_440,
     );
-    expect(arrangement).toEqual(before);
   });
 
   it("moves keyframes across lanes and rejects duplicate ticks atomically", () => {
@@ -139,7 +139,7 @@ function clipSelection(...clipIds: string[]): ArrangementTimelineSelection {
   };
 }
 
-function rejectingArrangement(): ArrangementDocument {
+function legacyRejectArrangement(): ArrangementDocument {
   const arrangement = createHouseArrangementReference();
   arrangement.tracks[0].overlap_policy = "reject";
   arrangement.tracks[0].clips = [

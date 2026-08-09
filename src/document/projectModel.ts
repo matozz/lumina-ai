@@ -266,6 +266,8 @@ export function normalizeProjectAssetRefs(bundle: ProjectBundle) {
   }
   for (const arrangement of bundle.arrangements) {
     for (const track of arrangement.tracks) {
+      track.name = "Cues";
+      track.overlap_policy = "layer";
       for (const clip of track.clips ?? []) clip.cue_ref = toAssetRef(clip.cue_ref);
     }
   }

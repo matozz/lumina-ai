@@ -39,7 +39,7 @@ export interface ArrangementAutomationOption {
 }
 
 export const CUE_CLIP_HEIGHT = 40;
-export const CUE_TRACK_MIN_HEIGHT = 64;
+export const CUE_TRACK_MIN_HEIGHT = 56;
 export const CUE_TRACK_PADDING = 8;
 export const CUE_TRACK_ROW_PITCH = 44;
 export const AUTOMATION_ROW_HEIGHT = 32;
@@ -137,9 +137,8 @@ export function visibleCueClips(clips: CueClip[], startTick: number, endTick: nu
 }
 
 export function moveCueClip(arrangement: ArrangementDocument, clipId: string, startTick: number) {
-  const { track, clip } = findCueClip(arrangement, clipId);
+  const { clip } = findCueClip(arrangement, clipId);
   validateClipRange(arrangement, startTick, clip.duration_tick);
-  assertOverlapPolicy(track, clipId, startTick, clip.duration_tick);
   clip.start_tick = startTick;
 }
 
@@ -148,9 +147,8 @@ export function resizeCueClip(
   clipId: string,
   durationTick: number,
 ) {
-  const { track, clip } = findCueClip(arrangement, clipId);
+  const { clip } = findCueClip(arrangement, clipId);
   validateClipRange(arrangement, clip.start_tick, durationTick);
-  assertOverlapPolicy(track, clipId, clip.start_tick, durationTick);
   clip.duration_tick = durationTick;
 }
 
@@ -161,11 +159,10 @@ export function updateCueClip(
     Pick<CueClip, "start_tick" | "duration_tick" | "source_offset_tick" | "playback" | "layer">
   >,
 ) {
-  const { track, clip } = findCueClip(arrangement, clipId);
+  const { clip } = findCueClip(arrangement, clipId);
   const startTick = changes.start_tick ?? clip.start_tick;
   const durationTick = changes.duration_tick ?? clip.duration_tick;
   validateClipRange(arrangement, startTick, durationTick);
-  assertOverlapPolicy(track, clipId, startTick, durationTick);
   if (
     changes.source_offset_tick !== undefined &&
     (!Number.isInteger(changes.source_offset_tick) || changes.source_offset_tick < 0)
@@ -211,7 +208,6 @@ export function duplicateCueClip(
     arrangement.tracks.flatMap((item) => item.clips ?? []),
   );
   validateClipRange(arrangement, startTick, clip.duration_tick);
-  assertOverlapPolicy(track, id, startTick, clip.duration_tick);
   track.clips ??= [];
   track.clips.push({ ...structuredClone(clip), id, start_tick: startTick });
   return id;
@@ -651,29 +647,6 @@ function validateClipRange(
       "ARRANGEMENT_CLIP_RANGE_INVALID",
       "CueClip start and duration must define a non-empty range inside the Arrangement.",
       "Move or resize the CueClip so its end stays inside the ruler.",
-    );
-  }
-}
-
-function assertOverlapPolicy(
-  track: ArrangementDocument["tracks"][number],
-  clipId: string,
-  startTick: number,
-  durationTick: number,
-) {
-  if (track.overlap_policy !== "reject") return;
-  const endTick = startTick + durationTick;
-  const overlap = track.clips?.find(
-    (candidate) =>
-      candidate.id !== clipId &&
-      startTick < candidate.start_tick + candidate.duration_tick &&
-      endTick > candidate.start_tick,
-  );
-  if (overlap) {
-    throw timelineError(
-      "ARRANGEMENT_CLIP_OVERLAP_REJECTED",
-      `CueTrack ${track.name} rejects overlap with ${overlap.id}.`,
-      "Move the CueClip to an empty range or change the track overlap policy explicitly.",
     );
   }
 }

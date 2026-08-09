@@ -104,7 +104,6 @@ export function deleteArrangementSelection(
 export function validateArrangementEdit(arrangement: ArrangementDocument) {
   for (const track of arrangement.tracks) {
     for (const clip of track.clips ?? []) validateClipRange(arrangement, clip);
-    if (track.overlap_policy === "reject") validateRejectOverlap(track.clips ?? [], track.name);
     for (const lane of track.automation_lanes ?? []) {
       const ticks = lane.keyframes.map((keyframe) => keyframe.time_tick);
       if (
@@ -190,20 +189,6 @@ function validateClipRange(arrangement: ArrangementDocument, clip: CueClip) {
       "ARRANGEMENT_CLIP_RANGE_INVALID",
       `CueClip ${clip.id} must stay between tick 0 and ${arrangement.length_ticks}.`,
     );
-  }
-}
-
-function validateRejectOverlap(clips: CueClip[], trackName: string) {
-  const sorted = [...clips].sort((left, right) => left.start_tick - right.start_tick);
-  for (let index = 1; index < sorted.length; index += 1) {
-    const previous = sorted[index - 1];
-    const current = sorted[index];
-    if (previous.start_tick + previous.duration_tick > current.start_tick) {
-      throw bulkError(
-        "ARRANGEMENT_CLIP_OVERLAP_REJECTED",
-        `CueTrack ${trackName} rejects overlap between ${previous.id} and ${current.id}.`,
-      );
-    }
   }
 }
 

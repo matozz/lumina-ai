@@ -97,6 +97,71 @@ describe("Stage 7 Project state", () => {
     expect(sessions[journeyKey]?.cursorTick).toBe(7_680);
   });
 
+  it("deletes an Arrangement identity outside editor history", () => {
+    const source = useProjectStore.getState().selectedArrangementRef;
+    const created = projectActions.duplicateArrangement(source, "Disposable Arrangement")!;
+    projectActions.markPublished();
+    projectActions.renameArrangement(created, "Disposable Arrangement Edited");
+    const revised = useProjectStore.getState().selectedArrangementRef;
+    const revisedKey = authoringSessionKey("arrangement", assetKey(revised));
+    authoringTransportActions.ensureSession({
+      key: revisedKey,
+      scope: "arrangement",
+      durationTicks: exactAsset(useProjectStore.getState().bundle.arrangements, revised)!
+        .length_ticks,
+    });
+    authoringTransportActions.play(revisedKey);
+
+    const fallback = projectActions.deleteArrangement(revised);
+    let state = useProjectStore.getState();
+    expect(state.bundle.manifest.arrangement_refs.some((item) => item.id === revised.id)).toBe(
+      false,
+    );
+    expect(state.bundle.arrangements.some((item) => item.id === revised.id)).toBe(false);
+    expect(state.bundle.manifest.active_arrangement_id).toBe(fallback.id);
+    expect(state.selectedArrangementRef).toEqual(fallback);
+    expect(useAuthoringTransportStore.getState().sessions[revisedKey]?.playback).toBe("paused");
+    expect(state.history).toHaveLength(0);
+    expect(state.historyCursor).toBe(0);
+    expect(state.savedHistoryCursor).toBe(-1);
+
+    projectActions.undo();
+    state = useProjectStore.getState();
+    expect(state.bundle.manifest.arrangement_refs.some((item) => item.id === revised.id)).toBe(
+      false,
+    );
+    expect(state.selectedArrangementRef).toEqual(fallback);
+  });
+
+  it("normalizes Arrangement track metadata to the fixed Cues behavior", () => {
+    const bundle = structuredClone(useProjectStore.getState().bundle);
+    bundle.arrangements[0].tracks[0].name = "Editable track name";
+    bundle.arrangements[0].tracks[0].overlap_policy = "reject";
+
+    projectActions.loadBundle(bundle);
+
+    expect(useProjectStore.getState().bundle.arrangements[0].tracks[0]).toMatchObject({
+      name: "Cues",
+      overlap_policy: "layer",
+    });
+  });
+
+  it("keeps the last Arrangement available", () => {
+    const state = useProjectStore.getState();
+    const reference = state.selectedArrangementRef;
+    const arrangement = structuredClone(exactAsset(state.bundle.arrangements, reference)!);
+    const bundle = structuredClone(state.bundle);
+    bundle.arrangements = [arrangement];
+    bundle.manifest.arrangement_refs = [reference];
+    bundle.manifest.active_arrangement_id = reference.id;
+    useProjectStore.setState({ bundle, selectedArrangementRef: reference });
+
+    expect(() => projectActions.deleteArrangement(reference)).toThrow(
+      "A Project requires at least one Arrangement",
+    );
+    expect(useProjectStore.getState().bundle.arrangements).toEqual([arrangement]);
+  });
+
   it("tracks sustained dark preview frames and resets after visible output", () => {
     const frame = previewFrame(0);
     for (let index = 1; index < PREVIEW_DARK_FRAME_NOTICE_THRESHOLD; index += 1) {

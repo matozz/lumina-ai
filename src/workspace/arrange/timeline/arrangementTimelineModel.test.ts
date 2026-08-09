@@ -51,7 +51,7 @@ describe("Arrangement timeline model", () => {
     );
   });
 
-  it("enforces reject overlap policy with a recoverable diagnostic", () => {
+  it("allows overlap regardless of legacy track policy metadata", () => {
     arrangement.tracks[0].overlap_policy = "reject";
     arrangement.tracks[0].clips?.push({
       id: "clip-b",
@@ -59,7 +59,8 @@ describe("Arrangement timeline model", () => {
       start_tick: 4_000,
       duration_tick: 1_000,
     });
-    expect(() => moveCueClip(arrangement, "clip-a", 3_900)).toThrow(/rejects overlap/);
+    moveCueClip(arrangement, "clip-a", 3_900);
+    expect(arrangement.tracks[0].clips?.[0].start_tick).toBe(3_900);
   });
 
   it("keeps semantic layers separate and packs same-layer overlaps into extra visual rows", () => {
