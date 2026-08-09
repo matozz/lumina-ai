@@ -9,6 +9,12 @@ import {
 } from "./timelineGeometry";
 
 describe("timeline geometry", () => {
+  it.fails("keeps a half-beat snap when only zoom changes", () => {
+    expect(createTimelineGeometry(960, 24).snapTicks).toBe(
+      createTimelineGeometry(960, 120).snapTicks,
+    );
+  });
+
   it("derives one shared snap interval from zoom for grid, preview, and commit", () => {
     const zoomedOut = createTimelineGeometry(960, 40);
     const zoomedIn = createTimelineGeometry(960, 80);

@@ -114,6 +114,20 @@ describe("Arrangement timeline model", () => {
     expect(arrangement.tracks[0].automation_lanes?.some((lane) => lane.id === laneId)).toBe(false);
   });
 
+  it.fails("presents a single-layer automation target without its raw layer ID", () => {
+    const effect = createEffectAsset(bundle, "Pulse");
+    bundle.effects.push(effect);
+    const cue = createCueAsset(bundle, [{ id: effect.id, revision: effect.revision }], "Cue A");
+    cue.id = "cue-a";
+    bundle.cues.push(cue);
+
+    const option = automationOptions(bundle, arrangement).find(
+      (candidate) => candidate.target.scope === "cue_layer",
+    )!;
+
+    expect(option.label).toBe(`${cue.name} · ${option.definition.name}`);
+  });
+
   it("adds, moves, and edits a typed automation curve without duplicate ticks", () => {
     const option = automationOptions(bundle, arrangement)[0];
     const laneId = addAutomationLane(arrangement, "cues", option, 0);

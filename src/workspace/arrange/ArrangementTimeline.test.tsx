@@ -1,5 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  authoringSessionKey,
+  authoringTransportActions,
+  useAuthoringTransportStore,
+} from "@/authoring/transport";
 import { assetKey, createCueAsset, createEffectAsset, exactAsset } from "@/document/projectModel";
 import { productionCatalogActions } from "@/stores/productionCatalog";
 import { projectActions, useProjectStore } from "@/stores/project";
@@ -11,12 +16,24 @@ describe("ArrangementTimeline workflow", () => {
   beforeEach(() => {
     localStorage.clear();
     projectActions.reset();
+    authoringTransportActions.reset();
     productionCatalogActions.reset();
     workspaceActions.reset();
     Object.defineProperty(HTMLElement.prototype, "setPointerCapture", {
       configurable: true,
       value: vi.fn(),
     });
+  });
+
+  it.fails("uses Space to toggle the selected Arrangement transport", () => {
+    const reference = useProjectStore.getState().selectedArrangementRef;
+    render(<ArrangementTimeline />);
+    const timeline = screen.getByRole("region", { name: "Arrangement timeline" });
+    const sessionKey = authoringSessionKey("arrangement", assetKey(reference));
+
+    fireEvent.keyDown(timeline, { key: " ", code: "Space" });
+
+    expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("playing");
   });
 
   it("materializes a selected built-in Cue only when placing it", () => {
