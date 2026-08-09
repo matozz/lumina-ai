@@ -45,16 +45,19 @@ TargetSet 选择仍属于 Cue Layer。Arrangement 只负责调度 Cue；Clip sch
 | ← / →                        | 按当前 Snap 移动选择                 |
 | Shift+← / →                  | 按一拍移动选择                       |
 | Alt+← / →                    | 调整已选 CueClip 尾端                |
+| Cmd/Ctrl+← / →               | 跳到起点 / 时间最靠后的 CueClip 起点 |
 | Cmd/Ctrl+↑ / ↓ / 0           | Zoom in / Zoom out / Fit             |
 | Cmd/Ctrl+A；Shift+Cmd/Ctrl+A | 选择当前编辑范围全部项目 / 清除选择  |
 
 输入框、Select、Popover、Dialog、菜单和 `contenteditable` 获得焦点时不劫持文本编辑快捷键。自动化数值弹窗内的 Delete/Backspace 只编辑当前输入值，不删除 Timeline 选择；Escape 仍关闭弹窗。按键 repeat 不得重复创建 history transaction。
 
+App WebView 默认禁止页面级文本选择、浏览器导航/刷新/打印/保存快捷键，以及非显式元素的原生 HTML drag/drop。输入控件和标记为可复制的 JSON/诊断表面恢复文本选择；只有声明 `draggable` 的资源与声明 drop target 的轨道保留原生拖放。应用自身快捷键仍继续冒泡到对应 workspace controller。
+
 ### Context menu 与 typed automation
 
 - CueClip 右键从该 Clip 精确引用的 Cue/Effect 建立菜单，只显示 `automation !== disabled` 且 `override_policy: cue_override` 的参数。可直接 Add/Reveal automation、Duplicate、Copy 或 Delete。
 - 这里创建的是 **单个 CueClip instance** 的 Arrangement automation，typed target 包含 `clip_id`。同一 Cue（例如 FullFlash）在时间轴上出现多次时，每个需要单独变化的 Clip 都要分别添加；若希望所有使用该 Cue 的 Clip 继承同一曲线，应在 Cue Builder 中创建一次 Cue-local automation。
-- 新 lane 在右键 context tick 创建一个使用当前有效值的 keyframe；已有 typed target lane 会被定位，在该 tick 补点或打开已有点。该操作不移动 playhead，也不改变 transport。
+- 新 lane 在右键 context tick 的当前 Snap 格创建一个使用当前有效值的 keyframe；已有 typed target lane 会被定位，并在该格补点或聚焦已有点。创建、定位和拖动都不自动打开编辑器，只有直接点击关键点才打开；这些操作不移动 playhead，也不改变 transport。
 - 空白 Cue row 提供 **Place selected Cue here** 与 **Paste here**。Automation row/keyframe 提供 Add、Edit、Interpolation、Copy/Paste、Delete selected 和 Delete lane；离散参数只允许 hold。
 - 单 Layer label 使用 `Cue · Parameter`；多 Layer 依次用 TargetSet、Effect 或 `Layer N` 消歧。label 每次从 exact ref 动态解析，不持久化 display string，也不显示 raw Layer ID 或 revision。
 

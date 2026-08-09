@@ -149,6 +149,7 @@ describe("Cue Builder safe authoring", () => {
     expect(screen.getByText("My Cues")).toBeTruthy();
     expect(screen.queryByText("Project Cues")).toBeNull();
     const deleteCue = await screen.findByRole("button", { name: "Delete Cue" });
+    expect(deleteCue.className).toContain("h-7");
     fireEvent.click(deleteCue);
     expect(
       useProjectStore
@@ -157,6 +158,76 @@ describe("Cue Builder safe authoring", () => {
           (candidate) => candidate.id === savedCue.id && candidate.revision === savedCue.revision,
         ),
     ).toBe(false);
+    expect(assetKey(useAuthoringDraftStore.getState().cue!.pinned)).not.toBe(assetKey(savedCue));
+    expect(assetKey(useProjectStore.getState().selectedCueRef!)).toBe(
+      assetKey(useAuthoringDraftStore.getState().cue!.pinned),
+    );
+  });
+
+  it("confirms and atomically removes referenced CueClips when deleting a Cue", async () => {
+    workspaceActions.setAdvancedMode(false);
+    const state = useProjectStore.getState();
+    const bundle = structuredClone(state.bundle);
+    const savedCue = structuredClone(cue);
+    const clipId = "referenced-cue-clip";
+    const track = bundle.arrangements[0].tracks[0];
+    const parameter = catalog.effects[0].parameters[0];
+    bundle.cues.push(savedCue);
+    bundle.manifest.cue_refs.push({ id: savedCue.id, revision: savedCue.revision });
+    track.clips = [
+      {
+        id: clipId,
+        cue_ref: { id: savedCue.id, revision: savedCue.revision },
+        start_tick: 0,
+        duration_tick: 3_840,
+      },
+    ];
+    track.automation_lanes = [
+      {
+        id: "referenced-cue-lane",
+        target: {
+          scope: "cue_layer",
+          clip_id: clipId,
+          layer_id: savedCue.layers[0].id,
+          parameter_id: parameter.id,
+        },
+        keyframes: [
+          {
+            id: "referenced-cue-keyframe",
+            time_tick: 0,
+            value: structuredClone(parameter.default_value),
+            interpolation: "linear",
+          },
+        ],
+      },
+    ];
+    useProjectStore.setState({
+      bundle,
+      selectedCueRef: { id: savedCue.id, revision: savedCue.revision },
+    });
+
+    render(<Harness />);
+    fireEvent.click(await screen.findByRole("button", { name: "Delete Cue" }));
+
+    expect(screen.getByRole("dialog", { name: "Delete Cue and Arrangement clips?" })).toBeTruthy();
+    expect(screen.getByText(/1 CueClip.*1 Arrangement/)).toBeTruthy();
+    expect(
+      useProjectStore.getState().bundle.cues.some((candidate) => candidate.id === savedCue.id),
+    ).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Cue and clips" }));
+
+    let project = useProjectStore.getState();
+    expect(project.bundle.cues.some((candidate) => candidate.id === savedCue.id)).toBe(false);
+    expect(project.bundle.arrangements[0].tracks[0].clips).toHaveLength(0);
+    expect(project.bundle.arrangements[0].tracks[0].automation_lanes).toHaveLength(0);
+    expect(assetKey(useAuthoringDraftStore.getState().cue!.pinned)).not.toBe(assetKey(savedCue));
+
+    act(() => projectActions.undo());
+    project = useProjectStore.getState();
+    expect(project.bundle.cues.some((candidate) => candidate.id === savedCue.id)).toBe(true);
+    expect(project.bundle.arrangements[0].tracks[0].clips).toHaveLength(1);
+    expect(project.bundle.arrangements[0].tracks[0].automation_lanes).toHaveLength(1);
   });
 
   it("keeps mute, solo, overrides, and automation local until one immutable save", async () => {

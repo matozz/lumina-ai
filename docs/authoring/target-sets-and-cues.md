@@ -26,6 +26,8 @@ Cue Layer 的持久化 `id` 只承担精确引用身份，不承担 Cue 名、Ef
 
 Built-in Cue/recipe 的 opaque ID 生成一次后固定提交到声明式 Catalog。既有项目中的历史语义 ID 默认保留但完全隐藏，不做宽泛字符串迁移。普通列表、Inspector、Tooltip、aria-label、校验诊断、导出摘要和 automation display label 不展示 raw ID；诊断使用 `Layer 1/2/N`。正式 JSON 仍包含精确 ID，因为资产包与 compiler 需要解析引用。
 
+删除未被引用的 My Cue 会直接形成一次可撤销 transaction。若 Cue 已被 Arrangement 使用，UI 必须先列出 CueClip 与 Arrangement 数量并二次确认；确认后在同一 transaction 中删除 exact Cue、所有引用它的 CueClip，以及以这些 `clip_id` 为 target 的 Arrangement typed automation lane。取消不修改文档，Undo 一次恢复全部依赖。
+
 ## 多分区路径
 
 同时效果：在同一个 Cue 中建立多个 Layer，每个 Layer 绑定不同 TargetSet。
@@ -61,3 +63,4 @@ TargetingScene 是 Stage 内一组有序 selection steps，可表达 All → par
 - 四个 5×5 corner TargetSet 可独立选择并正确解析；内置空间运动示例使用四个 10×10 quadrant，避免为极小空间采样改变 Effect 定义。多个 Cue 顺序或重叠调度时，相交区域写同一属性仍要求明确 MixPolicy。
 - Cue Layer 的 Effect/TargetSet/scene 引用在保存与重开后保持精确。
 - 新建/复制 Layer 的 opaque ID 唯一；编辑保留 ID，复制/删除时 automation target 原子重映射或清理并可完整 Undo。
+- 删除已被 Arrangement 引用的 My Cue 会明确确认依赖范围，Cue、CueClip 和 clip-local automation 原子删除并可一次 Undo；不会留下无效 exact ref。

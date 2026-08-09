@@ -913,19 +913,35 @@ export const projectActions = {
     useProjectStore.setState({ selectedCueRef: created });
     return created;
   },
-  deleteCue: (reference: AssetRef) => {
+  deleteCue: (reference: AssetRef, options?: { removeArrangementClips?: boolean }) => {
     const state = useProjectStore.getState();
-    if (
-      state.bundle.arrangements.some((arrangement) =>
-        arrangement.tracks.some((track) =>
-          track.clips?.some((clip) => assetKey(clip.cue_ref) === assetKey(reference)),
-        ),
-      )
-    ) {
+    const isReferenced = state.bundle.arrangements.some((arrangement) =>
+      arrangement.tracks.some((track) =>
+        track.clips?.some((clip) => assetKey(clip.cue_ref) === assetKey(reference)),
+      ),
+    );
+    if (isReferenced && !options?.removeArrangementClips) {
       throw new Error("Cue revision is referenced by an Arrangement");
     }
     transact("Delete Cue", (bundle, published) => {
       bumpManifestRevision(bundle, published);
+      if (options?.removeArrangementClips) {
+        for (const arrangement of bundle.arrangements) {
+          for (const track of arrangement.tracks) {
+            const removedClipIds = new Set(
+              (track.clips ?? [])
+                .filter((clip) => assetKey(clip.cue_ref) === assetKey(reference))
+                .map((clip) => clip.id),
+            );
+            if (removedClipIds.size === 0) continue;
+            track.clips = (track.clips ?? []).filter((clip) => !removedClipIds.has(clip.id));
+            track.automation_lanes = (track.automation_lanes ?? []).filter(
+              (lane) =>
+                lane.target.scope !== "cue_layer" || !removedClipIds.has(lane.target.clip_id),
+            );
+          }
+        }
+      }
       bundle.manifest.cue_refs = bundle.manifest.cue_refs.filter(
         (candidate) => assetKey(candidate) !== assetKey(reference),
       );

@@ -209,6 +209,7 @@ export const authoringDraftActions = {
       comparison: "working",
     });
   },
+  closeCue: () => useAuthoringDraftStore.setState({ cue: null, comparison: "working" }),
   revertCueToLastKnownGood: () => {
     const current = useAuthoringDraftStore.getState().cue;
     if (!current) return;

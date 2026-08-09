@@ -16,6 +16,25 @@ body,
   background-color: var(--background);
   color: var(--foreground);
   font-family: "Geist Variable", sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+[contenteditable="true"],
+[data-user-select="text"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+img,
+svg {
+  -webkit-user-drag: none;
+}
+
+[draggable="true"] {
+  -webkit-user-drag: element;
 }
 
 * {
