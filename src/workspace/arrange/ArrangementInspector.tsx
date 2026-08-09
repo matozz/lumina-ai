@@ -208,7 +208,7 @@ export function ArrangementInspector() {
           {tempoPoints.map((point, index) => (
             <div
               key={`${index}:${point.time_tick}`}
-              className="grid grid-cols-[1fr_1fr_auto] gap-1.5"
+              className="grid grid-cols-[1fr_1fr_auto] items-center gap-1.5"
             >
               <Input
                 aria-label={`Tempo point ${index + 1} tick`}
@@ -244,7 +244,7 @@ export function ArrangementInspector() {
                 }
               />
               <Button
-                size="icon-sm"
+                size="icon-xs"
                 variant="ghost"
                 aria-label={`Delete tempo point ${index + 1}`}
                 disabled={index === 0}
