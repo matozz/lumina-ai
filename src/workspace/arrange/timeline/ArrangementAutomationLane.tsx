@@ -1,5 +1,4 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
 import type {
   ArrangementAutomationLane as ArrangementAutomationLaneType,
   ArrangementDocument,
@@ -8,13 +7,12 @@ import type {
   ParameterDefinitionDSL,
   ParameterValueDSL,
 } from "@/bridge/types";
-import { Button } from "@/components/ui/button";
 import {
   AutomationCurveSegment,
   updateAutomationCurveElement,
 } from "@/panel/components/AutomationCurveSegment";
 import {
-  clampKeyframeDelta,
+  clampKeyframeDeltaToSnap,
   keyframeTransform,
   type KeyframeMoveBounds,
 } from "@/panel/keyframeGeometry";
@@ -185,13 +183,18 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
     const requested =
       snappedTickForPointerDelta(interaction.anchorTick, deltaPixels, geometry) -
       interaction.anchorTick;
-    interaction.deltaTick = clampKeyframeDelta(requested, {
-      minimum: Math.max(interaction.bounds.minimum, -interaction.anchorTick),
-      maximum: Math.min(
-        interaction.bounds.maximum,
-        arrangement.length_ticks - 1 - interaction.anchorTick,
-      ),
-    });
+    interaction.deltaTick = clampKeyframeDeltaToSnap(
+      requested,
+      {
+        minimum: Math.max(interaction.bounds.minimum, -interaction.anchorTick),
+        maximum: Math.min(
+          interaction.bounds.maximum,
+          arrangement.length_ticks - 1 - interaction.anchorTick,
+        ),
+      },
+      interaction.anchorTick,
+      geometry.snapTicks,
+    );
     onPreviewItems(interaction.items, interaction.deltaTick);
     onSnapPreview(interaction.anchorTick + interaction.deltaTick);
   };
@@ -222,7 +225,6 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
     if (!revealRequest || revealRequest.laneId !== lane.id) return;
     const keyframe = lane.keyframes.find((candidate) => candidate.id === revealRequest.keyframeId);
     if (!keyframe) return;
-    setInspectorId(keyframe.id);
     const viewportElement = viewportRef.current;
     if (viewportElement) {
       viewportElement.scrollLeft = Math.max(
@@ -240,10 +242,12 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
   }, [geometry, lane.id, lane.keyframes, revealRequest, viewportRef]);
 
   const addAt = (tick: number) => {
+    const maximumGridTick =
+      Math.floor((arrangement.length_ticks - 1) / geometry.snapTicks) * geometry.snapTicks;
     const snapped = Math.max(
       0,
       Math.min(
-        arrangement.length_ticks - 1,
+        maximumGridTick,
         snappedTickForPointerDelta(0, ticksToPixels(tick, geometry), geometry),
       ),
     );
@@ -284,7 +288,7 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
     >
       <div
         ref={rowRef}
-        className="border-border/60 group/lane relative h-8 border-b focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+        className="border-border/60 relative h-8 border-b focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
         role="group"
         tabIndex={0}
         aria-label={`${definition.name} automation lane with ${lane.keyframes.length} keyframes`}
@@ -415,24 +419,6 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
             </AutomationKeyframeContextMenu>
           );
         })}
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          className="absolute top-1 right-8 opacity-0 group-hover/lane:opacity-100 focus-visible:opacity-100"
-          aria-label={`Add ${definition.name} keyframe at visible range start`}
-          onClick={() => addAt((viewport.visibleStartBeat ?? viewport.startBeat) * arrangement.ppq)}
-        >
-          <Plus aria-hidden="true" />
-        </Button>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          className="absolute top-1 right-1 opacity-0 group-hover/lane:opacity-100 focus-visible:opacity-100"
-          aria-label={`Delete ${definition.name} automation lane`}
-          onClick={onDeleteLane}
-        >
-          <Trash2 aria-hidden="true" />
-        </Button>
       </div>
     </AutomationLaneContextMenu>
   );

@@ -10,6 +10,8 @@ interface ArrangementEditorShortcutOptions {
   onDuplicate: () => void;
   onEscape: () => void;
   onFit: () => void;
+  onJumpToLastCue: () => void;
+  onJumpToStart: () => void;
   onMoveSelection: (deltaTick: number) => void;
   onPaste: () => void;
   onRedo: () => void;
@@ -31,6 +33,8 @@ export function useArrangementEditorShortcuts({
   onDuplicate,
   onEscape,
   onFit,
+  onJumpToLastCue,
+  onJumpToStart,
   onMoveSelection,
   onPaste,
   onRedo,
@@ -103,6 +107,12 @@ export function useArrangementEditorShortcuts({
       } else if (event.key === "ArrowDown") {
         event.preventDefault();
         onZoomOut();
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        onJumpToStart();
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        onJumpToLastCue();
       } else if (event.key === "0") {
         event.preventDefault();
         onFit();
@@ -118,6 +128,8 @@ export function useArrangementEditorShortcuts({
     onDuplicate,
     onEscape,
     onFit,
+    onJumpToLastCue,
+    onJumpToStart,
     onMoveSelection,
     onPaste,
     onRedo,

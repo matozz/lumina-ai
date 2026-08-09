@@ -242,5 +242,7 @@ export function timelineContextTick(
   const pixels = clientX - rect.left + viewport.scrollLeft;
   const rawTick = (pixels / geometry.beatWidth) * geometry.ppq;
   const snapped = Math.round(rawTick / geometry.snapTicks) * geometry.snapTicks;
-  return Math.max(0, Math.min(arrangementLength - 1, snapped));
+  const maximumGridTick =
+    Math.floor((arrangementLength - 1) / geometry.snapTicks) * geometry.snapTicks;
+  return Math.max(0, Math.min(maximumGridTick, snapped));
 }

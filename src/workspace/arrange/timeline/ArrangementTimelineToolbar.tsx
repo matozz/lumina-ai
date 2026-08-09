@@ -205,6 +205,7 @@ export function ArrangementTimelineToolbar({
             <Shortcut keys="Delete" action="Delete selection" />
             <Shortcut keys="Escape" action="Cancel gesture or clear selection" />
             <Shortcut keys="Space" action="Play or pause this Arrangement" />
+            <Shortcut keys="⌘/Ctrl + ← / →" action="Jump to start or the last CueClip" />
             <Shortcut keys="⌘/Ctrl + ↑ / ↓" action="Zoom without changing Snap" />
             <Shortcut keys="⌘/Ctrl + 0" action="Fit the entire Arrangement" />
             <Shortcut keys="⌘/Ctrl + Z" action="Undo one transaction" />

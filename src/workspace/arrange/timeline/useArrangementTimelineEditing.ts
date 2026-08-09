@@ -171,7 +171,11 @@ export function useArrangementTimelineEditing({
   const ensureAutomation = useCallback(
     (trackId: string, option: ArrangementAutomationOption, timeTick: number) => {
       if (!arrangement) return;
-      const tick = Math.min(arrangement.length_ticks - 1, Math.max(0, Math.floor(timeTick)));
+      const maximumGridTick = Math.floor((arrangement.length_ticks - 1) / snapTicks) * snapTicks;
+      const tick = Math.max(
+        0,
+        Math.min(maximumGridTick, Math.round(timeTick / snapTicks) * snapTicks),
+      );
       const current = findAutomationLaneByTarget(arrangement, option.target);
       const currentKeyframe = current?.lane.keyframes.find(
         (keyframe) => keyframe.time_tick === tick,
@@ -201,7 +205,7 @@ export function useArrangementTimelineEditing({
           "Create or reveal typed automation",
           "arrangement.automation.context",
           (draft) => {
-            target = ensureAutomationAtTick(bundle, draft, trackId, option, timeTick);
+            target = ensureAutomationAtTick(bundle, draft, trackId, option, tick);
           },
         ) &&
         target
@@ -224,7 +228,7 @@ export function useArrangementTimelineEditing({
         });
       }
     },
-    [arrangement, bundle, runCommand, setSelection],
+    [arrangement, bundle, runCommand, setSelection, snapTicks],
   );
 
   const selectAll = useCallback(() => {

@@ -1,5 +1,7 @@
+import { Trash2 } from "lucide-react";
 import type { ArrangementDocument, ProjectBundle } from "@/bridge/types";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ArrangementAutomationOption } from "./arrangementTimelineModel";
 import { cueTrackVisualLayout, resolveAutomationOption } from "./arrangementTimelineModel";
@@ -10,6 +12,7 @@ interface ArrangementTrackHeadersProps {
   bundle: ProjectBundle;
   headersRef: React.RefObject<HTMLDivElement | null>;
   onAddAutomation: (trackId: string, option: ArrangementAutomationOption) => void;
+  onDeleteAutomationLane: (trackId: string, laneId: string) => void;
   options: ArrangementAutomationOption[];
   width: number;
 }
@@ -19,6 +22,7 @@ export function ArrangementTrackHeaders({
   bundle,
   headersRef,
   onAddAutomation,
+  onDeleteAutomationLane,
   options,
   width,
 }: ArrangementTrackHeadersProps) {
@@ -66,11 +70,22 @@ export function ArrangementTrackHeaders({
               return (
                 <div key={lane.id} className="border-border/60 flex h-8 items-center border-b px-2">
                   <Tooltip>
-                    <TooltipTrigger render={<span className="min-w-0 truncate text-[10px]" />}>
+                    <TooltipTrigger
+                      render={<span className="min-w-0 flex-1 truncate text-[10px]" />}
+                    >
                       {label}
                     </TooltipTrigger>
                     <TooltipContent side="right">{label}</TooltipContent>
                   </Tooltip>
+                  <Button
+                    size="icon-xs"
+                    variant="ghost"
+                    className="text-muted-foreground hover:text-foreground ml-1 size-6 shrink-0"
+                    aria-label={`Delete ${label} automation lane`}
+                    onClick={() => onDeleteAutomationLane(track.id, lane.id)}
+                  >
+                    <Trash2 className="size-3" aria-hidden="true" />
+                  </Button>
                 </div>
               );
             })}

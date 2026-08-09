@@ -27,6 +27,7 @@ import { useArrangementTimelineViewport } from "./timeline/useArrangementTimelin
 import {
   addAutomationLane,
   automationOptions,
+  deleteAutomationLane,
   updateCueClip,
 } from "./timeline/arrangementTimelineModel";
 import {
@@ -112,6 +113,30 @@ export function ArrangementTimeline() {
     snapTicks: geometry.snapTicks,
   });
 
+  const deleteLane = useCallback(
+    (trackId: string, laneId: string) =>
+      runCommand("Delete automation lane", `arrangement.automation.${laneId}`, (draft) =>
+        deleteAutomationLane(draft, trackId, laneId),
+      ),
+    [runCommand],
+  );
+  const seekToTick = useCallback(
+    (tick: number) => {
+      authoringTransportActions.seek(sessionKey, tick);
+      const scroll = scrollRef.current;
+      if (!scroll) return;
+      scroll.scrollLeft = Math.max(0, ticksToPixels(tick, geometry) - scroll.clientWidth / 2);
+      updateViewport(scroll);
+    },
+    [geometry, scrollRef, sessionKey, updateViewport],
+  );
+  const lastCueTick = Math.max(
+    0,
+    ...(arrangement?.tracks.flatMap((track) =>
+      (track.clips ?? []).map((clip) => clip.start_tick),
+    ) ?? []),
+  );
+
   useArrangementEditorShortcuts({
     hasSelection: selection.items.length > 0,
     sessionKey,
@@ -123,6 +148,8 @@ export function ArrangementTimeline() {
     onDuplicate: () => duplicateItems(selection.items),
     onEscape: cancelGestureOrClearSelection,
     onFit: fit,
+    onJumpToLastCue: () => seekToTick(lastCueTick),
+    onJumpToStart: () => seekToTick(0),
     onMoveSelection: (deltaTick) => moveItems(selection.items, deltaTick),
     onPaste: pasteSelection,
     onRedo: projectActions.redo,
@@ -303,6 +330,7 @@ export function ArrangementTimeline() {
                   ),
               )
             }
+            onDeleteAutomationLane={deleteLane}
           />
           <div
             ref={scrollRef}
@@ -346,6 +374,7 @@ export function ArrangementTimeline() {
                     geometry={geometry}
                     onCancelReady={setGestureCancel}
                     onCopyItems={copySelection}
+                    onDeleteAutomationLane={deleteLane}
                     onDeleteItems={deleteItems}
                     onDuplicateItems={duplicateItems}
                     onEnsureAutomation={ensureAutomation}

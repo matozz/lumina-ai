@@ -12,7 +12,6 @@ import {
   CUE_TRACK_ROW_PITCH,
   cueTrackVisualLayout,
   deleteAutomationKeyframes,
-  deleteAutomationLane,
   automationOptionsForClip,
   resolveAutomationOption,
   updateAutomationKeyframe,
@@ -44,6 +43,7 @@ interface ArrangementTrackRowsProps {
   geometry: TimelineGeometry;
   onCancelReady: (cancel: (() => void) | null) => void;
   onCopyItems: (items: ArrangementSelectionItem[]) => void;
+  onDeleteAutomationLane: (trackId: string, laneId: string) => void;
   onDeleteItems: (items: ArrangementSelectionItem[]) => void;
   onDuplicateItems: (items: ArrangementSelectionItem[]) => void;
   onEnsureAutomation: (
@@ -75,6 +75,7 @@ export function ArrangementTrackRows({
   geometry,
   onCancelReady,
   onCopyItems,
+  onDeleteAutomationLane,
   onDeleteItems,
   onDuplicateItems,
   onEnsureAutomation,
@@ -247,11 +248,7 @@ export function ArrangementTrackRows({
                   (draft) => updateAutomationKeyframe(draft, track.id, lane.id, id, changes),
                 )
               }
-              onDeleteLane={() =>
-                runCommand("Delete automation lane", `arrangement.automation.${lane.id}`, (draft) =>
-                  deleteAutomationLane(draft, track.id, lane.id),
-                )
-              }
+              onDeleteLane={() => onDeleteAutomationLane(track.id, lane.id)}
               revealRequest={revealRequest}
             />
           );

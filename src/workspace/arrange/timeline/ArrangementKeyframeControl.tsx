@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import type { ArrangementDocument, KeyframeDSL, ParameterDefinitionDSL } from "@/bridge/types";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -40,9 +41,22 @@ export function ArrangementKeyframeControl({
   valueInset,
 }: ArrangementKeyframeControlProps) {
   const bounds = keyframeMoveBounds(keyframes, new Set([keyframe.id]));
+  const pointerRef = useRef<{ clientX: number; clientY: number; moved: boolean } | null>(null);
+  const suppressOpenRef = useRef(false);
   return (
     <Popover open={inspectorOpen} onOpenChange={onInspectorOpenChange}>
       <PopoverTrigger
+        onClick={(event) => {
+          if (!suppressOpenRef.current) return;
+          suppressOpenRef.current = false;
+          event.preventDefault();
+          event.stopPropagation();
+          (
+            event as React.MouseEvent<HTMLButtonElement> & {
+              preventBaseUIHandler?: () => void;
+            }
+          ).preventBaseUIHandler?.();
+        }}
         render={
           <Button
             ref={onElement}
@@ -67,7 +81,33 @@ export function ArrangementKeyframeControl({
             data-keyframe-color={
               keyframe.value.type === "color" ? keyframe.value.value.toUpperCase() : undefined
             }
-            onPointerDown={onStartMove}
+            onPointerDown={(event) => {
+              pointerRef.current = {
+                clientX: event.clientX,
+                clientY: event.clientY,
+                moved: false,
+              };
+              suppressOpenRef.current = false;
+              onStartMove(event);
+            }}
+            onPointerMove={(event) => {
+              const pointer = pointerRef.current;
+              if (
+                pointer &&
+                (Math.abs(event.clientX - pointer.clientX) > 3 ||
+                  Math.abs(event.clientY - pointer.clientY) > 3)
+              ) {
+                pointer.moved = true;
+              }
+            }}
+            onPointerUp={() => {
+              suppressOpenRef.current = pointerRef.current?.moved ?? false;
+              pointerRef.current = null;
+            }}
+            onPointerCancel={() => {
+              pointerRef.current = null;
+              suppressOpenRef.current = false;
+            }}
           />
         }
       />

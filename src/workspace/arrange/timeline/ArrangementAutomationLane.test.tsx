@@ -108,12 +108,11 @@ describe("ArrangementAutomationLane pointer projection", () => {
       </div>,
     );
     const point = screen.getByRole("button", { name: "Intensity keyframe at tick 960" });
-    const row = container.querySelector<HTMLElement>("[data-lane-id]")!;
     const curve = container.querySelector<SVGSVGElement>("[data-automation-curve]")!;
 
     fireEvent.pointerDown(point, { button: 0, pointerId: 4, clientX: 48 });
-    fireEvent.pointerMove(row, { pointerId: 4, clientX: 60 });
-    fireEvent.pointerMove(row, { pointerId: 4, clientX: 65 });
+    fireEvent.pointerMove(point, { pointerId: 4, clientX: 60 });
+    fireEvent.pointerMove(point, { pointerId: 4, clientX: 65 });
     expect(frames).toHaveLength(1);
     expect(onMoveItems).not.toHaveBeenCalled();
     frames.splice(0).forEach((callback) => callback(0));
@@ -123,19 +122,26 @@ describe("ArrangementAutomationLane pointer projection", () => {
     expect(curve.style.width).toBe("36px");
     expect(onMoveItems).not.toHaveBeenCalled();
 
-    fireEvent.pointerUp(row, { pointerId: 4, clientX: 60 });
+    fireEvent.pointerUp(point, { pointerId: 4, clientX: 60 });
     expect(onMoveItems).toHaveBeenCalledOnce();
     expect(onMoveItems).toHaveBeenCalledWith([item], 240);
     expect(point.style.transform).toContain("0px");
     expect(curve.style.left).toBe("48px");
     expect(curve.style.width).toBe("48px");
+    fireEvent.click(point);
+    expect(screen.queryByRole("heading", { name: "Intensity keyframe" })).toBeNull();
 
     fireEvent.pointerDown(point, { button: 0, pointerId: 5, clientX: 48 });
-    fireEvent.pointerMove(row, { pointerId: 5, clientX: 60 });
+    fireEvent.pointerMove(point, { pointerId: 5, clientX: 60 });
     frames.splice(0).forEach((callback) => callback(0));
     expect(cancel).not.toBeNull();
     (cancel as unknown as () => void)();
     expect(onMoveItems).toHaveBeenCalledOnce();
     expect(curve.style.left).toBe("48px");
+
+    fireEvent.pointerDown(point, { button: 0, pointerId: 6, clientX: 48, clientY: 16 });
+    fireEvent.pointerUp(point, { pointerId: 6, clientX: 48, clientY: 16 });
+    fireEvent.click(point);
+    expect(screen.getByRole("heading", { name: "Intensity keyframe" })).toBeTruthy();
   });
 });

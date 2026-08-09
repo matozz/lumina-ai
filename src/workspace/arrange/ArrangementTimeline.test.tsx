@@ -35,6 +35,13 @@ describe("ArrangementTimeline workflow", () => {
     render(<ArrangementTimeline />);
     const timeline = screen.getByRole("region", { name: "Arrangement timeline" });
     const sessionKey = authoringSessionKey("arrangement", assetKey(reference));
+    const addAutomation = screen.getByRole("button", {
+      name: "Add typed Arrangement automation lane",
+    });
+
+    expect(addAutomation.textContent).toBe("");
+    expect(addAutomation.className).toContain("text-muted-foreground");
+    expect(addAutomation.className).toContain("size-6");
 
     fireEvent.keyDown(timeline, { key: " ", code: "Space" });
 
@@ -43,6 +50,35 @@ describe("ArrangementTimeline workflow", () => {
     expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("playing");
     fireEvent.keyDown(timeline, { key: " ", code: "Space" });
     expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("paused");
+  });
+
+  it("uses Command/Ctrl plus horizontal arrows to jump to the start or last CueClip", () => {
+    const effect = projectActions.createEffect("Jump Effect")!;
+    const cue = projectActions.createCue([effect], "Jump Cue")!;
+    const reference = useProjectStore.getState().selectedArrangementRef;
+    projectActions.updateArrangement(reference, "Seed shortcut destinations", (arrangement) => {
+      arrangement.tracks[0].clips = [
+        { id: "early", cue_ref: cue, start_tick: 960, duration_tick: 960 },
+        { id: "latest", cue_ref: cue, start_tick: 5_760, duration_tick: 960 },
+      ];
+    });
+    const historyBefore = useProjectStore.getState().historyCursor;
+    const { container } = render(<ArrangementTimeline />);
+    const scroll = container.querySelector<HTMLElement>("[data-arrangement-timeline-scroll]")!;
+    Object.defineProperty(scroll, "clientWidth", { configurable: true, value: 400 });
+    const sessionKey = authoringSessionKey(
+      "arrangement",
+      assetKey(useProjectStore.getState().selectedArrangementRef),
+    );
+
+    fireEvent.keyDown(window, { key: "ArrowRight", metaKey: true });
+    expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick).toBe(5_760);
+    expect(scroll.scrollLeft).toBe(88);
+
+    fireEvent.keyDown(window, { key: "ArrowLeft", metaKey: true });
+    expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick).toBe(0);
+    expect(scroll.scrollLeft).toBe(0);
+    expect(useProjectStore.getState().historyCursor).toBe(historyBefore);
   });
 
   it("materializes a selected built-in Cue only when placing it", () => {
@@ -474,6 +510,16 @@ describe("ArrangementTimeline workflow", () => {
       ]);
     });
     expect(screen.queryByText("Phase")).toBeNull();
+    const deleteLane = screen.getByRole("button", {
+      name: "Delete Context Cue · Speed automation lane",
+    });
+    expect(deleteLane.closest('[aria-label="Arrangement track headers"]')).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Add Speed keyframe at visible range start" }),
+    ).toBeNull();
+    const firstPoint = screen.getByRole("button", { name: "Speed keyframe at tick 1440" });
+    await waitFor(() => expect(document.activeElement).toBe(firstPoint));
+    expect(screen.queryByRole("heading", { name: "Speed keyframe" })).toBeNull();
     expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 1);
     expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick).toBe(0);
     expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("stopped");
@@ -481,7 +527,8 @@ describe("ArrangementTimeline workflow", () => {
     scroll.scrollLeft = 0;
     fireEvent.contextMenu(clip, { clientX: 72, clientY: 80 });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Reveal existing automation" }));
-    await waitFor(() => expect(screen.getByText("Speed keyframe")).toBeTruthy());
+    await waitFor(() => expect(document.activeElement).toBe(firstPoint));
+    expect(screen.queryByRole("heading", { name: "Speed keyframe" })).toBeNull();
     expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 1);
 
     scroll.scrollLeft = 0;
@@ -494,11 +541,23 @@ describe("ArrangementTimeline workflow", () => {
       expect(arrangement.tracks[0].automation_lanes).toHaveLength(1);
       expect(arrangement.tracks[0].automation_lanes?.[0].keyframes).toHaveLength(2);
       expect(arrangement.tracks[0].automation_lanes?.[0].keyframes[1].time_tick).toBe(1_920);
-      expect(screen.getByText("Speed keyframe")).toBeTruthy();
     });
+    const secondPoint = screen.getByRole("button", { name: "Speed keyframe at tick 1920" });
+    await waitFor(() => expect(document.activeElement).toBe(secondPoint));
+    expect(screen.queryByRole("heading", { name: "Speed keyframe" })).toBeNull();
     expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 2);
     expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick).toBe(0);
     expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("stopped");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete Context Cue · Speed automation lane" }),
+    );
+    await waitFor(() => {
+      const state = useProjectStore.getState();
+      const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
+      expect(arrangement.tracks[0].automation_lanes).toHaveLength(0);
+    });
+    expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 3);
   });
 
   it("adds, edits, and changes interpolation from automation context menus", async () => {

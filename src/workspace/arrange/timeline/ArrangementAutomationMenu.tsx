@@ -24,13 +24,13 @@ export function ArrangementAutomationMenu({
       <PopoverTrigger
         render={
           <Button
-            size="xs"
+            size="icon-xs"
             variant="ghost"
+            className="text-muted-foreground hover:text-foreground size-6 shrink-0"
             disabled={options.length === 0}
             aria-label="Add typed Arrangement automation lane"
           >
-            <Plus data-icon="inline-start" aria-hidden="true" />
-            Automation
+            <Plus className="size-3" aria-hidden="true" />
           </Button>
         }
       />

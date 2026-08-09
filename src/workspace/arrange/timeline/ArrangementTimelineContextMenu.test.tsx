@@ -14,7 +14,7 @@ describe("Arrangement timeline context geometry", () => {
 
     expect(timelineContextTick(124, viewport, geometry, 30_720)).toBe(4_320);
     expect(timelineContextTick(-1_000, viewport, geometry, 30_720)).toBe(0);
-    expect(timelineContextTick(20_000, viewport, geometry, 30_720)).toBe(30_719);
+    expect(timelineContextTick(20_000, viewport, geometry, 30_720)).toBe(30_240);
   });
 
   it("offers Paste here at the concrete blank-row context tick", async () => {
@@ -41,7 +41,11 @@ describe("Arrangement timeline context geometry", () => {
       ({ left: 0, right: 800, top: 0, bottom: 500, width: 800, height: 500 }) as DOMRect;
 
     fireEvent.contextMenu(screen.getByTestId("cue-row"), { clientX: 96, clientY: 40 });
-    fireEvent.click(await screen.findByRole("menuitem", { name: /Paste here/ }));
+    const pasteItem = await screen.findByRole("menuitem", { name: /Paste here/ });
+
+    expect(pasteItem.tagName).toBe("BUTTON");
+    expect(pasteItem.className).toContain("w-full");
+    fireEvent.click(pasteItem);
 
     expect(onPaste).toHaveBeenCalledOnce();
     expect(onPaste).toHaveBeenCalledWith(1_920);
