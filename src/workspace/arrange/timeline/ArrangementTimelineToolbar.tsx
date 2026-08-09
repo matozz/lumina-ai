@@ -198,7 +198,12 @@ export function ArrangementTimelineToolbar({
             <Shortcut keys="Shift + ← / →" action="Nudge by one beat" />
             <Shortcut keys="Alt + ← / →" action="Resize selected clip" />
             <Shortcut keys="Double-click lane" action="Add typed keyframe" />
+            <Shortcut keys="⌘/Ctrl + A" action="Select all in this Arrangement" />
+            <Shortcut keys="Shift + ⌘/Ctrl + A" action="Clear the selection" />
+            <Shortcut keys="⌘/Ctrl + C / V" action="Copy or paste at the playhead" />
+            <Shortcut keys="⌘/Ctrl + D" action="Duplicate by the selection span" />
             <Shortcut keys="Delete" action="Delete selection" />
+            <Shortcut keys="Escape" action="Cancel gesture or clear selection" />
             <Shortcut keys="Space" action="Play or pause this Arrangement" />
             <Shortcut keys="⌘/Ctrl + ↑ / ↓" action="Zoom without changing Snap" />
             <Shortcut keys="⌘/Ctrl + 0" action="Fit the entire Arrangement" />

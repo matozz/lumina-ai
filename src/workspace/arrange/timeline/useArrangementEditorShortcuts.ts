@@ -3,27 +3,57 @@ import { authoringTransportActions, useAuthoringTransportStore } from "@/authori
 import { isTextEditingTarget } from "@/lib/dom";
 
 interface ArrangementEditorShortcutOptions {
+  hasSelection: boolean;
+  onClearSelection: () => void;
+  onCopy: () => void;
+  onDelete: () => void;
+  onDuplicate: () => void;
+  onEscape: () => void;
   onFit: () => void;
+  onMoveSelection: (deltaTick: number) => void;
+  onPaste: () => void;
   onRedo: () => void;
+  onResizeSelection: (deltaTick: number) => void;
+  onSelectAll: () => void;
   onUndo: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   sessionKey: string;
+  snapTicks: number;
+  ppq: number;
 }
 
 export function useArrangementEditorShortcuts({
+  hasSelection,
+  onClearSelection,
+  onCopy,
+  onDelete,
+  onDuplicate,
+  onEscape,
   onFit,
+  onMoveSelection,
+  onPaste,
   onRedo,
+  onResizeSelection,
+  onSelectAll,
   onUndo,
   onZoomIn,
   onZoomOut,
   sessionKey,
+  snapTicks,
+  ppq,
 }: ArrangementEditorShortcutOptions) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.repeat || shortcutTargetIsBlocked(event.target)) return;
       const command = event.metaKey || event.ctrlKey;
       const key = event.key.toLowerCase();
+
+      if (!command && event.key === "Escape") {
+        event.preventDefault();
+        onEscape();
+        return;
+      }
 
       if (!command && (event.code === "Space" || event.key === " ")) {
         event.preventDefault();
@@ -33,9 +63,34 @@ export function useArrangementEditorShortcuts({
         else authoringTransportActions.play(sessionKey);
         return;
       }
-      if (!command) return;
+      if (!command) {
+        if (hasSelection && (event.key === "Delete" || event.key === "Backspace")) {
+          event.preventDefault();
+          onDelete();
+        } else if (hasSelection && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+          event.preventDefault();
+          const direction = event.key === "ArrowLeft" ? -1 : 1;
+          const deltaTick = direction * (event.shiftKey ? ppq : snapTicks);
+          if (event.altKey) onResizeSelection(deltaTick);
+          else onMoveSelection(deltaTick);
+        }
+        return;
+      }
 
-      if (key === "z") {
+      if (key === "a") {
+        event.preventDefault();
+        if (event.shiftKey) onClearSelection();
+        else onSelectAll();
+      } else if (key === "c" && hasSelection) {
+        event.preventDefault();
+        onCopy();
+      } else if (key === "v") {
+        event.preventDefault();
+        onPaste();
+      } else if (key === "d" && hasSelection) {
+        event.preventDefault();
+        onDuplicate();
+      } else if (key === "z") {
         event.preventDefault();
         if (event.shiftKey) onRedo();
         else onUndo();
@@ -55,7 +110,26 @@ export function useArrangementEditorShortcuts({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onFit, onRedo, onUndo, onZoomIn, onZoomOut, sessionKey]);
+  }, [
+    hasSelection,
+    onClearSelection,
+    onCopy,
+    onDelete,
+    onDuplicate,
+    onEscape,
+    onFit,
+    onMoveSelection,
+    onPaste,
+    onRedo,
+    onResizeSelection,
+    onSelectAll,
+    onUndo,
+    onZoomIn,
+    onZoomOut,
+    ppq,
+    sessionKey,
+    snapTicks,
+  ]);
 }
 
 export function shortcutTargetIsBlocked(target: EventTarget | null) {

@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { ArrangementDocument, ProjectBundle } from "@/bridge/types";
+import { useCallback, useEffect, useRef } from "react";
 import { AuthoringDiagnosticAlert } from "@/authoring/AuthoringDiagnosticAlert";
-import { authoringDiagnostic, type AuthoringDiagnostic } from "@/authoring/diagnostics";
+import { authoringDiagnostic } from "@/authoring/diagnostics";
 import {
   authoringSessionKey,
   authoringTransportActions,
@@ -13,6 +12,7 @@ import { projectActions, projectSelectors, useProjectStore } from "@/stores/proj
 import { productionCatalogSelectors, useProductionCatalogStore } from "@/stores/productionCatalog";
 import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/stores/workspace";
 import { ArrangementClipInspector } from "./timeline/ArrangementClipInspector";
+import { ArrangementMarquee } from "./timeline/ArrangementMarquee";
 import {
   ArrangementGrid,
   ArrangementPlayhead,
@@ -22,14 +22,17 @@ import { ArrangementTimelineToolbar } from "./timeline/ArrangementTimelineToolba
 import { ArrangementTrackHeaders } from "./timeline/ArrangementTrackHeaders";
 import { ArrangementTrackRows } from "./timeline/ArrangementTrackRows";
 import { useArrangementEditorShortcuts } from "./timeline/useArrangementEditorShortcuts";
+import { useArrangementTimelineEditing } from "./timeline/useArrangementTimelineEditing";
 import { useArrangementTimelineViewport } from "./timeline/useArrangementTimelineViewport";
 import {
   addAutomationLane,
   automationOptions,
-  deleteCueClip,
-  duplicateCueClip,
   updateCueClip,
 } from "./timeline/arrangementTimelineModel";
+import {
+  arrangementSelectionFromItems,
+  arrangementSelectionItemKey,
+} from "./timeline/arrangementSelection";
 
 const HEADER_WIDTH = 192;
 
@@ -49,8 +52,6 @@ export function ArrangementTimeline() {
       ? pendingBuiltInCue
       : null;
   const selectedCue = selectedBuiltInCue?.cue ?? exactAsset(bundle.cues, selectedCueRef);
-  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
-  const [diagnostic, setDiagnostic] = useState<AuthoringDiagnostic | null>(null);
   const snapGuideRef = useRef<HTMLDivElement>(null);
   const firstSignature = arrangement?.time_signatures[0] ?? {
     time_tick: 0,
@@ -83,11 +84,46 @@ export function ArrangementTimeline() {
   );
   const handleZoomIn = useCallback(() => zoomIn(playheadTick()), [playheadTick, zoomIn]);
   const handleZoomOut = useCallback(() => zoomOut(playheadTick()), [playheadTick, zoomOut]);
+  const {
+    cancelGestureOrClearSelection,
+    clearSelection,
+    copySelection,
+    deleteItems,
+    diagnostic,
+    duplicateItems,
+    moveItems,
+    pasteSelection,
+    resizeItems,
+    runCommand,
+    selectAll,
+    selectItem,
+    selection,
+    setDiagnostic,
+    setGestureCancel,
+    setSelection,
+  } = useArrangementTimelineEditing({
+    anchorTick: playheadTick,
+    arrangement,
+    reference,
+    snapTicks: geometry.snapTicks,
+  });
 
   useArrangementEditorShortcuts({
+    hasSelection: selection.items.length > 0,
     sessionKey,
+    snapTicks: geometry.snapTicks,
+    ppq: arrangement?.ppq ?? 960,
+    onClearSelection: clearSelection,
+    onCopy: copySelection,
+    onDelete: () => deleteItems(selection.items),
+    onDuplicate: () => duplicateItems(selection.items),
+    onEscape: cancelGestureOrClearSelection,
     onFit: fit,
+    onMoveSelection: (deltaTick) => moveItems(selection.items, deltaTick),
+    onPaste: pasteSelection,
     onRedo: projectActions.redo,
+    onResizeSelection: (deltaTick) => resizeItems(selection.items, deltaTick),
+    onSelectAll: selectAll,
     onUndo: projectActions.undo,
     onZoomIn: handleZoomIn,
     onZoomOut: handleZoomOut,
@@ -104,21 +140,6 @@ export function ArrangementTimeline() {
   }, [arrangement, sessionKey]);
 
   if (!arrangement) return null;
-
-  const runCommand = (
-    label: string,
-    path: string,
-    update: (draft: ArrangementDocument, bundle: ProjectBundle) => void,
-  ) => {
-    try {
-      projectActions.updateArrangement(reference, label, update);
-      setDiagnostic(null);
-      return true;
-    } catch (error) {
-      setDiagnostic(authoringDiagnostic(error, path));
-      return false;
-    }
-  };
 
   const placeSelectedCue = () => {
     const cue = selectedCue;
@@ -176,7 +197,9 @@ export function ArrangementTimeline() {
           layer: 0,
           layer_overrides: [],
         });
-        setSelectedClipId(id);
+        setSelection(
+          arrangementSelectionFromItems([{ type: "clip", trackId: track.id, clipId: id }]),
+        );
       },
     );
     if (placed) {
@@ -202,11 +225,15 @@ export function ArrangementTimeline() {
     scrollRef.current?.clientWidth ?? 0,
     ticksToPixels(arrangement.length_ticks, geometry),
   );
-  const selected = selectedClipId
-    ? (arrangement.tracks
-        .flatMap((track) => track.clips ?? [])
-        .find((clip) => clip.id === selectedClipId) ?? null)
-    : null;
+  const primaryItem = selection.items.find(
+    (item) => arrangementSelectionItemKey(item) === selection.primary,
+  );
+  const selected =
+    primaryItem?.type === "clip"
+      ? (arrangement.tracks
+          .find((track) => track.id === primaryItem.trackId)
+          ?.clips?.find((clip) => clip.id === primaryItem.clipId) ?? null)
+      : null;
   const selectedCueName = selected
     ? (exactAsset(bundle.cues, selected.cue_ref)?.name ?? selected.cue_ref.id)
     : null;
@@ -229,7 +256,7 @@ export function ArrangementTimeline() {
         onPlaceCue={placeSelectedCue}
         onRedo={projectActions.redo}
         onSelectArrangement={(next) => {
-          setSelectedClipId(null);
+          clearSelection();
           setDiagnostic(null);
           projectActions.selectArrangement(next);
         }}
@@ -295,20 +322,35 @@ export function ArrangementTimeline() {
                   geometry={geometry}
                   viewport={viewport}
                 />
-                <ArrangementTrackRows
+                <ArrangementMarquee
                   arrangement={arrangement}
                   bundle={bundle}
                   geometry={geometry}
-                  runCommand={runCommand}
-                  selectedClipId={selectedClipId}
-                  viewport={viewport}
+                  selection={selection}
                   viewportRef={scrollRef}
-                  onSnapPreview={updateSnapPreview}
-                  onSelectClip={(id) => {
-                    setSelectedClipId(id);
-                    setDiagnostic(null);
+                  onCancelReady={(cancel) => {
+                    setGestureCancel(cancel);
                   }}
-                />
+                  onSelectionChange={setSelection}
+                >
+                  <ArrangementTrackRows
+                    arrangement={arrangement}
+                    bundle={bundle}
+                    geometry={geometry}
+                    onCancelReady={setGestureCancel}
+                    runCommand={runCommand}
+                    selection={selection}
+                    viewport={viewport}
+                    viewportRef={scrollRef}
+                    onMoveItems={moveItems}
+                    onResizeItems={resizeItems}
+                    onSelectItem={(item, modifiers) => {
+                      selectItem(item, modifiers);
+                      setDiagnostic(null);
+                    }}
+                    onSnapPreview={updateSnapPreview}
+                  />
+                </ArrangementMarquee>
               </div>
               <div
                 ref={snapGuideRef}
@@ -330,7 +372,7 @@ export function ArrangementTimeline() {
           cueName={selectedCueName}
           diagnostic={clipDiagnostic}
           onRecover={() => {
-            setSelectedClipId(null);
+            clearSelection();
             setDiagnostic(null);
           }}
           onUpdate={(changes) =>
@@ -339,24 +381,8 @@ export function ArrangementTimeline() {
               updateCueClip(draft, selected.id, changes),
             )
           }
-          onDelete={() =>
-            selected &&
-            runCommand("Delete CueClip", `arrangement.clip.${selected.id}.delete`, (draft) => {
-              deleteCueClip(draft, selected.id);
-              setSelectedClipId(null);
-            })
-          }
-          onDuplicate={() =>
-            selected &&
-            runCommand(
-              "Duplicate CueClip",
-              `arrangement.clip.${selected.id}.duplicate`,
-              (draft) => {
-                const id = duplicateCueClip(draft, selected.id, geometry.snapTicks);
-                setSelectedClipId(id);
-              },
-            )
-          }
+          onDelete={() => selected && deleteItems(selection.items)}
+          onDuplicate={() => selected && duplicateItems(selection.items)}
         />
       </div>
     </section>

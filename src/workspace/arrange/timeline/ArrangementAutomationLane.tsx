@@ -23,6 +23,14 @@ import {
 } from "@/panel/timelineGeometry";
 import type { TimelineViewport } from "@/panel/virtualization";
 import { ArrangementKeyframeControl } from "./ArrangementKeyframeControl";
+import {
+  arrangementSelectionHas,
+  selectionAfterClick,
+  type ArrangementKeyframeSelectionItem,
+  type ArrangementSelectionItem,
+  type ArrangementTimelineSelection,
+} from "./arrangementSelection";
+import { AUTOMATION_ROW_HEIGHT, AUTOMATION_VALUE_INSET } from "./arrangementTimelineModel";
 
 interface ArrangementAutomationLaneProps {
   arrangement: ArrangementDocument;
@@ -30,9 +38,14 @@ interface ArrangementAutomationLaneProps {
   geometry: TimelineGeometry;
   lane: ArrangementAutomationLaneType;
   onAdd: (tick: number, value: ParameterValueDSL, interpolation: KeyframeInterpolationDSL) => void;
+  onCancelReady: (cancel: (() => void) | null) => void;
   onDeleteKeyframes: (ids: string[]) => void;
   onDeleteLane: () => void;
-  onMoveKeyframes: (ids: string[], deltaTick: number) => void;
+  onMoveItems: (items: ArrangementSelectionItem[], deltaTick: number) => void;
+  onSelectKeyframe: (
+    item: ArrangementKeyframeSelectionItem,
+    modifiers: { additive: boolean; toggle: boolean },
+  ) => void;
   onSnapPreview: (tick: number | null) => void;
   onUpdateKeyframe: (
     id: string,
@@ -40,6 +53,8 @@ interface ArrangementAutomationLaneProps {
   ) => void;
   viewport: TimelineViewport;
   viewportRef: React.RefObject<HTMLDivElement | null>;
+  selection: ArrangementTimelineSelection;
+  trackId: string;
 }
 
 interface KeyframeInteraction {
@@ -48,12 +63,10 @@ interface KeyframeInteraction {
   currentClientX: number;
   deltaTick: number;
   ids: string[];
+  items: ArrangementSelectionItem[];
   startClientX: number;
   startScrollLeft: number;
 }
-
-const AUTOMATION_ROW_HEIGHT = 40;
-const AUTOMATION_VALUE_INSET = 8;
 
 export const ArrangementAutomationLane = memo(function ArrangementAutomationLane({
   arrangement,
@@ -61,28 +74,35 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
   geometry,
   lane,
   onAdd,
+  onCancelReady,
   onDeleteKeyframes,
   onDeleteLane,
-  onMoveKeyframes,
+  onMoveItems,
+  onSelectKeyframe,
   onSnapPreview,
   onUpdateKeyframe,
   viewport,
   viewportRef,
+  selection,
+  trackId,
 }: ArrangementAutomationLaneProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const keyframeRefs = useRef(new Map<string, HTMLButtonElement>());
   const interactionRef = useRef<KeyframeInteraction | null>(null);
   const frameRef = useRef<number | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [inspectorId, setInspectorId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const available = new Set(lane.keyframes.map((keyframe) => keyframe.id));
-    setSelectedIds((current) => {
-      const retained = new Set([...current].filter((id) => available.has(id)));
-      return retained.size === current.size ? current : retained;
-    });
-  }, [lane.keyframes]);
+  const selectedIds = new Set(
+    lane.keyframes
+      .filter((keyframe) =>
+        arrangementSelectionHas(selection, {
+          type: "keyframe",
+          trackId,
+          laneId: lane.id,
+          keyframeId: keyframe.id,
+        }),
+      )
+      .map((keyframe) => keyframe.id),
+  );
 
   const flushPreview = () => {
     frameRef.current = null;
@@ -126,8 +146,9 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
       }
     }
     onSnapPreview(null);
+    onCancelReady(null);
     if (commit && interaction?.deltaTick) {
-      onMoveKeyframes(interaction.ids, interaction.deltaTick);
+      onMoveItems(interaction.items, interaction.deltaTick);
     }
   };
 
@@ -191,22 +212,6 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
             arrangement.ppq,
         );
       }}
-      onKeyDown={(event) => {
-        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a") {
-          event.preventDefault();
-          setSelectedIds(new Set(lane.keyframes.map((keyframe) => keyframe.id)));
-        } else if (event.key === "Delete" || event.key === "Backspace") {
-          event.preventDefault();
-          if (selectedIds.size > 0) onDeleteKeyframes([...selectedIds]);
-        } else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-          event.preventDefault();
-          const direction = event.key === "ArrowLeft" ? -1 : 1;
-          onMoveKeyframes(
-            [...selectedIds],
-            direction * (event.shiftKey ? arrangement.ppq : geometry.snapTicks),
-          );
-        }
-      }}
     >
       {visibleSegments.map((keyframe) => {
         const index = lane.keyframes.findIndex((candidate) => candidate.id === keyframe.id);
@@ -246,22 +251,41 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
               if (event.button !== 0) return;
               event.preventDefault();
               event.stopPropagation();
-              const selection = event.shiftKey
-                ? toggleSelection(selectedIds, keyframe.id)
-                : selected
-                  ? new Set(selectedIds)
-                  : new Set([keyframe.id]);
-              setSelectedIds(selection);
+              const item: ArrangementKeyframeSelectionItem = {
+                type: "keyframe",
+                trackId,
+                laneId: lane.id,
+                keyframeId: keyframe.id,
+              };
+              const modifiers = {
+                additive: event.shiftKey,
+                toggle: event.metaKey || event.ctrlKey,
+              };
+              const gestureSelection = selectionAfterClick(selection, item, modifiers);
+              onSelectKeyframe(item, modifiers);
+              if (modifiers.toggle) return;
+              const gestureItems = gestureSelection.items.filter(
+                (candidate) => candidate.type === "keyframe",
+              );
+              const laneIds = new Set(
+                gestureItems
+                  .filter(
+                    (candidate) => candidate.type === "keyframe" && candidate.laneId === lane.id,
+                  )
+                  .map((candidate) => candidate.keyframeId),
+              );
               event.currentTarget.setPointerCapture(event.pointerId);
               interactionRef.current = {
                 anchorTick: keyframe.time_tick,
-                bounds: keyframeMoveBounds(lane.keyframes, selection),
+                bounds: keyframeMoveBounds(lane.keyframes, laneIds),
                 currentClientX: event.clientX,
                 deltaTick: 0,
-                ids: [...selection],
+                ids: [...laneIds],
+                items: gestureItems,
                 startClientX: event.clientX,
                 startScrollLeft: viewportRef.current?.scrollLeft ?? 0,
               };
+              onCancelReady(() => finish(false));
             }}
             onUpdate={(changes) => {
               onUpdateKeyframe(keyframe.id, changes);
@@ -295,10 +319,3 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
     </div>
   );
 });
-
-function toggleSelection(selected: ReadonlySet<string>, id: string) {
-  const next = new Set(selected);
-  if (next.has(id)) next.delete(id);
-  else next.add(id);
-  return next.size > 0 ? next : new Set([id]);
-}

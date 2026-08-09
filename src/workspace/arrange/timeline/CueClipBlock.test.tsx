@@ -30,6 +30,7 @@ describe("CueClipBlock native pointer interaction", () => {
   it("batches pointer moves into DOM-only rAF preview and commits once on pointer up", () => {
     const onCommitMove = vi.fn();
     const onCommitResize = vi.fn();
+    let cancel: (() => void) | null = null;
     const viewportRef = createRef<HTMLDivElement>();
     const { container } = render(
       <div ref={viewportRef}>
@@ -43,10 +44,11 @@ describe("CueClipBlock native pointer interaction", () => {
           }}
           cueName="Cue A"
           geometry={createTimelineGeometry(960, 48)}
+          onCancelReady={(next) => {
+            cancel = next;
+          }}
           onCommitMove={onCommitMove}
           onCommitResize={onCommitResize}
-          onDelete={vi.fn()}
-          onDuplicate={vi.fn()}
           onSelect={vi.fn()}
           onSnapPreview={vi.fn()}
           selected
@@ -82,6 +84,14 @@ describe("CueClipBlock native pointer interaction", () => {
     fireEvent.pointerUp(block, { pointerId: 8, clientX: 168 });
     expect(onCommitResize).toHaveBeenCalledOnce();
     expect(onCommitResize).toHaveBeenCalledWith(2_400);
+
+    fireEvent.pointerDown(block, { button: 0, pointerId: 9, clientX: 48 });
+    fireEvent.pointerMove(block, { pointerId: 9, clientX: 72 });
+    flushFrame();
+    expect(cancel).not.toBeNull();
+    (cancel as unknown as () => void)();
+    expect(onCommitMove).toHaveBeenCalledOnce();
+    expect(block.style.transform).toBe("");
   });
 
   it("renders a one-beat clip at its truthful compact width in the global view", () => {
@@ -98,10 +108,9 @@ describe("CueClipBlock native pointer interaction", () => {
           }}
           cueName="FullFlash"
           geometry={createTimelineGeometry(960, 4, 480)}
+          onCancelReady={vi.fn()}
           onCommitMove={vi.fn()}
           onCommitResize={vi.fn()}
-          onDelete={vi.fn()}
-          onDuplicate={vi.fn()}
           onSelect={vi.fn()}
           onSnapPreview={vi.fn()}
           selected={false}

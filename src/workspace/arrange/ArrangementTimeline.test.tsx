@@ -205,7 +205,7 @@ describe("ArrangementTimeline workflow", () => {
     fireEvent.keyDown(clip, { key: "ArrowRight" });
 
     expect(screen.getByText(/ARRANGEMENT_CLIP_OVERLAP_REJECTED/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Reset selection" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Dismiss and retry" })).toBeTruthy();
   });
 
   it("renders layered and overlapping CueClips on distinct visual rows", () => {
@@ -243,6 +243,109 @@ describe("ArrangementTimeline workflow", () => {
     expect(
       container.querySelector<HTMLElement>('[data-clip-id="top-left-return"]')?.style.top,
     ).toBe("8px");
+  });
+
+  it("copies, pastes, duplicates, deletes, and undoes a multi-clip selection atomically", async () => {
+    const effect = projectActions.createEffect("Bulk Pulse")!;
+    const cue = projectActions.createCue([effect], "Bulk Cue")!;
+    const reference = useProjectStore.getState().selectedArrangementRef;
+    projectActions.updateArrangement(reference, "Seed bulk timeline editing", (arrangement) => {
+      arrangement.tracks[0].clips = [
+        { id: "bulk-a", cue_ref: cue, start_tick: 960, duration_tick: 960, layer: 0 },
+        { id: "bulk-b", cue_ref: cue, start_tick: 2_880, duration_tick: 960, layer: 0 },
+      ];
+    });
+    const historyBefore = useProjectStore.getState().historyCursor;
+    render(<ArrangementTimeline />);
+    const sessionKey = authoringSessionKey(
+      "arrangement",
+      assetKey(useProjectStore.getState().selectedArrangementRef),
+    );
+    authoringTransportActions.seek(sessionKey, 5_760);
+    const first = screen.getByRole("button", { name: /Bulk Cue, starts at tick 960/ });
+    const second = screen.getByRole("button", { name: /Bulk Cue, starts at tick 2880/ });
+
+    fireEvent.pointerDown(first, { button: 0, pointerId: 20, clientX: 48 });
+    fireEvent.pointerUp(first, { pointerId: 20, clientX: 48 });
+    fireEvent.pointerDown(second, { button: 0, pointerId: 21, clientX: 144, shiftKey: true });
+    fireEvent.pointerUp(second, { pointerId: 21, clientX: 144, shiftKey: true });
+    fireEvent.keyDown(window, { key: "c", metaKey: true });
+    expect(useProjectStore.getState().historyCursor).toBe(historyBefore);
+
+    fireEvent.keyDown(window, { key: "v", metaKey: true });
+    await waitFor(() => {
+      const current = exactAsset(
+        useProjectStore.getState().bundle.arrangements,
+        useProjectStore.getState().selectedArrangementRef,
+      )!;
+      expect(current.tracks[0].clips).toHaveLength(4);
+      expect(current.tracks[0].clips?.map((clip) => clip.start_tick)).toEqual([
+        960, 2_880, 5_760, 7_680,
+      ]);
+    });
+    expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 1);
+
+    fireEvent.keyDown(window, { key: "d", metaKey: true });
+    await waitFor(() => {
+      const current = exactAsset(
+        useProjectStore.getState().bundle.arrangements,
+        useProjectStore.getState().selectedArrangementRef,
+      )!;
+      expect(current.tracks[0].clips).toHaveLength(6);
+    });
+    expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 2);
+
+    fireEvent.keyDown(window, { key: "Delete" });
+    await waitFor(() => {
+      const current = exactAsset(
+        useProjectStore.getState().bundle.arrangements,
+        useProjectStore.getState().selectedArrangementRef,
+      )!;
+      expect(current.tracks[0].clips).toHaveLength(4);
+    });
+    expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 3);
+
+    fireEvent.keyDown(window, { key: "z", metaKey: true });
+    await waitFor(() => {
+      const current = exactAsset(
+        useProjectStore.getState().bundle.arrangements,
+        useProjectStore.getState().selectedArrangementRef,
+      )!;
+      expect(current.tracks[0].clips).toHaveLength(6);
+    });
+    expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 2);
+  });
+
+  it("selects and clears the current Arrangement scope with Command+A", async () => {
+    const effect = projectActions.createEffect("Select Pulse")!;
+    const cue = projectActions.createCue([effect], "Select Cue")!;
+    const reference = useProjectStore.getState().selectedArrangementRef;
+    projectActions.updateArrangement(reference, "Seed selection scope", (arrangement) => {
+      arrangement.tracks[0].clips = [
+        { id: "select-a", cue_ref: cue, start_tick: 0, duration_tick: 960 },
+        { id: "select-b", cue_ref: cue, start_tick: 1_920, duration_tick: 960 },
+      ];
+      addAutomationLane(
+        arrangement,
+        arrangement.tracks[0].id,
+        automationOptions(useProjectStore.getState().bundle, arrangement)[0],
+        0,
+      );
+    });
+    const { container } = render(<ArrangementTimeline />);
+
+    fireEvent.keyDown(window, { key: "a", metaKey: true });
+    await waitFor(() => {
+      expect(container.querySelectorAll('[data-clip-id][aria-pressed="true"]')).toHaveLength(2);
+      expect(
+        container.querySelectorAll('button[aria-label*="keyframe"][aria-pressed="true"]'),
+      ).toHaveLength(2);
+    });
+
+    fireEvent.keyDown(window, { key: "a", metaKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(container.querySelectorAll('[aria-pressed="true"]')).toHaveLength(0);
+    });
   });
 
   it("renders typed automation curves and adds a keyframe as one transaction", async () => {

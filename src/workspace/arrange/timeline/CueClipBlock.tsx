@@ -14,11 +14,10 @@ interface CueClipBlockProps {
   clip: CueClip;
   cueName: string;
   geometry: TimelineGeometry;
+  onCancelReady: (cancel: (() => void) | null) => void;
   onCommitMove: (startTick: number) => void;
   onCommitResize: (durationTick: number) => void;
-  onDelete: () => void;
-  onDuplicate: () => void;
-  onSelect: () => void;
+  onSelect: (modifiers: { additive: boolean; toggle: boolean }) => void;
   onSnapPreview: (tick: number | null) => void;
   selected: boolean;
   top: number;
@@ -39,10 +38,9 @@ export const CueClipBlock = memo(function CueClipBlock({
   clip,
   cueName,
   geometry,
+  onCancelReady,
   onCommitMove,
   onCommitResize,
-  onDelete,
-  onDuplicate,
   onSelect,
   onSnapPreview,
   selected,
@@ -103,6 +101,7 @@ export const CueClipBlock = memo(function CueClipBlock({
       elementRef.current.style.width = `${Math.max(1, clipWidth)}px`;
     }
     onSnapPreview(null);
+    onCancelReady(null);
     if (!commit || !interaction) return;
     if (interaction.kind === "move" && interaction.nextValue !== clip.start_tick) {
       onCommitMove(interaction.nextValue);
@@ -122,8 +121,9 @@ export const CueClipBlock = memo(function CueClipBlock({
     if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
-    onSelect();
+    onSelect({ additive: event.shiftKey, toggle: event.metaKey || event.ctrlKey });
     elementRef.current?.focus();
+    if (event.metaKey || event.ctrlKey) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     interactionRef.current = {
       kind,
@@ -132,6 +132,7 @@ export const CueClipBlock = memo(function CueClipBlock({
       startScrollLeft: viewportRef.current?.scrollLeft ?? 0,
       nextValue: kind === "move" ? clip.start_tick : clip.duration_tick,
     };
+    onCancelReady(() => finish(false));
   };
 
   return (
@@ -166,31 +167,6 @@ export const CueClipBlock = memo(function CueClipBlock({
       onPointerCancel={() => finish(false)}
       onLostPointerCapture={() => {
         if (interactionRef.current) finish(false);
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Delete" || event.key === "Backspace") {
-          event.preventDefault();
-          onDelete();
-          return;
-        }
-        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d") {
-          event.preventDefault();
-          onDuplicate();
-          return;
-        }
-        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-        event.preventDefault();
-        const direction = event.key === "ArrowLeft" ? -1 : 1;
-        const delta = direction * (event.shiftKey ? geometry.ppq : geometry.snapTicks);
-        if (event.altKey) {
-          onCommitResize(
-            Math.max(1, Math.min(arrangementLength - clip.start_tick, clip.duration_tick + delta)),
-          );
-        } else {
-          onCommitMove(
-            Math.max(0, Math.min(arrangementLength - clip.duration_tick, clip.start_tick + delta)),
-          );
-        }
       }}
     >
       {!compact && (

@@ -33,6 +33,8 @@ export const CUE_CLIP_HEIGHT = 40;
 export const CUE_TRACK_MIN_HEIGHT = 64;
 export const CUE_TRACK_PADDING = 8;
 export const CUE_TRACK_ROW_PITCH = 44;
+export const AUTOMATION_ROW_HEIGHT = 40;
+export const AUTOMATION_VALUE_INSET = 8;
 
 export interface CueClipVisualPlacement {
   row: number;
