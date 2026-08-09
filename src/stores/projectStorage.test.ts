@@ -105,6 +105,21 @@ describe("project folder storage", () => {
       error: "invalid latest",
     });
   });
+
+  it("keeps authoring ready when an autosave fails", async () => {
+    useProjectStorageStore.setState(storageState("ready", "/shows"), true);
+    vi.spyOn(engine, "saveProjectStorage").mockRejectedValue(new Error("temporary save failure"));
+
+    await projectStorageActions.saveBundle("/shows", useProjectStore.getState().bundle);
+
+    expect(useProjectStorageStore.getState()).toMatchObject({
+      phase: "ready",
+      directory: "/shows",
+      attemptedDirectory: null,
+      isSaving: false,
+      error: "temporary save failure",
+    });
+  });
 });
 
 describe("ProjectAutosaveController", () => {

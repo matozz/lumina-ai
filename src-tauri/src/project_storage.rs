@@ -1,4 +1,4 @@
-use crate::document::{load_project_bundle, ProjectBundle};
+use crate::document::{load_project_draft, ProjectBundle};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -71,18 +71,16 @@ pub async fn load_project_storage(
     let content = tokio::fs::read_to_string(&latest_path)
         .await
         .map_err(|error| format!("Project storage read failed: {error}"))?;
-    let project = load_project_bundle(&content)
-        .map(crate::document::ValidatedProject::into_bundle)
-        .map_err(|diagnostics| {
-            format!(
-                "The latest project in this folder is invalid:\n{}",
-                diagnostics
-                    .into_iter()
-                    .map(|diagnostic| diagnostic.to_string())
-                    .collect::<Vec<_>>()
-                    .join("\n")
-            )
-        })?;
+    let project = load_project_draft(&content).map_err(|diagnostics| {
+        format!(
+            "The latest project in this folder is not a compatible Lumina V1 draft:\n{}",
+            diagnostics
+                .into_iter()
+                .map(|diagnostic| diagnostic.to_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
+    })?;
     Ok(Some(ProjectStorageLoadResult {
         project,
         latest_path: display_path(&latest_path),
@@ -95,14 +93,14 @@ pub async fn save_project_storage(
     directory: String,
     project_json: String,
 ) -> Result<ProjectStorageSaveResult, String> {
-    let validated = load_project_bundle(&project_json).map_err(|diagnostics| {
+    let draft = load_project_draft(&project_json).map_err(|diagnostics| {
         diagnostics
             .into_iter()
             .map(|diagnostic| diagnostic.to_string())
             .collect::<Vec<_>>()
             .join("\n")
     })?;
-    let mut serialized = serde_json::to_string_pretty(&validated.into_bundle())
+    let mut serialized = serde_json::to_string_pretty(&draft)
         .map_err(|error| format!("Project serialization error: {error}"))?;
     serialized.push('\n');
 
@@ -131,7 +129,7 @@ pub async fn save_project_storage(
     }
 
     if let Some(existing) = existing {
-        load_project_bundle(&existing).map_err(|diagnostics| {
+        load_project_draft(&existing).map_err(|diagnostics| {
             format!(
                 "Refusing to replace an invalid latest project:\n{}",
                 diagnostics
@@ -309,7 +307,7 @@ mod tests {
         clear_storage_preference, load_project_storage, load_storage_preference,
         save_project_storage, save_storage_preference, MAX_HISTORY_FILES,
     };
-    use crate::document::valid_bundle;
+    use crate::document::{valid_bundle, ValidatedProject};
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static TEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
@@ -335,6 +333,35 @@ mod tests {
             .expect("latest Project");
         assert_eq!(reopened.project.manifest.name, "Durable Project");
         assert_eq!(reopened.history_count, 0);
+
+        tokio::fs::remove_dir_all(directory)
+            .await
+            .expect("test cleanup");
+    }
+
+    #[tokio::test]
+    async fn saves_and_reopens_a_semantically_incomplete_authoring_draft() {
+        let directory = test_directory("semantic-draft").await;
+        let mut bundle = valid_bundle();
+        let mut overlapping = bundle.arrangements[0].tracks[0].clips[0].clone();
+        overlapping.id = "clip-2".to_string();
+        overlapping.start_tick = 1_920;
+        bundle.arrangements[0].tracks[0].clips.push(overlapping);
+        assert!(ValidatedProject::validate(bundle.clone()).is_err());
+
+        save_project_storage(
+            directory.to_string_lossy().into_owned(),
+            serde_json::to_string(&bundle).expect("Project JSON"),
+        )
+        .await
+        .expect("semantic authoring diagnostics do not block storage");
+        let reopened = load_project_storage(directory.to_string_lossy().into_owned())
+            .await
+            .expect("load Project storage")
+            .expect("latest Project");
+
+        assert_eq!(reopened.project.arrangements[0].tracks[0].clips.len(), 2);
+        assert!(ValidatedProject::validate(reopened.project).is_err());
 
         tokio::fs::remove_dir_all(directory)
             .await

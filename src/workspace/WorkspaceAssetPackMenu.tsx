@@ -1,4 +1,4 @@
-import { Download, FolderOpen, PackageOpen, Upload } from "lucide-react";
+import { Download, FolderOpen, PackageOpen, RotateCw, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import type { UserAssetPack } from "@/bridge/types";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ export function WorkspaceAssetPackMenu({ disabled = false }: { disabled?: boolea
   const projectDirectory = useProjectStorageStore(projectStorageSelectors.directory);
   const historyCount = useProjectStorageStore(projectStorageSelectors.historyCount);
   const isSaving = useProjectStorageStore(projectStorageSelectors.isSaving);
+  const storageError = useProjectStorageStore(projectStorageSelectors.error);
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -142,6 +143,26 @@ export function WorkspaceAssetPackMenu({ disabled = false }: { disabled?: boolea
                 ? "Saving…"
                 : `${historyCount} of 50 recent ${historyCount === 1 ? "version" : "versions"}`}
             </p>
+            {storageError && (
+              <div className="grid gap-1.5">
+                <p
+                  className="text-destructive truncate text-[11px]"
+                  role="alert"
+                  title={storageError}
+                >
+                  Last save failed. Editing is still available.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="justify-start"
+                  onClick={() => void projectStorageActions.retrySave()}
+                >
+                  <RotateCw data-icon="inline-start" aria-hidden="true" />
+                  Retry save
+                </Button>
+              </div>
+            )}
             <Button variant="outline" className="justify-start" onClick={chooseProjectFolder}>
               <FolderOpen data-icon="inline-start" aria-hidden="true" />
               Change project folder

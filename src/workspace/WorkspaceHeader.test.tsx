@@ -113,4 +113,19 @@ describe("WorkspaceHeader live workflow", () => {
     expect(screen.getByText("12 of 50 recent versions")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Change project folder" })).toBeTruthy();
   });
+
+  it("shows autosave failures in Assets without blocking the workspace", async () => {
+    useProjectStorageStore.setState({ error: "temporary save failure" });
+
+    render(
+      <TooltipProvider>
+        <WorkspaceHeader />
+      </TooltipProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Assets" }));
+
+    expect(await screen.findByText("Last save failed. Editing is still available.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Retry save" })).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "Choose a project folder" })).toBeNull();
+  });
 });

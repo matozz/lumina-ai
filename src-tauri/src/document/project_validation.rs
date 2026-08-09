@@ -58,6 +58,11 @@ impl ValidatedProject {
 }
 
 pub fn load_project_bundle(source: &str) -> Result<ValidatedProject, Vec<Diagnostic>> {
+    let bundle = load_project_draft(source)?;
+    ValidatedProject::validate(bundle)
+}
+
+pub fn load_project_draft(source: &str) -> Result<ProjectBundle, Vec<Diagnostic>> {
     let bundle = serde_json::from_str::<ProjectBundle>(source).map_err(|error| {
         vec![Diagnostic::error(
             PROJECT_SCHEMA_INVALID,
@@ -66,7 +71,13 @@ pub fn load_project_bundle(source: &str) -> Result<ValidatedProject, Vec<Diagnos
             "Use a ProjectBundle that matches the current Lumina V1 schema.",
         )]
     })?;
-    ValidatedProject::validate(bundle)
+    let mut diagnostics = Vec::new();
+    validate_schema_versions(&bundle, &mut diagnostics);
+    if diagnostics.is_empty() {
+        Ok(bundle)
+    } else {
+        Err(diagnostics)
+    }
 }
 
 fn validate_schema_versions(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {

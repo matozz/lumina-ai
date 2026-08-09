@@ -133,8 +133,6 @@ export const projectStorageActions = {
       const latest = useProjectStorageStore.getState();
       if (latest.directory !== directory) return false;
       useProjectStorageStore.setState({
-        phase: "error",
-        attemptedDirectory: directory,
         isSaving: false,
         error: errorMessage(error, "The project could not be saved."),
       });
@@ -144,15 +142,11 @@ export const projectStorageActions = {
 
   retrySave: async () => {
     const state = useProjectStorageStore.getState();
-    const directory = state.directory ?? state.attemptedDirectory;
-    if (!directory) return false;
-    useProjectStorageStore.setState({
-      phase: "ready",
-      directory,
-      attemptedDirectory: null,
-      error: null,
-    });
-    return projectStorageActions.saveBundle(directory, useProjectStore.getState().bundle);
+    if (state.phase === "ready" && state.directory) {
+      return projectStorageActions.saveBundle(state.directory, useProjectStore.getState().bundle);
+    }
+    if (!state.attemptedDirectory) return false;
+    return projectStorageActions.activateDirectory(state.attemptedDirectory, false);
   },
 };
 

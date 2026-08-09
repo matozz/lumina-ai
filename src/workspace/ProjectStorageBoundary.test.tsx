@@ -38,4 +38,21 @@ describe("ProjectStorageBoundary", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByRole("button", { name: "Editor action" })).toBeTruthy();
   });
+
+  it("does not block authoring for a save error after the folder is ready", () => {
+    useProjectStorageStore.setState({
+      phase: "ready",
+      directory: "/shows",
+      error: "temporary save failure",
+    });
+
+    render(
+      <ProjectStorageBoundary>
+        <button>Editor action</button>
+      </ProjectStorageBoundary>,
+    );
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("button", { name: "Editor action" })).toBeTruthy();
+  });
 });
