@@ -6,11 +6,14 @@ import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
 import {
   addAutomationKeyframe,
   addAutomationLane,
+  automationOptionsForClip,
   automationOptions,
   cueTrackVisualLayout,
   deleteCueClip,
+  ensureAutomationAtTick,
   moveAutomationKeyframes,
   moveCueClip,
+  resolveAutomationOption,
   resizeCueClip,
   updateAutomationKeyframe,
   visibleCueClips,
@@ -100,6 +103,7 @@ describe("Arrangement timeline model", () => {
 
   it("resolves typed global and CueLayer parameters and removes dependent lanes with a clip", () => {
     const effect = createEffectAsset(bundle, "Pulse");
+    effect.parameters[0].override_policy = "cue_override";
     bundle.effects.push(effect);
     const cue = createCueAsset(bundle, [{ id: effect.id, revision: effect.revision }], "Cue A");
     cue.id = "cue-a";
@@ -114,8 +118,9 @@ describe("Arrangement timeline model", () => {
     expect(arrangement.tracks[0].automation_lanes?.some((lane) => lane.id === laneId)).toBe(false);
   });
 
-  it.fails("presents a single-layer automation target without its raw layer ID", () => {
+  it("presents a single-layer automation target without its raw layer ID", () => {
     const effect = createEffectAsset(bundle, "Pulse");
+    effect.parameters[0].override_policy = "cue_override";
     bundle.effects.push(effect);
     const cue = createCueAsset(bundle, [{ id: effect.id, revision: effect.revision }], "Cue A");
     cue.id = "cue-a";
@@ -126,6 +131,78 @@ describe("Arrangement timeline model", () => {
     )!;
 
     expect(option.label).toBe(`${cue.name} · ${option.definition.name}`);
+    const target = structuredClone(option.target);
+    cue.name = "Renamed Cue A";
+    const resolved = resolveAutomationOption(bundle, arrangement, target)!;
+    expect(resolved.label).toBe(`Renamed Cue A · ${option.definition.name}`);
+    expect(resolved.target).toEqual(target);
+  });
+
+  it("filters disabled, effect-only, and locked CueLayer parameters", () => {
+    const effect = createEffectAsset(bundle, "Filtered Pulse");
+    effect.parameters[0].override_policy = "cue_override";
+    effect.parameters[1].override_policy = "cue_override";
+    effect.parameters[1].automation = "disabled";
+    effect.parameters[2].override_policy = "effect_only";
+    effect.parameters[3].override_policy = "locked";
+    bundle.effects.push(effect);
+    const cue = createCueAsset(bundle, [effect], "Filtered Cue");
+    cue.id = "cue-a";
+    bundle.cues.push(cue);
+
+    const options = automationOptionsForClip(bundle, arrangement, "clip-a");
+
+    expect(options.map((option) => option.definition.id)).toEqual([effect.parameters[0].id]);
+  });
+
+  it("creates or locates one typed lane at the exact context tick without duplicates", () => {
+    const effect = createEffectAsset(bundle, "Context Pulse");
+    const definition = effect.parameters[0];
+    definition.override_policy = "cue_override";
+    bundle.effects.push(effect);
+    const cue = createCueAsset(bundle, [effect], "Context Cue");
+    cue.id = "cue-a";
+    cue.automation_lanes = [
+      {
+        id: "cue-speed",
+        target: { layer_id: cue.layers[0].id, parameter_id: definition.id },
+        keyframes: [
+          {
+            id: "cue-start",
+            time_tick: 0,
+            value: { type: "scalar", value: 0.25 },
+            interpolation: "linear",
+          },
+          {
+            id: "cue-end",
+            time_tick: 960,
+            value: { type: "scalar", value: 0.75 },
+            interpolation: "linear",
+          },
+        ],
+      },
+    ];
+    bundle.cues.push(cue);
+    const option = automationOptionsForClip(bundle, arrangement, "clip-a")[0];
+
+    const created = ensureAutomationAtTick(bundle, arrangement, "cues", option, 1_440);
+    const lane = arrangement.tracks[0].automation_lanes?.[0]!;
+    expect(lane.keyframes).toEqual([
+      expect.objectContaining({
+        id: created.keyframeId,
+        time_tick: 1_440,
+        value: { type: "scalar", value: 0.5 },
+      }),
+    ]);
+
+    const located = ensureAutomationAtTick(bundle, arrangement, "cues", option, 1_440);
+    expect(located).toEqual(created);
+    expect(arrangement.tracks[0].automation_lanes).toHaveLength(1);
+    expect(lane.keyframes).toHaveLength(1);
+
+    const appended = ensureAutomationAtTick(bundle, arrangement, "cues", option, 1_920);
+    expect(appended.laneId).toBe(created.laneId);
+    expect(lane.keyframes).toHaveLength(2);
   });
 
   it("adds, moves, and edits a typed automation curve without duplicate ticks", () => {

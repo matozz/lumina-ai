@@ -87,13 +87,16 @@ export function ArrangementTimeline() {
   const {
     cancelGestureOrClearSelection,
     clearSelection,
+    clipboardKind,
     copySelection,
     deleteItems,
     diagnostic,
     duplicateItems,
+    ensureAutomation,
     moveItems,
     pasteSelection,
     resizeItems,
+    revealRequest,
     runCommand,
     selectAll,
     selectItem,
@@ -104,6 +107,7 @@ export function ArrangementTimeline() {
   } = useArrangementTimelineEditing({
     anchorTick: playheadTick,
     arrangement,
+    bundle,
     reference,
     snapTicks: geometry.snapTicks,
   });
@@ -141,7 +145,7 @@ export function ArrangementTimeline() {
 
   if (!arrangement) return null;
 
-  const placeSelectedCue = () => {
+  const placeSelectedCue = (requestedTick?: number) => {
     const cue = selectedCue;
     const cueRef = cue ? { id: cue.id, revision: cue.revision } : null;
     if (!cue || !cueRef) {
@@ -154,7 +158,8 @@ export function ArrangementTimeline() {
       return;
     }
     const durationTick = Math.min(arrangement.length_ticks, cue.nominal_length_ticks);
-    const cursorTick = useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick ?? 0;
+    const cursorTick =
+      requestedTick ?? useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick ?? 0;
     const startTick = Math.min(arrangement.length_ticks - durationTick, cursorTick);
     const placed = runCommand(
       `Place Cue ${cue.name}`,
@@ -336,12 +341,21 @@ export function ArrangementTimeline() {
                   <ArrangementTrackRows
                     arrangement={arrangement}
                     bundle={bundle}
+                    canPlaceCue={Boolean(selectedCue)}
+                    clipboardKind={clipboardKind}
                     geometry={geometry}
                     onCancelReady={setGestureCancel}
+                    onCopyItems={copySelection}
+                    onDeleteItems={deleteItems}
+                    onDuplicateItems={duplicateItems}
+                    onEnsureAutomation={ensureAutomation}
                     runCommand={runCommand}
+                    revealRequest={revealRequest}
                     selection={selection}
                     viewport={viewport}
                     viewportRef={scrollRef}
+                    onPasteAt={pasteSelection}
+                    onPlaceCueAt={placeSelectedCue}
                     onMoveItems={moveItems}
                     onResizeItems={resizeItems}
                     onSelectItem={(item, modifiers) => {

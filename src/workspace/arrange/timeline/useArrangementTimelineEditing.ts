@@ -18,11 +18,17 @@ import {
   arrangementSelectionFromItems,
   type ArrangementSelectionItem,
 } from "./arrangementSelection";
+import {
+  ensureAutomationAtTick,
+  findAutomationLaneByTarget,
+  type ArrangementAutomationOption,
+} from "./arrangementTimelineModel";
 import { useArrangementSelection } from "./useArrangementSelection";
 
 interface ArrangementTimelineEditingOptions {
   anchorTick: () => number;
   arrangement: ArrangementDocument | undefined;
+  bundle: ProjectBundle;
   reference: AssetRef;
   snapTicks: number;
 }
@@ -30,10 +36,18 @@ interface ArrangementTimelineEditingOptions {
 export function useArrangementTimelineEditing({
   anchorTick,
   arrangement,
+  bundle,
   reference,
   snapTicks,
 }: ArrangementTimelineEditingOptions) {
   const [diagnostic, setDiagnostic] = useState<AuthoringDiagnostic | null>(null);
+  const [clipboardKind, setClipboardKind] = useState<"clips" | "keyframes" | "mixed" | null>(null);
+  const [revealRequest, setRevealRequest] = useState<{
+    keyframeId: string;
+    laneId: string;
+    nonce: number;
+  } | null>(null);
+  const revealNonceRef = useRef(0);
   const clipboardRef = useRef<ArrangementClipboardPayload | null>(null);
   const gestureCancelRef = useRef<(() => void) | null>(null);
   const { clearSelection, selectItem, selection, setSelection } =
@@ -113,28 +127,105 @@ export function useArrangementTimelineEditing({
     [arrangement, runCommand, setSelection, snapTicks],
   );
 
-  const copySelection = useCallback(() => {
-    if (!arrangement || selection.items.length === 0) return;
-    try {
-      clipboardRef.current = copyArrangementSelection(arrangement, selection);
-      setDiagnostic(null);
-    } catch (error) {
-      setDiagnostic(authoringDiagnostic(error, "arrangement.selection.copy"));
-    }
-  }, [arrangement, selection]);
+  const copySelection = useCallback(
+    (items: ArrangementSelectionItem[] = selection.items) => {
+      if (!arrangement || items.length === 0) return;
+      try {
+        const payload = copyArrangementSelection(arrangement, arrangementSelectionFromItems(items));
+        clipboardRef.current = payload;
+        setClipboardKind(
+          payload.clips.length > 0 && payload.keyframes.length > 0
+            ? "mixed"
+            : payload.clips.length > 0
+              ? "clips"
+              : "keyframes",
+        );
+        setDiagnostic(null);
+      } catch (error) {
+        setDiagnostic(authoringDiagnostic(error, "arrangement.selection.copy"));
+      }
+    },
+    [arrangement, selection.items],
+  );
 
-  const pasteSelection = useCallback(() => {
-    const payload = clipboardRef.current;
-    if (!arrangement || !payload) return;
-    let nextSelection = arrangementSelectionFromItems([]);
-    if (
-      runCommand("Paste timeline selection", "arrangement.selection.paste", (draft) => {
-        nextSelection = pasteArrangementSelection(draft, payload, anchorTick());
-      })
-    ) {
-      setSelection(nextSelection);
-    }
-  }, [anchorTick, arrangement, runCommand, setSelection]);
+  const pasteSelection = useCallback(
+    (requestedAnchorTick?: number) => {
+      const payload = clipboardRef.current;
+      if (!arrangement || !payload) return;
+      let nextSelection = arrangementSelectionFromItems([]);
+      if (
+        runCommand("Paste timeline selection", "arrangement.selection.paste", (draft) => {
+          nextSelection = pasteArrangementSelection(
+            draft,
+            payload,
+            requestedAnchorTick ?? anchorTick(),
+          );
+        })
+      ) {
+        setSelection(nextSelection);
+      }
+    },
+    [anchorTick, arrangement, runCommand, setSelection],
+  );
+
+  const ensureAutomation = useCallback(
+    (trackId: string, option: ArrangementAutomationOption, timeTick: number) => {
+      if (!arrangement) return;
+      const tick = Math.min(arrangement.length_ticks - 1, Math.max(0, Math.floor(timeTick)));
+      const current = findAutomationLaneByTarget(arrangement, option.target);
+      const currentKeyframe = current?.lane.keyframes.find(
+        (keyframe) => keyframe.time_tick === tick,
+      );
+      if (current && currentKeyframe) {
+        setDiagnostic(null);
+        setSelection(
+          arrangementSelectionFromItems([
+            {
+              type: "keyframe",
+              trackId: current.track.id,
+              laneId: current.lane.id,
+              keyframeId: currentKeyframe.id,
+            },
+          ]),
+        );
+        setRevealRequest({
+          laneId: current.lane.id,
+          keyframeId: currentKeyframe.id,
+          nonce: ++revealNonceRef.current,
+        });
+        return;
+      }
+      let target: ReturnType<typeof ensureAutomationAtTick> | null = null;
+      if (
+        runCommand(
+          "Create or reveal typed automation",
+          "arrangement.automation.context",
+          (draft) => {
+            target = ensureAutomationAtTick(bundle, draft, trackId, option, timeTick);
+          },
+        ) &&
+        target
+      ) {
+        const resolved = target as ReturnType<typeof ensureAutomationAtTick>;
+        setSelection(
+          arrangementSelectionFromItems([
+            {
+              type: "keyframe",
+              trackId: resolved.trackId,
+              laneId: resolved.laneId,
+              keyframeId: resolved.keyframeId,
+            },
+          ]),
+        );
+        setRevealRequest({
+          laneId: resolved.laneId,
+          keyframeId: resolved.keyframeId,
+          nonce: ++revealNonceRef.current,
+        });
+      }
+    },
+    [arrangement, bundle, runCommand, setSelection],
+  );
 
   const selectAll = useCallback(() => {
     if (arrangement) setSelection(arrangementSelectionFromItems(allArrangementItems(arrangement)));
@@ -152,13 +243,16 @@ export function useArrangementTimelineEditing({
   return {
     cancelGestureOrClearSelection,
     clearSelection,
+    clipboardKind,
     copySelection,
     deleteItems,
     diagnostic,
     duplicateItems,
+    ensureAutomation,
     moveItems,
     pasteSelection,
     resizeItems,
+    revealRequest,
     runCommand,
     selectAll,
     selectItem,

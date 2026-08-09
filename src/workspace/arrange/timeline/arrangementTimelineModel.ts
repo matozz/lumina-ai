@@ -10,6 +10,7 @@ import type {
   ProjectBundle,
 } from "@/bridge/types";
 import { exactAsset } from "@/document/projectModel";
+import { arrangementAutomationDisplayLabel, cueLayerPresentation } from "./automationPresentation";
 
 export class ArrangementTimelineError extends Error {
   constructor(
@@ -26,6 +27,8 @@ export interface ArrangementAutomationOption {
   definition: ParameterDefinitionDSL;
   initialValue: ParameterValueDSL;
   label: string;
+  layerCount?: number;
+  layerLabel?: string;
   target: ArrangementAutomationTarget;
 }
 
@@ -229,30 +232,56 @@ export function automationOptions(
     for (const clip of track.clips ?? []) {
       const cue = exactAsset(bundle.cues, clip.cue_ref);
       if (!cue) continue;
-      for (const layer of cue.layers) {
-        const effect = exactAsset(bundle.effects, layer.effect_ref);
-        if (!effect) continue;
-        for (const definition of effect.parameters) {
-          const target = {
-            scope: "cue_layer" as const,
-            clip_id: clip.id,
-            layer_id: layer.id,
-            parameter_id: definition.id,
-          };
-          if (existing.has(automationTargetKey(target))) continue;
-          options.push({
-            target,
-            definition,
-            initialValue: structuredClone(
-              layer.parameter_overrides?.[definition.id] ?? definition.default_value,
-            ),
-            label: `${cue.name} · ${layer.id} · ${definition.name}`,
-          });
-        }
+      for (const option of automationOptionsForClip(bundle, arrangement, clip.id)) {
+        if (!existing.has(automationTargetKey(option.target))) options.push(option);
       }
     }
   }
   return options.sort((left, right) => left.label.localeCompare(right.label));
+}
+
+export function automationOptionsForClip(
+  bundle: ProjectBundle,
+  arrangement: ArrangementDocument,
+  clipId: string,
+) {
+  const clip = arrangement.tracks
+    .flatMap((track) => track.clips ?? [])
+    .find((candidate) => candidate.id === clipId);
+  const cue = clip ? exactAsset(bundle.cues, clip.cue_ref) : undefined;
+  if (!clip || !cue) return [];
+  const options: ArrangementAutomationOption[] = [];
+  for (const layer of cue.layers) {
+    const effect = exactAsset(bundle.effects, layer.effect_ref);
+    if (!effect) continue;
+    const presentation = cueLayerPresentation(bundle, cue, layer.id);
+    for (const definition of effect.parameters) {
+      if (!isArrangementAutomatable(definition)) continue;
+      const target = {
+        scope: "cue_layer" as const,
+        clip_id: clip.id,
+        layer_id: layer.id,
+        parameter_id: definition.id,
+      };
+      const clipOverride = clip.layer_overrides?.find((override) => override.layer_id === layer.id)
+        ?.parameter_overrides?.[definition.id];
+      options.push({
+        target,
+        definition,
+        initialValue: structuredClone(
+          clipOverride ?? layer.parameter_overrides?.[definition.id] ?? definition.default_value,
+        ),
+        label: arrangementAutomationDisplayLabel(bundle, cue, layer.id, definition.name),
+        layerCount: cue.layers.length,
+        layerLabel: presentation?.layerLabel,
+      });
+    }
+  }
+  return options.sort((left, right) => left.label.localeCompare(right.label));
+}
+
+export function isArrangementAutomatable(definition: ParameterDefinitionDSL) {
+  return definition.automation !== "disabled" && definition.override_policy === "cue_override";
 }
 
 export function resolveAutomationOption(
@@ -284,7 +313,9 @@ export function resolveAutomationOption(
     initialValue: structuredClone(
       layer.parameter_overrides?.[definition.id] ?? definition.default_value,
     ),
-    label: `${cue.name} · ${layer.id} · ${definition.name}`,
+    label: arrangementAutomationDisplayLabel(bundle, cue, layer.id, definition.name),
+    layerCount: cue.layers.length,
+    layerLabel: cueLayerPresentation(bundle, cue, layer.id)?.layerLabel,
   };
 }
 
@@ -315,15 +346,14 @@ export function addAutomationLane(
       "Edit the existing lane or select a different parameter.",
     );
   }
-  if (arrangement.length_ticks < 2) {
+  if (arrangement.length_ticks < 1) {
     throw timelineError(
       "ARRANGEMENT_AUTOMATION_RANGE_INVALID",
-      "Arrangement is too short for a two-keyframe automation lane.",
-      "Increase Arrangement length to at least two ticks.",
+      "Arrangement is too short for an automation lane.",
+      "Increase Arrangement length to at least one tick.",
     );
   }
-  const firstTick = Math.min(arrangement.length_ticks - 2, Math.max(0, Math.floor(startTick)));
-  const lastTick = Math.min(arrangement.length_ticks - 1, firstTick + arrangement.ppq * 4);
+  const firstTick = Math.min(arrangement.length_ticks - 1, Math.max(0, Math.floor(startTick)));
   track.automation_lanes ??= [];
   const lane: ArrangementAutomationLane = {
     id: uniqueId(
@@ -338,18 +368,133 @@ export function addAutomationLane(
         value: structuredClone(option.initialValue),
         interpolation: option.definition.automation === "discrete" ? "hold" : "linear",
       },
-      {
-        id: "end",
-        time_tick: lastTick,
-        value: structuredClone(option.initialValue),
-        interpolation: "hold",
-      },
     ],
   };
   lane.keyframes[0].id = uniqueId(`${lane.id}-keyframe`, lane.keyframes);
-  lane.keyframes[1].id = uniqueId(`${lane.id}-keyframe`, lane.keyframes);
   track.automation_lanes.push(lane);
   return lane.id;
+}
+
+export function findAutomationLaneByTarget(
+  arrangement: ArrangementDocument,
+  target: ArrangementAutomationTarget,
+) {
+  for (const track of arrangement.tracks) {
+    const lane = track.automation_lanes?.find(
+      (candidate) => automationTargetKey(candidate.target) === automationTargetKey(target),
+    );
+    if (lane) return { lane, track };
+  }
+  return undefined;
+}
+
+export function ensureAutomationAtTick(
+  bundle: ProjectBundle,
+  arrangement: ArrangementDocument,
+  preferredTrackId: string,
+  option: ArrangementAutomationOption,
+  timeTick: number,
+) {
+  const tick = Math.min(arrangement.length_ticks - 1, Math.max(0, Math.floor(timeTick)));
+  let resolved = findAutomationLaneByTarget(arrangement, option.target);
+  if (!resolved) {
+    const contextualOption = {
+      ...option,
+      initialValue: effectiveAutomationValueAtTick(bundle, arrangement, option, tick),
+    };
+    const laneId = addAutomationLane(arrangement, preferredTrackId, contextualOption, tick);
+    resolved = findAutomationLaneByTarget(arrangement, option.target);
+    if (!resolved)
+      throw timelineError("ARRANGEMENT_AUTOMATION_MISSING", laneId, "Retry the action.");
+  }
+  const existing = resolved.lane.keyframes.find((keyframe) => keyframe.time_tick === tick);
+  if (existing) {
+    return { trackId: resolved.track.id, laneId: resolved.lane.id, keyframeId: existing.id };
+  }
+  const value = effectiveAutomationValueAtTick(bundle, arrangement, option, tick);
+  addAutomationKeyframe(
+    arrangement,
+    resolved.track.id,
+    resolved.lane.id,
+    tick,
+    value,
+    option.definition.automation === "discrete" ? "hold" : "linear",
+  );
+  const keyframe = resolved.lane.keyframes.find((candidate) => candidate.time_tick === tick)!;
+  return { trackId: resolved.track.id, laneId: resolved.lane.id, keyframeId: keyframe.id };
+}
+
+export function effectiveAutomationValueAtTick(
+  bundle: ProjectBundle,
+  arrangement: ArrangementDocument,
+  option: ArrangementAutomationOption,
+  timeTick: number,
+) {
+  const arrangementLane = findAutomationLaneByTarget(arrangement, option.target)?.lane;
+  if (arrangementLane) {
+    return valueAtTick(arrangementLane.keyframes, timeTick, option.initialValue);
+  }
+  if (option.target.scope !== "cue_layer") return structuredClone(option.initialValue);
+  const target = option.target;
+  const clip = arrangement.tracks
+    .flatMap((track) => track.clips ?? [])
+    .find((candidate) => candidate.id === target.clip_id);
+  const cue = clip ? exactAsset(bundle.cues, clip.cue_ref) : undefined;
+  const cueLane = cue?.automation_lanes?.find(
+    (lane) =>
+      lane.target.layer_id === target.layer_id && lane.target.parameter_id === target.parameter_id,
+  );
+  if (!clip || !cue || !cueLane) return structuredClone(option.initialValue);
+  const elapsed = Math.max(0, timeTick - clip.start_tick + (clip.source_offset_tick ?? 0));
+  const localTick =
+    clip.playback === "loop" && cue.nominal_length_ticks > 0
+      ? elapsed % cue.nominal_length_ticks
+      : Math.min(Math.max(0, cue.nominal_length_ticks - 1), elapsed);
+  return valueAtTick(cueLane.keyframes, localTick, option.initialValue);
+}
+
+export function automationLaneValueAtTick(
+  lane: ArrangementAutomationLane,
+  timeTick: number,
+  fallback: ParameterValueDSL,
+) {
+  return valueAtTick(lane.keyframes, timeTick, fallback);
+}
+
+function valueAtTick(
+  keyframes: KeyframeDSL[],
+  timeTick: number,
+  fallback: ParameterValueDSL,
+): ParameterValueDSL {
+  const ordered = [...keyframes].sort((left, right) => left.time_tick - right.time_tick);
+  if (ordered.length === 0) return structuredClone(fallback);
+  const nextIndex = ordered.findIndex((keyframe) => keyframe.time_tick >= timeTick);
+  if (nextIndex <= 0) {
+    return structuredClone(nextIndex === 0 ? ordered[0].value : ordered[ordered.length - 1].value);
+  }
+  const next = ordered[nextIndex];
+  if (next.time_tick === timeTick) return structuredClone(next.value);
+  const previous = ordered[nextIndex - 1];
+  if (
+    previous.interpolation === "hold" ||
+    previous.value.type !== "scalar" ||
+    next.value.type !== "scalar"
+  ) {
+    return structuredClone(previous.value);
+  }
+  const linear = (timeTick - previous.time_tick) / (next.time_tick - previous.time_tick);
+  const progress = interpolationProgress(previous.interpolation, linear);
+  return {
+    type: "scalar",
+    value: previous.value.value + (next.value.value - previous.value.value) * progress,
+  };
+}
+
+function interpolationProgress(interpolation: KeyframeInterpolationDSL, progress: number) {
+  if (interpolation === "ease_in") return progress * progress;
+  if (interpolation === "ease_out") return 1 - (1 - progress) * (1 - progress);
+  if (interpolation === "ease_in_out") return progress * progress * (3 - 2 * progress);
+  return progress;
 }
 
 export function addAutomationKeyframe(

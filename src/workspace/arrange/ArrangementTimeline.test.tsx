@@ -9,7 +9,11 @@ import { assetKey, createCueAsset, createEffectAsset, exactAsset } from "@/docum
 import { productionCatalogActions } from "@/stores/productionCatalog";
 import { projectActions, useProjectStore } from "@/stores/project";
 import { useWorkspaceStore, workspaceActions } from "@/stores/workspace";
-import { addAutomationLane, automationOptions } from "./timeline/arrangementTimelineModel";
+import {
+  addAutomationKeyframe,
+  addAutomationLane,
+  automationOptions,
+} from "./timeline/arrangementTimelineModel";
 import { ArrangementTimeline } from "./ArrangementTimeline";
 
 describe("ArrangementTimeline workflow", () => {
@@ -339,7 +343,7 @@ describe("ArrangementTimeline workflow", () => {
       expect(container.querySelectorAll('[data-clip-id][aria-pressed="true"]')).toHaveLength(2);
       expect(
         container.querySelectorAll('button[aria-label*="keyframe"][aria-pressed="true"]'),
-      ).toHaveLength(2);
+      ).toHaveLength(1);
     });
 
     fireEvent.keyDown(window, { key: "a", metaKey: true, shiftKey: true });
@@ -352,11 +356,15 @@ describe("ArrangementTimeline workflow", () => {
     const reference = useProjectStore.getState().selectedArrangementRef;
     projectActions.updateArrangement(reference, "Seed typed automation", (arrangement) => {
       const bundle = useProjectStore.getState().bundle;
-      addAutomationLane(
+      const option = automationOptions(bundle, arrangement)[0];
+      const laneId = addAutomationLane(arrangement, arrangement.tracks[0].id, option, 0);
+      addAutomationKeyframe(
         arrangement,
         arrangement.tracks[0].id,
-        automationOptions(bundle, arrangement)[0],
-        0,
+        laneId,
+        3_840,
+        option.initialValue,
+        "hold",
       );
     });
     const historyBefore = useProjectStore.getState().historyCursor;
@@ -382,5 +390,172 @@ describe("ArrangementTimeline workflow", () => {
     expect(
       screen.getByRole("button", { name: "Master dimmer keyframe at tick 1920" }),
     ).toBeTruthy();
+  });
+
+  it("creates and reveals legal typed automation from the CueClip context tick", async () => {
+    const originalEffectRef = projectActions.createEffect("Context Effect")!;
+    projectActions.updateEffect(originalEffectRef, "Expose one context parameter", (effect) => {
+      effect.parameters.forEach((parameter, index) => {
+        parameter.override_policy = index === 0 ? "cue_override" : "effect_only";
+      });
+      effect.parameters[1].automation = "disabled";
+    });
+    const effectRef = useProjectStore.getState().selectedEffectRef!;
+    const cueRef = projectActions.createCue([effectRef], "Context Cue")!;
+    const reference = useProjectStore.getState().selectedArrangementRef;
+    projectActions.updateArrangement(reference, "Seed context automation clip", (arrangement) => {
+      arrangement.tracks[0].clips = [
+        { id: "context-clip", cue_ref: cueRef, start_tick: 0, duration_tick: 7_680 },
+      ];
+      arrangement.tracks[0].automation_lanes = [];
+    });
+    const historyBefore = useProjectStore.getState().historyCursor;
+    const { container } = render(<ArrangementTimeline />);
+    const scroll = container.querySelector<HTMLElement>("[data-arrangement-timeline-scroll]")!;
+    scroll.getBoundingClientRect = () =>
+      ({ left: 0, right: 800, top: 0, bottom: 500, width: 800, height: 500 }) as DOMRect;
+    const clip = screen.getByRole("button", { name: /Context Cue, starts at tick 0/ });
+    const sessionKey = authoringSessionKey(
+      "arrangement",
+      assetKey(useProjectStore.getState().selectedArrangementRef),
+    );
+
+    fireEvent.contextMenu(clip, { clientX: 72, clientY: 80 });
+    const addAutomation = await screen.findByRole("menuitem", { name: "Add automation" });
+    fireEvent.keyDown(addAutomation, { key: "ArrowRight" });
+    const speed = await screen.findByRole("menuitem", { name: /Speed.*scalar/ });
+    fireEvent.click(speed);
+
+    await waitFor(() => {
+      const state = useProjectStore.getState();
+      const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
+      expect(arrangement.tracks[0].automation_lanes).toHaveLength(1);
+      expect(arrangement.tracks[0].automation_lanes?.[0].keyframes).toEqual([
+        expect.objectContaining({ time_tick: 1_440 }),
+      ]);
+    });
+    expect(screen.queryByText("Phase")).toBeNull();
+    expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 1);
+    expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick).toBe(0);
+    expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("stopped");
+
+    scroll.scrollLeft = 0;
+    fireEvent.contextMenu(clip, { clientX: 72, clientY: 80 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Reveal existing automation" }));
+    await waitFor(() => expect(screen.getByText("Speed keyframe")).toBeTruthy());
+    expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 1);
+
+    scroll.scrollLeft = 0;
+    fireEvent.contextMenu(clip, { clientX: 96, clientY: 80 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Reveal existing automation" }));
+
+    await waitFor(() => {
+      const state = useProjectStore.getState();
+      const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
+      expect(arrangement.tracks[0].automation_lanes).toHaveLength(1);
+      expect(arrangement.tracks[0].automation_lanes?.[0].keyframes).toHaveLength(2);
+      expect(arrangement.tracks[0].automation_lanes?.[0].keyframes[1].time_tick).toBe(1_920);
+      expect(screen.getByText("Speed keyframe")).toBeTruthy();
+    });
+    expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 2);
+    expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick).toBe(0);
+    expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("stopped");
+  });
+
+  it("adds, edits, and changes interpolation from automation context menus", async () => {
+    const reference = useProjectStore.getState().selectedArrangementRef;
+    projectActions.updateArrangement(reference, "Seed automation context row", (arrangement) => {
+      const bundle = useProjectStore.getState().bundle;
+      addAutomationLane(
+        arrangement,
+        arrangement.tracks[0].id,
+        automationOptions(bundle, arrangement)[0],
+        0,
+      );
+    });
+    const historyBefore = useProjectStore.getState().historyCursor;
+    const { container } = render(<ArrangementTimeline />);
+    const scroll = container.querySelector<HTMLElement>("[data-arrangement-timeline-scroll]")!;
+    scroll.getBoundingClientRect = () =>
+      ({ left: 0, right: 800, top: 0, bottom: 500, width: 800, height: 500 }) as DOMRect;
+    const lane = screen.getByRole("group", { name: /Master dimmer automation lane/ });
+
+    fireEvent.contextMenu(lane, { clientX: 96, clientY: 120 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Add keyframe here" }));
+
+    await waitFor(() => {
+      const state = useProjectStore.getState();
+      const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
+      expect(arrangement.tracks[0].automation_lanes?.[0].keyframes).toHaveLength(2);
+      expect(arrangement.tracks[0].automation_lanes?.[0].keyframes[1].time_tick).toBe(1_920);
+    });
+    const keyframe = screen.getByRole("button", {
+      name: "Master dimmer keyframe at tick 1920",
+    });
+    fireEvent.contextMenu(keyframe, { clientX: 96, clientY: 120 });
+    const interpolation = await screen.findByRole("menuitem", { name: "Interpolation" });
+    fireEvent.keyDown(interpolation, { key: "ArrowRight" });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Hold" }));
+
+    await waitFor(() => {
+      const state = useProjectStore.getState();
+      const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
+      expect(arrangement.tracks[0].automation_lanes?.[0].keyframes[1].interpolation).toBe("hold");
+    });
+    fireEvent.contextMenu(keyframe, { clientX: 96, clientY: 120 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Edit value" }));
+    expect(await screen.findByText("Master dimmer keyframe")).toBeTruthy();
+    expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 2);
+  });
+
+  it("places from a blank-row context tick and copies from the CueClip menu", async () => {
+    const effectRef = projectActions.createEffect("Row Context Effect")!;
+    const cueRef = projectActions.createCue([effectRef], "Row Context Cue")!;
+    const reference = useProjectStore.getState().selectedArrangementRef;
+    projectActions.updateArrangement(reference, "Clear context row", (arrangement) => {
+      arrangement.tracks[0].clips = [];
+      arrangement.tracks[0].automation_lanes = [];
+    });
+    const historyBefore = useProjectStore.getState().historyCursor;
+    const { container } = render(<ArrangementTimeline />);
+    const scroll = container.querySelector<HTMLElement>("[data-arrangement-timeline-scroll]")!;
+    scroll.getBoundingClientRect = () =>
+      ({ left: 0, right: 800, top: 0, bottom: 500, width: 800, height: 500 }) as DOMRect;
+    const row = container.querySelector<HTMLElement>('[data-track-id="cues"]')!;
+
+    fireEvent.contextMenu(row, { clientX: 96, clientY: 80 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Place selected Cue here" }));
+
+    await waitFor(() => {
+      const state = useProjectStore.getState();
+      const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
+      expect(arrangement.tracks[0].clips).toEqual([
+        expect.objectContaining({ cue_ref: cueRef, start_tick: 1_920 }),
+      ]);
+    });
+    const clip = screen.getByRole("button", { name: /Row Context Cue, starts at tick 1920/ });
+    fireEvent.contextMenu(clip, { clientX: 96, clientY: 80 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: /^Copy/ }));
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await waitFor(() => {
+      expect(screen.queryByRole("menuitem", { name: /^Copy/ })).toBeNull();
+      expect(document.querySelector("[data-base-ui-inert]")).toBeNull();
+    });
+
+    fireEvent.keyDown(window, { key: "v", metaKey: true });
+
+    await waitFor(() => {
+      const state = useProjectStore.getState();
+      const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
+      expect(arrangement.tracks[0].clips).toHaveLength(2);
+      expect(arrangement.tracks[0].clips?.[1]).toMatchObject({ start_tick: 0 });
+    });
+    expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 2);
+    const sessionKey = authoringSessionKey(
+      "arrangement",
+      assetKey(useProjectStore.getState().selectedArrangementRef),
+    );
+    expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick).toBe(0);
+    expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("stopped");
   });
 });

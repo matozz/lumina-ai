@@ -4,6 +4,7 @@ import type { TimelineGeometry } from "@/panel/timelineGeometry";
 import type { TimelineViewport } from "@/panel/virtualization";
 import { ArrangementAutomationLane } from "./ArrangementAutomationLane";
 import { CueClipBlock } from "./CueClipBlock";
+import { CueClipContextMenu, CueRowContextMenu } from "./ArrangementTimelineContextMenu";
 import {
   addAutomationKeyframe,
   CUE_TRACK_PADDING,
@@ -11,6 +12,7 @@ import {
   cueTrackVisualLayout,
   deleteAutomationKeyframes,
   deleteAutomationLane,
+  automationOptionsForClip,
   resolveAutomationOption,
   updateAutomationKeyframe,
   visibleCueClips,
@@ -31,10 +33,23 @@ export type RunArrangementCommand = (
 interface ArrangementTrackRowsProps {
   arrangement: ArrangementDocument;
   bundle: ProjectBundle;
+  canPlaceCue: boolean;
+  clipboardKind: "clips" | "keyframes" | "mixed" | null;
   geometry: TimelineGeometry;
   onCancelReady: (cancel: (() => void) | null) => void;
+  onCopyItems: (items: ArrangementSelectionItem[]) => void;
+  onDeleteItems: (items: ArrangementSelectionItem[]) => void;
+  onDuplicateItems: (items: ArrangementSelectionItem[]) => void;
+  onEnsureAutomation: (
+    trackId: string,
+    option: ReturnType<typeof automationOptionsForClip>[number],
+    tick: number,
+  ) => void;
+  onPasteAt: (tick: number) => void;
+  onPlaceCueAt: (tick: number) => void;
   onSnapPreview: (tick: number | null) => void;
   runCommand: RunArrangementCommand;
+  revealRequest: { keyframeId: string; laneId: string; nonce: number } | null;
   selection: ArrangementTimelineSelection;
   onMoveItems: (items: ArrangementSelectionItem[], deltaTick: number) => void;
   onResizeItems: (items: ArrangementSelectionItem[], deltaTick: number) => void;
@@ -49,10 +64,19 @@ interface ArrangementTrackRowsProps {
 export function ArrangementTrackRows({
   arrangement,
   bundle,
+  canPlaceCue,
+  clipboardKind,
   geometry,
   onCancelReady,
+  onCopyItems,
+  onDeleteItems,
+  onDuplicateItems,
+  onEnsureAutomation,
+  onPasteAt,
+  onPlaceCueAt,
   onSnapPreview,
   runCommand,
+  revealRequest,
   selection,
   onMoveItems,
   onResizeItems,
@@ -65,59 +89,85 @@ export function ArrangementTrackRows({
     const layout = cueTrackVisualLayout(clips);
     return (
       <div key={track.id}>
-        <div
-          className="border-border relative border-b"
-          style={{ height: layout.height }}
-          data-cue-row-count={layout.rowCount}
-          data-track-id={track.id}
+        <CueRowContextMenu
+          arrangementLength={arrangement.length_ticks}
+          canPlaceCue={canPlaceCue}
+          clipboardKind={clipboardKind}
+          geometry={geometry}
+          onCancelReady={onCancelReady}
+          onPaste={onPasteAt}
+          onPlaceCue={onPlaceCueAt}
+          viewportRef={viewportRef}
         >
-          {visibleCueClips(
-            clips,
-            viewport.startBeat * arrangement.ppq,
-            viewport.endBeat * arrangement.ppq,
-          ).map((clip) => {
-            const selectionItem = { type: "clip" as const, trackId: track.id, clipId: clip.id };
-            const placement = layout.placements.get(clip.id) ?? {
-              row: 0,
-              semanticLayer: clip.layer ?? 0,
-              subrow: 0,
-            };
-            return (
-              <CueClipBlock
-                key={clip.id}
-                arrangementLength={arrangement.length_ticks}
-                clip={clip}
-                cueName={exactAsset(bundle.cues, clip.cue_ref)?.name ?? clip.cue_ref.id}
-                geometry={geometry}
-                onCancelReady={onCancelReady}
-                selected={arrangementSelectionHas(selection, selectionItem)}
-                top={CUE_TRACK_PADDING + placement.row * CUE_TRACK_ROW_PITCH}
-                visualRow={placement.row}
-                viewportRef={viewportRef}
-                onSelect={(modifiers) => {
-                  onSelectItem(selectionItem, modifiers);
-                }}
-                onSnapPreview={onSnapPreview}
-                onCommitMove={(startTick) =>
-                  onMoveItems(
-                    arrangementSelectionHas(selection, selectionItem)
-                      ? selection.items
-                      : [selectionItem],
-                    startTick - clip.start_tick,
-                  )
-                }
-                onCommitResize={(durationTick) =>
-                  onResizeItems(
-                    arrangementSelectionHas(selection, selectionItem)
-                      ? selection.items
-                      : [selectionItem],
-                    durationTick - clip.duration_tick,
-                  )
-                }
-              />
-            );
-          })}
-        </div>
+          <div
+            className="border-border relative border-b"
+            style={{ height: layout.height }}
+            data-cue-row-count={layout.rowCount}
+            data-track-id={track.id}
+          >
+            {visibleCueClips(
+              clips,
+              viewport.startBeat * arrangement.ppq,
+              viewport.endBeat * arrangement.ppq,
+            ).map((clip) => {
+              const selectionItem = { type: "clip" as const, trackId: track.id, clipId: clip.id };
+              const placement = layout.placements.get(clip.id) ?? {
+                row: 0,
+                semanticLayer: clip.layer ?? 0,
+                subrow: 0,
+              };
+              const selected = arrangementSelectionHas(selection, selectionItem);
+              const contextItems = selected ? selection.items : [selectionItem];
+              return (
+                <CueClipContextMenu
+                  key={clip.id}
+                  arrangementLength={arrangement.length_ticks}
+                  arrangement={arrangement}
+                  geometry={geometry}
+                  onCancelReady={onCancelReady}
+                  onAutomation={(option, tick) => onEnsureAutomation(track.id, option, tick)}
+                  onContext={() => {
+                    if (!selected) onSelectItem(selectionItem, { additive: false, toggle: false });
+                  }}
+                  onCopy={() => onCopyItems(contextItems)}
+                  onDelete={() => onDeleteItems(contextItems)}
+                  onDuplicate={() => onDuplicateItems(contextItems)}
+                  options={automationOptionsForClip(bundle, arrangement, clip.id)}
+                  stopPropagation
+                  viewportRef={viewportRef}
+                >
+                  <CueClipBlock
+                    clip={clip}
+                    cueName={exactAsset(bundle.cues, clip.cue_ref)?.name ?? clip.cue_ref.id}
+                    geometry={geometry}
+                    selected={selected}
+                    top={CUE_TRACK_PADDING + placement.row * CUE_TRACK_ROW_PITCH}
+                    visualRow={placement.row}
+                    viewportRef={viewportRef}
+                    arrangementLength={arrangement.length_ticks}
+                    onCancelReady={onCancelReady}
+                    onSelect={(modifiers) => {
+                      onSelectItem(selectionItem, modifiers);
+                    }}
+                    onSnapPreview={onSnapPreview}
+                    onCommitMove={(startTick) =>
+                      onMoveItems(
+                        selected ? selection.items : [selectionItem],
+                        startTick - clip.start_tick,
+                      )
+                    }
+                    onCommitResize={(durationTick) =>
+                      onResizeItems(
+                        selected ? selection.items : [selectionItem],
+                        durationTick - clip.duration_tick,
+                      )
+                    }
+                  />
+                </CueClipContextMenu>
+              );
+            })}
+          </div>
+        </CueRowContextMenu>
         {track.automation_lanes?.map((lane) => {
           const option = resolveAutomationOption(bundle, arrangement, lane.target);
           if (!option) return null;
@@ -125,6 +175,7 @@ export function ArrangementTrackRows({
             <ArrangementAutomationLane
               key={lane.id}
               arrangement={arrangement}
+              clipboardKind={clipboardKind}
               definition={option.definition}
               geometry={geometry}
               lane={lane}
@@ -142,7 +193,10 @@ export function ArrangementTrackRows({
                     addAutomationKeyframe(draft, track.id, lane.id, tick, value, interpolation),
                 )
               }
+              onCopyItems={onCopyItems}
+              onDeleteItems={onDeleteItems}
               onMoveItems={onMoveItems}
+              onPasteAt={onPasteAt}
               onSelectKeyframe={(item: ArrangementKeyframeSelectionItem, modifiers) =>
                 onSelectItem(item, modifiers)
               }
@@ -165,6 +219,7 @@ export function ArrangementTrackRows({
                   deleteAutomationLane(draft, track.id, lane.id),
                 )
               }
+              revealRequest={revealRequest}
             />
           );
         })}

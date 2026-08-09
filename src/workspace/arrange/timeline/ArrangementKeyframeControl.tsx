@@ -60,6 +60,7 @@ export function ArrangementKeyframeControl({
             }}
             aria-label={`${definition.name} keyframe at tick ${keyframe.time_tick}`}
             aria-pressed={selected}
+            data-keyframe-id={keyframe.id}
             onPointerDown={onStartMove}
           />
         }
