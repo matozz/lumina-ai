@@ -7,10 +7,10 @@
   "nominal_length_ticks": 15360,
   "layers": [
     {
-      "id": "blackout-safe",
+      "id": "layer_4g5ln4crp3o5utvc",
       "effect_ref": {
         "id": "builtin.transition.blackout-safe",
-        "revision": 1
+        "revision": 2
       },
       "target": {
         "type": "all"

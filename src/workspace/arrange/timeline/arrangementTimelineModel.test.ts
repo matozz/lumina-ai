@@ -8,6 +8,7 @@ import {
   addAutomationLane,
   automationOptionsForClip,
   automationOptions,
+  automationLaneValueAtTick,
   cueTrackVisualLayout,
   deleteCueClip,
   ensureAutomationAtTick,
@@ -140,6 +141,9 @@ describe("Arrangement timeline model", () => {
 
   it("filters disabled, effect-only, and locked CueLayer parameters", () => {
     const effect = createEffectAsset(bundle, "Filtered Pulse");
+    effect.parameters.forEach((parameter) => {
+      parameter.override_policy = "effect_only";
+    });
     effect.parameters[0].override_policy = "cue_override";
     effect.parameters[1].override_policy = "cue_override";
     effect.parameters[1].automation = "disabled";
@@ -183,7 +187,9 @@ describe("Arrangement timeline model", () => {
       },
     ];
     bundle.cues.push(cue);
-    const option = automationOptionsForClip(bundle, arrangement, "clip-a")[0];
+    const option = automationOptionsForClip(bundle, arrangement, "clip-a").find(
+      (candidate) => candidate.definition.id === definition.id,
+    )!;
 
     const created = ensureAutomationAtTick(bundle, arrangement, "cues", option, 1_440);
     const lane = arrangement.tracks[0].automation_lanes?.[0]!;
@@ -231,6 +237,45 @@ describe("Arrangement timeline model", () => {
     expect(() => moveAutomationKeyframes(arrangement, "cues", laneId, [middle.id], -2_160)).toThrow(
       /collide/,
     );
+  });
+
+  it("evaluates Color in Lab and hold values through the exact boundary tick", () => {
+    const lane = {
+      id: "color-lane",
+      target: { scope: "global" as const, parameter_id: "master_dimmer" as const },
+      keyframes: [
+        {
+          id: "red",
+          time_tick: 0,
+          value: { type: "color" as const, value: "#FF0000" },
+          interpolation: "linear" as const,
+        },
+        {
+          id: "blue",
+          time_tick: 960,
+          value: { type: "color" as const, value: "#0000FF" },
+          interpolation: "hold" as const,
+        },
+        {
+          id: "green",
+          time_tick: 1_920,
+          value: { type: "color" as const, value: "#00FF00" },
+          interpolation: "hold" as const,
+        },
+      ],
+    };
+
+    expect(automationLaneValueAtTick(lane, 480, { type: "color", value: "#000000" })).toEqual(
+      expect.objectContaining({ type: "color", value: expect.not.stringMatching("#800080") }),
+    );
+    expect(automationLaneValueAtTick(lane, 1_919, { type: "color", value: "#000000" })).toEqual({
+      type: "color",
+      value: "#0000FF",
+    });
+    expect(automationLaneValueAtTick(lane, 1_920, { type: "color", value: "#000000" })).toEqual({
+      type: "color",
+      value: "#00FF00",
+    });
   });
 
   it("records a pointer-up style edit as one Project history transaction", () => {

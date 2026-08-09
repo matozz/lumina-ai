@@ -922,7 +922,8 @@ mod tests {
         builtin_production_catalog, resolve_cue_recipe, valid_bundle, AssetRef, CueRecipeRef,
         GridZone, TargetSetDefinition, TargetSetRef, TargetSetSelector,
     };
-    use crate::engine::profile::{AttributeValue, INTENSITY_ATTRIBUTE};
+    use crate::engine::color::lerp_color_lab;
+    use crate::engine::profile::{AttributeValue, COLOR_RGB_ATTRIBUTE, INTENSITY_ATTRIBUTE};
     use crate::engine::render::{render_at, RenderSource, RenderTime};
     use std::time::Instant;
 
@@ -1855,6 +1856,88 @@ mod tests {
             journey_timeline
                 .tempo_map
                 .micros_at(MusicalTime::from_ticks(9_600))
+        );
+    }
+
+    #[test]
+    fn arrangement_color_automation_uses_lab_and_writes_color_rgb() {
+        let mut bundle = valid_bundle();
+        bundle.effects[0].parameters.push(
+            serde_json::from_value(serde_json::json!({
+                "id": "color",
+                "name": "Color",
+                "value_type": "color",
+                "default_value": { "type": "color", "value": "#FFFFFF" },
+                "required": true,
+                "help": "Single-color output override.",
+                "safe_fallback": { "type": "color", "value": "#FFFFFF" },
+                "override_policy": "cue_override",
+                "advanced": false,
+                "unit": "color",
+                "ui_hint": "color",
+                "automation": "continuous"
+            }))
+            .expect("color parameter"),
+        );
+        bundle.effects[0]
+            .catalog
+            .required_attributes
+            .push(COLOR_RGB_ATTRIBUTE.to_string());
+        bundle.cues[0]
+            .capability_summary
+            .required_attributes
+            .push(COLOR_RGB_ATTRIBUTE.to_string());
+        bundle.arrangements[0].tracks[0].automation_lanes.push(
+            serde_json::from_value(serde_json::json!({
+                "id": "clip-color",
+                "target": {
+                    "scope": "cue_layer",
+                    "clip_id": "clip-1",
+                    "layer_id": "pulse-layer",
+                    "parameter_id": "color"
+                },
+                "keyframes": [
+                    {
+                        "id": "red",
+                        "time_tick": 0,
+                        "value": { "type": "color", "value": "#FF0000" },
+                        "interpolation": "linear"
+                    },
+                    {
+                        "id": "blue",
+                        "time_tick": 960,
+                        "value": { "type": "color", "value": "#0000FF" },
+                        "interpolation": "hold"
+                    }
+                ]
+            }))
+            .expect("Arrangement Color automation"),
+        );
+
+        let snapshot = Compiler::compile_active_project(
+            ValidatedProject::validate(bundle).expect("Color Project validates"),
+        )
+        .expect("Color Project compiles");
+        let rendered_color = |beat| {
+            let frame = render_at(&snapshot.show, RenderTime { beat }, RenderSource::Timeline);
+            let handle =
+                crate::engine::attribute::resolve_attribute(frame[0].profile, COLOR_RGB_ATTRIBUTE)
+                    .expect("color.rgb handle");
+            frame[0].value(handle).cloned()
+        };
+        let midpoint = lerp_color_lab((255, 0, 0), (0, 0, 255), 0.5);
+
+        assert_eq!(
+            rendered_color(0.0),
+            Some(AttributeValue::Color([255, 0, 0]))
+        );
+        assert_eq!(
+            rendered_color(0.5),
+            Some(AttributeValue::Color([midpoint.0, midpoint.1, midpoint.2]))
+        );
+        assert_eq!(
+            rendered_color(1.0),
+            Some(AttributeValue::Color([0, 0, 255]))
         );
     }
 

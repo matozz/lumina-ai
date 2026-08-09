@@ -524,12 +524,16 @@ pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<D
         if let Some((duplicate_id, duplicate_revision)) =
             signatures.insert(signature, (effect.id.clone(), effect.revision))
         {
-            diagnostics.push(output_diagnostic(
-                effect,
-                "sampled_output",
-                &format!("Sampled output duplicates {duplicate_id} revision {duplicate_revision}."),
-                "Make the Production Effect behavior observably distinct.",
-            ));
+            if duplicate_id != effect.id {
+                diagnostics.push(output_diagnostic(
+                    effect,
+                    "sampled_output",
+                    &format!(
+                        "Sampled output duplicates {duplicate_id} revision {duplicate_revision}."
+                    ),
+                    "Make the Production Effect behavior observably distinct.",
+                ));
+            }
         }
         for parameter in effect.parameters.iter().filter(|parameter| {
             matches!(

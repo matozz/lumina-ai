@@ -49,7 +49,7 @@ export function ArrangementKeyframeControl({
             size="icon-xs"
             variant="default"
             className={cn(
-              "border-primary-foreground/20 absolute z-10 size-4 touch-none rounded-full border shadow-sm will-change-transform",
+              "border-primary-foreground/20 absolute z-10 size-3 touch-none rounded-full border shadow-sm will-change-transform",
               !selected && "bg-primary/80 hover:bg-primary",
               selected && "ring-primary/40 ring-2",
             )}
@@ -57,10 +57,16 @@ export function ArrangementKeyframeControl({
               left: ticksToPixels(keyframe.time_tick, geometry),
               top: keyframeValueY(keyframe.value, definition, rowHeight, valueInset),
               transform: keyframeTransform(0),
+              backgroundColor: keyframe.value.type === "color" ? keyframe.value.value : undefined,
             }}
-            aria-label={`${definition.name} keyframe at tick ${keyframe.time_tick}`}
+            aria-label={`${definition.name} keyframe at tick ${keyframe.time_tick}${
+              keyframe.value.type === "color" ? `, ${keyframe.value.value.toUpperCase()}` : ""
+            }`}
             aria-pressed={selected}
             data-keyframe-id={keyframe.id}
+            data-keyframe-color={
+              keyframe.value.type === "color" ? keyframe.value.value.toUpperCase() : undefined
+            }
             onPointerDown={onStartMove}
           />
         }

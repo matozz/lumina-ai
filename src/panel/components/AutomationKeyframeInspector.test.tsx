@@ -61,7 +61,7 @@ describe("AutomationKeyframeInspector", () => {
     expect(screen.getByText("1.1.000 · 0:00.000")).toBeTruthy();
   });
 
-  it("uses native typed color and degree inputs", () => {
+  it("round-trips a native color picker and an explicit #RRGGBB value", () => {
     const color: ParameterDefinitionDSL = {
       id: "color",
       name: "Color",
@@ -71,8 +71,20 @@ describe("AutomationKeyframeInspector", () => {
       ui_hint: "color",
       automation: "continuous",
     };
-    renderInspector(color);
-    expect(screen.getByLabelText("Color")).toHaveProperty("type", "color");
+    const onApply = renderInspector(color);
+    expect(screen.getByLabelText("Color color picker")).toHaveProperty("type", "color");
+    expect(screen.getByLabelText("Color hex value")).toHaveProperty("value", "#FF0000");
+
+    fireEvent.change(screen.getByLabelText("Color hex value"), {
+      target: { value: "#12abef" },
+    });
+    expect(screen.getByLabelText("Color color picker")).toHaveProperty("value", "#12abef");
+    fireEvent.click(screen.getByRole("button", { name: /Apply/ }));
+    expect(onApply).toHaveBeenCalledWith({
+      time_tick: 0,
+      value: { type: "color", value: "#12ABEF" },
+      interpolation: "linear",
+    });
   });
 
   it("labels angle values in degrees", () => {

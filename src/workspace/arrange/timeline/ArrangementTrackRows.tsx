@@ -1,3 +1,4 @@
+import { useCallback, useRef } from "react";
 import type { ArrangementDocument, ProjectBundle } from "@/bridge/types";
 import { exactAsset } from "@/document/projectModel";
 import type { TimelineGeometry } from "@/panel/timelineGeometry";
@@ -23,6 +24,11 @@ import {
   type ArrangementSelectionItem,
   type ArrangementTimelineSelection,
 } from "./arrangementSelection";
+import {
+  emptyKeyframeProjectionIds,
+  keyframeLaneKey,
+  projectRegisteredKeyframeLanes,
+} from "./arrangementKeyframeProjection";
 
 export type RunArrangementCommand = (
   label: string,
@@ -84,6 +90,30 @@ export function ArrangementTrackRows({
   viewport,
   viewportRef,
 }: ArrangementTrackRowsProps) {
+  const projectionControllers = useRef(
+    new Map<string, (selectedIds: ReadonlySet<string>, deltaTick: number) => void>(),
+  );
+  const registerProjection = useCallback(
+    (
+      trackId: string,
+      laneId: string,
+      project: ((selectedIds: ReadonlySet<string>, deltaTick: number) => void) | null,
+    ) => {
+      const key = keyframeLaneKey(trackId, laneId);
+      if (project) projectionControllers.current.set(key, project);
+      else projectionControllers.current.delete(key);
+    },
+    [],
+  );
+  const previewItems = useCallback((items: ArrangementSelectionItem[], deltaTick: number) => {
+    projectRegisteredKeyframeLanes(projectionControllers.current, items, deltaTick);
+  }, []);
+  const resetProjection = useCallback(() => {
+    for (const project of projectionControllers.current.values()) {
+      project(emptyKeyframeProjectionIds(), 0);
+    }
+  }, []);
+
   return arrangement.tracks.map((track) => {
     const clips = track.clips ?? [];
     const layout = cueTrackVisualLayout(clips);
@@ -196,6 +226,9 @@ export function ArrangementTrackRows({
               onCopyItems={onCopyItems}
               onDeleteItems={onDeleteItems}
               onMoveItems={onMoveItems}
+              onPreviewItems={previewItems}
+              onRegisterProjection={registerProjection}
+              onResetProjection={resetProjection}
               onPasteAt={onPasteAt}
               onSelectKeyframe={(item: ArrangementKeyframeSelectionItem, modifiers) =>
                 onSelectItem(item, modifiers)

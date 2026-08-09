@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type {
   ArrangementAutomationLane as ArrangementAutomationLaneType,
@@ -9,11 +9,14 @@ import type {
   ParameterValueDSL,
 } from "@/bridge/types";
 import { Button } from "@/components/ui/button";
-import { AutomationCurveSegment } from "@/panel/components/AutomationCurveSegment";
+import {
+  AutomationCurveSegment,
+  updateAutomationCurveElement,
+} from "@/panel/components/AutomationCurveSegment";
 import {
   clampKeyframeDelta,
-  keyframeMoveBounds,
   keyframeTransform,
+  type KeyframeMoveBounds,
 } from "@/panel/keyframeGeometry";
 import {
   pointerDeltaWithScroll,
@@ -34,6 +37,7 @@ import {
   type ArrangementSelectionItem,
   type ArrangementTimelineSelection,
 } from "./arrangementSelection";
+import { keyframeSelectionMoveBounds } from "./arrangementKeyframeProjection";
 import {
   AUTOMATION_ROW_HEIGHT,
   AUTOMATION_VALUE_INSET,
@@ -53,6 +57,13 @@ interface ArrangementAutomationLaneProps {
   onDeleteKeyframes: (ids: string[]) => void;
   onDeleteLane: () => void;
   onMoveItems: (items: ArrangementSelectionItem[], deltaTick: number) => void;
+  onPreviewItems: (items: ArrangementSelectionItem[], deltaTick: number) => void;
+  onRegisterProjection: (
+    trackId: string,
+    laneId: string,
+    project: ((selectedIds: ReadonlySet<string>, deltaTick: number) => void) | null,
+  ) => void;
+  onResetProjection: () => void;
   onPasteAt: (tick: number) => void;
   onSelectKeyframe: (
     item: ArrangementKeyframeSelectionItem,
@@ -72,10 +83,9 @@ interface ArrangementAutomationLaneProps {
 
 interface KeyframeInteraction {
   anchorTick: number;
-  bounds: ReturnType<typeof keyframeMoveBounds>;
+  bounds: KeyframeMoveBounds;
   currentClientX: number;
   deltaTick: number;
-  ids: string[];
   items: ArrangementSelectionItem[];
   startClientX: number;
   startScrollLeft: number;
@@ -94,6 +104,9 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
   onDeleteKeyframes,
   onDeleteLane,
   onMoveItems,
+  onPreviewItems,
+  onRegisterProjection,
+  onResetProjection,
   onPasteAt,
   onSelectKeyframe,
   onSnapPreview,
@@ -106,6 +119,7 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
 }: ArrangementAutomationLaneProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const keyframeRefs = useRef(new Map<string, HTMLButtonElement>());
+  const curveRefs = useRef(new Map<string, SVGSVGElement>());
   const interactionRef = useRef<KeyframeInteraction | null>(null);
   const frameRef = useRef<number | null>(null);
   const [inspectorId, setInspectorId] = useState<string | null>(null);
@@ -124,6 +138,39 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
   const selectedKeyframeItems = selection.items.filter(
     (item): item is ArrangementKeyframeSelectionItem => item.type === "keyframe",
   );
+
+  const projectLane = useCallback(
+    (ids: ReadonlySet<string>, deltaTick: number) => {
+      const deltaPixels = ticksToPixels(deltaTick, geometry);
+      for (const [id, element] of keyframeRefs.current) {
+        element.style.transform = keyframeTransform(ids.has(id) ? deltaPixels : 0);
+      }
+      for (let index = 0; index < lane.keyframes.length - 1; index += 1) {
+        const start = lane.keyframes[index];
+        const end = lane.keyframes[index + 1];
+        const element = curveRefs.current.get(`${start.id}\u0000${end.id}`);
+        if (!element) continue;
+        updateAutomationCurveElement(
+          element,
+          start,
+          end,
+          definition,
+          arrangement.ppq,
+          geometry.beatWidth,
+          AUTOMATION_ROW_HEIGHT,
+          AUTOMATION_VALUE_INSET,
+          ids,
+          deltaTick,
+        );
+      }
+    },
+    [arrangement.ppq, definition, geometry, lane.keyframes],
+  );
+
+  useEffect(() => {
+    onRegisterProjection(trackId, lane.id, projectLane);
+    return () => onRegisterProjection(trackId, lane.id, null);
+  }, [lane.id, onRegisterProjection, projectLane, trackId]);
 
   const flushPreview = () => {
     frameRef.current = null;
@@ -145,11 +192,7 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
         arrangement.length_ticks - 1 - interaction.anchorTick,
       ),
     });
-    const transform = keyframeTransform(ticksToPixels(interaction.deltaTick, geometry));
-    for (const id of interaction.ids) {
-      const element = keyframeRefs.current.get(id);
-      if (element) element.style.transform = transform;
-    }
+    onPreviewItems(interaction.items, interaction.deltaTick);
     onSnapPreview(interaction.anchorTick + interaction.deltaTick);
   };
 
@@ -160,12 +203,7 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
     }
     const interaction = interactionRef.current;
     interactionRef.current = null;
-    if (interaction) {
-      for (const id of interaction.ids) {
-        const element = keyframeRefs.current.get(id);
-        if (element) element.style.transform = keyframeTransform(0);
-      }
-    }
+    if (interaction) onResetProjection();
     onSnapPreview(null);
     onCancelReady(null);
     if (commit && interaction?.deltaTick) {
@@ -246,7 +284,7 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
     >
       <div
         ref={rowRef}
-        className="border-border/60 group/lane relative h-10 border-b focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+        className="border-border/60 group/lane relative h-8 border-b focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
         role="group"
         tabIndex={0}
         aria-label={`${definition.name} automation lane with ${lane.keyframes.length} keyframes`}
@@ -272,6 +310,11 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
           return (
             <AutomationCurveSegment
               key={`${keyframe.id}:${lane.keyframes[index + 1].id}`}
+              ref={(element) => {
+                const segmentKey = `${keyframe.id}\u0000${lane.keyframes[index + 1].id}`;
+                if (element) curveRefs.current.set(segmentKey, element);
+                else curveRefs.current.delete(segmentKey);
+              }}
               start={keyframe}
               end={lane.keyframes[index + 1]}
               definition={definition}
@@ -348,21 +391,12 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
                   const gestureItems = gestureSelection.items.filter(
                     (candidate) => candidate.type === "keyframe",
                   );
-                  const laneIds = new Set(
-                    gestureItems
-                      .filter(
-                        (candidate) =>
-                          candidate.type === "keyframe" && candidate.laneId === lane.id,
-                      )
-                      .map((candidate) => candidate.keyframeId),
-                  );
                   event.currentTarget.setPointerCapture(event.pointerId);
                   interactionRef.current = {
                     anchorTick: keyframe.time_tick,
-                    bounds: keyframeMoveBounds(lane.keyframes, laneIds),
+                    bounds: keyframeSelectionMoveBounds(arrangement, gestureItems),
                     currentClientX: event.clientX,
                     deltaTick: 0,
-                    ids: [...laneIds],
                     items: gestureItems,
                     startClientX: event.clientX,
                     startScrollLeft: viewportRef.current?.scrollLeft ?? 0,

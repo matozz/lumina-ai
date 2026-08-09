@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { friendlyEffectAttribute } from "@/document/effectCompatibility";
-import { assetKey } from "@/document/projectModel";
+import { assetKey, latestRefsById } from "@/document/projectModel";
 import type { CueLayerUpdate } from "./cueAuthoring";
 import { CueOverrideControls } from "./CueOverrideControls";
 
@@ -47,10 +47,30 @@ export function CueLayerEditor({
   onDuplicate: () => void;
   advanced: boolean;
 }) {
-  const effectItems = effects.map((candidate) => ({
-    value: assetKey(candidate),
-    label: candidate.name,
-  }));
+  const latestEffectKeys = new Set(latestRefsById(effects).map(assetKey));
+  const selectedEffectKey = assetKey(layer.effect_ref);
+  const effectItems = effects
+    .filter(
+      (candidate) =>
+        latestEffectKeys.has(assetKey(candidate)) || assetKey(candidate) === selectedEffectKey,
+    )
+    .map((candidate) => {
+      const hasNewerRevision = effects.some(
+        (other) => other.id === candidate.id && other.revision > candidate.revision,
+      );
+      return {
+        value: assetKey(candidate),
+        label: `${candidate.name}${
+          hasNewerRevision
+            ? " · pinned"
+            : effects.some(
+                  (other) => other.id === candidate.id && other.revision < candidate.revision,
+                )
+              ? " · current"
+              : ""
+        }`,
+      };
+    });
   const targetItems = stage.target_sets.map((target) => ({ value: target.id, label: target.name }));
   const sceneItems = [
     { value: "__static__", label: "Stay on selected fixtures" },

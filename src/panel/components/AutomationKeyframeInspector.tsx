@@ -238,6 +238,33 @@ const TypedValueInput = ({ definition, id, invalid, onChange, value }: TypedValu
       </div>
     );
   }
+  if (definition.value_type === "color") {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`${id}-picker`}>{definition.name}</Label>
+        <div className="grid grid-cols-[3rem_1fr] gap-2">
+          <Input
+            id={`${id}-picker`}
+            type="color"
+            value={value}
+            aria-label={`${definition.name} color picker`}
+            aria-invalid={invalid}
+            onChange={(event) => onChange(event.target.value.toUpperCase())}
+          />
+          <Input
+            id={id}
+            type="text"
+            inputMode="text"
+            value={value.toUpperCase()}
+            aria-label={`${definition.name} hex value`}
+            aria-invalid={invalid}
+            pattern="#[0-9A-Fa-f]{6}"
+            onChange={(event) => onChange(event.target.value.toUpperCase())}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -246,7 +273,7 @@ const TypedValueInput = ({ definition, id, invalid, onChange, value }: TypedValu
       </Label>
       <Input
         id={id}
-        type={definition.value_type === "color" ? "color" : "number"}
+        type="number"
         min={displayRange(definition)?.[0]}
         max={displayRange(definition)?.[1]}
         step={definition.value_type === "scalar" ? "any" : undefined}

@@ -1,5 +1,6 @@
 import type { ArrangementDocument, ProjectBundle } from "@/bridge/types";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ArrangementAutomationOption } from "./arrangementTimelineModel";
 import { cueTrackVisualLayout, resolveAutomationOption } from "./arrangementTimelineModel";
 import { ArrangementAutomationMenu } from "./ArrangementAutomationMenu";
@@ -58,13 +59,21 @@ export function ArrangementTrackHeaders({
                 />
               </div>
             </div>
-            {track.automation_lanes?.map((lane) => (
-              <div key={lane.id} className="border-border/60 flex h-10 items-center border-b px-2">
-                <span className="truncate text-[10px]">
-                  {resolveAutomationOption(bundle, arrangement, lane.target)?.label ?? lane.id}
-                </span>
-              </div>
-            ))}
+            {track.automation_lanes?.map((lane) => {
+              const label =
+                resolveAutomationOption(bundle, arrangement, lane.target)?.label ??
+                "Unavailable automation";
+              return (
+                <div key={lane.id} className="border-border/60 flex h-8 items-center border-b px-2">
+                  <Tooltip>
+                    <TooltipTrigger render={<span className="min-w-0 truncate text-[10px]" />}>
+                      {label}
+                    </TooltipTrigger>
+                    <TooltipContent side="right">{label}</TooltipContent>
+                  </Tooltip>
+                </div>
+              );
+            })}
           </div>
         );
       })}

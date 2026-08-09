@@ -11,6 +11,7 @@ import type {
 } from "@/bridge/types";
 import { exactAsset } from "@/document/projectModel";
 import { arrangementAutomationDisplayLabel, cueLayerPresentation } from "./automationPresentation";
+import { interpolateHexColorLab } from "@/lib/color";
 
 export class ArrangementTimelineError extends Error {
   constructor(
@@ -36,8 +37,8 @@ export const CUE_CLIP_HEIGHT = 40;
 export const CUE_TRACK_MIN_HEIGHT = 64;
 export const CUE_TRACK_PADDING = 8;
 export const CUE_TRACK_ROW_PITCH = 44;
-export const AUTOMATION_ROW_HEIGHT = 40;
-export const AUTOMATION_VALUE_INSET = 8;
+export const AUTOMATION_ROW_HEIGHT = 32;
+export const AUTOMATION_VALUE_INSET = 6;
 
 export interface CueClipVisualPlacement {
   row: number;
@@ -475,15 +476,20 @@ function valueAtTick(
   const next = ordered[nextIndex];
   if (next.time_tick === timeTick) return structuredClone(next.value);
   const previous = ordered[nextIndex - 1];
-  if (
-    previous.interpolation === "hold" ||
-    previous.value.type !== "scalar" ||
-    next.value.type !== "scalar"
-  ) {
+  if (previous.interpolation === "hold") {
     return structuredClone(previous.value);
   }
   const linear = (timeTick - previous.time_tick) / (next.time_tick - previous.time_tick);
   const progress = interpolationProgress(previous.interpolation, linear);
+  if (previous.value.type === "color" && next.value.type === "color") {
+    return {
+      type: "color",
+      value: interpolateHexColorLab(previous.value.value, next.value.value, progress),
+    };
+  }
+  if (previous.value.type !== "scalar" || next.value.type !== "scalar") {
+    return structuredClone(previous.value);
+  }
   return {
     type: "scalar",
     value: previous.value.value + (next.value.value - previous.value.value) * progress,

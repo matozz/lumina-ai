@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Boxes,
   Copy,
@@ -97,6 +97,14 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
     stage.target_sets.find((target) => target.id === "all") ??
     stage.target_sets[0];
   const allTarget = stage.target_sets.find((target) => target.id === "all") ?? stage.target_sets[0];
+  const latestProductionEffects = useMemo(
+    () =>
+      latestRefsById(productionCatalog?.effects ?? []).flatMap((reference) => {
+        const effect = exactAsset(productionCatalog?.effects ?? [], reference);
+        return effect ? [effect] : [];
+      }),
+    [productionCatalog],
+  );
 
   useEffect(() => {
     if (workspace === "effect-lab" && allTarget && selectedTargetSetId !== allTarget.id) {
@@ -111,11 +119,11 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   }, [workspace]);
 
   useEffect(() => {
-    if (workspace === "effect-lab" && !selectedEffectRef && productionCatalog?.effects[0]) {
-      const effect = productionCatalog.effects[0];
+    if (workspace === "effect-lab" && !selectedEffectRef && latestProductionEffects[0]) {
+      const effect = latestProductionEffects[0];
       projectActions.setSelectedEffectRef({ id: effect.id, revision: effect.revision });
     }
-  }, [productionCatalog, selectedEffectRef, workspace]);
+  }, [latestProductionEffects, selectedEffectRef, workspace]);
 
   useEffect(() => {
     const scope = workspace === "effect-lab" ? "effect" : workspace === "cues" ? "cue" : null;
@@ -278,7 +286,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
           {workspace === "effect-lab" && (
             <>
               <LibrarySectionLabel>Production Catalog</LibrarySectionLabel>
-              {productionCatalog?.effects
+              {latestProductionEffects
                 .filter((effect) => effect.catalog.visibility !== "hidden")
                 .map((effect) => {
                   const reference = { id: effect.id, revision: effect.revision };

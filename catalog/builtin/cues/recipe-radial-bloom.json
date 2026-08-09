@@ -7,10 +7,10 @@
   "nominal_length_ticks": 15360,
   "layers": [
     {
-      "id": "bloom",
+      "id": "layer_76zsseiz2reoflhc",
       "effect_ref": {
         "id": "builtin.spatial.radial-bloom",
-        "revision": 1
+        "revision": 2
       },
       "target": {
         "type": "grid_zones"

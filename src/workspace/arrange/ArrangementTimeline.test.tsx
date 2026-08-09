@@ -13,6 +13,7 @@ import {
   addAutomationKeyframe,
   addAutomationLane,
   automationOptions,
+  automationOptionsForClip,
 } from "./timeline/arrangementTimelineModel";
 import { ArrangementTimeline } from "./ArrangementTimeline";
 
@@ -376,9 +377,9 @@ describe("ArrangementTimeline workflow", () => {
     const firstKeyframe = screen.getAllByRole("button", {
       name: /Master dimmer keyframe at tick/,
     })[0];
-    expect(curve.getAttribute("viewBox")?.endsWith(" 40")).toBe(true);
-    expect(curvePath.getAttribute("d")).toContain("M 0 8");
-    expect(firstKeyframe.style.top).toBe("8px");
+    expect(curve.getAttribute("viewBox")?.endsWith(" 32")).toBe(true);
+    expect(curvePath.getAttribute("d")).toContain("M 0 6");
+    expect(firstKeyframe.style.top).toBe("6px");
     fireEvent.doubleClick(lane, { clientX: 96 });
 
     await waitFor(() => {
@@ -390,6 +391,44 @@ describe("ArrangementTimeline workflow", () => {
     expect(
       screen.getByRole("button", { name: "Master dimmer keyframe at tick 1920" }),
     ).toBeTruthy();
+  });
+
+  it("renders automatable Color as centered swatches and a gradient band", () => {
+    const effectRef = projectActions.createEffect("Color drop")!;
+    const cueRef = projectActions.createCue([effectRef], "Color drop Cue")!;
+    const reference = useProjectStore.getState().selectedArrangementRef;
+    projectActions.updateArrangement(reference, "Seed Color lane", (arrangement, bundle) => {
+      arrangement.tracks[0].clips = [
+        { id: "color-drop", cue_ref: cueRef, start_tick: 0, duration_tick: 1_920 },
+      ];
+      arrangement.tracks[0].automation_lanes = [];
+      const option = automationOptionsForClip(bundle, arrangement, "color-drop").find(
+        (candidate) => candidate.definition.id === "color",
+      )!;
+      const laneId = addAutomationLane(arrangement, "cues", option, 0);
+      const lane = arrangement.tracks[0].automation_lanes?.find(
+        (candidate) => candidate.id === laneId,
+      )!;
+      lane.keyframes[0].value = { type: "color", value: "#FF0000" };
+      addAutomationKeyframe(
+        arrangement,
+        "cues",
+        laneId,
+        960,
+        { type: "color", value: "#0000FF" },
+        "linear",
+      );
+    });
+
+    const { container } = render(<ArrangementTimeline />);
+
+    expect(container.querySelector("[data-automation-color-band]")).toBeTruthy();
+    const red = container.querySelector<HTMLElement>('[data-keyframe-color="#FF0000"]')!;
+    const blue = container.querySelector<HTMLElement>('[data-keyframe-color="#0000FF"]')!;
+    expect(red.style.top).toBe("16px");
+    expect(blue.style.top).toBe("16px");
+    expect(red.style.backgroundColor).toBe("#FF0000");
+    expect(blue.style.backgroundColor).toBe("#0000FF");
   });
 
   it("creates and reveals legal typed automation from the CueClip context tick", async () => {
