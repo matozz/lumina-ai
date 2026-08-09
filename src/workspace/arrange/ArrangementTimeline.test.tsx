@@ -462,7 +462,7 @@ describe("ArrangementTimeline workflow", () => {
 
     fireEvent.contextMenu(clip, { clientX: 72, clientY: 80 });
     const addAutomation = await screen.findByRole("menuitem", { name: "Add automation" });
-    fireEvent.keyDown(addAutomation, { key: "ArrowRight" });
+    fireEvent.click(addAutomation);
     const speed = await screen.findByRole("menuitem", { name: /Speed.*scalar/ });
     fireEvent.click(speed);
 

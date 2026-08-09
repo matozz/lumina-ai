@@ -53,6 +53,7 @@ TargetSet 选择仍属于 Cue Layer。Arrangement 只负责调度 Cue；Clip sch
 ### Context menu 与 typed automation
 
 - CueClip 右键从该 Clip 精确引用的 Cue/Effect 建立菜单，只显示 `automation !== disabled` 且 `override_policy: cue_override` 的参数。可直接 Add/Reveal automation、Duplicate、Copy 或 Delete。
+- 这里创建的是 **单个 CueClip instance** 的 Arrangement automation，typed target 包含 `clip_id`。同一 Cue（例如 FullFlash）在时间轴上出现多次时，每个需要单独变化的 Clip 都要分别添加；若希望所有使用该 Cue 的 Clip 继承同一曲线，应在 Cue Builder 中创建一次 Cue-local automation。
 - 新 lane 在右键 context tick 创建一个使用当前有效值的 keyframe；已有 typed target lane 会被定位，在该 tick 补点或打开已有点。该操作不移动 playhead，也不改变 transport。
 - 空白 Cue row 提供 **Place selected Cue here** 与 **Paste here**。Automation row/keyframe 提供 Add、Edit、Interpolation、Copy/Paste、Delete selected 和 Delete lane；离散参数只允许 hold。
 - 单 Layer label 使用 `Cue · Parameter`；多 Layer 依次用 TargetSet、Effect 或 `Layer N` 消歧。label 每次从 exact ref 动态解析，不持久化 display string，也不显示 raw Layer ID 或 revision。

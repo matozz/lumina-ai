@@ -159,6 +159,32 @@ describe("Arrangement timeline model", () => {
     expect(options.map((option) => option.definition.id)).toEqual([effect.parameters[0].id]);
   });
 
+  it("scopes Arrangement automation to one CueClip even when Cue references repeat", () => {
+    const effect = createEffectAsset(bundle, "Repeated FullFlash");
+    effect.parameters[0].override_policy = "cue_override";
+    bundle.effects.push(effect);
+    const cue = createCueAsset(bundle, [effect], "FullFlash");
+    cue.id = "cue-a";
+    bundle.cues.push(cue);
+    arrangement.tracks[0].clips?.push({
+      id: "clip-b",
+      cue_ref: { id: cue.id, revision: cue.revision },
+      start_tick: 3_840,
+      duration_tick: 1_920,
+    });
+
+    const first = automationOptionsForClip(bundle, arrangement, "clip-a").find(
+      (option) => option.definition.id === effect.parameters[0].id,
+    )!;
+    const second = automationOptionsForClip(bundle, arrangement, "clip-b").find(
+      (option) => option.definition.id === effect.parameters[0].id,
+    )!;
+
+    expect(first.target).toMatchObject({ scope: "cue_layer", clip_id: "clip-a" });
+    expect(second.target).toMatchObject({ scope: "cue_layer", clip_id: "clip-b" });
+    expect(first.target).not.toEqual(second.target);
+  });
+
   it("creates or locates one typed lane at the exact context tick without duplicates", () => {
     const effect = createEffectAsset(bundle, "Context Pulse");
     const definition = effect.parameters[0];

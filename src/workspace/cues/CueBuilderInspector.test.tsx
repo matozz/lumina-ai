@@ -132,6 +132,33 @@ describe("Cue Builder safe authoring", () => {
     expect(screen.queryByRole("button", { name: "Add selected Effect" })).toBeNull();
   });
 
+  it("labels saved Cues consistently and exposes deletion in basic mode", async () => {
+    workspaceActions.setAdvancedMode(false);
+    const state = useProjectStore.getState();
+    const bundle = structuredClone(state.bundle);
+    const savedCue = structuredClone(cue);
+    bundle.cues.push(savedCue);
+    bundle.manifest.cue_refs.push({ id: savedCue.id, revision: savedCue.revision });
+    useProjectStore.setState({
+      bundle,
+      selectedCueRef: { id: savedCue.id, revision: savedCue.revision },
+    });
+
+    render(<Harness />);
+
+    expect(screen.getByText("My Cues")).toBeTruthy();
+    expect(screen.queryByText("Project Cues")).toBeNull();
+    const deleteCue = await screen.findByRole("button", { name: "Delete Cue" });
+    fireEvent.click(deleteCue);
+    expect(
+      useProjectStore
+        .getState()
+        .bundle.cues.some(
+          (candidate) => candidate.id === savedCue.id && candidate.revision === savedCue.revision,
+        ),
+    ).toBe(false);
+  });
+
   it("keeps mute, solo, overrides, and automation local until one immutable save", async () => {
     const initialCueRefs = useProjectStore.getState().bundle.cues.map(assetKey);
     render(<Harness />);

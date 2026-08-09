@@ -193,6 +193,7 @@ function AutomationOptionsSubmenu({
   onSelect: (option: ArrangementAutomationOption) => void;
   options: ArrangementAutomationOption[];
 }) {
+  const [open, setOpen] = useState(false);
   const layerGroups = new Map<string, ArrangementAutomationOption[]>();
   for (const option of options) {
     const label = option.layerLabel ?? "Layer";
@@ -200,26 +201,20 @@ function AutomationOptionsSubmenu({
   }
   const grouped = options.some((option) => (option.layerCount ?? 1) > 1);
   return (
-    <ContextMenuSub>
-      <ContextMenuSubTrigger>
+    <ContextMenuSub open={open} onOpenChange={setOpen}>
+      <ContextMenuSubTrigger onClick={() => setOpen(true)}>
         {icon}
         {label}
       </ContextMenuSubTrigger>
       <ContextMenuSubContent className="w-64">
         {grouped
           ? [...layerGroups.entries()].map(([layerLabel, layerOptions]) => (
-              <ContextMenuSub key={layerLabel}>
-                <ContextMenuSubTrigger>{layerLabel}</ContextMenuSubTrigger>
-                <ContextMenuSubContent className="w-56">
-                  {layerOptions.map((option) => (
-                    <AutomationOptionItem
-                      key={automationTargetKey(option.target)}
-                      option={option}
-                      onSelect={onSelect}
-                    />
-                  ))}
-                </ContextMenuSubContent>
-              </ContextMenuSub>
+              <AutomationLayerSubmenu
+                key={layerLabel}
+                label={layerLabel}
+                onSelect={onSelect}
+                options={layerOptions}
+              />
             ))
           : options.map((option) => (
               <AutomationOptionItem
@@ -228,6 +223,32 @@ function AutomationOptionsSubmenu({
                 onSelect={onSelect}
               />
             ))}
+      </ContextMenuSubContent>
+    </ContextMenuSub>
+  );
+}
+
+function AutomationLayerSubmenu({
+  label,
+  onSelect,
+  options,
+}: {
+  label: string;
+  onSelect: (option: ArrangementAutomationOption) => void;
+  options: ArrangementAutomationOption[];
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <ContextMenuSub open={open} onOpenChange={setOpen}>
+      <ContextMenuSubTrigger onClick={() => setOpen(true)}>{label}</ContextMenuSubTrigger>
+      <ContextMenuSubContent className="w-56">
+        {options.map((option) => (
+          <AutomationOptionItem
+            key={automationTargetKey(option.target)}
+            option={option}
+            onSelect={onSelect}
+          />
+        ))}
       </ContextMenuSubContent>
     </ContextMenuSub>
   );

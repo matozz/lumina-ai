@@ -450,9 +450,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                   <AlertDescription>{recipeError}</AlertDescription>
                 </Alert>
               )}
-              <LibrarySectionLabel>
-                {workspace === "arrange" ? "My Cues" : "Project Cues"}
-              </LibrarySectionLabel>
+              <LibrarySectionLabel>My Cues</LibrarySectionLabel>
               {workspace === "arrange" && (
                 <p className="text-muted-foreground px-1 text-[10px]">
                   Built-ins stay in the catalog. Saved and customized Cues appear here.

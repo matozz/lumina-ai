@@ -279,7 +279,7 @@ export function CueBuilderInspector() {
                 Save as copy
               </Button>
             )}
-            {advancedMode && session.mode === "edit" && <DeleteCueButton reference={reference} />}
+            {session.mode === "edit" && <DeleteCueButton reference={reference} />}
           </div>
         </ScrollArea>
       </aside>
@@ -488,7 +488,7 @@ function DeleteCueButton({ reference }: { reference: { id: string; revision: num
       }}
     >
       <Trash2 data-icon="inline-start" aria-hidden="true" />
-      Delete pinned Cue
+      Delete Cue
     </Button>
   );
 }
