@@ -28,6 +28,22 @@ Random 将 phase 0 保留为停止状态的静态预览；Transport 离开零点
 - 参数 UI 只读取当前 Effect 的 parameter schema，不能按 Effect 名称写分支。
 - 默认 speed 以及 Cue override 只接受 0.25×、0.5×、1×、2×、4×、8×。
 
+### Standard Color override
+
+适合单色覆盖的 Effect revision 可以声明标准参数 `color`：
+
+- `value_type: color`，值为严格的 `#RRGGBB`；
+- `unit/ui_hint: color`；
+- `override_policy: cue_override`；
+- `automation: continuous`；
+- 完整的 `required`、`help`、`safe_fallback` 和 `advanced` 元数据。
+
+该参数是 Effect 最终 `color.rgb` 输出的单色覆盖，可从 Lab、Cue Layer override 和 Arrangement Color automation 到达。Color lane 在 runtime 使用 Lab 插值；endpoint 精确保留。没有声明 standard Color 的 Effect 不获得万能颜色入口。
+
+结构性 Palette 继续使用 `color_stops`，只在 Lab 中编辑，并保持 `override_policy: effect_only`、`automation: disabled`。本版本不在 runtime 改变 stop 数量，也不做 stop-by-stop Arrangement automation。
+
+Built-in Effect revision 不原地修改。Color-capable revision 2 与 revision 1 同时保留；新建内容默认从 Catalog 选择最新 revision，既有 Cue 的 exact ref 继续固定在原 revision，直到用户明确创建/保存新的 Cue revision。
+
 ## 内置效果取舍
 
 内置库按可观察的视觉意图区分，而不是按参数微调重复收录。V1 保留柔和、可塑形的 **Breathe**，删除与其图结构和输出过于接近的旧 **Pulse**；需要短促节拍时使用 **Short Color Burst** 或安全等级明确的 **Safe Strobe Pulse**。
@@ -59,5 +75,6 @@ Effect 写入 typed fixture attributes。Profile 提供默认 HTP/LTP policy，�
 
 - 内置 Effect 修改不会改变 Catalog 文件或已存在项目资产。
 - 参数变化在 Canvas 可见；无效参数不会替换最后有效预览。
+- standard Color 在 Lab、Cue override、Arrangement lane 和 `color.rgb` render output 间保持 typed round-trip；`color_stops` 不出现在 automation 菜单。
 - Effect 不包含任何 Stage/TargetSet identity。
 - 1,000 fixtures × 多 Effect layers 仍保持确定性并满足 60Hz 预算。

@@ -26,10 +26,12 @@ Layout
 1. 在 **Stage** 选择或复制 Layout，检查完整几何预览，再用 **Use on Stage** 按容量生成 fixtures、Patch 和安全的 TargetSet。
 2. 在 **Lab** 选择内置 Effect 预览；需要修改时先复制为项目 Effect。
 3. 在 **Cues** 为每个 Layer 选择 Effect 和 Stage TargetSet。需要同时作用多个区域时使用一个多 Layer Cue；需要分时出现时创建多个 Cue。
-4. 在 **Arrange** 放置 CueClip，设置位置、时长、重叠策略和 typed automation。CueClip 不直接重新选择 TargetSet。
+4. 在 **Arrange** 放置 CueClip，使用 Focus mode、框选、批量编辑和右键菜单完成位置、时长、重叠策略及 typed automation。CueClip 不直接重新选择 TargetSet。
 5. 在 **Live** 检查当前 Arrangement；只有明确的 **Go Live** 操作会验证、编译并激活新的 immutable runtime snapshot。
 
 Stage、Lab、Cues 和 Arrange 的默认节拍均为 128 BPM。打开页面默认不播放；切换功能区会停止 Authoring Transport 并回到 loop start（未启用 loop 时为 tick 0）。Lab/Cues 内选择另一个 Effect/Cue 不会自行开始播放，但若当前预览正在播放，新资产会继承 cursor 与 playing 状态，便于连续比较。
+
+Arrange 的 Space 固定为播放/暂停。Zoom、Snap 与视觉 Grid 是三个独立状态；Fit 只改变视口，不改动文档、Snap 或 BPM。Cue Layer 的 opaque identity 与 display name 分离，普通 UI 和辅助功能名称只显示可理解的 Cue、TargetSet、Effect、Layer 序号和参数名。
 
 ## 工程约束
 

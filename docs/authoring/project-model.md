@@ -13,6 +13,8 @@
 
 所有持久化引用都包含稳定 ID 和内部 revision。display name 不是 identity，`latest` 不是合法引用。revision 用于精确解析和 immutable runtime snapshot；普通 UI 不显示它。
 
+Cue Layer ID 同样是内部 exact-reference identity：创建时生成、编辑时稳定、复制时重生。它不编码业务语义，普通 UI 不展示；Arrangement automation 仍以 `clip_id + layer_id + parameter_id` 精确定位。
+
 ## 引用方向
 
 ```text

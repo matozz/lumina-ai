@@ -59,10 +59,7 @@ export function keyframeProjectionGroups(items: ArrangementSelectionItem[]) {
 }
 
 export function projectRegisteredKeyframeLanes(
-  controllers: ReadonlyMap<
-    string,
-    (selectedIds: ReadonlySet<string>, deltaTick: number) => void
-  >,
+  controllers: ReadonlyMap<string, (selectedIds: ReadonlySet<string>, deltaTick: number) => void>,
   items: ArrangementSelectionItem[],
   deltaTick: number,
 ) {

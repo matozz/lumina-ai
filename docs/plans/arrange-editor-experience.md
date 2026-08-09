@@ -680,19 +680,19 @@ docs/evidence/arrange-editor-experience/
 
 完成前逐项检查：
 
-- [ ] 所有规划阶段均已实施，无“后续再做”占位；
-- [ ] `House 128 Custom` 暴露的 Zoom/Snap、短 Clip 批量编辑、名称和点线问题均有验收；64 小节空尾能被全局查看但不会被自动改写；
-- [ ] Context menu 直接创建 typed automation；
-- [ ] 框选 Copy/Move/Delete 和 Undo 实际可用；
-- [ ] Track、CueClip layer、visual subrow、Cue Layer 语义没有混淆；
-- [ ] 新 Cue Layer 使用 opaque 稳定 ID，普通 UI 无 raw ID 外露；
-- [ ] Color 参数、Catalog revision、Cue refs、Golden 和 runtime 全链路通过；
-- [ ] 1100×720 和大窗口 computer-use 通过并有截图；
-- [ ] `pnpm check:all` 通过；
-- [ ] 无 debug log、无 stale comment、无重复 switch/gesture 分支；
-- [ ] 没有直接 localStorage/SQLite 操作；
-- [ ] 已创建语义化增量提交；
-- [ ] 未自动 push 或创建 PR。
+- [x] 所有规划阶段均已实施，无“后续再做”占位；
+- [x] `House 128 Custom` 暴露的 Zoom/Snap、短 Clip 批量编辑、名称和点线问题均有验收；64 小节空尾能被全局查看但不会被自动改写；
+- [x] Context menu 直接创建 typed automation；
+- [x] 框选 Copy/Move/Delete 和 Undo 实际可用；
+- [x] Track、CueClip layer、visual subrow、Cue Layer 语义没有混淆；
+- [x] 新 Cue Layer 使用 opaque 稳定 ID，普通 UI 无 raw ID 外露；
+- [x] Color 参数、Catalog revision、Cue refs、Golden 和 runtime 全链路通过；
+- [x] 1100×720 和大窗口 computer-use 通过并有截图；
+- [x] `pnpm check:all` 通过；
+- [x] 无 debug log、无 stale comment、无重复 switch/gesture 分支；
+- [x] 没有直接 localStorage/SQLite 操作；
+- [x] 已创建语义化增量提交；
+- [x] 未自动 push 或创建 PR。
 
 最终汇报必须包括：
 

@@ -18,6 +18,10 @@ catalog/builtin/
 
 内置资产默认只读。用户 Save/Customize/Duplicate 时生成 ProjectBundle 内的新资产和独立 ID，不覆盖 Catalog 源文件。
 
+同一 built-in Effect ID 可以同时保留多个 immutable revision。Catalog UI 对新选择默认展示最新 revision；已存在的 Cue、recipe、Arrangement 和 Project Template 仍使用提交在 JSON 中的 exact ref，不以 `latest` 替换。只增加可选 authoring contract、默认 render 不变的同 ID revision 可以共享 sampled-output signature；不同 Effect ID 仍不得产生不可区分的重复输出。
+
+Cue recipe 与 Project Template 中的 Layer ID 也是持久化引用。新声明使用固定的 opaque ID；如果内置 revision 确需迁移 identity，所有 layer override 与 automation target 必须在同一源码变更中精确重映射，并通过完整 ProjectBundle validation。
+
 ## 校验与 Golden
 
 `pnpm catalog:check` 执行：
@@ -30,7 +34,7 @@ catalog/builtin/
 6. runtime sampled output 与 determinism 检查；
 7. Production render、compatibility 和 Generator coordinate Golden 比对。
 
-修改经过审查后运行 `pnpm catalog:golden:update`，并提交 `catalog/production-compatibility-v1.json`、Generator Golden 和 Rust production Golden 的有意差异。
+修改经过审查后运行 `pnpm catalog:golden:update`，并提交 `catalog/production-compatibility-v1.json`、Generator Golden 和 Rust production Golden 的有意差异。新增 Color revision 时还要验证 standard parameter metadata、Cue/Arrangement exact target、Lab midpoint/endpoints 与实际 `color.rgb` 输出。
 
 ## 用户资产包
 
