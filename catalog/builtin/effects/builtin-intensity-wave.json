@@ -8,89 +8,63 @@
     {
       "id": "speed",
       "name": "Speed",
-      "value_type": "scalar",
-      "default_value": {
+      "schema": {
         "type": "scalar",
-        "value": 1
+        "default": 1,
+        "range": {
+          "min": 0.25,
+          "max": 8,
+          "step": 0.25
+        },
+        "unit": "multiplier"
       },
-      "range": [0.25, 8],
-      "step": 0.25,
-      "required": true,
-      "help": "Beat-synced wave speed.",
-      "safe_fallback": {
-        "type": "scalar",
-        "value": 1
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "multiplier",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Beat-synced wave speed."
     },
     {
       "id": "phase",
       "name": "Phase",
-      "value_type": "scalar",
-      "default_value": {
+      "schema": {
         "type": "scalar",
-        "value": 0
+        "default": 0,
+        "range": {
+          "min": -1,
+          "max": 1,
+          "step": 0.05
+        },
+        "unit": "cycles"
       },
-      "range": [-1, 1],
-      "step": 0.05,
-      "required": true,
-      "help": "Cycle offset across the layout.",
-      "safe_fallback": {
-        "type": "scalar",
-        "value": 0
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "cycles",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Cycle offset across the layout."
     },
     {
       "id": "intensity",
       "name": "Intensity",
-      "value_type": "scalar",
-      "default_value": {
+      "schema": {
         "type": "scalar",
-        "value": 0.9
+        "default": 0.9,
+        "range": {
+          "min": 0,
+          "max": 1,
+          "step": 0.05
+        },
+        "unit": "normalized"
       },
-      "range": [0, 1],
-      "step": 0.05,
-      "required": true,
-      "help": "Maximum wave output.",
-      "safe_fallback": {
-        "type": "scalar",
-        "value": 0.5
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "normalized",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Maximum wave output."
     },
     {
       "id": "color",
       "name": "Color",
-      "value_type": "color",
-      "default_value": {
-        "type": "color",
-        "value": "#FFFFFF"
+      "schema": {
+        "type": "color"
       },
-      "default_enabled": false,
-      "required": true,
-      "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback.",
-      "safe_fallback": {
-        "type": "color",
-        "value": "#FFFFFF"
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "color",
-      "ui_hint": "color",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
     }
   ],
   "graph": {
@@ -143,8 +117,6 @@
     "colorfulness": 0,
     "strobe_risk": "none",
     "required_attributes": ["intensity"],
-    "layout_capabilities": ["coordinates"],
-    "parameter_summary": ["speed", "phase", "intensity"],
-    "deprecated": false
+    "layout_capabilities": ["coordinates"]
   }
 }

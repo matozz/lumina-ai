@@ -8,6 +8,7 @@ import type {
 } from "@/bridge/types";
 import { authoringSessionKey, useAuthoringTransportStore } from "@/authoring/transport";
 import { assetKey, createCueAsset, createEffectAsset } from "@/document/projectModel";
+import { parameterInitialValue } from "@/document/effectParameter";
 import { authoringDraftActions, useAuthoringDraftStore } from "@/stores/authoringDraft";
 import { productionCatalogActions } from "@/stores/productionCatalog";
 import { projectActions, useProjectStore } from "@/stores/project";
@@ -195,7 +196,7 @@ describe("Cue Builder safe authoring", () => {
           {
             id: "referenced-cue-keyframe",
             time_tick: 0,
-            value: structuredClone(parameter.default_value),
+            value: parameterInitialValue(parameter),
             interpolation: "linear",
           },
         ],
@@ -356,14 +357,11 @@ function cueFixture() {
   effect.catalog.category = "Rhythm";
   effect.catalog.visibility = "standard";
   effect.catalog.layout_capabilities = ["any"];
-  effect.catalog.parameter_summary = ["speed"];
   effect.parameters = effect.parameters.map((parameter) => ({
     ...parameter,
-    required: true,
+    scope: "arrangement",
+    section: "main",
     help: parameter.name,
-    safe_fallback: structuredClone(parameter.default_value),
-    override_policy: "cue_override",
-    advanced: false,
   }));
   scratch.effects.push(effect);
   const strobe = structuredClone(effect);

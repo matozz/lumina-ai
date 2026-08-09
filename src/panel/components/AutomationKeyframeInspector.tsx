@@ -26,6 +26,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PopoverDescription, PopoverHeader, PopoverTitle } from "@/components/ui/popover";
+import {
+  parameterAutomation,
+  parameterEnumValues,
+  parameterRange,
+  parameterStep,
+  parameterValueType,
+} from "@/document/effectParameter";
 import { formatMusicalPosition, formatSeconds, ticksToSeconds } from "../musicalTimeDisplay";
 
 interface AutomationKeyframeInspectorProps {
@@ -126,11 +133,13 @@ export const AutomationKeyframeInspector = ({
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              {(definition.automation === "discrete" ? ["hold"] : INTERPOLATIONS).map((value) => (
-                <SelectItem key={value} value={value}>
-                  {value.replace(/_/g, " ")}
-                </SelectItem>
-              ))}
+              {(parameterAutomation(definition) === "discrete" ? ["hold"] : INTERPOLATIONS).map(
+                (value) => (
+                  <SelectItem key={value} value={value}>
+                    {value.replace(/_/g, " ")}
+                  </SelectItem>
+                ),
+              )}
             </SelectGroup>
           </SelectContent>
         </Select>
@@ -164,7 +173,7 @@ interface TypedValueInputProps {
 }
 
 const TypedValueInput = ({ definition, id, invalid, onChange, value }: TypedValueInputProps) => {
-  if (definition.id === "speed" && definition.value_type === "scalar") {
+  if (definition.id === "speed" && parameterValueType(definition) === "scalar") {
     return (
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={id}>{definition.name} (×)</Label>
@@ -176,7 +185,7 @@ const TypedValueInput = ({ definition, id, invalid, onChange, value }: TypedValu
       </div>
     );
   }
-  if (definition.value_type === "direction") {
+  if (parameterValueType(definition) === "direction") {
     return (
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={id}>{definition.name}</Label>
@@ -194,7 +203,7 @@ const TypedValueInput = ({ definition, id, invalid, onChange, value }: TypedValu
       </div>
     );
   }
-  if (definition.value_type === "boolean") {
+  if (parameterValueType(definition) === "boolean") {
     return (
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={id}>{definition.name}</Label>
@@ -212,7 +221,7 @@ const TypedValueInput = ({ definition, id, invalid, onChange, value }: TypedValu
       </div>
     );
   }
-  if (definition.value_type === "enum") {
+  if (parameterValueType(definition) === "enum") {
     return (
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={id}>{definition.name}</Label>
@@ -222,7 +231,7 @@ const TypedValueInput = ({ definition, id, invalid, onChange, value }: TypedValu
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              {(definition.enum_values ?? []).map((option) => (
+              {parameterEnumValues(definition).map((option) => (
                 <SelectItem key={option} value={option}>
                   {option.replace(/_/g, " ")}
                 </SelectItem>
@@ -233,7 +242,7 @@ const TypedValueInput = ({ definition, id, invalid, onChange, value }: TypedValu
       </div>
     );
   }
-  if (definition.value_type === "color_stops") {
+  if (parameterValueType(definition) === "color_stops") {
     return (
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={id}>{definition.name}</Label>
@@ -241,7 +250,7 @@ const TypedValueInput = ({ definition, id, invalid, onChange, value }: TypedValu
       </div>
     );
   }
-  if (definition.value_type === "color") {
+  if (parameterValueType(definition) === "color") {
     return (
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`${id}-picker`}>{definition.name}</Label>
@@ -279,7 +288,7 @@ const TypedValueInput = ({ definition, id, invalid, onChange, value }: TypedValu
         type="number"
         min={displayRange(definition)?.[0]}
         max={displayRange(definition)?.[1]}
-        step={definition.value_type === "scalar" ? "any" : undefined}
+        step={parameterStep(definition) ?? "any"}
         value={value}
         aria-invalid={invalid}
         onChange={(event) => onChange(event.target.value)}
@@ -305,55 +314,53 @@ function parseValue(
   value: string,
   definition: ParameterDefinitionDSL,
 ): ParameterValueDSL | undefined {
-  if (definition.value_type === "color") {
+  if (parameterValueType(definition) === "color") {
     return /^#[0-9a-f]{6}$/i.test(value) ? { type: "color", value } : undefined;
   }
-  if (definition.value_type === "direction") {
+  if (parameterValueType(definition) === "direction") {
     return value === "forward" || value === "reverse" ? { type: "direction", value } : undefined;
   }
-  if (definition.value_type === "boolean") {
+  if (parameterValueType(definition) === "boolean") {
     return value === "true" || value === "false"
       ? { type: "boolean", value: value === "true" }
       : undefined;
   }
-  if (definition.value_type === "enum") {
-    return (definition.enum_values ?? []).includes(value) ? { type: "enum", value } : undefined;
+  if (parameterValueType(definition) === "enum") {
+    return parameterEnumValues(definition).includes(value) ? { type: "enum", value } : undefined;
   }
-  if (definition.value_type === "color_stops") return undefined;
+  if (parameterValueType(definition) === "color_stops") return undefined;
   const parsed = Number(value) / scalarDisplayScale(definition);
   if (!Number.isFinite(parsed)) return undefined;
   if (definition.id === "speed" && !isBeatSyncSpeedMultiplier(parsed)) return undefined;
-  const range = definition.range;
+  const range = parameterRange(definition);
   if (range && (parsed < range[0] || parsed > range[1])) return undefined;
   return { type: "scalar", value: parsed };
 }
 
 function scalarDisplayScale(definition: ParameterDefinitionDSL): number {
-  return definition.unit === "percent" && (definition.range?.[1] ?? 100) <= 1 ? 100 : 1;
+  return definition.schema.type === "scalar" &&
+    definition.schema.unit === "percent" &&
+    definition.schema.range.max <= 1
+    ? 100
+    : 1;
 }
 
 function displayRange(definition: ParameterDefinitionDSL): [number, number] | undefined {
-  return definition.range
-    ? [
-        definition.range[0] * scalarDisplayScale(definition),
-        definition.range[1] * scalarDisplayScale(definition),
-      ]
+  const range = parameterRange(definition);
+  return range
+    ? [range[0] * scalarDisplayScale(definition), range[1] * scalarDisplayScale(definition)]
     : undefined;
 }
 
 function unitLabel(definition: ParameterDefinitionDSL): string {
-  const labels: Record<ParameterDefinitionDSL["unit"], string> = {
+  if (definition.schema.type !== "scalar") return "";
+  const labels = {
     multiplier: "(×)",
     cycles: "(cycles)",
     percent: "(%)",
     normalized: "(0–1)",
-    color: "",
-    direction: "",
     degrees: "(°)",
     none: "",
-    boolean: "",
-    choice: "",
-    color_stops: "",
   };
-  return labels[definition.unit];
+  return labels[definition.schema.unit];
 }

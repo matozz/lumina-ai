@@ -29,31 +29,151 @@ pub enum EffectSourceDSL {
 pub struct ParameterDefinitionDSL {
     pub id: String,
     pub name: String,
-    pub value_type: ParameterValueTypeDSL,
-    pub default_value: ParameterValueDSL,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub default_enabled: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub range: Option<(f64, f64)>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub step: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub required: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub help: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub safe_fallback: Option<ParameterValueDSL>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub override_policy: Option<ParameterOverridePolicyDSL>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub advanced: Option<bool>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub enum_values: Vec<String>,
+    pub schema: ParameterSchemaDSL,
+    pub scope: ParameterScopeDSL,
+    pub section: ParameterSectionDSL,
+    pub help: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub graph_binding: Option<ParameterGraphBindingDSL>,
-    pub unit: ParameterUnitDSL,
-    pub ui_hint: ParameterUiHintDSL,
-    pub automation: AutomationPolicyDSL,
+}
+
+impl ParameterDefinitionDSL {
+    pub const fn value_type(&self) -> ParameterValueTypeDSL {
+        self.schema.value_type()
+    }
+
+    pub fn default_value(&self) -> Option<ParameterValueDSL> {
+        self.schema.default_value()
+    }
+
+    pub const fn range(&self) -> Option<(f64, f64)> {
+        self.schema.range()
+    }
+
+    pub const fn step(&self) -> Option<f64> {
+        self.schema.step()
+    }
+
+    pub fn enum_values(&self) -> &[String] {
+        self.schema.enum_values()
+    }
+
+    pub const fn automation(&self) -> AutomationPolicyDSL {
+        if !matches!(self.scope, ParameterScopeDSL::Arrangement) {
+            return AutomationPolicyDSL::Disabled;
+        }
+        match self.value_type() {
+            ParameterValueTypeDSL::Scalar | ParameterValueTypeDSL::Color => {
+                AutomationPolicyDSL::Continuous
+            }
+            ParameterValueTypeDSL::Direction
+            | ParameterValueTypeDSL::Boolean
+            | ParameterValueTypeDSL::Enum => AutomationPolicyDSL::Discrete,
+            ParameterValueTypeDSL::ColorStops => AutomationPolicyDSL::Disabled,
+        }
+    }
+
+    pub const fn allows_cue_override(&self) -> bool {
+        matches!(
+            self.scope,
+            ParameterScopeDSL::Cue | ParameterScopeDSL::Arrangement
+        )
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
+pub enum ParameterSchemaDSL {
+    Scalar {
+        default: f64,
+        range: ScalarParameterRangeDSL,
+        unit: ScalarParameterUnitDSL,
+    },
+    Color {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        default: Option<String>,
+    },
+    Direction {
+        default: DirectionDSL,
+    },
+    Boolean {
+        default: bool,
+    },
+    Enum {
+        default: String,
+        values: Vec<String>,
+    },
+    ColorStops {
+        default: Vec<ColorStopDSL>,
+    },
+}
+
+impl ParameterSchemaDSL {
+    pub const fn value_type(&self) -> ParameterValueTypeDSL {
+        match self {
+            Self::Scalar { .. } => ParameterValueTypeDSL::Scalar,
+            Self::Color { .. } => ParameterValueTypeDSL::Color,
+            Self::Direction { .. } => ParameterValueTypeDSL::Direction,
+            Self::Boolean { .. } => ParameterValueTypeDSL::Boolean,
+            Self::Enum { .. } => ParameterValueTypeDSL::Enum,
+            Self::ColorStops { .. } => ParameterValueTypeDSL::ColorStops,
+        }
+    }
+
+    pub fn default_value(&self) -> Option<ParameterValueDSL> {
+        match self {
+            Self::Scalar { default, .. } => Some(ParameterValueDSL::Scalar(*default)),
+            Self::Color { default } => default.clone().map(ParameterValueDSL::Color),
+            Self::Direction { default } => Some(ParameterValueDSL::Direction(*default)),
+            Self::Boolean { default } => Some(ParameterValueDSL::Boolean(*default)),
+            Self::Enum { default, .. } => Some(ParameterValueDSL::Enum(default.clone())),
+            Self::ColorStops { default } => Some(ParameterValueDSL::ColorStops(default.clone())),
+        }
+    }
+
+    pub const fn range(&self) -> Option<(f64, f64)> {
+        match self {
+            Self::Scalar { range, .. } => Some((range.min, range.max)),
+            _ => None,
+        }
+    }
+
+    pub const fn step(&self) -> Option<f64> {
+        match self {
+            Self::Scalar { range, .. } => Some(range.step),
+            _ => None,
+        }
+    }
+
+    pub fn enum_values(&self) -> &[String] {
+        match self {
+            Self::Enum { values, .. } => values,
+            _ => &[],
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[serde(deny_unknown_fields)]
+pub struct ScalarParameterRangeDSL {
+    pub min: f64,
+    pub max: f64,
+    pub step: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ParameterScopeDSL {
+    Effect,
+    Cue,
+    Arrangement,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ParameterSectionDSL {
+    Main,
+    Advanced,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
@@ -96,14 +216,6 @@ impl ParameterValueDSL {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum ParameterOverridePolicyDSL {
-    CueOverride,
-    EffectOnly,
-    Locked,
-}
-
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ParameterGraphBindingDSL {
@@ -127,32 +239,15 @@ pub enum DirectionDSL {
     Reverse,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum ParameterUnitDSL {
+pub enum ScalarParameterUnitDSL {
     None,
     Multiplier,
     Cycles,
     Percent,
     Normalized,
-    Color,
-    Direction,
     Degrees,
-    Boolean,
-    Choice,
-    ColorStops,
-}
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
-#[serde(rename_all = "snake_case")]
-pub enum ParameterUiHintDSL {
-    Slider,
-    Color,
-    Segmented,
-    Angle,
-    Toggle,
-    Select,
-    ColorStops,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
@@ -199,12 +294,6 @@ pub struct EffectCatalogDSL {
     pub required_attributes: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub layout_capabilities: Vec<LayoutCapabilityDSL>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub parameter_summary: Vec<String>,
-    #[serde(default)]
-    pub deprecated: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub replacement: Option<EffectReplacementDSL>,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
@@ -236,14 +325,6 @@ pub enum LayoutCapabilityDSL {
     Radial,
     Coordinates,
     TargetingScene,
-}
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct EffectReplacementDSL {
-    pub id: String,
-    #[schemars(range(min = 1))]
-    pub revision: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]

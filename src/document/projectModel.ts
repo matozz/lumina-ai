@@ -272,31 +272,6 @@ export function normalizeProjectAssetRefs(bundle: ProjectBundle) {
   return bundle;
 }
 
-export function normalizeProjectEffectParameters(bundle: ProjectBundle) {
-  for (const effect of bundle.effects) ensureStandardColorParameter(effect);
-  return bundle;
-}
-
-export function ensureStandardColorParameter(effect: EffectDefinitionDocument) {
-  if (effect.parameters.some((parameter) => parameter.id === "color")) return effect;
-  effect.parameters.push({
-    id: "color",
-    name: "Color",
-    value_type: "color",
-    default_value: { type: "color", value: "#FFFFFF" },
-    default_enabled: false,
-    required: true,
-    help: "Optional single-color override. Clear it to use the Effect color or intensity fallback.",
-    safe_fallback: { type: "color", value: "#FFFFFF" },
-    override_policy: "cue_override",
-    advanced: false,
-    unit: "color",
-    ui_hint: "color",
-    automation: "continuous",
-  });
-  return effect;
-}
-
 export function toAssetRef(reference: AssetRef): AssetRef {
   return { id: reference.id, revision: reference.revision };
 }

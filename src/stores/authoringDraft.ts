@@ -91,12 +91,14 @@ export const authoringDraftActions = {
       },
     });
   },
-  restoreEffectFallback: (parameterId: string) => {
+  restoreEffectLastValid: (parameterId: string) => {
+    const validParameter = useAuthoringDraftStore
+      .getState()
+      .effect?.lastKnownGood.parameters.find((candidate) => candidate.id === parameterId);
+    if (!validParameter) return;
     authoringDraftActions.updateEffect((draft) => {
       const parameter = draft.parameters.find((candidate) => candidate.id === parameterId);
-      if (parameter?.safe_fallback) {
-        parameter.default_value = structuredClone(parameter.safe_fallback);
-      }
+      if (parameter) parameter.schema = structuredClone(validParameter.schema);
     });
   },
   markEffectValidating: (generation: number) => {

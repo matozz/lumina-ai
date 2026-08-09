@@ -2,17 +2,21 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ParameterDefinitionDSL } from "@/bridge/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { parameterAutomation, parameterInitialValue } from "@/document/effectParameter";
 import { AutomationKeyframeInspector } from "./AutomationKeyframeInspector";
 
 const masterDimmer: ParameterDefinitionDSL = {
   id: "master_dimmer",
   name: "Master dimmer",
-  value_type: "scalar",
-  default_value: { type: "scalar", value: 1 },
-  range: [0, 1],
-  unit: "percent",
-  ui_hint: "slider",
-  automation: "continuous",
+  schema: {
+    type: "scalar",
+    default: 1,
+    range: { min: 0, max: 1, step: 0.01 },
+    unit: "percent",
+  },
+  scope: "arrangement",
+  section: "main",
+  help: "Global output level.",
 };
 
 function renderInspector(definition: ParameterDefinitionDSL, onApply = vi.fn()) {
@@ -26,8 +30,8 @@ function renderInspector(definition: ParameterDefinitionDSL, onApply = vi.fn()) 
           keyframe={{
             id: "key-0",
             time_tick: 0,
-            value: definition.default_value,
-            interpolation: definition.automation === "discrete" ? "hold" : "linear",
+            value: parameterInitialValue(definition),
+            interpolation: parameterAutomation(definition) === "discrete" ? "hold" : "linear",
           }}
           minimumTick={0}
           maximumTick={960}
@@ -57,7 +61,7 @@ describe("AutomationKeyframeInspector", () => {
               keyframe={{
                 id: "key-0",
                 time_tick: 0,
-                value: masterDimmer.default_value,
+                value: parameterInitialValue(masterDimmer),
                 interpolation: "linear",
               }}
               minimumTick={0}
@@ -104,11 +108,10 @@ describe("AutomationKeyframeInspector", () => {
     const color: ParameterDefinitionDSL = {
       id: "color",
       name: "Color",
-      value_type: "color",
-      default_value: { type: "color", value: "#ff0000" },
-      unit: "color",
-      ui_hint: "color",
-      automation: "continuous",
+      schema: { type: "color", default: "#ff0000" },
+      scope: "arrangement",
+      section: "main",
+      help: "Output color.",
     };
     const onApply = renderInspector(color);
     expect(screen.getByLabelText("Color color picker")).toHaveProperty("type", "color");
@@ -130,12 +133,15 @@ describe("AutomationKeyframeInspector", () => {
     const angle: ParameterDefinitionDSL = {
       id: "pan",
       name: "Pan",
-      value_type: "scalar",
-      default_value: { type: "scalar", value: 30 },
-      range: [-270, 270],
-      unit: "degrees",
-      ui_hint: "angle",
-      automation: "continuous",
+      schema: {
+        type: "scalar",
+        default: 30,
+        range: { min: -270, max: 270, step: 1 },
+        unit: "degrees",
+      },
+      scope: "arrangement",
+      section: "main",
+      help: "Pan angle.",
     };
     renderInspector(angle);
     expect(screen.getByLabelText("Pan (°)")).toHaveProperty("value", "30");
@@ -145,12 +151,15 @@ describe("AutomationKeyframeInspector", () => {
     const speed: ParameterDefinitionDSL = {
       id: "speed",
       name: "Speed",
-      value_type: "scalar",
-      default_value: { type: "scalar", value: 1 },
-      range: [0.125, 8],
-      unit: "multiplier",
-      ui_hint: "slider",
-      automation: "continuous",
+      schema: {
+        type: "scalar",
+        default: 1,
+        range: { min: 0.125, max: 8, step: 0.125 },
+        unit: "multiplier",
+      },
+      scope: "arrangement",
+      section: "main",
+      help: "Playback speed.",
     };
     const onApply = renderInspector(speed);
 

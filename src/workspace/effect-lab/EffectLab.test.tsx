@@ -139,9 +139,9 @@ describe("Effect Lab safe authoring", () => {
     const state = useProjectStore.getState();
     const next = exactAsset(state.bundle.effects, state.selectedEffectRef);
     expect(next?.revision).toBe(2);
-    expect(next?.parameters.find((parameter) => parameter.id === "speed")?.default_value).toEqual({
+    expect(next?.parameters.find((parameter) => parameter.id === "speed")?.schema).toMatchObject({
       type: "scalar",
-      value: 2,
+      default: 2,
     });
     expect(exactAsset(state.bundle.effects, original)?.revision).toBe(1);
   });
@@ -180,6 +180,5 @@ function asBuiltin(
   effect.catalog.category = "Production";
   effect.catalog.visibility = "standard";
   effect.catalog.layout_capabilities = ["any"];
-  effect.catalog.parameter_summary = ["speed"];
   return effect;
 }

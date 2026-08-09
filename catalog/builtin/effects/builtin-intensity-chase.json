@@ -8,87 +8,57 @@
     {
       "id": "speed",
       "name": "Speed",
-      "value_type": "scalar",
-      "default_value": {
+      "schema": {
         "type": "scalar",
-        "value": 1
+        "default": 1,
+        "range": {
+          "min": 0.25,
+          "max": 8,
+          "step": 0.25
+        },
+        "unit": "multiplier"
       },
-      "range": [0.25, 8],
-      "step": 0.25,
-      "required": true,
-      "help": "Beat-synced chase speed.",
-      "safe_fallback": {
-        "type": "scalar",
-        "value": 1
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "multiplier",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Beat-synced chase speed."
     },
     {
       "id": "intensity",
       "name": "Intensity",
-      "value_type": "scalar",
-      "default_value": {
+      "schema": {
         "type": "scalar",
-        "value": 1
+        "default": 1,
+        "range": {
+          "min": 0,
+          "max": 1,
+          "step": 0.05
+        },
+        "unit": "normalized"
       },
-      "range": [0, 1],
-      "step": 0.05,
-      "required": true,
-      "help": "Maximum chase output.",
-      "safe_fallback": {
-        "type": "scalar",
-        "value": 0.5
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "normalized",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Maximum chase output."
     },
     {
       "id": "direction",
       "name": "Direction",
-      "value_type": "direction",
-      "default_value": {
+      "schema": {
         "type": "direction",
-        "value": "forward"
+        "default": "forward"
       },
-      "required": true,
-      "help": "Chase travel direction.",
-      "safe_fallback": {
-        "type": "direction",
-        "value": "forward"
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "direction",
-      "ui_hint": "segmented",
-      "automation": "discrete"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Chase travel direction."
     },
     {
       "id": "color",
       "name": "Color",
-      "value_type": "color",
-      "default_value": {
-        "type": "color",
-        "value": "#FFFFFF"
+      "schema": {
+        "type": "color"
       },
-      "default_enabled": false,
-      "required": true,
-      "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback.",
-      "safe_fallback": {
-        "type": "color",
-        "value": "#FFFFFF"
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "color",
-      "ui_hint": "color",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
     }
   ],
   "graph": {
@@ -141,8 +111,6 @@
     "colorfulness": 0,
     "strobe_risk": "low",
     "required_attributes": ["intensity"],
-    "layout_capabilities": ["linear", "matrix", "coordinates"],
-    "parameter_summary": ["speed", "intensity", "direction"],
-    "deprecated": false
+    "layout_capabilities": ["linear", "matrix", "coordinates"]
   }
 }

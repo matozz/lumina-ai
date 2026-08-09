@@ -104,7 +104,7 @@ describe("Arrangement timeline model", () => {
 
   it("resolves typed global and CueLayer parameters and removes dependent lanes with a clip", () => {
     const effect = createEffectAsset(bundle, "Pulse");
-    effect.parameters[0].override_policy = "cue_override";
+    effect.parameters[0].scope = "arrangement";
     bundle.effects.push(effect);
     const cue = createCueAsset(bundle, [{ id: effect.id, revision: effect.revision }], "Cue A");
     cue.id = "cue-a";
@@ -121,7 +121,7 @@ describe("Arrangement timeline model", () => {
 
   it("presents a single-layer automation target without its raw layer ID", () => {
     const effect = createEffectAsset(bundle, "Pulse");
-    effect.parameters[0].override_policy = "cue_override";
+    effect.parameters[0].scope = "arrangement";
     bundle.effects.push(effect);
     const cue = createCueAsset(bundle, [{ id: effect.id, revision: effect.revision }], "Cue A");
     cue.id = "cue-a";
@@ -139,16 +139,13 @@ describe("Arrangement timeline model", () => {
     expect(resolved.target).toEqual(target);
   });
 
-  it("filters disabled, effect-only, and locked CueLayer parameters", () => {
+  it("filters Effect-only and Cue-only parameters from Arrangement automation", () => {
     const effect = createEffectAsset(bundle, "Filtered Pulse");
     effect.parameters.forEach((parameter) => {
-      parameter.override_policy = "effect_only";
+      parameter.scope = "effect";
     });
-    effect.parameters[0].override_policy = "cue_override";
-    effect.parameters[1].override_policy = "cue_override";
-    effect.parameters[1].automation = "disabled";
-    effect.parameters[2].override_policy = "effect_only";
-    effect.parameters[3].override_policy = "locked";
+    effect.parameters[0].scope = "arrangement";
+    effect.parameters[1].scope = "cue";
     bundle.effects.push(effect);
     const cue = createCueAsset(bundle, [effect], "Filtered Cue");
     cue.id = "cue-a";
@@ -161,7 +158,7 @@ describe("Arrangement timeline model", () => {
 
   it("scopes Arrangement automation to one CueClip even when Cue references repeat", () => {
     const effect = createEffectAsset(bundle, "Repeated FullFlash");
-    effect.parameters[0].override_policy = "cue_override";
+    effect.parameters[0].scope = "arrangement";
     bundle.effects.push(effect);
     const cue = createCueAsset(bundle, [effect], "FullFlash");
     cue.id = "cue-a";
@@ -188,7 +185,7 @@ describe("Arrangement timeline model", () => {
   it("creates or locates one typed lane at the exact context tick without duplicates", () => {
     const effect = createEffectAsset(bundle, "Context Pulse");
     const definition = effect.parameters[0];
-    definition.override_policy = "cue_override";
+    definition.scope = "arrangement";
     bundle.effects.push(effect);
     const cue = createCueAsset(bundle, [effect], "Context Cue");
     cue.id = "cue-a";

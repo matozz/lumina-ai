@@ -12,6 +12,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import type { TimelineGeometry } from "@/panel/timelineGeometry";
+import { parameterValueType } from "@/document/effectParameter";
 import {
   automationTargetKey,
   findAutomationLaneByTarget,
@@ -225,7 +226,7 @@ function AutomationOptionItem({
         {option.definition.name}
       </span>
       <span className="text-muted-foreground ml-auto text-[10px]">
-        {option.definition.value_type}
+        {parameterValueType(option.definition)}
       </span>
     </ContextMenuItem>
   );

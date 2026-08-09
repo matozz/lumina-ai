@@ -10,12 +10,15 @@ import { createHouseArrangementReference } from "./houseArrangementReference";
 const definition: ParameterDefinitionDSL = {
   id: "intensity",
   name: "Intensity",
-  value_type: "scalar",
-  default_value: { type: "scalar", value: 0.5 },
-  range: [0, 1],
-  unit: "normalized",
-  ui_hint: "slider",
-  automation: "continuous",
+  schema: {
+    type: "scalar",
+    default: 0.5,
+    range: { min: 0, max: 1, step: 0.01 },
+    unit: "normalized",
+  },
+  scope: "arrangement",
+  section: "main",
+  help: "Output intensity.",
 };
 
 describe("ArrangementAutomationLane pointer projection", () => {

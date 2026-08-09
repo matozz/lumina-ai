@@ -1373,11 +1373,11 @@ mod tests {
           "effect_definitions": [{
             "id": "project.red-pulse", "name": "Red Pulse", "revision": 1, "source": "project_local",
             "parameters": [
-              { "id": "speed", "name": "Speed", "value_type": "scalar", "default_value": { "type": "scalar", "value": 1.0 }, "range": [0.25, 8.0], "unit": "multiplier", "ui_hint": "slider", "automation": "continuous" },
-              { "id": "phase", "name": "Phase", "value_type": "scalar", "default_value": { "type": "scalar", "value": 0.0 }, "range": [-1.0, 1.0], "unit": "cycles", "ui_hint": "slider", "automation": "continuous" },
-              { "id": "width", "name": "Width", "value_type": "scalar", "default_value": { "type": "scalar", "value": 100.0 }, "range": [1.0, 100.0], "unit": "percent", "ui_hint": "slider", "automation": "continuous" },
-              { "id": "transition", "name": "Transition", "value_type": "scalar", "default_value": { "type": "scalar", "value": 20.0 }, "range": [0.0, 100.0], "unit": "percent", "ui_hint": "slider", "automation": "continuous" },
-              { "id": "color", "name": "Color", "value_type": "color", "default_value": { "type": "color", "value": "#ff0000" }, "unit": "color", "ui_hint": "color", "automation": "continuous" }
+              { "id": "speed", "name": "Speed", "schema": { "type": "scalar", "default": 1.0, "range": { "min": 0.25, "max": 8.0, "step": 0.25 }, "unit": "multiplier" }, "scope": "arrangement", "section": "main", "help": "Beat-synced playback speed." },
+              { "id": "phase", "name": "Phase", "schema": { "type": "scalar", "default": 0.0, "range": { "min": -1.0, "max": 1.0, "step": 0.05 }, "unit": "cycles" }, "scope": "arrangement", "section": "main", "help": "Cycle offset." },
+              { "id": "width", "name": "Width", "schema": { "type": "scalar", "default": 100.0, "range": { "min": 1.0, "max": 100.0, "step": 1.0 }, "unit": "percent" }, "scope": "arrangement", "section": "main", "help": "Pulse width." },
+              { "id": "transition", "name": "Transition", "schema": { "type": "scalar", "default": 20.0, "range": { "min": 0.0, "max": 100.0, "step": 1.0 }, "unit": "percent" }, "scope": "arrangement", "section": "main", "help": "Pulse transition." },
+              { "id": "color", "name": "Color", "schema": { "type": "color", "default": "#ff0000" }, "scope": "arrangement", "section": "main", "help": "Pulse color." }
             ],
             "graph": { "nodes": [
               { "type": "time", "id": "time" },

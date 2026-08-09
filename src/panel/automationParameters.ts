@@ -5,6 +5,7 @@ import type {
   ParameterValueDSL,
 } from "@/bridge/types";
 import { automationTargetParentTrack, automationTargetPath } from "@/document/automationTarget";
+import { parameterAllowsAutomation, parameterInitialValue } from "@/document/effectParameter";
 
 export interface AutomationParameterOption {
   definition: ParameterDefinitionDSL;
@@ -15,12 +16,15 @@ export interface AutomationParameterOption {
 const MASTER_DIMMER: ParameterDefinitionDSL = {
   id: "master_dimmer",
   name: "Master dimmer",
-  value_type: "scalar",
-  default_value: { type: "scalar", value: 1 },
-  range: [0, 1],
-  unit: "percent",
-  ui_hint: "slider",
-  automation: "continuous",
+  schema: {
+    type: "scalar",
+    default: 1,
+    range: { min: 0, max: 1, step: 0.01 },
+    unit: "percent",
+  },
+  scope: "arrangement",
+  section: "main",
+  help: "Global output level.",
 };
 
 export function automationParameterOptions(
@@ -38,7 +42,7 @@ export function automationParameterOptions(
       ? [
           {
             definition: MASTER_DIMMER,
-            initialValue: MASTER_DIMMER.default_value,
+            initialValue: parameterInitialValue(MASTER_DIMMER),
             target: {
               scope: "global" as const,
               parameter_id: "master_dimmer" as const,
@@ -63,7 +67,7 @@ export function resolveAutomationParameter(
     return target.parameter_id === "master_dimmer"
       ? {
           definition: MASTER_DIMMER,
-          initialValue: structuredClone(MASTER_DIMMER.default_value),
+          initialValue: parameterInitialValue(MASTER_DIMMER),
           target,
         }
       : undefined;
@@ -88,9 +92,9 @@ function effectParameterOptions(
   );
   if (!definition) return [];
 
-  return definition.parameters.map((parameter) => ({
+  return definition.parameters.filter(parameterAllowsAutomation).map((parameter) => ({
     definition: parameter,
-    initialValue: instance.parameter_overrides?.[parameter.id] ?? parameter.default_value,
+    initialValue: instance.parameter_overrides?.[parameter.id] ?? parameterInitialValue(parameter),
     target: {
       scope: "effect_instance",
       instance_id: instance.id,

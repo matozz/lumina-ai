@@ -923,6 +923,7 @@ mod tests {
         GridZone, TargetSetDefinition, TargetSetRef, TargetSetSelector,
     };
     use crate::engine::color::lerp_color_lab;
+    use crate::engine::effect::COLOR_PARAMETER_ID;
     use crate::engine::profile::{AttributeValue, COLOR_RGB_ATTRIBUTE, INTENSITY_ATTRIBUTE};
     use crate::engine::render::{render_at, RenderSource, RenderTime};
     use std::time::Instant;
@@ -1869,23 +1870,14 @@ mod tests {
     #[test]
     fn arrangement_color_automation_uses_lab_and_writes_color_rgb() {
         let mut bundle = valid_bundle();
-        bundle.effects[0].parameters.push(
-            serde_json::from_value(serde_json::json!({
-                "id": "color",
-                "name": "Color",
-                "value_type": "color",
-                "default_value": { "type": "color", "value": "#FFFFFF" },
-                "required": true,
-                "help": "Single-color output override.",
-                "safe_fallback": { "type": "color", "value": "#FFFFFF" },
-                "override_policy": "cue_override",
-                "advanced": false,
-                "unit": "color",
-                "ui_hint": "color",
-                "automation": "continuous"
-            }))
-            .expect("color parameter"),
-        );
+        let color = bundle.effects[0]
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.id == COLOR_PARAMETER_ID)
+            .expect("standard Color parameter");
+        color.schema = crate::document::ParameterSchemaDSL::Color {
+            default: Some("#FFFFFF".to_string()),
+        };
         bundle.effects[0]
             .catalog
             .required_attributes

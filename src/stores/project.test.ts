@@ -145,7 +145,7 @@ describe("Stage 7 Project state", () => {
     expect(migrated.bundle.manifest.layout_refs).toHaveLength(26);
   });
 
-  it("preserves a version 12 workspace while adding optional Color to legacy Effects", async () => {
+  it("resets pre-contract caches instead of migrating legacy Effect fields", async () => {
     const cachedBundle = structuredClone(useProjectStore.getState().bundle);
     cachedBundle.manifest.name = "Keep my authored workspace";
     const legacyEffect = cachedBundle.effects[0];
@@ -154,18 +154,26 @@ describe("Stage 7 Project state", () => {
     );
     const migrate = useProjectStore.persist.getOptions().migrate;
     const migrated = (await Promise.resolve(
-      migrate?.({ bundle: cachedBundle, selectedEffectRef: toAssetRef(legacyEffect) }, 12),
+      migrate?.({ bundle: cachedBundle, selectedEffectRef: toAssetRef(legacyEffect) }, 13),
     )) as ReturnType<typeof useProjectStore.getState>;
 
-    expect(migrated.bundle.manifest.name).toBe("Keep my authored workspace");
-    expect(exactAsset(migrated.bundle.effects, legacyEffect)?.parameters).toContainEqual(
-      expect.objectContaining({
-        id: "color",
-        value_type: "color",
-        default_enabled: false,
-      }),
+    expect(migrated.bundle.manifest.name).toBe("Untitled Lighting Project");
+    expect(migrated.selectedEffectRef).toBeNull();
+    expect(migrated.bundle.effects).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          parameters: expect.arrayContaining([
+            expect.objectContaining({
+              id: "color",
+              schema: { type: "color" },
+              scope: "arrangement",
+            }),
+          ]),
+        }),
+      ]),
     );
-    expect(migrated.selectedEffectRef).toEqual(toAssetRef(legacyEffect));
+    expect(JSON.stringify(migrated.bundle)).not.toContain("default_enabled");
+    expect(JSON.stringify(migrated.bundle)).not.toContain('"value_type":"color"');
   });
 
   it("does not interrupt the current preview when selecting another Effect", () => {

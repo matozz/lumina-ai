@@ -1,4 +1,5 @@
 import type { KeyframeDSL, ParameterDefinitionDSL, ParameterValueDSL } from "@/bridge/types";
+import { parameterRange } from "@/document/effectParameter";
 
 const MAX_TICK = 0xffff_ffff;
 
@@ -60,7 +61,7 @@ export function keyframeValueY(
   inset = 4,
 ): number {
   if (value.type !== "scalar") return height / 2;
-  const [minimum, maximum] = definition.range ?? [0, 1];
+  const [minimum, maximum] = parameterRange(definition) ?? [0, 1];
   if (maximum <= minimum) return height / 2;
   const progress = Math.max(0, Math.min(1, (value.value - minimum) / (maximum - minimum)));
   const safeInset = Math.max(0, Math.min(height / 2, inset));

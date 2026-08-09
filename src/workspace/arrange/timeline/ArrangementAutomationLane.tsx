@@ -23,6 +23,7 @@ import {
   type TimelineGeometry,
 } from "@/panel/timelineGeometry";
 import type { TimelineViewport } from "@/panel/virtualization";
+import { parameterAutomation, parameterInitialValue } from "@/document/effectParameter";
 import { ArrangementKeyframeControl } from "./ArrangementKeyframeControl";
 import {
   AutomationKeyframeContextMenu,
@@ -254,8 +255,8 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
     if (lane.keyframes.some((keyframe) => keyframe.time_tick === snapped)) return;
     onAdd(
       snapped,
-      automationLaneValueAtTick(lane, snapped, definition.default_value),
-      definition.automation === "discrete" ? "hold" : "linear",
+      automationLaneValueAtTick(lane, snapped, parameterInitialValue(definition)),
+      parameterAutomation(definition) === "discrete" ? "hold" : "linear",
     );
   };
 

@@ -43,8 +43,6 @@ export interface AssetRef {
   revision: number;
 }
 
-export type AutomationPolicyDSL = "continuous" | "discrete" | "disabled";
-
 export type CatalogVisibilityDSL = "standard" | "advanced" | "hidden";
 
 export type CenterEdgesRegion = "center" | "edges";
@@ -158,14 +156,11 @@ export interface EffectCatalogDSL {
   category?: string | null;
   colorfulness: number;
   density: number;
-  deprecated?: boolean;
   energy: number;
   family?: EffectFamilyDSL | null;
   layout_capabilities?: Array<LayoutCapabilityDSL>;
   mood?: Array<string>;
   motion: MotionTagDSL;
-  parameter_summary?: Array<string>;
-  replacement?: EffectReplacementDSL | null;
   required_attributes?: Array<string>;
   strobe_risk: StrobeRiskDSL;
   visibility?: CatalogVisibilityDSL;
@@ -290,11 +285,6 @@ export type EffectPortDSL =
 export interface EffectPortRefDSL {
   node_id: string;
   port: EffectPortDSL;
-}
-
-export interface EffectReplacementDSL {
-  id: string;
-  revision: number;
 }
 
 export type EffectSourceDSL = "built_in" | "project_local" | "user_library";
@@ -536,23 +526,13 @@ export type OscillatorWaveformDSL = "sine" | "triangle" | "saw" | "pulse";
 export type OverlapPolicyDSL = "layer" | "replace" | "reject" | "crossfade";
 
 export interface ParameterDefinitionDSL {
-  advanced?: boolean | null;
-  automation: AutomationPolicyDSL;
-  default_enabled?: boolean | null;
-  default_value: ParameterValueDSL;
-  enum_values?: Array<string>;
   graph_binding?: ParameterGraphBindingDSL | null;
-  help?: string | null;
+  help: string;
   id: string;
   name: string;
-  override_policy?: ParameterOverridePolicyDSL | null;
-  range?: [number, number] | null;
-  required?: boolean | null;
-  safe_fallback?: ParameterValueDSL | null;
-  step?: number | null;
-  ui_hint: ParameterUiHintDSL;
-  unit: ParameterUnitDSL;
-  value_type: ParameterValueTypeDSL;
+  schema: ParameterSchemaDSL;
+  scope: ParameterScopeDSL;
+  section: ParameterSectionDSL;
 }
 
 export interface ParameterGraphBindingDSL {
@@ -560,29 +540,38 @@ export interface ParameterGraphBindingDSL {
   property: EffectNodePropertyDSL;
 }
 
-export type ParameterOverridePolicyDSL = "cue_override" | "effect_only" | "locked";
+export type ParameterSchemaDSL =
+  | {
+      default: number;
+      range: ScalarParameterRangeDSL;
+      type: "scalar";
+      unit: ScalarParameterUnitDSL;
+    }
+  | {
+      default?: string | null;
+      type: "color";
+    }
+  | {
+      default: DirectionDSL;
+      type: "direction";
+    }
+  | {
+      default: boolean;
+      type: "boolean";
+    }
+  | {
+      default: string;
+      type: "enum";
+      values: Array<string>;
+    }
+  | {
+      default: Array<ColorStopDSL>;
+      type: "color_stops";
+    };
 
-export type ParameterUiHintDSL =
-  | "slider"
-  | "color"
-  | "segmented"
-  | "angle"
-  | "toggle"
-  | "select"
-  | "color_stops";
+export type ParameterScopeDSL = "effect" | "cue" | "arrangement";
 
-export type ParameterUnitDSL =
-  | "none"
-  | "multiplier"
-  | "cycles"
-  | "percent"
-  | "normalized"
-  | "color"
-  | "direction"
-  | "degrees"
-  | "boolean"
-  | "choice"
-  | "color_stops";
+export type ParameterSectionDSL = "main" | "advanced";
 
 export type ParameterValueDSL =
   | {
@@ -610,18 +599,24 @@ export type ParameterValueDSL =
       value: Array<ColorStopDSL>;
     };
 
-export type ParameterValueTypeDSL =
-  | "scalar"
-  | "color"
-  | "direction"
-  | "boolean"
-  | "enum"
-  | "color_stops";
-
 export interface PatchDSL {
   id_range: [number, number];
   profile_id: string;
 }
+
+export interface ScalarParameterRangeDSL {
+  max: number;
+  min: number;
+  step: number;
+}
+
+export type ScalarParameterUnitDSL =
+  | "none"
+  | "multiplier"
+  | "cycles"
+  | "percent"
+  | "normalized"
+  | "degrees";
 
 export interface SequenceStepDSL {
   accel?: number | null;

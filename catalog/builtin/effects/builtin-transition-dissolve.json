@@ -8,67 +8,46 @@
     {
       "id": "speed",
       "name": "Speed",
-      "value_type": "scalar",
-      "default_value": {
+      "schema": {
         "type": "scalar",
-        "value": 1
+        "default": 1,
+        "range": {
+          "min": 0.25,
+          "max": 8,
+          "step": 0.25
+        },
+        "unit": "multiplier"
       },
-      "range": [0.25, 8],
-      "step": 0.25,
-      "required": true,
-      "help": "Beat-synced seeded dissolve cadence.",
-      "safe_fallback": {
-        "type": "scalar",
-        "value": 0.5
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "multiplier",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Beat-synced seeded dissolve cadence."
     },
     {
       "id": "intensity",
       "name": "Intensity",
-      "value_type": "scalar",
-      "default_value": {
+      "schema": {
         "type": "scalar",
-        "value": 0.8
+        "default": 0.8,
+        "range": {
+          "min": 0,
+          "max": 1,
+          "step": 0.05
+        },
+        "unit": "normalized"
       },
-      "range": [0, 1],
-      "step": 0.05,
-      "required": true,
-      "help": "Peak dissolve intensity.",
-      "safe_fallback": {
-        "type": "scalar",
-        "value": 0.4
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "normalized",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Peak dissolve intensity."
     },
     {
       "id": "color",
       "name": "Color",
-      "value_type": "color",
-      "default_value": {
-        "type": "color",
-        "value": "#FFFFFF"
+      "schema": {
+        "type": "color"
       },
-      "default_enabled": false,
-      "required": true,
-      "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback.",
-      "safe_fallback": {
-        "type": "color",
-        "value": "#FFFFFF"
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "color",
-      "ui_hint": "color",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
     }
   ],
   "graph": {
@@ -109,8 +88,6 @@
     "colorfulness": 0,
     "strobe_risk": "low",
     "required_attributes": ["intensity"],
-    "layout_capabilities": ["any"],
-    "parameter_summary": ["speed", "intensity"],
-    "deprecated": false
+    "layout_capabilities": ["any"]
   }
 }

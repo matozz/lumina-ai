@@ -10,6 +10,11 @@ import type {
   ProjectBundle,
 } from "@/bridge/types";
 import { exactAsset } from "@/document/projectModel";
+import {
+  parameterAllowsAutomation,
+  parameterAutomation,
+  parameterInitialValue,
+} from "@/document/effectParameter";
 import { arrangementAutomationDisplayLabel, cueLayerPresentation } from "./automationPresentation";
 import { interpolateHexColorLab } from "@/lib/color";
 
@@ -102,12 +107,15 @@ export function cueTrackVisualLayout(clips: CueClip[]): CueTrackVisualLayout {
 export const MASTER_DIMMER_DEFINITION: ParameterDefinitionDSL = {
   id: "master_dimmer",
   name: "Master dimmer",
-  value_type: "scalar",
-  default_value: { type: "scalar", value: 1 },
-  range: [0, 1],
-  unit: "percent",
-  ui_hint: "slider",
-  automation: "continuous",
+  schema: {
+    type: "scalar",
+    default: 1,
+    range: { min: 0, max: 1, step: 0.01 },
+    unit: "percent",
+  },
+  scope: "arrangement",
+  section: "main",
+  help: "Global output level.",
 };
 
 export function findCueClip(arrangement: ArrangementDocument, clipId: string) {
@@ -224,7 +232,7 @@ export function automationOptions(
     options.push({
       target: masterTarget,
       definition: MASTER_DIMMER_DEFINITION,
-      initialValue: structuredClone(MASTER_DIMMER_DEFINITION.default_value),
+      initialValue: parameterInitialValue(MASTER_DIMMER_DEFINITION),
       label: "Global · Master dimmer",
     });
   }
@@ -270,7 +278,9 @@ export function automationOptionsForClip(
         target,
         definition,
         initialValue: structuredClone(
-          clipOverride ?? layer.parameter_overrides?.[definition.id] ?? definition.default_value,
+          clipOverride ??
+            layer.parameter_overrides?.[definition.id] ??
+            parameterInitialValue(definition),
         ),
         label: arrangementAutomationDisplayLabel(bundle, cue, layer.id, definition.name),
         layerCount: cue.layers.length,
@@ -282,7 +292,7 @@ export function automationOptionsForClip(
 }
 
 export function isArrangementAutomatable(definition: ParameterDefinitionDSL) {
-  return definition.automation !== "disabled" && definition.override_policy === "cue_override";
+  return parameterAllowsAutomation(definition);
 }
 
 export function resolveAutomationOption(
@@ -295,7 +305,7 @@ export function resolveAutomationOption(
       ? {
           target,
           definition: MASTER_DIMMER_DEFINITION,
-          initialValue: structuredClone(MASTER_DIMMER_DEFINITION.default_value),
+          initialValue: parameterInitialValue(MASTER_DIMMER_DEFINITION),
           label: "Global · Master dimmer",
         }
       : undefined;
@@ -312,7 +322,7 @@ export function resolveAutomationOption(
     target,
     definition,
     initialValue: structuredClone(
-      layer.parameter_overrides?.[definition.id] ?? definition.default_value,
+      layer.parameter_overrides?.[definition.id] ?? parameterInitialValue(definition),
     ),
     label: arrangementAutomationDisplayLabel(bundle, cue, layer.id, definition.name),
     layerCount: cue.layers.length,
@@ -367,7 +377,7 @@ export function addAutomationLane(
         id: "start",
         time_tick: firstTick,
         value: structuredClone(option.initialValue),
-        interpolation: option.definition.automation === "discrete" ? "hold" : "linear",
+        interpolation: parameterAutomation(option.definition) === "discrete" ? "hold" : "linear",
       },
     ],
   };
@@ -419,7 +429,7 @@ export function ensureAutomationAtTick(
     resolved.lane.id,
     tick,
     value,
-    option.definition.automation === "discrete" ? "hold" : "linear",
+    parameterAutomation(option.definition) === "discrete" ? "hold" : "linear",
   );
   const keyframe = resolved.lane.keyframes.find((candidate) => candidate.time_tick === tick)!;
   return { trackId: resolved.track.id, laneId: resolved.lane.id, keyframeId: keyframe.id };

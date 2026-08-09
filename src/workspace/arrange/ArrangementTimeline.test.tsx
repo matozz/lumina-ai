@@ -618,9 +618,9 @@ describe("ArrangementTimeline workflow", () => {
     const originalEffectRef = projectActions.createEffect("Context Effect")!;
     projectActions.updateEffect(originalEffectRef, "Expose one context parameter", (effect) => {
       effect.parameters.forEach((parameter, index) => {
-        parameter.override_policy = index === 0 ? "cue_override" : "effect_only";
+        parameter.scope = index === 0 ? "arrangement" : "effect";
       });
-      effect.parameters[1].automation = "disabled";
+      effect.parameters[1].scope = "cue";
     });
     const effectRef = useProjectStore.getState().selectedEffectRef!;
     const cueRef = projectActions.createCue([effectRef], "Context Cue")!;

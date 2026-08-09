@@ -2,8 +2,8 @@ use super::validation::{validate_effect_definition_document, validate_parameter_
 use super::{
     layout_capacity, layout_grid_dimensions, validate_layout_geometry, ArrangementAutomationTarget,
     ArrangementDocument, AssetRef, CenterEdgesRegion, CueDefinition, CueLayer, CueMixOverride,
-    EffectDefinitionDocument, EffectNodeDSL, LayoutDefinition, LayoutGeometry,
-    ParameterOverridePolicyDSL, ParameterValueDSL, ProjectBundle, StageDocument,
+    EffectDefinitionDocument, EffectNodeDSL, LayoutDefinition, LayoutGeometry, ParameterSchemaDSL,
+    ParameterScopeDSL, ParameterSectionDSL, ParameterValueDSL, ProjectBundle, StageDocument,
     TargetSetDefinition, TargetSetSelector, TargetingDuration, TargetingDurationUnit,
     TargetingTransition, ARRANGEMENT_DOCUMENT_SCHEMA_VERSION, CUE_DEFINITION_SCHEMA_VERSION,
     EFFECT_DEFINITION_SCHEMA_VERSION, LAYOUT_DEFINITION_SCHEMA_VERSION,
@@ -498,7 +498,7 @@ fn effect_writer_attributes(
     }
     if effect.parameters.iter().any(|parameter| {
         parameter.id == COLOR_PARAMETER_ID
-            && (parameter.default_enabled.unwrap_or(true) || has_explicit_color)
+            && (parameter.default_value().is_some() || has_explicit_color)
     }) {
         attributes.insert(COLOR_RGB_ATTRIBUTE.to_string());
     }
@@ -631,13 +631,37 @@ fn validate_effects(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
     for (effect_index, effect) in bundle.effects.iter().enumerate() {
         let path = format!("effects[{effect_index}]");
         validate_effect_definition_document(effect, &path, diagnostics);
+        match effect
+            .parameters
+            .iter()
+            .find(|parameter| parameter.id == COLOR_PARAMETER_ID)
+        {
+            Some(parameter)
+                if matches!(parameter.schema, ParameterSchemaDSL::Color { .. })
+                    && matches!(parameter.scope, ParameterScopeDSL::Arrangement)
+                    && matches!(parameter.section, ParameterSectionDSL::Main) => {}
+            Some(_) => diagnostics.push(Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                format!("{path}.parameters"),
+                "The standard Color parameter must use color schema, arrangement scope, and the main section.",
+                "Declare id color with schema type color, scope arrangement, and section main.",
+            )),
+            None => diagnostics.push(Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                format!("{path}.parameters"),
+                "Effect is missing the standard Color parameter.",
+                "Declare an optional color schema so Lab, Cue, and Arrangement share one Color contract.",
+            )),
+        }
         for (parameter_index, parameter) in effect.parameters.iter().enumerate() {
-            validate_beat_sync_speed_override(
-                &parameter.id,
-                &parameter.default_value,
-                &format!("{path}.parameters[{parameter_index}].default_value"),
-                diagnostics,
-            );
+            if let Some(default) = parameter.default_value() {
+                validate_beat_sync_speed_override(
+                    &parameter.id,
+                    &default,
+                    &format!("{path}.parameters[{parameter_index}].schema.default"),
+                    diagnostics,
+                );
+            }
         }
     }
 }
@@ -1667,7 +1691,7 @@ fn validate_parameter_value(
         ));
         return;
     };
-    if parameter.value_type != value.value_type() {
+    if parameter.value_type() != value.value_type() {
         diagnostics.push(Diagnostic::error(
             PROJECT_SCHEMA_INVALID,
             format!("{path}.parameter_overrides.{parameter_id}"),
@@ -1675,10 +1699,10 @@ fn validate_parameter_value(
             "Use the value type declared by the referenced Effect revision.",
         ));
     }
-    if parameter
-        .override_policy
-        .is_some_and(|policy| !matches!(policy, ParameterOverridePolicyDSL::CueOverride))
-    {
+    if !matches!(
+        parameter.scope,
+        ParameterScopeDSL::Cue | ParameterScopeDSL::Arrangement
+    ) {
         diagnostics.push(
             Diagnostic::error(
                 PROJECT_SCHEMA_INVALID,
@@ -1695,9 +1719,9 @@ fn validate_parameter_value(
     }
     validate_parameter_value_contract(
         value,
-        parameter.value_type,
-        parameter.range,
-        &parameter.enum_values,
+        parameter.value_type(),
+        parameter.range(),
+        parameter.enum_values(),
         &format!("{path}.parameter_overrides.{parameter_id}"),
         diagnostics,
     );
@@ -2209,10 +2233,19 @@ pub(crate) mod tests {
                 "revision": 1,
                 "source": "project_local",
                 "parameters": [{
-                    "id": "intensity", "name": "Intensity", "value_type": "scalar",
-                    "default_value": { "type": "scalar", "value": 1.0 },
-                    "range": [0.0, 1.0], "unit": "normalized", "ui_hint": "slider",
-                    "automation": "continuous"
+                    "id": "intensity", "name": "Intensity",
+                    "schema": {
+                        "type": "scalar", "default": 1.0,
+                        "range": { "min": 0.0, "max": 1.0, "step": 0.05 },
+                        "unit": "normalized"
+                    },
+                    "scope": "arrangement", "section": "main",
+                    "help": "Maximum output intensity."
+                }, {
+                    "id": "color", "name": "Color",
+                    "schema": { "type": "color" },
+                    "scope": "arrangement", "section": "main",
+                    "help": "Optional single-color output override."
                 }],
                 "graph": { "nodes": [
                     { "type": "time", "id": "time" },
@@ -2379,23 +2412,14 @@ pub(crate) mod tests {
     #[test]
     fn standard_color_parameters_participate_in_layer_conflict_validation() {
         let mut bundle = valid_bundle();
-        bundle.effects[0].parameters.push(
-            serde_json::from_value(serde_json::json!({
-                "id": "color",
-                "name": "Color",
-                "value_type": "color",
-                "default_value": { "type": "color", "value": "#FFFFFF" },
-                "required": true,
-                "help": "Single-color output.",
-                "safe_fallback": { "type": "color", "value": "#FFFFFF" },
-                "override_policy": "cue_override",
-                "advanced": false,
-                "unit": "color",
-                "ui_hint": "color",
-                "automation": "continuous"
-            }))
-            .expect("standard Color parameter"),
-        );
+        let color = bundle.effects[0]
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.id == COLOR_PARAMETER_ID)
+            .expect("standard Color parameter");
+        color.schema = ParameterSchemaDSL::Color {
+            default: Some("#FFFFFF".to_string()),
+        };
         bundle.effects[0]
             .catalog
             .required_attributes
@@ -2419,6 +2443,36 @@ pub(crate) mod tests {
         assert!(diagnostics.iter().any(|diagnostic| {
             diagnostic.code == CUE_LAYER_ATTRIBUTE_CONFLICT
                 && diagnostic.message.contains(COLOR_RGB_ATTRIBUTE)
+        }));
+    }
+
+    #[test]
+    fn requires_the_standard_color_contract_on_project_effects() {
+        let mut missing = valid_bundle();
+        missing.effects[0]
+            .parameters
+            .retain(|parameter| parameter.id != COLOR_PARAMETER_ID);
+        let diagnostics = ValidatedProject::validate(missing)
+            .expect_err("Project Effects must declare the standard Color parameter");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == PROJECT_SCHEMA_INVALID
+                && diagnostic.path == "effects[0].parameters"
+                && diagnostic.message.contains("missing the standard Color")
+        }));
+
+        let mut malformed = valid_bundle();
+        malformed.effects[0]
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.id == COLOR_PARAMETER_ID)
+            .expect("standard Color parameter")
+            .scope = ParameterScopeDSL::Cue;
+        let diagnostics = ValidatedProject::validate(malformed)
+            .expect_err("standard Color must use the shared arrangement scope");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == PROJECT_SCHEMA_INVALID
+                && diagnostic.path == "effects[0].parameters"
+                && diagnostic.message.contains("arrangement scope")
         }));
     }
 
@@ -2453,12 +2507,11 @@ pub(crate) mod tests {
             serde_json::from_value(json!({
                 "id": "speed",
                 "name": "Speed",
-                "value_type": "scalar",
-                "default_value": { "type": "scalar", "value": 1.0 },
-                "range": [0.25, 8.0],
-                "unit": "multiplier",
-                "ui_hint": "slider",
-                "automation": "continuous"
+                "schema": { "type": "scalar", "default": 1.0,
+                    "range": { "min": 0.25, "max": 8.0, "step": 0.25 },
+                    "unit": "multiplier" },
+                "scope": "arrangement", "section": "main",
+                "help": "Beat-synced playback speed."
             }))
             .expect("speed parameter"),
         );
@@ -2481,12 +2534,11 @@ pub(crate) mod tests {
             serde_json::from_value(json!({
                 "id": "speed",
                 "name": "Speed",
-                "value_type": "scalar",
-                "default_value": { "type": "scalar", "value": 0.375 },
-                "range": [0.25, 8.0],
-                "unit": "multiplier",
-                "ui_hint": "slider",
-                "automation": "continuous"
+                "schema": { "type": "scalar", "default": 0.375,
+                    "range": { "min": 0.25, "max": 8.0, "step": 0.25 },
+                    "unit": "multiplier" },
+                "scope": "arrangement", "section": "main",
+                "help": "Beat-synced playback speed."
             }))
             .expect("speed parameter"),
         );
@@ -2495,7 +2547,7 @@ pub(crate) mod tests {
             ValidatedProject::validate(bundle).expect_err("default speed must stay musical");
         assert!(diagnostics.iter().any(|diagnostic| {
             diagnostic.code == PROJECT_SCHEMA_INVALID
-                && diagnostic.path.ends_with(".default_value")
+                && diagnostic.path.ends_with(".schema.default")
                 && diagnostic.message.contains("beat-synchronized")
         }));
     }
@@ -2507,12 +2559,11 @@ pub(crate) mod tests {
             serde_json::from_value(json!({
                 "id": "speed",
                 "name": "Speed",
-                "value_type": "scalar",
-                "default_value": { "type": "scalar", "value": 1.0 },
-                "range": [0.25, 8.0],
-                "unit": "multiplier",
-                "ui_hint": "slider",
-                "automation": "continuous"
+                "schema": { "type": "scalar", "default": 1.0,
+                    "range": { "min": 0.25, "max": 8.0, "step": 0.25 },
+                    "unit": "multiplier" },
+                "scope": "arrangement", "section": "main",
+                "help": "Beat-synced playback speed."
             }))
             .expect("speed parameter"),
         );

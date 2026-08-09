@@ -10,6 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import type { AutomationParameterOption } from "../automationParameters";
+import { parameterUnit, parameterValueType } from "@/document/effectParameter";
 
 interface AutomationParameterMenuProps {
   label: string;
@@ -69,7 +70,7 @@ export const AutomationParameterMenu = ({
               <span className="flex min-w-0 flex-col items-start">
                 <span className="truncate text-xs">{option.definition.name}</span>
                 <span className="text-muted-foreground text-[10px]">
-                  {option.definition.value_type} · {option.definition.unit}
+                  {parameterValueType(option.definition)} · {parameterUnit(option.definition)}
                 </span>
               </span>
             </Button>

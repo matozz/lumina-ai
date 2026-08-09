@@ -3,7 +3,6 @@ import type {
   EffectNodeDSL,
   OscillatorWaveformDSL,
   ParameterDefinitionDSL,
-  ParameterValueDSL,
   SequenceStepDSL,
 } from "@/bridge/types";
 import type { EffectFormValues } from "./effectFactory";
@@ -18,31 +17,21 @@ export function buildCommonParameters(values: EffectFormValues): ParameterDefini
     {
       id: "color",
       name: "Color",
-      value_type: "color",
-      default_value: { type: "color", value: values.color },
-      default_enabled: values.attributeMode === "intensity_color",
-      required: true,
+      schema: {
+        type: "color",
+        ...(values.attributeMode === "intensity_color" ? { default: values.color } : {}),
+      },
+      scope: "arrangement",
+      section: "main",
       help: "Single-color output used by this Effect and available to Cue or Arrangement overrides.",
-      safe_fallback: { type: "color", value: "#FFFFFF" },
-      override_policy: "cue_override",
-      advanced: false,
-      unit: "color",
-      ui_hint: "color",
-      automation: "continuous",
     },
     {
       id: "direction",
       name: "Direction",
-      value_type: "direction",
-      default_value: { type: "direction", value: "forward" },
-      required: true,
+      schema: { type: "direction", default: "forward" },
+      scope: "arrangement",
+      section: "main",
       help: "Playback direction.",
-      safe_fallback: { type: "direction", value: "forward" },
-      override_policy: "cue_override",
-      advanced: false,
-      unit: "direction",
-      ui_hint: "segmented",
-      automation: "discrete",
     },
   ];
 }
@@ -117,20 +106,14 @@ function scalarParameter(
   return {
     id,
     name,
-    value_type: "scalar",
-    default_value: scalar(value),
-    range,
-    required: true,
+    schema: {
+      type: "scalar",
+      default: value,
+      range: { min: range[0], max: range[1], step: id === "speed" ? 0.25 : 0.05 },
+      unit,
+    },
+    scope: "arrangement",
+    section: "main",
     help: `${name} control.`,
-    safe_fallback: scalar(value),
-    override_policy: "cue_override",
-    advanced: false,
-    unit,
-    ui_hint: "slider",
-    automation: "continuous",
   };
-}
-
-function scalar(value: number): ParameterValueDSL {
-  return { type: "scalar", value };
 }

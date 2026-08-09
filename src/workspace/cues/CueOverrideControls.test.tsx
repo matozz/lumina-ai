@@ -36,7 +36,8 @@ describe("CueOverrideControls Color", () => {
     const bundle = createStarterProjectBundle();
     const effect = createEffectAsset(bundle, "Intensity-only Pulse");
     const color = effect.parameters.find((parameter) => parameter.id === "color")!;
-    color.default_enabled = false;
+    if (color.schema.type !== "color") throw new Error("standard Color parameter missing");
+    delete color.schema.default;
     const cue = createCueAsset(bundle, [effect]);
     const layer = cue.layers[0];
     const onUpdate = (update: CueLayerUpdate) => update(layer, cue);
@@ -52,7 +53,7 @@ describe("CueOverrideControls Color", () => {
 
     expect(screen.queryByLabelText("Color color picker")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Choose color" }));
-    expect(layer.parameter_overrides?.color).toEqual(color.default_value);
+    expect(layer.parameter_overrides?.color).toEqual({ type: "color", value: "#FFFFFF" });
 
     rerender(
       <CueOverrideControls

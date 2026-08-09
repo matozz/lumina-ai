@@ -1,35 +1,33 @@
 import { describe, expect, it } from "vitest";
 import { builtinEffects } from "./builtinCatalog";
 
-const COLOR_EFFECT_IDS = [
-  "builtin.color.pulse",
+const EXPLICIT_DEFAULT_COLOR_EFFECT_IDS = [
   "builtin.spatial.radial-bloom",
   "builtin.transition.blackout-safe",
   "builtin.transition.fade-crossfade",
 ];
 
 describe("Production Color overrides", () => {
-  it.each(COLOR_EFFECT_IDS)("pins a complete standard Color contract on %s", (id) => {
-    const matchingEffects = builtinEffects.filter((effect) => effect.id === id);
-    const effect = matchingEffects[0];
-    const color = effect?.parameters.find((parameter) => parameter.id === "color");
+  it("pins one complete standard Color contract on every built-in Effect", () => {
+    for (const effect of builtinEffects) {
+      const colors = effect.parameters.filter((parameter) => parameter.id === "color");
+      expect(colors, effect.id).toHaveLength(1);
+      expect(colors[0], effect.id).toMatchObject({
+        id: "color",
+        schema: { type: "color" },
+        scope: "arrangement",
+        section: "main",
+      });
+      expect(colors[0].help, effect.id).toBeTruthy();
+    }
+  });
 
-    expect(matchingEffects).toHaveLength(1);
-    expect(effect?.revision).toBe(1);
-    expect(color).toMatchObject({
-      id: "color",
-      value_type: "color",
-      required: true,
-      override_policy: "cue_override",
-      advanced: false,
-      unit: "color",
-      ui_hint: "color",
-      automation: "continuous",
-    });
-    expect(color?.help).toBeTruthy();
-    expect(color?.safe_fallback).toEqual({ type: "color", value: "#FFFFFF" });
-    expect(effect?.catalog.required_attributes).toContain("color.rgb");
-    expect(effect?.catalog.parameter_summary).toContain("color");
+  it("preserves authored defaults only for Effects that previously enabled Color", () => {
+    for (const effect of builtinEffects) {
+      const color = effect.parameters.find((parameter) => parameter.id === "color")!;
+      const expectsDefault = EXPLICIT_DEFAULT_COLOR_EFFECT_IDS.includes(effect.id);
+      expect("default" in color.schema, effect.id).toBe(expectsDefault);
+    }
   });
 
   it("keeps structural Palette stops Effect-only and non-automatable", () => {
@@ -37,7 +35,7 @@ describe("Production Color overrides", () => {
       (effect) => effect.id === "builtin.color.pulse" && effect.revision === 1,
     )!;
     expect(
-      pulse.parameters.find((parameter) => parameter.value_type === "color_stops"),
-    ).toMatchObject({ override_policy: "effect_only", automation: "disabled" });
+      pulse.parameters.find((parameter) => parameter.schema.type === "color_stops"),
+    ).toMatchObject({ scope: "effect", section: "advanced" });
   });
 });

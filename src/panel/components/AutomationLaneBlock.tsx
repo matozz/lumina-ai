@@ -3,6 +3,7 @@ import type { KeyframeInterpolationDSL } from "@/bridge/types";
 import { engineSelectors, useEngineStore } from "@/stores/engine";
 import { resolveAutomationParameter } from "../automationParameters";
 import { isTextEditingTarget } from "@/lib/dom";
+import { parameterAutomation } from "@/document/effectParameter";
 import { useTimelineActions } from "../context/TimelineContext";
 import { clampKeyframeDelta, keyframeMoveBounds, keyframeTransform } from "../keyframeGeometry";
 import {
@@ -250,7 +251,7 @@ export const AutomationLaneBlock = memo(({ event, viewport }: AutomationLaneBloc
       .find((keyframe) => keyframe.time_tick < timeTick);
     const value = structuredClone(previous?.value ?? parameter.initialValue);
     const interpolation: KeyframeInterpolationDSL =
-      parameter.definition.automation === "discrete" ? "hold" : "linear";
+      parameterAutomation(parameter.definition) === "discrete" ? "hold" : "linear";
     actions.onAddKeyframe(track.id, lane.id, timeTick, value, interpolation);
   };
 

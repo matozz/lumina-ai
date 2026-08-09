@@ -82,7 +82,7 @@ describe("UserAssetPack V1", () => {
     expect(imported.bundle.manifest.arrangement_refs).toContainEqual(toRef(arrangement));
   });
 
-  it("adds disabled standard Color metadata when importing a legacy Effect", () => {
+  it("rejects Effects that omit the standard Color contract", () => {
     const { bundle, effectRef } = projectWithPortableAssets();
     const pack = createUserAssetPack(bundle, "Legacy Package");
     const legacyEffect = exactAsset(pack.effects, effectRef)!;
@@ -90,13 +90,16 @@ describe("UserAssetPack V1", () => {
       (parameter) => parameter.id !== "color",
     );
 
-    const imported = importUserAssetPack(createStarterProjectBundle(), pack);
-    const color = exactAsset(imported.bundle.effects, effectRef)?.parameters.find(
-      (parameter) => parameter.id === "color",
+    const validation = validateUserAssetPack(pack);
+    expect(validation.success).toBe(false);
+    if (!validation.success) {
+      expect(validation.issues).toContainEqual(
+        expect.objectContaining({ message: "Effect is missing the standard Color parameter" }),
+      );
+    }
+    expect(() => importUserAssetPack(createStarterProjectBundle(), pack)).toThrow(
+      /missing the standard Color parameter/,
     );
-
-    expect(color).toMatchObject({ value_type: "color", default_enabled: false });
-    expect(exactAsset(imported.importedPack.effects, effectRef)?.parameters).toContainEqual(color);
   });
 
   it("rejects malformed packs and missing transitive dependencies", () => {

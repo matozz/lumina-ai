@@ -5,6 +5,7 @@ import type {
   OscillatorWaveformDSL,
   ParameterValueDSL,
 } from "@/bridge/types";
+import { parameterDefaultValue } from "@/document/effectParameter";
 import { buildCommonParameters, buildEffectGraph, waveformFromDefinition } from "./effectGraph";
 
 export type EffectAttributeMode = "intensity_color" | "intensity";
@@ -174,18 +175,16 @@ function scalarValue(
 ) {
   const override = instance.parameter_overrides?.[id];
   if (override?.type === "scalar") return override.value;
-  const defaultValue = definition.parameters.find(
-    (parameter) => parameter.id === id,
-  )?.default_value;
+  const parameter = definition.parameters.find((parameter) => parameter.id === id);
+  const defaultValue = parameter ? parameterDefaultValue(parameter) : undefined;
   return defaultValue?.type === "scalar" ? defaultValue.value : fallback;
 }
 
 function colorValue(definition: EffectDefinitionDSL, instance: EffectInstanceDSL) {
   const override = instance.parameter_overrides?.color;
   if (override?.type === "color") return override.value;
-  const defaultValue = definition.parameters.find(
-    (parameter) => parameter.id === "color",
-  )?.default_value;
+  const parameter = definition.parameters.find((parameter) => parameter.id === "color");
+  const defaultValue = parameter ? parameterDefaultValue(parameter) : undefined;
   return defaultValue?.type === "color" ? defaultValue.value : "#ffffff";
 }
 

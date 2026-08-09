@@ -11,12 +11,15 @@ import {
 const definition: ParameterDefinitionDSL = {
   id: "intensity",
   name: "Intensity",
-  value_type: "scalar",
-  default_value: { type: "scalar", value: 0.5 },
-  range: [0, 1],
-  unit: "normalized",
-  ui_hint: "slider",
-  automation: "continuous",
+  schema: {
+    type: "scalar",
+    default: 0.5,
+    range: { min: 0, max: 1, step: 0.01 },
+    unit: "normalized",
+  },
+  scope: "arrangement",
+  section: "main",
+  help: "Output intensity.",
 };
 
 const start: KeyframeDSL = {
@@ -85,10 +88,7 @@ describe("AutomationCurveSegment", () => {
       ...definition,
       id: "color",
       name: "Color",
-      value_type: "color",
-      default_value: { type: "color", value: "#FF0000" },
-      unit: "color",
-      ui_hint: "color",
+      schema: { type: "color", default: "#FF0000" },
     };
     const { container } = render(
       <AutomationCurveSegment

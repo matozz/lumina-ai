@@ -6,11 +6,10 @@ use super::{
     CueTriggerMode, CueTriggerPolicy, DirectionDSL, EffectDefinitionDSL, EffectDefinitionDocument,
     EffectFamilyDSL, EffectInstanceDSL, EffectNodeDSL, GeneratorDSL, GroupDSL, GroupFixturesDSL,
     GroupRangeDSL, LayoutCapabilityDSL, LayoutDSL, LayoutDefinition, LayoutGeometry, LayoutType,
-    MetaDSL, OscillatorWaveformDSL, ParameterOverridePolicyDSL, ParameterValueDSL, PatchDSL,
-    ProjectBundle, ProjectManifest, ShowDocumentV1, StageDocument, StrobeRiskDSL,
-    TargetSetDefinition, TargetSetRef, TargetSetSelector, TargetingSceneDefinition,
-    TargetingSceneRef, TargetingTransition, ValidatedProject, CUE_DEFINITION_SCHEMA_VERSION,
-    CURRENT_SCHEMA_VERSION,
+    MetaDSL, OscillatorWaveformDSL, ParameterScopeDSL, ParameterValueDSL, PatchDSL, ProjectBundle,
+    ProjectManifest, ShowDocumentV1, StageDocument, StrobeRiskDSL, TargetSetDefinition,
+    TargetSetRef, TargetSetSelector, TargetingSceneDefinition, TargetingSceneRef,
+    TargetingTransition, ValidatedProject, CUE_DEFINITION_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION,
 };
 use crate::compiler::diagnostic::{
     Diagnostic, CATALOG_METADATA_INVALID, CATALOG_OUTPUT_INVALID, CATALOG_PARAMETER_INVALID,
@@ -536,12 +535,11 @@ pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<D
                 ));
             }
         }
-        for parameter in effect.parameters.iter().filter(|parameter| {
-            matches!(
-                parameter.override_policy,
-                Some(ParameterOverridePolicyDSL::CueOverride)
-            )
-        }) {
+        for parameter in effect
+            .parameters
+            .iter()
+            .filter(|parameter| parameter.allows_cue_override())
+        {
             let Some(alternate) = alternate_parameter_value(parameter) else {
                 continue;
             };
@@ -770,18 +768,19 @@ pub fn materialize_effect_graph_bindings(effect: &mut EffectDefinitionDocument) 
         else {
             continue;
         };
-        let applied = match (binding.property, node, &parameter.default_value) {
+        let default = parameter.default_value();
+        let applied = match (binding.property, node, default.as_ref()) {
             (
                 super::EffectNodePropertyDSL::Waveform,
                 super::EffectNodeDSL::Oscillator { waveform, .. },
-                ParameterValueDSL::Enum(value),
+                Some(ParameterValueDSL::Enum(value)),
             ) => parse_waveform(value)
                 .map(|value| *waveform = value)
                 .is_some(),
             (
                 super::EffectNodePropertyDSL::Attack,
                 super::EffectNodeDSL::Envelope { attack, .. },
-                ParameterValueDSL::Scalar(value),
+                Some(ParameterValueDSL::Scalar(value)),
             ) => {
                 *attack = *value;
                 true
@@ -789,7 +788,7 @@ pub fn materialize_effect_graph_bindings(effect: &mut EffectDefinitionDocument) 
             (
                 super::EffectNodePropertyDSL::Release,
                 super::EffectNodeDSL::Envelope { release, .. },
-                ParameterValueDSL::Scalar(value),
+                Some(ParameterValueDSL::Scalar(value)),
             ) => {
                 *release = *value;
                 true
@@ -797,7 +796,7 @@ pub fn materialize_effect_graph_bindings(effect: &mut EffectDefinitionDocument) 
             (
                 super::EffectNodePropertyDSL::ColorStops,
                 super::EffectNodeDSL::ColorGradient { stops, .. },
-                ParameterValueDSL::ColorStops(value),
+                Some(ParameterValueDSL::ColorStops(value)),
             ) => {
                 *stops = value.clone();
                 true
@@ -810,13 +809,13 @@ pub fn materialize_effect_graph_bindings(effect: &mut EffectDefinitionDocument) 
                     CATALOG_PARAMETER_INVALID,
                     format!("effect.parameters[{index}].graph_binding"),
                     "Typed graph binding cannot be materialized from this parameter value.",
-                    "Restore the safe fallback or repair the binding contract.",
+                    "Restore the last valid value or repair the binding contract.",
                 )
                 .with_asset("effect", effect.id.clone(), effect.revision)
                 .with_recovery(
-                    "restore_safe_fallback",
-                    "Restore safe fallback",
-                    Some(format!("effect.parameters[{index}].default_value")),
+                    "restore_last_valid_value",
+                    "Restore last valid value",
+                    Some(format!("effect.parameters[{index}].schema.default")),
                 ),
             );
         }
@@ -906,7 +905,8 @@ fn effect_sample_document(
 fn alternate_parameter_value(
     parameter: &super::ParameterDefinitionDSL,
 ) -> Option<ParameterValueDSL> {
-    match (&parameter.default_value, parameter.range) {
+    let default = parameter.default_value()?;
+    match (&default, parameter.range()) {
         (ParameterValueDSL::Scalar(default), Some((minimum, maximum))) => {
             let candidate = if parameter.id == "speed" {
                 [0.25, 0.5, 1.0, 2.0, 4.0, 8.0].into_iter().find(|value| {
@@ -931,7 +931,7 @@ fn alternate_parameter_value(
         }
         (ParameterValueDSL::Boolean(value), _) => Some(ParameterValueDSL::Boolean(!value)),
         (ParameterValueDSL::Enum(value), _) => parameter
-            .enum_values
+            .enum_values()
             .iter()
             .find(|candidate| *candidate != value)
             .cloned()
@@ -949,7 +949,7 @@ fn sampled_maximum_strobe_risk(
         .parameters
         .iter()
         .find(|parameter| parameter.id == "speed")
-        .and_then(|parameter| parameter.range.map(|(_, maximum)| maximum));
+        .and_then(|parameter| parameter.range().map(|(_, maximum)| maximum));
     let overrides = maximum_speed.map_or_else(BTreeMap::new, |maximum| {
         BTreeMap::from([("speed".to_string(), ParameterValueDSL::Scalar(maximum))])
     });
@@ -1138,8 +1138,8 @@ fn validate_cue_recipe<'a>(
                 continue;
             };
             if !matches!(
-                parameter.override_policy,
-                Some(ParameterOverridePolicyDSL::CueOverride)
+                parameter.scope,
+                ParameterScopeDSL::Cue | ParameterScopeDSL::Arrangement
             ) {
                 diagnostics.push(
                     Diagnostic::error(
@@ -1153,9 +1153,9 @@ fn validate_cue_recipe<'a>(
             }
             validate_parameter_value_contract(
                 value,
-                parameter.value_type,
-                parameter.range,
-                &parameter.enum_values,
+                parameter.value_type(),
+                parameter.range(),
+                parameter.enum_values(),
                 &format!("{layer_path}.parameter_overrides.{parameter_id}"),
                 diagnostics,
             );
@@ -1235,7 +1235,7 @@ fn effect_writer_attributes(
     }
     if effect.parameters.iter().any(|parameter| {
         parameter.id == COLOR_PARAMETER_ID
-            && (parameter.default_enabled.unwrap_or(true) || has_explicit_color)
+            && (parameter.default_value().is_some() || has_explicit_color)
     }) {
         attributes.insert(COLOR_RGB_ATTRIBUTE.to_string());
     }
@@ -1553,7 +1553,9 @@ pub const DEFAULT_CUE_TRIGGER: CueTriggerPolicy = CueTriggerPolicy {
 mod tests {
     use super::*;
     use crate::compiler::diagnostic::CUE_RECIPE_UNRESOLVED;
-    use crate::document::{valid_bundle, AutomationPolicyDSL, ParameterValueTypeDSL};
+    use crate::document::{
+        valid_bundle, AutomationPolicyDSL, ParameterScopeDSL, ParameterValueTypeDSL,
+    };
 
     #[test]
     fn checked_in_catalog_meets_production_contract() {
@@ -1576,21 +1578,18 @@ mod tests {
                 .find(|parameter| parameter.id == COLOR_PARAMETER_ID)
                 .unwrap_or_else(|| panic!("{} has no standard Color parameter", effect.id));
             assert_eq!(
-                color.value_type,
+                color.value_type(),
                 ParameterValueTypeDSL::Color,
                 "{}",
                 effect.id
             );
             assert!(
-                matches!(
-                    color.override_policy,
-                    Some(ParameterOverridePolicyDSL::CueOverride)
-                ),
+                matches!(color.scope, ParameterScopeDSL::Arrangement),
                 "{}",
                 effect.id
             );
             assert!(
-                matches!(color.automation, AutomationPolicyDSL::Continuous),
+                matches!(color.automation(), AutomationPolicyDSL::Continuous),
                 "{}",
                 effect.id
             );
@@ -1610,7 +1609,7 @@ mod tests {
             .iter()
             .find(|parameter| parameter.id == COLOR_PARAMETER_ID)
             .expect("standard Color");
-        assert_eq!(color.default_enabled, Some(false));
+        assert!(color.default_value().is_none());
 
         let show = Compiler::compile_document(effect_sample_document(effect, BTreeMap::new()))
             .expect("optional Color compiles");

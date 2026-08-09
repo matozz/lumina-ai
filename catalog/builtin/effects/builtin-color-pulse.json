@@ -8,32 +8,26 @@
     {
       "id": "speed",
       "name": "Speed",
-      "value_type": "scalar",
-      "default_value": {
+      "schema": {
         "type": "scalar",
-        "value": 1
+        "default": 1,
+        "range": {
+          "min": 0.25,
+          "max": 8,
+          "step": 0.25
+        },
+        "unit": "multiplier"
       },
-      "range": [0.25, 8],
-      "step": 0.25,
-      "required": true,
-      "help": "Beat-synced color pulse speed.",
-      "safe_fallback": {
-        "type": "scalar",
-        "value": 1
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "multiplier",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Beat-synced color pulse speed."
     },
     {
       "id": "palette",
       "name": "Palette",
-      "value_type": "color_stops",
-      "default_value": {
+      "schema": {
         "type": "color_stops",
-        "value": [
+        "default": [
           {
             "position": 0,
             "color": "#190D3B"
@@ -44,51 +38,23 @@
           }
         ]
       },
-      "required": true,
+      "scope": "effect",
+      "section": "advanced",
       "help": "Dark-to-bright pulse colors.",
-      "safe_fallback": {
-        "type": "color_stops",
-        "value": [
-          {
-            "position": 0,
-            "color": "#000000"
-          },
-          {
-            "position": 1,
-            "color": "#FFFFFF"
-          }
-        ]
-      },
-      "override_policy": "effect_only",
-      "advanced": true,
       "graph_binding": {
         "node_id": "gradient",
         "property": "color_stops"
-      },
-      "unit": "color_stops",
-      "ui_hint": "color_stops",
-      "automation": "disabled"
+      }
     },
     {
       "id": "color",
       "name": "Color",
-      "value_type": "color",
-      "default_value": {
-        "type": "color",
-        "value": "#FF4FD8"
+      "schema": {
+        "type": "color"
       },
-      "default_enabled": false,
-      "required": true,
-      "help": "Single-color output override for Cue and Arrangement authoring.",
-      "safe_fallback": {
-        "type": "color",
-        "value": "#FFFFFF"
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "color",
-      "ui_hint": "color",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Single-color output override for Cue and Arrangement authoring."
     }
   ],
   "graph": {
@@ -165,8 +131,6 @@
     "colorfulness": 0.9,
     "strobe_risk": "low",
     "required_attributes": ["color.rgb", "intensity"],
-    "layout_capabilities": ["any"],
-    "parameter_summary": ["speed", "color"],
-    "deprecated": false
+    "layout_capabilities": ["any"]
   }
 }

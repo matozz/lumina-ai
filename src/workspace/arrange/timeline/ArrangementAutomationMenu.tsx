@@ -10,6 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import type { ArrangementAutomationOption } from "./arrangementTimelineModel";
+import { parameterAutomation, parameterValueType } from "@/document/effectParameter";
 
 export function ArrangementAutomationMenu({
   options,
@@ -55,7 +56,7 @@ export function ArrangementAutomationMenu({
               <span className="flex min-w-0 flex-col items-start">
                 <span className="truncate text-xs">{option.label}</span>
                 <span className="text-muted-foreground text-[10px]">
-                  {option.definition.value_type} · {option.definition.automation}
+                  {parameterValueType(option.definition)} · {parameterAutomation(option.definition)}
                 </span>
               </span>
             </Button>

@@ -1,5 +1,6 @@
 import { Copy, Pencil, Plus, Trash2 } from "lucide-react";
 import type { KeyframeInterpolationDSL, ParameterDefinitionDSL } from "@/bridge/types";
+import { parameterAutomation } from "@/document/effectParameter";
 import {
   ContextMenuContent,
   ContextMenuGroup,
@@ -90,7 +91,7 @@ export function AutomationKeyframeContextMenu({
   ...props
 }: AutomationKeyframeContextMenuProps) {
   const interpolations: KeyframeInterpolationDSL[] =
-    definition.automation === "discrete"
+    parameterAutomation(definition) === "discrete"
       ? ["hold"]
       : ["linear", "ease_in", "ease_out", "ease_in_out", "bezier", "hold"];
   return (

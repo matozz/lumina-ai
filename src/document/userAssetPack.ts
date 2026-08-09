@@ -2,7 +2,7 @@ import Ajv2020, { type ErrorObject } from "ajv/dist/2020.js";
 import schema from "../../schemas/user-asset-pack-v1.schema.json";
 import type { AssetRef, ProjectBundle, UserAssetPack } from "@/bridge/types";
 import { validateProjectBundle } from "./projectBundle";
-import { assetKey, ensureStandardColorParameter, exactAsset, uniqueId } from "./projectModel";
+import { assetKey, exactAsset, uniqueId } from "./projectModel";
 
 type PackAssetKind = "stage" | "layout" | "effect" | "cue" | "arrangement";
 
@@ -146,7 +146,6 @@ export function importUserAssetPack(
     throw new Error(validation.issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n"));
   }
   const pack = structuredClone(validation.data);
-  for (const effect of pack.effects) ensureStandardColorParameter(effect);
   const conflicts = assetPackConflicts(bundle, pack);
   if (conflicts.length > 0 && onConflict === "reject") {
     throw new Error(
@@ -180,6 +179,25 @@ function validateAssetPackReferences(pack: UserAssetPack) {
   const layouts = new Set(pack.layouts.map(assetKey));
   const effects = new Set(pack.effects.map(assetKey));
   const cues = new Set(pack.cues.map(assetKey));
+  for (const [effectIndex, effect] of pack.effects.entries()) {
+    const color = effect.parameters.find((parameter) => parameter.id === "color");
+    if (!color) {
+      issues.push({
+        path: `effects[${effectIndex}].parameters`,
+        message: "Effect is missing the standard Color parameter",
+      });
+    } else if (
+      color.schema.type !== "color" ||
+      color.scope !== "arrangement" ||
+      color.section !== "main"
+    ) {
+      issues.push({
+        path: `effects[${effectIndex}].parameters`,
+        message:
+          "The standard Color parameter must use color schema, arrangement scope, and the main section",
+      });
+    }
+  }
   for (const [index, stage] of pack.stages.entries()) {
     if (!layouts.has(assetKey(stage.layout_ref))) {
       issues.push({ path: `stages[${index}].layout_ref`, message: "Layout dependency is missing" });

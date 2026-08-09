@@ -39,6 +39,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { fixtureIdsForStage } from "@/document/layoutDefinition";
 import { effectTargetCompatibility, friendlyEffectAttribute } from "@/document/effectCompatibility";
+import { setParameterDefaultValue } from "@/document/effectParameter";
 import { activeLayout, activeStage, exactAsset, uniqueId } from "@/document/projectModel";
 import { resolveTargetSet } from "@/document/stageTopology";
 import {
@@ -132,8 +133,10 @@ export function EffectLabInspector() {
 
   const effect = session.working;
   const readOnly = effect.source === "built_in" && session.mode === "edit";
-  const commonParameters = effect.parameters.filter((parameter) => !parameter.advanced);
-  const advancedParameters = effect.parameters.filter((parameter) => parameter.advanced);
+  const commonParameters = effect.parameters.filter((parameter) => parameter.section === "main");
+  const advancedParameters = effect.parameters.filter(
+    (parameter) => parameter.section === "advanced",
+  );
   const parameterIndices = Object.fromEntries(
     effect.parameters.map((parameter, index) => [parameter.id, index]),
   );
@@ -158,14 +161,19 @@ export function EffectLabInspector() {
   const updateParameter = (parameterId: string, value: ParameterValueDSL) => {
     authoringDraftActions.updateEffect((draft) => {
       const parameter = draft.parameters.find((candidate) => candidate.id === parameterId);
-      if (parameter) parameter.default_value = structuredClone(value);
+      if (parameter) setParameterDefaultValue(parameter, structuredClone(value));
     });
   };
 
-  const updateParameterDefaultEnabled = (parameterId: string, enabled: boolean) => {
+  const updateOptionalParameter = (parameterId: string, enabled: boolean) => {
     authoringDraftActions.updateEffect((draft) => {
       const parameter = draft.parameters.find((candidate) => candidate.id === parameterId);
-      if (parameter?.value_type === "color") parameter.default_enabled = enabled;
+      if (parameter?.schema.type === "color") {
+        setParameterDefaultValue(
+          parameter,
+          enabled ? { type: "color", value: "#FFFFFF" } : undefined,
+        );
+      }
     });
   };
 
@@ -374,8 +382,8 @@ export function EffectLabInspector() {
               readOnly={readOnly}
               parameterIndices={parameterIndices}
               onChange={updateParameter}
-              onDefaultEnabledChange={updateParameterDefaultEnabled}
-              onRestoreFallback={authoringDraftActions.restoreEffectFallback}
+              onOptionalEnabledChange={updateOptionalParameter}
+              onRestoreLastValid={authoringDraftActions.restoreEffectLastValid}
               showMetadata={advancedMode}
             />
 
@@ -402,8 +410,8 @@ export function EffectLabInspector() {
                     readOnly={readOnly}
                     parameterIndices={parameterIndices}
                     onChange={updateParameter}
-                    onDefaultEnabledChange={updateParameterDefaultEnabled}
-                    onRestoreFallback={authoringDraftActions.restoreEffectFallback}
+                    onOptionalEnabledChange={updateOptionalParameter}
+                    onRestoreLastValid={authoringDraftActions.restoreEffectLastValid}
                     showMetadata={advancedMode}
                   />
                 )}
