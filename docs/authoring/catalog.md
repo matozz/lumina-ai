@@ -18,7 +18,7 @@ catalog/builtin/
 
 内置资产默认只读。用户 Save/Customize/Duplicate 时生成 ProjectBundle 内的新资产和独立 ID，不覆盖 Catalog 源文件。
 
-同一 built-in Effect ID 可以同时保留多个 immutable revision。Catalog UI 对新选择默认展示最新 revision；已存在的 Cue、recipe、Arrangement 和 Project Template 仍使用提交在 JSON 中的 exact ref，不以 `latest` 替换。只增加可选 authoring contract、默认 render 不变的同 ID revision 可以共享 sampled-output signature；不同 Effect ID 仍不得产生不可区分的重复输出。
+同一 built-in Effect ID 可以同时保留多个 revision。Catalog UI 对新选择默认展示最新 revision；已存在的 Cue、recipe、Arrangement 和 Project Template 仍使用提交在 JSON 中的 exact ref，不以 `latest` 替换。兼容现有 Schema、参数和引用的行为修复直接修改当前 Catalog 源文件，不为每次修复机械增加 revision 或兼容配置；只有无法保持兼容、必须让新旧行为并存时才新增 revision。不同 Effect ID 仍不得产生不可区分的重复输出。
 
 Cue recipe 与 Project Template 中的 Layer ID 也是持久化引用。新声明使用固定的 opaque ID；如果内置 revision 确需迁移 identity，所有 layer override 与 automation target 必须在同一源码变更中精确重映射，并通过完整 ProjectBundle validation。
 

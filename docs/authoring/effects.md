@@ -42,7 +42,7 @@ Random 将 phase 0 保留为停止状态的静态预览；Transport 离开零点
 
 结构性 Palette 继续使用 `color_stops`，只在 Lab 中编辑，并保持 `override_policy: effect_only`、`automation: disabled`。本版本不在 runtime 改变 stop 数量，也不做 stop-by-stop Arrangement automation。
 
-Built-in Effect revision 不原地修改。Color-capable revision 2 与 revision 1 同时保留；新建内容默认从 Catalog 选择最新 revision，既有 Cue 的 exact ref 继续固定在原 revision，直到用户明确创建/保存新的 Cue revision。
+兼容现有 Schema、参数和引用的 Catalog 修复直接更新当前源文件，不机械增加 revision。只有无法兼容、必须让新旧行为并存时才增加 revision，并同步更新需要迁移的 Cue exact ref。当前 4 个 standard Color Effect 都只保留 revision 1，Catalog 内不保留重复 rev2。
 
 ## 内置效果取舍
 

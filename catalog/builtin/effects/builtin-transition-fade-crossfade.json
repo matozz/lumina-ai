@@ -48,6 +48,26 @@
       "unit": "normalized",
       "ui_hint": "slider",
       "automation": "continuous"
+    },
+    {
+      "id": "color",
+      "name": "Color",
+      "value_type": "color",
+      "default_value": {
+        "type": "color",
+        "value": "#7C8DFF"
+      },
+      "required": true,
+      "help": "Single-color output override for Cue and Arrangement authoring.",
+      "safe_fallback": {
+        "type": "color",
+        "value": "#FFFFFF"
+      },
+      "override_policy": "cue_override",
+      "advanced": false,
+      "unit": "color",
+      "ui_hint": "color",
+      "automation": "continuous"
     }
   ],
   "graph": {
@@ -94,11 +114,11 @@
     "energy": 0.3,
     "density": 1,
     "motion": "organic",
-    "colorfulness": 0,
+    "colorfulness": 0.75,
     "strobe_risk": "none",
-    "required_attributes": ["intensity"],
+    "required_attributes": ["intensity", "color.rgb"],
     "layout_capabilities": ["any"],
-    "parameter_summary": ["speed", "intensity"],
+    "parameter_summary": ["speed", "intensity", "color"],
     "deprecated": false
   }
 }

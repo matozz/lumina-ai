@@ -68,6 +68,26 @@
       "unit": "color_stops",
       "ui_hint": "color_stops",
       "automation": "disabled"
+    },
+    {
+      "id": "color",
+      "name": "Color",
+      "value_type": "color",
+      "default_value": {
+        "type": "color",
+        "value": "#FF4FD8"
+      },
+      "required": true,
+      "help": "Single-color output override for Cue and Arrangement authoring.",
+      "safe_fallback": {
+        "type": "color",
+        "value": "#FFFFFF"
+      },
+      "override_policy": "cue_override",
+      "advanced": false,
+      "unit": "color",
+      "ui_hint": "color",
+      "automation": "continuous"
     }
   ],
   "graph": {
@@ -113,12 +133,14 @@
         "attribute_id": "color.rgb"
       },
       {
-        "type": "constant",
+        "type": "map",
         "id": "visible-intensity",
-        "value": {
-          "type": "scalar",
-          "value": 1
-        }
+        "input": {
+          "node_id": "oscillator",
+          "port": "scalar"
+        },
+        "input_range": [0, 1],
+        "output_range": [0.25, 1]
       },
       {
         "type": "attribute_writer",
@@ -143,7 +165,7 @@
     "strobe_risk": "low",
     "required_attributes": ["color.rgb", "intensity"],
     "layout_capabilities": ["any"],
-    "parameter_summary": ["speed"],
+    "parameter_summary": ["speed", "color"],
     "deprecated": false
   }
 }

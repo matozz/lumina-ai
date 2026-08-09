@@ -1574,6 +1574,43 @@ mod tests {
     }
 
     #[test]
+    fn short_color_burst_keeps_its_pulse_with_a_cue_color_override() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        let burst = catalog
+            .effects
+            .iter()
+            .find(|effect| effect.id == "builtin.color.pulse" && effect.revision == 1)
+            .expect("Short Color Burst current source");
+        let document = effect_sample_document(
+            burst,
+            BTreeMap::from([(
+                crate::engine::effect::COLOR_PARAMETER_ID.to_string(),
+                ParameterValueDSL::Color("#FF4FD8".to_string()),
+            )]),
+        );
+        let show = Compiler::compile_document(document).expect("Short Color Burst compiles");
+        let active = effect_sample_live(&show);
+        let intensities = [0.0, 0.25, 0.5, 0.75].map(|beat| {
+            render_at(&show, RenderTime { beat }, RenderSource::Live(&active))
+                .first()
+                .and_then(frame_intensity)
+                .expect("Short Color Burst writes intensity")
+        });
+
+        let minimum = intensities.into_iter().fold(f64::INFINITY, f64::min);
+        let maximum = intensities.into_iter().fold(f64::NEG_INFINITY, f64::max);
+
+        assert!(
+            minimum >= 0.25 - f64::EPSILON,
+            "burst keeps a safe visible floor"
+        );
+        assert!(
+            maximum > minimum + 0.5,
+            "Cue Color must not flatten the burst pulse"
+        );
+    }
+
+    #[test]
     fn corner_spatial_effects_keep_visible_output_on_authored_target_sizes() {
         let catalog = builtin_production_catalog().expect("catalog");
         let template = catalog

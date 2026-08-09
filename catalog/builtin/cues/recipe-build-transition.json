@@ -10,7 +10,7 @@
       "id": "layer_4g5ln4crp3o5utvc",
       "effect_ref": {
         "id": "builtin.transition.blackout-safe",
-        "revision": 2
+        "revision": 1
       },
       "target": {
         "type": "all"
