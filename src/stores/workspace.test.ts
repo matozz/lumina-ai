@@ -91,4 +91,14 @@ describe("workspace state", () => {
       },
     });
   });
+
+  it("keeps Arrange focus and splitter size in workspace preferences", () => {
+    workspaceActions.setArrangeTimelineFocus(true);
+    workspaceActions.setArrangePreviewSize(44);
+
+    expect(useWorkspaceStore.getState()).toMatchObject({
+      arrangeTimelineFocus: true,
+      arrangePreviewSize: 44,
+    });
+  });
 });

@@ -83,4 +83,38 @@ describe("CueClipBlock native pointer interaction", () => {
     expect(onCommitResize).toHaveBeenCalledOnce();
     expect(onCommitResize).toHaveBeenCalledWith(2_400);
   });
+
+  it("renders a one-beat clip at its truthful compact width in the global view", () => {
+    const viewportRef = createRef<HTMLDivElement>();
+    render(
+      <div ref={viewportRef}>
+        <CueClipBlock
+          arrangementLength={245_760}
+          clip={{
+            id: "drop-beat",
+            cue_ref: { id: "full-flash", revision: 1 },
+            start_tick: 69_120,
+            duration_tick: 960,
+          }}
+          cueName="FullFlash"
+          geometry={createTimelineGeometry(960, 4, 480)}
+          onCommitMove={vi.fn()}
+          onCommitResize={vi.fn()}
+          onDelete={vi.fn()}
+          onDuplicate={vi.fn()}
+          onSelect={vi.fn()}
+          onSnapPreview={vi.fn()}
+          selected={false}
+          top={8}
+          visualRow={0}
+          viewportRef={viewportRef}
+        />
+      </div>,
+    );
+
+    const block = screen.getByRole("button", { name: /FullFlash, starts at tick 69120/ });
+    expect(block.style.width).toBe("4px");
+    expect(block.dataset.compact).toBe("true");
+    expect(block.querySelector("[data-resize-handle]")).toBeNull();
+  });
 });

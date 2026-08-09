@@ -19,7 +19,10 @@ export function WorkspaceShell() {
   const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
   const libraryVisible = useWorkspaceStore(workspaceSelectors.libraryVisible);
   const inspectorVisible = useWorkspaceStore(workspaceSelectors.inspectorVisible);
-  const showContextLibrary = libraryVisible;
+  const arrangeTimelineFocus = useWorkspaceStore(workspaceSelectors.arrangeTimelineFocus);
+  const focusMode = activeWorkspace === "arrange" && arrangeTimelineFocus;
+  const showContextLibrary = libraryVisible && !focusMode;
+  const showContextInspector = inspectorVisible && !focusMode;
   useProjectPreviewController(activeWorkspace);
 
   const selectWorkspace = (workspace: WorkspaceId) => {
@@ -56,7 +59,7 @@ export function WorkspaceShell() {
             </main>
           </ResizablePanel>
 
-          {inspectorVisible && (
+          {showContextInspector && (
             <>
               <ResizableHandle withHandle />
               <ResizablePanel

@@ -29,6 +29,8 @@ export interface WorkspaceState {
   advancedMode: boolean;
   libraryVisible: boolean;
   inspectorVisible: boolean;
+  arrangeTimelineFocus: boolean;
+  arrangePreviewSize: number;
   selectedEffectId: string | null;
   selectedLiveEffectId: string | null;
   selectedArrangeBuiltInCue: ArrangeBuiltInCueSelection | null;
@@ -47,6 +49,8 @@ const initialState: WorkspaceState = {
   advancedMode: false,
   libraryVisible: true,
   inspectorVisible: true,
+  arrangeTimelineFocus: false,
+  arrangePreviewSize: 38,
   selectedEffectId: null,
   selectedLiveEffectId: null,
   selectedArrangeBuiltInCue: null,
@@ -60,7 +64,7 @@ const initialState: WorkspaceState = {
   statusMessage: null,
 };
 
-const LOCAL_WORKSPACE_PREFERENCES_VERSION = 5;
+const LOCAL_WORKSPACE_PREFERENCES_VERSION = 6;
 
 export const useWorkspaceStore = create<WorkspaceState>()(
   persist(() => initialState, {
@@ -77,6 +81,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       activeWorkspace: state.activeWorkspace,
       libraryVisible: state.libraryVisible,
       inspectorVisible: state.inspectorVisible,
+      arrangeTimelineFocus: state.arrangeTimelineFocus,
+      arrangePreviewSize: state.arrangePreviewSize,
       favoriteEffectIds: state.favoriteEffectIds,
       livePadQuantize: state.livePadQuantize,
       livePadConfigs: state.livePadConfigs,
@@ -96,6 +102,12 @@ export const workspaceActions = {
   setLibraryVisible: (libraryVisible: boolean) => useWorkspaceStore.setState({ libraryVisible }),
   setInspectorVisible: (inspectorVisible: boolean) =>
     useWorkspaceStore.setState({ inspectorVisible }),
+  setArrangeTimelineFocus: (arrangeTimelineFocus: boolean) =>
+    useWorkspaceStore.setState({ arrangeTimelineFocus }),
+  setArrangePreviewSize: (arrangePreviewSize: number) =>
+    useWorkspaceStore.setState({
+      arrangePreviewSize: Math.max(20, Math.min(70, arrangePreviewSize)),
+    }),
   setSelectedEffectId: (selectedEffectId: string | null) =>
     useWorkspaceStore.setState({ selectedEffectId }),
   setSelectedLiveEffectId: (selectedLiveEffectId: string | null) =>
@@ -156,6 +168,8 @@ export const workspaceSelectors = {
   advancedMode: (state: WorkspaceState) => state.advancedMode,
   libraryVisible: (state: WorkspaceState) => state.libraryVisible,
   inspectorVisible: (state: WorkspaceState) => state.inspectorVisible,
+  arrangeTimelineFocus: (state: WorkspaceState) => state.arrangeTimelineFocus,
+  arrangePreviewSize: (state: WorkspaceState) => state.arrangePreviewSize,
   selectedEffectId: (state: WorkspaceState) => state.selectedEffectId,
   selectedLiveEffectId: (state: WorkspaceState) => state.selectedLiveEffectId,
   selectedArrangeBuiltInCue: (state: WorkspaceState) => state.selectedArrangeBuiltInCue,

@@ -3,24 +3,43 @@ export const MIN_BEAT_WIDTH = 24;
 export const MAX_BEAT_WIDTH = 120;
 export const BEAT_WIDTH_STEP = 16;
 
+export type ArrangementSnapPreset = "bar" | "beat" | "half" | "quarter" | "eighth";
+
 export interface TimelineGeometry {
   beatWidth: number;
   ppq: number;
   snapTicks: number;
 }
 
-export function createTimelineGeometry(ppq: number, beatWidth: number): TimelineGeometry {
+export function createTimelineGeometry(
+  ppq: number,
+  beatWidth: number,
+  snapTicks = Math.max(1, Math.round(ppq / 2)),
+): TimelineGeometry {
   return {
     beatWidth,
     ppq,
-    snapTicks: Math.max(1, Math.round(ppq * gridSnapBeats(beatWidth))),
+    snapTicks: Math.max(1, Math.round(snapTicks)),
   };
 }
 
-export function gridSnapBeats(beatWidth: number): number {
-  if (beatWidth >= 96) return 0.25;
-  if (beatWidth >= 48) return 0.5;
-  return 1;
+export function snapTicksForPreset(
+  ppq: number,
+  preset: ArrangementSnapPreset,
+  timeSignature = { numerator: 4, denominator: 4 },
+): number {
+  const beatTicks = (ppq * 4) / timeSignature.denominator;
+  if (preset === "bar") return Math.max(1, Math.round(beatTicks * timeSignature.numerator));
+  if (preset === "beat") return Math.max(1, Math.round(beatTicks));
+  if (preset === "half") return Math.max(1, Math.round(beatTicks / 2));
+  if (preset === "quarter") return Math.max(1, Math.round(beatTicks / 4));
+  return Math.max(1, Math.round(beatTicks / 8));
+}
+
+export function visualGridTicks(ppq: number, beatWidth: number): number {
+  if (beatWidth >= 96) return Math.max(1, Math.round(ppq / 4));
+  if (beatWidth >= 48) return Math.max(1, Math.round(ppq / 2));
+  return Math.max(1, Math.round(ppq));
 }
 
 export function ticksToPixels(ticks: number, geometry: TimelineGeometry): number {
@@ -65,6 +84,10 @@ export function pointerDeltaWithScroll(
   return clientX - startClientX + scrollLeft - startScrollLeft;
 }
 
-export function clampBeatWidth(beatWidth: number): number {
-  return Math.max(MIN_BEAT_WIDTH, Math.min(MAX_BEAT_WIDTH, beatWidth));
+export function clampBeatWidth(
+  beatWidth: number,
+  minimum = MIN_BEAT_WIDTH,
+  maximum = MAX_BEAT_WIDTH,
+): number {
+  return Math.max(minimum, Math.min(maximum, beatWidth));
 }

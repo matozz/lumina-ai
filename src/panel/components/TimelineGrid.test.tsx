@@ -47,7 +47,7 @@ describe("TimelineGrid", () => {
     });
 
     fireEvent.pointerDown(ruler, { button: 0, clientX: 110 });
-    expect(onSeek).toHaveBeenLastCalledWith(3);
+    expect(onSeek).toHaveBeenLastCalledWith(2.5);
     expect(document.activeElement).toBe(ruler);
 
     act(() => engineActions.setGlobalBeat(5));
@@ -58,6 +58,6 @@ describe("TimelineGrid", () => {
     fireEvent.keyDown(ruler, { key: "ArrowLeft", shiftKey: true });
     fireEvent.keyDown(ruler, { key: "Home" });
     fireEvent.keyDown(ruler, { key: "End" });
-    expect(onSeek.mock.calls.slice(-4)).toEqual([[6], [1], [0], [64]]);
+    expect(onSeek.mock.calls.slice(-4)).toEqual([[5.5], [1], [0], [64]]);
   });
 });

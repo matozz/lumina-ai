@@ -1,5 +1,16 @@
-import { CircleHelp, Copy, Plus, Redo2, Undo2, ZoomIn, ZoomOut } from "lucide-react";
-import type { ArrangementDocument, AssetRef, ProjectBundle } from "@/bridge/types";
+import {
+  CircleHelp,
+  Copy,
+  Focus,
+  Maximize2,
+  Minimize2,
+  Plus,
+  Redo2,
+  Undo2,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
+import type { AssetRef, ProjectBundle } from "@/bridge/types";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -11,15 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { assetKey, exactAsset, latestRefsById } from "@/document/projectModel";
-import { MAX_BEAT_WIDTH, MIN_BEAT_WIDTH, type TimelineGeometry } from "@/panel/timelineGeometry";
+import type { ArrangementSnapPreset } from "@/panel/timelineGeometry";
 
 interface ArrangementTimelineToolbarProps {
-  arrangement: ArrangementDocument;
   beatWidth: number;
   bundle: ProjectBundle;
   canRedo: boolean;
   canUndo: boolean;
-  geometry: TimelineGeometry;
   onCreate: () => void;
   onDuplicate: () => void;
   onPlaceCue: () => void;
@@ -28,8 +37,13 @@ interface ArrangementTimelineToolbarProps {
   onUndo: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  onFit: () => void;
+  onSnapChange: (preset: ArrangementSnapPreset) => void;
+  onToggleFocus: () => void;
   reference: AssetRef;
   selectedCueName: string | null;
+  snapPreset: ArrangementSnapPreset;
+  focusMode: boolean;
 }
 
 export function ArrangementTimelineToolbar({
@@ -37,7 +51,6 @@ export function ArrangementTimelineToolbar({
   bundle,
   canRedo,
   canUndo,
-  geometry,
   onCreate,
   onDuplicate,
   onPlaceCue,
@@ -46,8 +59,13 @@ export function ArrangementTimelineToolbar({
   onUndo,
   onZoomIn,
   onZoomOut,
+  onFit,
+  onSnapChange,
+  onToggleFocus,
   reference,
   selectedCueName,
+  snapPreset,
+  focusMode,
 }: ArrangementTimelineToolbarProps) {
   const refs = latestRefsById(bundle.manifest.arrangement_refs);
   const items = refs.map((candidate) => ({
@@ -56,7 +74,7 @@ export function ArrangementTimelineToolbar({
   }));
 
   return (
-    <div className="border-border bg-card flex min-h-10 shrink-0 items-center gap-1.5 border-b px-2">
+    <div className="border-border bg-card flex min-h-10 shrink-0 flex-wrap items-center gap-1 border-b px-2 py-1">
       <Select
         items={items}
         value={assetKey(reference)}
@@ -65,7 +83,7 @@ export function ArrangementTimelineToolbar({
           if (selected) onSelectArrangement(selected);
         }}
       >
-        <SelectTrigger size="sm" className="min-w-44">
+        <SelectTrigger size="sm" className="w-40">
           <SelectValue />
         </SelectTrigger>
         <SelectContent alignItemWithTrigger={false}>
@@ -93,31 +111,59 @@ export function ArrangementTimelineToolbar({
         onClick={onPlaceCue}
       >
         <Plus data-icon="inline-start" aria-hidden="true" />
-        Place Cue at playhead
+        Place Cue
       </Button>
       <div className="ml-auto flex items-center gap-0.5" aria-label="Timeline zoom and snap">
         <Button
           size="icon-xs"
           variant="ghost"
-          disabled={beatWidth <= MIN_BEAT_WIDTH}
           aria-label="Zoom Arrangement timeline out"
           onClick={onZoomOut}
         >
           <ZoomOut aria-hidden="true" />
         </Button>
-        <span className="text-muted-foreground min-w-16 text-center font-mono text-[9px]">
-          SNAP {formatSnap(geometry.snapTicks, geometry.ppq)}
+        <span className="text-muted-foreground min-w-12 text-center font-mono text-[9px]">
+          {beatWidth.toFixed(beatWidth < 10 ? 1 : 0)} px/b
         </span>
+        <Select
+          items={SNAP_OPTIONS}
+          value={snapPreset}
+          onValueChange={(value) => onSnapChange(value as ArrangementSnapPreset)}
+        >
+          <SelectTrigger size="sm" className="w-24" aria-label="Arrangement timeline snap">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent alignItemWithTrigger={false}>
+            <SelectGroup>
+              {SNAP_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <Button
           size="icon-xs"
           variant="ghost"
-          disabled={beatWidth >= MAX_BEAT_WIDTH}
           aria-label="Zoom Arrangement timeline in"
           onClick={onZoomIn}
         >
           <ZoomIn aria-hidden="true" />
         </Button>
+        <Button size="icon-xs" variant="ghost" aria-label="Fit entire Arrangement" onClick={onFit}>
+          <Focus aria-hidden="true" />
+        </Button>
       </div>
+      <Button
+        size="icon-xs"
+        variant={focusMode ? "secondary" : "ghost"}
+        aria-label={focusMode ? "Exit Timeline focus mode" : "Enter Timeline focus mode"}
+        aria-pressed={focusMode}
+        onClick={onToggleFocus}
+      >
+        {focusMode ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+      </Button>
       <Button
         size="icon-xs"
         variant="ghost"
@@ -147,12 +193,15 @@ export function ArrangementTimelineToolbar({
         <PopoverContent align="end" className="w-72">
           <PopoverTitle>Arrange controls</PopoverTitle>
           <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[11px]">
-            <Shortcut keys="Ruler click" action="Seek to adaptive snap" />
+            <Shortcut keys="Ruler click" action="Seek to the current Snap" />
             <Shortcut keys="← / →" action="Nudge clip or keyframes" />
             <Shortcut keys="Shift + ← / →" action="Nudge by one beat" />
             <Shortcut keys="Alt + ← / →" action="Resize selected clip" />
             <Shortcut keys="Double-click lane" action="Add typed keyframe" />
             <Shortcut keys="Delete" action="Delete selection" />
+            <Shortcut keys="Space" action="Play or pause this Arrangement" />
+            <Shortcut keys="⌘/Ctrl + ↑ / ↓" action="Zoom without changing Snap" />
+            <Shortcut keys="⌘/Ctrl + 0" action="Fit the entire Arrangement" />
             <Shortcut keys="⌘/Ctrl + Z" action="Undo one transaction" />
           </dl>
         </PopoverContent>
@@ -170,9 +219,10 @@ function Shortcut({ keys, action }: { keys: string; action: string }) {
   );
 }
 
-function formatSnap(snapTicks: number, ppq: number) {
-  const beats = snapTicks / ppq;
-  if (beats === 0.25) return "¼ beat";
-  if (beats === 0.5) return "½ beat";
-  return `${beats} beat`;
-}
+const SNAP_OPTIONS: Array<{ label: string; value: ArrangementSnapPreset }> = [
+  { value: "bar", label: "Snap 1 bar" },
+  { value: "beat", label: "Snap 1 beat" },
+  { value: "half", label: "Snap ½ beat" },
+  { value: "quarter", label: "Snap ¼ beat" },
+  { value: "eighth", label: "Snap ⅛ beat" },
+];

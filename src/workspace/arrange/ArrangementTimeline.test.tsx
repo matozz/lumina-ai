@@ -8,7 +8,7 @@ import {
 import { assetKey, createCueAsset, createEffectAsset, exactAsset } from "@/document/projectModel";
 import { productionCatalogActions } from "@/stores/productionCatalog";
 import { projectActions, useProjectStore } from "@/stores/project";
-import { workspaceActions } from "@/stores/workspace";
+import { useWorkspaceStore, workspaceActions } from "@/stores/workspace";
 import { addAutomationLane, automationOptions } from "./timeline/arrangementTimelineModel";
 import { ArrangementTimeline } from "./ArrangementTimeline";
 
@@ -25,7 +25,7 @@ describe("ArrangementTimeline workflow", () => {
     });
   });
 
-  it.fails("uses Space to toggle the selected Arrangement transport", () => {
+  it("uses Space to toggle the selected Arrangement transport", () => {
     const reference = useProjectStore.getState().selectedArrangementRef;
     render(<ArrangementTimeline />);
     const timeline = screen.getByRole("region", { name: "Arrangement timeline" });
@@ -34,6 +34,10 @@ describe("ArrangementTimeline workflow", () => {
     fireEvent.keyDown(timeline, { key: " ", code: "Space" });
 
     expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("playing");
+    fireEvent.keyDown(timeline, { key: " ", code: "Space", repeat: true });
+    expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("playing");
+    fireEvent.keyDown(timeline, { key: " ", code: "Space" });
+    expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("paused");
   });
 
   it("materializes a selected built-in Cue only when placing it", () => {
@@ -61,7 +65,7 @@ describe("ArrangementTimeline workflow", () => {
     render(<ArrangementTimeline />);
 
     expect(useProjectStore.getState().bundle.cues).toHaveLength(initialCueCount);
-    fireEvent.click(screen.getByRole("button", { name: "Place Cue at playhead" }));
+    fireEvent.click(screen.getByRole("button", { name: "Place Cue" }));
 
     const state = useProjectStore.getState();
     const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
@@ -121,9 +125,15 @@ describe("ArrangementTimeline workflow", () => {
       expect.arrayContaining(["1", "1.2", "1.3", "2", "2.2", "2.3", "3"]),
     );
     expect(container.querySelector('[title="96 BPM at tick 5760"]')).toBeTruthy();
-    expect(screen.getByText("SNAP ½ beat")).toBeTruthy();
+    expect(
+      screen.getByRole("combobox", { name: "Arrangement timeline snap" }).textContent,
+    ).toContain("Snap ½ beat");
+    const historyBeforeZoom = useProjectStore.getState().historyCursor;
     fireEvent.click(screen.getByRole("button", { name: "Zoom Arrangement timeline out" }));
-    expect(screen.getByText("SNAP 1 beat")).toBeTruthy();
+    expect(
+      screen.getByRole("combobox", { name: "Arrangement timeline snap" }).textContent,
+    ).toContain("Snap ½ beat");
+    expect(useProjectStore.getState().historyCursor).toBe(historyBeforeZoom);
 
     const clip = screen.getByRole("button", { name: /Pulse Cue, starts at tick 960/ });
     fireEvent.pointerDown(clip, { button: 0, pointerId: 1, clientX: 48 });
@@ -134,12 +144,47 @@ describe("ArrangementTimeline workflow", () => {
     await waitFor(() => {
       const state = useProjectStore.getState();
       const current = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
-      expect(current.tracks[0].clips?.[0].start_tick).toBe(1_920);
+      expect(current.tracks[0].clips?.[0].start_tick).toBe(1_440);
     });
     expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 1);
     expect(assetKey(useProjectStore.getState().selectedArrangementRef)).toBe(
       assetKey(seededReference),
     );
+  });
+
+  it("does not capture Space while an inspector input is editing", () => {
+    const effect = projectActions.createEffect("Pulse")!;
+    const cue = projectActions.createCue([effect], "Pulse Cue")!;
+    const reference = useProjectStore.getState().selectedArrangementRef;
+    projectActions.updateArrangement(reference, "Seed editable clip", (arrangement) => {
+      arrangement.tracks[0].clips = [
+        { id: "clip-a", cue_ref: cue, start_tick: 960, duration_tick: 1_920 },
+      ];
+    });
+    render(<ArrangementTimeline />);
+    const clip = screen.getByRole("button", { name: /Pulse Cue, starts at tick 960/ });
+    fireEvent.pointerDown(clip, { button: 0, pointerId: 11, clientX: 48 });
+    fireEvent.pointerUp(clip, { pointerId: 11, clientX: 48 });
+    const input = screen.getByLabelText("Start tick");
+    const sessionKey = authoringSessionKey(
+      "arrangement",
+      assetKey(useProjectStore.getState().selectedArrangementRef),
+    );
+
+    fireEvent.keyDown(input, { key: " ", code: "Space" });
+
+    expect(useAuthoringTransportStore.getState().sessions[sessionKey]?.playback).toBe("stopped");
+  });
+
+  it("toggles Timeline focus mode as a workspace-only preference", () => {
+    render(<ArrangementTimeline />);
+    const historyBefore = useProjectStore.getState().historyCursor;
+
+    fireEvent.click(screen.getByRole("button", { name: "Enter Timeline focus mode" }));
+
+    expect(useWorkspaceStore.getState().arrangeTimelineFocus).toBe(true);
+    expect(screen.getByRole("button", { name: "Exit Timeline focus mode" })).toBeTruthy();
+    expect(useProjectStore.getState().historyCursor).toBe(historyBefore);
   });
 
   it("shows overlap failure beside the selected CueClip with a recovery action", () => {

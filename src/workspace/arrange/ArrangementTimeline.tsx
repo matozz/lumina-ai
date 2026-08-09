@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ArrangementDocument, ProjectBundle } from "@/bridge/types";
 import { AuthoringDiagnosticAlert } from "@/authoring/AuthoringDiagnosticAlert";
 import { authoringDiagnostic, type AuthoringDiagnostic } from "@/authoring/diagnostics";
@@ -8,8 +8,7 @@ import {
   useAuthoringTransportStore,
 } from "@/authoring/transport";
 import { activeStage, appendExactRef, assetKey, exactAsset } from "@/document/projectModel";
-import { isTextEditingTarget } from "@/lib/dom";
-import { BEAT_WIDTH_STEP, ticksToPixels } from "@/panel/timelineGeometry";
+import { ticksToPixels } from "@/panel/timelineGeometry";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import { productionCatalogSelectors, useProductionCatalogStore } from "@/stores/productionCatalog";
 import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/stores/workspace";
@@ -22,6 +21,7 @@ import {
 import { ArrangementTimelineToolbar } from "./timeline/ArrangementTimelineToolbar";
 import { ArrangementTrackHeaders } from "./timeline/ArrangementTrackHeaders";
 import { ArrangementTrackRows } from "./timeline/ArrangementTrackRows";
+import { useArrangementEditorShortcuts } from "./timeline/useArrangementEditorShortcuts";
 import { useArrangementTimelineViewport } from "./timeline/useArrangementTimelineViewport";
 import {
   addAutomationLane,
@@ -41,6 +41,7 @@ export function ArrangementTimeline() {
   const productionCatalog = useProductionCatalogStore(productionCatalogSelectors.catalog);
   const canUndo = useProjectStore(projectSelectors.canUndo);
   const canRedo = useProjectStore(projectSelectors.canRedo);
+  const focusMode = useWorkspaceStore(workspaceSelectors.arrangeTimelineFocus);
   const arrangement = exactAsset(bundle.arrangements, reference);
   const stage = activeStage(bundle);
   const selectedBuiltInCue =
@@ -51,9 +52,46 @@ export function ArrangementTimeline() {
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [diagnostic, setDiagnostic] = useState<AuthoringDiagnostic | null>(null);
   const snapGuideRef = useRef<HTMLDivElement>(null);
-  const { beatWidth, geometry, headersRef, scrollRef, updateViewport, viewport, zoom } =
-    useArrangementTimelineViewport(arrangement?.ppq ?? 960);
+  const firstSignature = arrangement?.time_signatures[0] ?? {
+    time_tick: 0,
+    numerator: 4,
+    denominator: 4,
+  };
+  const {
+    beatWidth,
+    fit,
+    geometry,
+    headersRef,
+    scrollRef,
+    setSnapPreset,
+    snapPreset,
+    trackPointer,
+    updateViewport,
+    viewport,
+    zoomIn,
+    zoomOut,
+  } = useArrangementTimelineViewport(
+    arrangement?.ppq ?? 960,
+    arrangement?.length_ticks ?? 1,
+    firstSignature,
+  );
   const sessionKey = authoringSessionKey("arrangement", assetKey(reference));
+
+  const playheadTick = useCallback(
+    () => useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick ?? 0,
+    [sessionKey],
+  );
+  const handleZoomIn = useCallback(() => zoomIn(playheadTick()), [playheadTick, zoomIn]);
+  const handleZoomOut = useCallback(() => zoomOut(playheadTick()), [playheadTick, zoomOut]);
+
+  useArrangementEditorShortcuts({
+    sessionKey,
+    onFit: fit,
+    onRedo: projectActions.redo,
+    onUndo: projectActions.undo,
+    onZoomIn: handleZoomIn,
+    onZoomOut: handleZoomOut,
+  });
 
   useEffect(() => {
     if (!arrangement) return;
@@ -161,8 +199,8 @@ export function ArrangementTimeline() {
 
   const laneOptions = automationOptions(bundle, arrangement);
   const contentWidth = Math.max(
-    900,
-    ticksToPixels(arrangement.length_ticks + arrangement.ppq * 2, geometry),
+    scrollRef.current?.clientWidth ?? 0,
+    ticksToPixels(arrangement.length_ticks, geometry),
   );
   const selected = selectedClipId
     ? (arrangement.tracks
@@ -179,26 +217,13 @@ export function ArrangementTimeline() {
       className="bg-card flex h-full min-h-0 flex-col"
       aria-label="Arrangement timeline"
       tabIndex={0}
-      onKeyDown={(event) => {
-        if (isTextEditingTarget(event.target) || (!event.metaKey && !event.ctrlKey)) return;
-        const key = event.key.toLowerCase();
-        if (key === "z") {
-          event.preventDefault();
-          if (event.shiftKey) projectActions.redo();
-          else projectActions.undo();
-        } else if (key === "y") {
-          event.preventDefault();
-          projectActions.redo();
-        }
-      }}
     >
       <ArrangementTimelineToolbar
-        arrangement={arrangement}
         beatWidth={beatWidth}
         bundle={bundle}
         canRedo={canRedo}
         canUndo={canUndo}
-        geometry={geometry}
+        focusMode={focusMode}
         onCreate={() => projectActions.createArrangement()}
         onDuplicate={() => projectActions.duplicateArrangement(reference)}
         onPlaceCue={placeSelectedCue}
@@ -209,10 +234,14 @@ export function ArrangementTimeline() {
           projectActions.selectArrangement(next);
         }}
         onUndo={projectActions.undo}
-        onZoomIn={() => zoom(beatWidth + BEAT_WIDTH_STEP)}
-        onZoomOut={() => zoom(beatWidth - BEAT_WIDTH_STEP)}
+        onFit={fit}
+        onSnapChange={setSnapPreset}
+        onToggleFocus={() => workspaceActions.setArrangeTimelineFocus(!focusMode)}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
         reference={reference}
         selectedCueName={selectedCue?.name ?? null}
+        snapPreset={snapPreset}
       />
       {diagnostic && !clipDiagnostic && (
         <AuthoringDiagnosticAlert
@@ -247,6 +276,7 @@ export function ArrangementTimeline() {
             ref={scrollRef}
             data-arrangement-timeline-scroll
             className="bg-background relative min-w-0 flex-1 overflow-auto overscroll-none"
+            onPointerMove={(event) => trackPointer(event.clientX)}
             onScroll={(event) => {
               updateViewport(event.currentTarget);
               if (headersRef.current) headersRef.current.scrollTop = event.currentTarget.scrollTop;

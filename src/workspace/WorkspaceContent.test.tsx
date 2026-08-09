@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { projectActions } from "@/stores/project";
+import { workspaceActions } from "@/stores/workspace";
 import { WorkspaceContent } from "./WorkspaceContent";
 
 vi.mock("@/canvas/CanvasView", () => ({
@@ -19,7 +20,10 @@ vi.mock("@/components/ui/resizable", () => ({
 }));
 
 describe("WorkspaceContent", () => {
-  beforeEach(() => projectActions.reset());
+  beforeEach(() => {
+    projectActions.reset();
+    workspaceActions.reset();
+  });
 
   it("visualizes intensity-only output on the Arrange canvas", () => {
     render(<WorkspaceContent workspace="arrange" />);
@@ -36,5 +40,14 @@ describe("WorkspaceContent", () => {
     expect(screen.getByRole("alert").textContent).toContain(
       "The selected Cue revision could not be compiled.",
     );
+  });
+
+  it("compresses the preview and gives Timeline the remaining height in focus mode", () => {
+    workspaceActions.setArrangeTimelineFocus(true);
+    const { container } = render(<WorkspaceContent workspace="arrange" />);
+
+    expect(container.querySelector("[data-arrange-focus-mode]")).toBeTruthy();
+    expect(container.querySelector("[data-arrange-preview-compact]")).toBeTruthy();
+    expect(screen.queryByTestId("canvas")).toBeNull();
   });
 });

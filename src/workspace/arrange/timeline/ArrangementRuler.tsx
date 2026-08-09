@@ -24,16 +24,17 @@ export function ArrangementRuler({
   viewport,
 }: ArrangementRulerProps) {
   const rulerRef = useRef<HTMLDivElement>(null);
-  const marks = useMemo(
-    () =>
-      rulerMarks(
-        arrangement.ppq,
-        arrangement.time_signatures,
-        viewport.startBeat * arrangement.ppq,
-        Math.min(arrangement.length_ticks, viewport.endBeat * arrangement.ppq),
-      ),
-    [arrangement, viewport.endBeat, viewport.startBeat],
-  );
+  const marks = useMemo(() => {
+    const density = arrangementGridDensity(geometry.beatWidth);
+    return rulerMarks(
+      arrangement.ppq,
+      arrangement.time_signatures,
+      viewport.startBeat * arrangement.ppq,
+      Math.min(arrangement.length_ticks, viewport.endBeat * arrangement.ppq),
+    ).filter((mark) =>
+      mark.isBar ? (mark.bar - 1) % density.barStride === 0 : density.showBeatLabels,
+    );
+  }, [arrangement, geometry.beatWidth, viewport.endBeat, viewport.startBeat]);
 
   useEffect(() => {
     const update = () => {
@@ -115,16 +116,17 @@ export function ArrangementGrid({
   geometry,
   viewport,
 }: Omit<ArrangementRulerProps, "sessionKey">) {
-  const marks = useMemo(
-    () =>
-      rulerMarks(
-        arrangement.ppq,
-        arrangement.time_signatures,
-        viewport.startBeat * arrangement.ppq,
-        Math.min(arrangement.length_ticks, viewport.endBeat * arrangement.ppq),
-      ),
-    [arrangement, viewport.endBeat, viewport.startBeat],
-  );
+  const marks = useMemo(() => {
+    const density = arrangementGridDensity(geometry.beatWidth);
+    return rulerMarks(
+      arrangement.ppq,
+      arrangement.time_signatures,
+      viewport.startBeat * arrangement.ppq,
+      Math.min(arrangement.length_ticks, viewport.endBeat * arrangement.ppq),
+    ).filter((mark) =>
+      mark.isBar ? (mark.bar - 1) % density.barStride === 0 : density.showBeatGrid,
+    );
+  }, [arrangement, geometry.beatWidth, viewport.endBeat, viewport.startBeat]);
   return (
     <div className="pointer-events-none absolute inset-0" aria-hidden="true">
       {marks.map((mark) => (
@@ -140,6 +142,14 @@ export function ArrangementGrid({
       ))}
     </div>
   );
+}
+
+export function arrangementGridDensity(beatWidth: number) {
+  if (beatWidth >= 28) return { barStride: 1, showBeatGrid: true, showBeatLabels: true };
+  if (beatWidth >= 10) return { barStride: 1, showBeatGrid: false, showBeatLabels: false };
+  if (beatWidth >= 4) return { barStride: 4, showBeatGrid: false, showBeatLabels: false };
+  if (beatWidth >= 2) return { barStride: 8, showBeatGrid: false, showBeatLabels: false };
+  return { barStride: 16, showBeatGrid: false, showBeatLabels: false };
 }
 
 export function ArrangementPlayhead({

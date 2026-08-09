@@ -2,7 +2,13 @@ import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useEngineStore } from "@/stores/engine";
 import type { TimelineViewport } from "../virtualization";
-import { pixelsToTicks, snapTick, ticksToPixels, type TimelineGeometry } from "../timelineGeometry";
+import {
+  pixelsToTicks,
+  snapTick,
+  ticksToPixels,
+  visualGridTicks,
+  type TimelineGeometry,
+} from "../timelineGeometry";
 
 interface GridProps {
   geometry: TimelineGeometry;
@@ -14,7 +20,8 @@ interface GridProps {
 export const TimelineGrid = ({ geometry, viewport, maxBeat, onSeek }: GridProps) => {
   const { beatWidth } = geometry;
   const rulerRef = useRef<HTMLDivElement>(null);
-  const snapWidth = ticksToPixels(geometry.snapTicks, geometry);
+  const gridTicks = visualGridTicks(geometry.ppq, beatWidth);
+  const gridWidth = ticksToPixels(gridTicks, geometry);
   const firstBarBeat = Math.max(0, Math.floor(viewport.startBeat / 4) * 4);
   const lastBarBeat = Math.ceil(viewport.endBeat / 4) * 4;
   const labels = Array.from(
@@ -64,10 +71,10 @@ export const TimelineGrid = ({ geometry, viewport, maxBeat, onSeek }: GridProps)
             "linear-gradient(to right, rgba(39,39,42,0.3) 1px, transparent 1px)",
             "linear-gradient(to right, rgba(39,39,42,0.18) 1px, transparent 1px)",
           ].join(","),
-          backgroundSize: `${beatWidth * 4}px 100%, ${beatWidth}px 100%, ${snapWidth}px 100%`,
+          backgroundSize: `${beatWidth * 4}px 100%, ${beatWidth}px 100%, ${gridWidth}px 100%`,
         }}
-        data-snap-ticks={geometry.snapTicks}
-        data-snap-width={snapWidth}
+        data-grid-ticks={gridTicks}
+        data-grid-width={gridWidth}
       />
 
       <div
