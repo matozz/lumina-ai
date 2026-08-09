@@ -45,11 +45,21 @@ export function WorkspaceContent({ workspace }: { workspace: WorkspaceId }) {
         <ResizablePanel id="arrange-preview" defaultSize={`${arrangePreviewSize}%`} minSize="10rem">
           <WorkspaceSurface workspace={workspace} />
         </ResizablePanel>
-        <ResizableHandle withHandle />
+        <ResizableHandle
+          withHandle
+          onKeyDownCapture={(event) => {
+            if (
+              (event.metaKey || event.ctrlKey) &&
+              (event.key === "ArrowUp" || event.key === "ArrowDown")
+            ) {
+              event.preventDefault();
+            }
+          }}
+        />
         <ResizablePanel
           id="arrange-timeline"
           defaultSize={`${100 - arrangePreviewSize}%`}
-          minSize="15rem"
+          minSize="12rem"
         >
           <ArrangementTimeline />
         </ResizablePanel>

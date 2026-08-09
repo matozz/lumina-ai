@@ -53,7 +53,7 @@ const initialState: WorkspaceState = {
   libraryVisible: true,
   inspectorVisible: true,
   arrangeTimelineFocus: false,
-  arrangePreviewSize: 38,
+  arrangePreviewSize: 68,
   arrangeTimelineBeatWidth: 48,
   arrangeTimelineSnapPreset: "half",
   selectedEffectId: null,
@@ -69,17 +69,21 @@ const initialState: WorkspaceState = {
   statusMessage: null,
 };
 
-const LOCAL_WORKSPACE_PREFERENCES_VERSION = 6;
+const LOCAL_WORKSPACE_PREFERENCES_VERSION = 7;
+const LEGACY_ARRANGE_PREVIEW_SIZE = 38;
 
 export const useWorkspaceStore = create<WorkspaceState>()(
   persist(() => initialState, {
     name: "lumina-workspace-v1",
     version: LOCAL_WORKSPACE_PREFERENCES_VERSION,
     migrate: (persistedState, version) => {
-      if (version < LOCAL_WORKSPACE_PREFERENCES_VERSION) return structuredClone(initialState);
+      if (version < 6) return structuredClone(initialState);
       const state = persistedState as Omit<Partial<WorkspaceState>, "activeWorkspace"> & {
         activeWorkspace?: string;
       };
+      if (version < 7 && state.arrangePreviewSize === LEGACY_ARRANGE_PREVIEW_SIZE) {
+        return { ...state, arrangePreviewSize: initialState.arrangePreviewSize } as WorkspaceState;
+      }
       return state as WorkspaceState;
     },
     partialize: (state) => ({

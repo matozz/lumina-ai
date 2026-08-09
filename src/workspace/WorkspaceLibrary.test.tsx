@@ -42,7 +42,7 @@ describe("Live workspace library", () => {
 
     render(<WorkspaceLibrary workspace="live" />);
 
-    expect(screen.getByText("Live Wash")).toBeTruthy();
+    expectCompactLibraryItem(screen.getByText("Live Wash").closest("button"));
     expect(screen.queryByText("Draft-only Pulse")).toBeNull();
     expect(screen.queryByText(/r2/)).toBeNull();
   });
@@ -50,7 +50,7 @@ describe("Live workspace library", () => {
   it("keeps generated Layout previews available without exposing advanced asset actions", () => {
     render(<WorkspaceLibrary workspace="stage" />);
 
-    expect(screen.getByRole("button", { name: /Main Matrix 20×20/ })).toBeTruthy();
+    expectCompactLibraryItem(screen.getByRole("button", { name: /Main Matrix 20×20/ }));
     expect(screen.getByText("Generated")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Sine Ribbon 160 Formula/ }));
     expect(useProjectStore.getState().selectedLayoutRef).toEqual({
@@ -67,6 +67,7 @@ describe("Live workspace library", () => {
     render(<WorkspaceLibrary workspace="effect-lab" />);
 
     const key = authoringSessionKey("effect", assetKey(reference));
+    expectCompactLibraryItem(screen.getByText("Manual preview").closest("button"));
     expect(useAuthoringTransportStore.getState().sessions[key].playback).toBe("stopped");
   });
 
@@ -117,9 +118,17 @@ describe("Live workspace library", () => {
     const unavailable = screen.getByRole("button", {
       name: /Matrix Spatial Chase.*Needs Rows area/,
     });
+    expectCompactLibraryItem(unavailable);
     expect(unavailable.hasAttribute("disabled")).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Edit fixture areas" }));
     expect(screen.getByRole("dialog")).toBeTruthy();
     expect(screen.getByText("Fixture area editor")).toBeTruthy();
   });
 });
+
+function expectCompactLibraryItem(item: Element | null) {
+  expect(item).toBeInstanceOf(HTMLButtonElement);
+  expect(item?.className).toContain("h-6");
+  expect(item?.className).toContain("items-center");
+  expect(item?.className).toContain("py-0");
+}
