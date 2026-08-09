@@ -454,6 +454,55 @@ describe("ArrangementTimeline workflow", () => {
     expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 2);
   });
 
+  it("moves every selected CueClip in one history transaction when dragging one of them", async () => {
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      frames.push(callback);
+      return frames.length;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    const effect = projectActions.createEffect("Group move")!;
+    const cue = projectActions.createCue([effect], "Group move Cue")!;
+    const reference = useProjectStore.getState().selectedArrangementRef;
+    projectActions.updateArrangement(reference, "Seed group move", (arrangement) => {
+      arrangement.tracks[0].clips = [
+        { id: "move-a", cue_ref: cue, start_tick: 960, duration_tick: 960 },
+        { id: "move-b", cue_ref: cue, start_tick: 2_880, duration_tick: 960 },
+      ];
+    });
+    const historyBefore = useProjectStore.getState().historyCursor;
+    const { container } = render(<ArrangementTimeline />);
+    const first = screen.getByRole("button", { name: /Group move Cue, starts at tick 960/ });
+    const second = screen.getByRole("button", { name: /Group move Cue, starts at tick 2880/ });
+
+    fireEvent.pointerDown(first, { button: 0, pointerId: 31, clientX: 48 });
+    fireEvent.pointerUp(first, { pointerId: 31, clientX: 48 });
+    fireEvent.pointerDown(second, {
+      button: 0,
+      pointerId: 32,
+      clientX: 144,
+      shiftKey: true,
+    });
+    fireEvent.pointerUp(second, { pointerId: 32, clientX: 144, shiftKey: true });
+    await waitFor(() => {
+      expect(container.querySelectorAll('[data-clip-id][aria-pressed="true"]')).toHaveLength(2);
+    });
+
+    fireEvent.pointerDown(first, { button: 0, pointerId: 33, clientX: 48 });
+    fireEvent.pointerMove(first, { pointerId: 33, clientX: 72 });
+    act(() => {
+      frames.splice(0).forEach((callback) => callback(0));
+    });
+    fireEvent.pointerUp(first, { pointerId: 33, clientX: 72 });
+
+    await waitFor(() => {
+      const state = useProjectStore.getState();
+      const arrangement = exactAsset(state.bundle.arrangements, state.selectedArrangementRef)!;
+      expect(arrangement.tracks[0].clips?.map((clip) => clip.start_tick)).toEqual([1_440, 3_360]);
+    });
+    expect(useProjectStore.getState().historyCursor).toBe(historyBefore + 1);
+  });
+
   it("selects and clears the current Arrangement scope with Command+A", async () => {
     const effect = projectActions.createEffect("Select Pulse")!;
     const cue = projectActions.createCue([effect], "Select Cue")!;

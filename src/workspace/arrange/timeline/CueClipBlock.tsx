@@ -121,7 +121,9 @@ export const CueClipBlock = memo(function CueClipBlock({
     if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
-    onSelect({ additive: event.shiftKey, toggle: event.metaKey || event.ctrlKey });
+    if (!selected || event.shiftKey || event.metaKey || event.ctrlKey) {
+      onSelect({ additive: event.shiftKey, toggle: event.metaKey || event.ctrlKey });
+    }
     elementRef.current?.focus();
     if (event.metaKey || event.ctrlKey) return;
     event.currentTarget.setPointerCapture(event.pointerId);

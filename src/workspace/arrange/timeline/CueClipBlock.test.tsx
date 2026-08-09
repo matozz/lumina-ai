@@ -126,4 +126,41 @@ describe("CueClipBlock native pointer interaction", () => {
     expect(block.dataset.compact).toBe("true");
     expect(block.querySelector("[data-resize-handle]")).toBeNull();
   });
+
+  it("preserves an existing multi-selection when a selected clip starts moving", () => {
+    const viewportRef = createRef<HTMLDivElement>();
+    const onSelect = vi.fn();
+    render(
+      <div ref={viewportRef}>
+        <CueClipBlock
+          arrangementLength={30_720}
+          clip={{
+            id: "selected-clip",
+            cue_ref: { id: "cue-a", revision: 1 },
+            start_tick: 960,
+            duration_tick: 960,
+          }}
+          cueName="Selected Cue"
+          geometry={createTimelineGeometry(960, 48)}
+          onCancelReady={vi.fn()}
+          onCommitMove={vi.fn()}
+          onCommitResize={vi.fn()}
+          onSelect={onSelect}
+          onSnapPreview={vi.fn()}
+          selected
+          top={8}
+          visualRow={0}
+          viewportRef={viewportRef}
+        />
+      </div>,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: /Selected Cue/ }), {
+      button: 0,
+      pointerId: 30,
+      clientX: 48,
+    });
+
+    expect(onSelect).not.toHaveBeenCalled();
+  });
 });
