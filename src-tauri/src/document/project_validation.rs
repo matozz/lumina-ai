@@ -450,9 +450,9 @@ fn validate_cue_layer_composition(
                     CUE_LAYER_ATTRIBUTE_CONFLICT,
                     format!("{path}.layers[{right_index}].mix_overrides"),
                     format!(
-                        "Cue layers {:?} and {:?} overlap fixtures and both write {}; the later layer has no explicit mix policy.",
-                        left.id,
-                        right.id,
+                        "Cue Layer {} and Layer {} overlap fixtures and both write {}; the later layer has no explicit mix policy.",
+                        left_index + 1,
+                        right_index + 1,
                         conflicts.join(", ")
                     ),
                     "Keep one visual intent, choose non-overlapping TargetSets, or explicitly select a mix policy for every shared attribute.",
@@ -2193,6 +2193,8 @@ pub(crate) mod tests {
         assert!(diagnostics.iter().any(|diagnostic| {
             diagnostic.code == CUE_LAYER_ATTRIBUTE_CONFLICT
                 && diagnostic.path.ends_with("layers[1].mix_overrides")
+                && diagnostic.message.contains("Layer 1 and Layer 2")
+                && !diagnostic.message.contains("second-intensity")
                 && diagnostic
                     .recovery
                     .as_deref()
