@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Braces, LockKeyhole } from "lucide-react";
 import type { LayoutDefinition, LayoutGeometry } from "@/bridge/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -13,7 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { circleRingDensity, fixtureIdsForLayout } from "@/document/layoutDefinition";
+import {
+  circleRingDensity,
+  fixtureIdsForLayout,
+  polygonFixtureSpacing,
+  polygonRadiusForFixtureSpacing,
+} from "@/document/layoutDefinition";
 
 export function LayoutGeometryEditor({
   layout,
@@ -111,6 +116,7 @@ function GridGeometryFields({
           value={geometry.rows}
           min={1}
           integer
+          configPath="rows"
           onChange={(rows) => onChange({ ...geometry, rows })}
         />
         <NumberField
@@ -118,6 +124,7 @@ function GridGeometryFields({
           value={geometry.columns}
           min={1}
           integer
+          configPath="columns"
           onChange={(columns) => onChange({ ...geometry, columns })}
         />
       </div>
@@ -148,10 +155,13 @@ function StripGeometryFields({
           value={geometry.count}
           min={1}
           integer
+          configPath="count"
           onChange={(count) => onChange({ ...geometry, count })}
         />
         <Field>
-          <FieldLabel>Orientation</FieldLabel>
+          <FieldLabel className="text-muted-foreground font-mono text-[9px]">
+            orientation
+          </FieldLabel>
           <Select
             value={geometry.orientation}
             onValueChange={(orientation) =>
@@ -193,6 +203,7 @@ function CircleGeometryFields({
           value={geometry.rings}
           min={1}
           integer
+          configPath="rings"
           onChange={(rings) => onChange({ ...geometry, rings })}
         />
         <NumberField
@@ -201,6 +212,7 @@ function CircleGeometryFields({
           value={density}
           min={1}
           integer
+          configPath="increment"
           onChange={(increment) =>
             onChange({ ...geometry, increment: circleRingDensity(increment) })
           }
@@ -211,6 +223,7 @@ function CircleGeometryFields({
         value={geometry.ring_gap}
         min={0}
         integer
+        configPath="ring_gap"
         onChange={(ring_gap) =>
           onChange({
             ...geometry,
@@ -244,6 +257,7 @@ function SectorGeometryFields({
           value={geometry.rings}
           min={1}
           integer
+          configPath="rings"
           onChange={(rings) => onChange({ ...geometry, rings })}
         />
         <NumberField
@@ -252,11 +266,13 @@ function SectorGeometryFields({
           value={geometry.segments}
           min={1}
           integer
+          configPath="segments"
           onChange={(segments) => onChange({ ...geometry, segments })}
         />
         <NumberField
           label="Start angle"
           value={geometry.start_angle_degrees}
+          configPath="start_angle_degrees"
           onChange={(start_angle_degrees) => onChange({ ...geometry, start_angle_degrees })}
         />
         <NumberField
@@ -264,6 +280,7 @@ function SectorGeometryFields({
           value={geometry.sweep_angle_degrees}
           min={0.1}
           max={360}
+          configPath="sweep_angle_degrees"
           onChange={(sweep_angle_degrees) => onChange({ ...geometry, sweep_angle_degrees })}
         />
       </div>
@@ -271,6 +288,7 @@ function SectorGeometryFields({
         label="Fixture gap"
         value={geometry.ring_gap}
         min={0}
+        configPath="ring_gap"
         onChange={(ring_gap) =>
           onChange({ ...geometry, ring_gap, ring_pitch: diameter + ring_gap })
         }
@@ -289,6 +307,23 @@ function PolygonGeometryFields({
   geometry: Extract<LayoutGeometry, { shape: "polygon" }>;
   onChange: (geometry: Extract<LayoutGeometry, { shape: "polygon" }>) => void;
 }) {
+  const derivedFixtureSpacing = polygonFixtureSpacing(geometry);
+  const fixtureSpacingRef = useRef(
+    Number.isFinite(derivedFixtureSpacing) && derivedFixtureSpacing > 0 ? derivedFixtureSpacing : 1,
+  );
+  if (Number.isFinite(derivedFixtureSpacing) && derivedFixtureSpacing > 0) {
+    fixtureSpacingRef.current = derivedFixtureSpacing;
+  }
+  const fixtureSpacing = fixtureSpacingRef.current;
+  const resizeForSpacing = (sides: number, fixturesPerSide: number) => ({
+    ...geometry,
+    sides,
+    fixtures_per_side: fixturesPerSide,
+    radius:
+      sides >= 3 && fixturesPerSide >= 1
+        ? polygonRadiusForFixtureSpacing(sides, fixturesPerSide, fixtureSpacing)
+        : geometry.radius,
+  });
   return (
     <>
       <div className="grid grid-cols-2 gap-2">
@@ -297,29 +332,36 @@ function PolygonGeometryFields({
           value={geometry.sides}
           min={3}
           integer
-          onChange={(sides) => onChange({ ...geometry, sides })}
+          configPath="sides"
+          onChange={(sides) => onChange(resizeForSpacing(sides, geometry.fixtures_per_side))}
         />
         <NumberField
           label="Fixtures per side"
           value={geometry.fixtures_per_side}
           min={1}
           integer
-          onChange={(fixtures_per_side) => onChange({ ...geometry, fixtures_per_side })}
+          configPath="fixtures_per_side"
+          onChange={(fixtures_per_side) =>
+            onChange(resizeForSpacing(geometry.sides, fixtures_per_side))
+          }
         />
         <NumberField
           label="Radius"
           value={geometry.radius}
           min={0.1}
+          configPath="radius"
           onChange={(radius) => onChange({ ...geometry, radius })}
         />
         <NumberField
           label="Rotation"
           value={geometry.rotation_degrees}
+          configPath="rotation_degrees"
           onChange={(rotation_degrees) => onChange({ ...geometry, rotation_degrees })}
         />
       </div>
       <FieldDescription>
-        Side and fixture counts never rewrite the saved radius or rotation.
+        Center spacing is {formatMetric(fixtureSpacing)}. Changing sides or fixtures_per_side
+        updates the saved radius so spacing stays fixed; editing radius changes the spacing.
       </FieldDescription>
     </>
   );
@@ -336,11 +378,13 @@ function FormulaGeometryFields({
     <>
       <TextField
         label="X formula"
+        configPath="formula.x"
         value={geometry.formula.x}
         onChange={(x) => onChange({ ...geometry, formula: { ...geometry.formula, x } })}
       />
       <TextField
         label="Y formula"
+        configPath="formula.y"
         value={geometry.formula.y}
         onChange={(y) => onChange({ ...geometry, formula: { ...geometry.formula, y } })}
       />
@@ -350,17 +394,20 @@ function FormulaGeometryFields({
           value={geometry.formula.count}
           min={1}
           integer
+          configPath="formula.count"
           onChange={(count) => onChange({ ...geometry, formula: { ...geometry.formula, count } })}
         />
         <NumberField
           label="Scale"
           value={geometry.formula.scale ?? 1}
           min={0.01}
+          configPath="formula.scale"
           onChange={(scale) => onChange({ ...geometry, formula: { ...geometry.formula, scale } })}
         />
         <NumberField
           label="t start"
           value={geometry.formula.t_range[0]}
+          configPath="formula.t_range[0]"
           onChange={(start) =>
             onChange({
               ...geometry,
@@ -371,6 +418,7 @@ function FormulaGeometryFields({
         <NumberField
           label="t end"
           value={geometry.formula.t_range[1]}
+          configPath="formula.t_range[1]"
           onChange={(end) =>
             onChange({
               ...geometry,
@@ -404,10 +452,11 @@ function AlgorithmGeometryFields({
           value={geometry.count}
           min={1}
           integer
+          configPath="count"
           onChange={(count) => onChange({ ...geometry, count })}
         />
         <Field>
-          <FieldLabel>Algorithm</FieldLabel>
+          <FieldLabel className="text-muted-foreground font-mono text-[9px]">algorithm</FieldLabel>
           <Select
             value={geometry.algorithm}
             onValueChange={(algorithm) =>
@@ -431,6 +480,7 @@ function AlgorithmGeometryFields({
           <NumberField
             key={parameter.id}
             label={parameter.label}
+            configPath={`parameters.${parameter.id}`}
             value={geometry.parameters[parameter.id] ?? 0}
             min={parameter.minimum ?? undefined}
             max={parameter.maximum ?? undefined}
@@ -477,6 +527,7 @@ function GapFields<T extends GapGeometry>({
         value={geometry.gap.x}
         min={0}
         integer
+        configPath="gap.x"
         onChange={(value) => updateGap("x", value)}
       />
       <NumberField
@@ -484,6 +535,7 @@ function GapFields<T extends GapGeometry>({
         value={geometry.gap.y}
         min={0}
         integer
+        configPath="gap.y"
         onChange={(value) => updateGap("y", value)}
       />
     </div>
@@ -508,12 +560,14 @@ function OriginFields<T extends OriginGeometry>({
         label="Origin X"
         value={geometry.origin.x}
         integer
+        configPath="origin.x"
         onChange={(x) => onChange({ ...geometry, origin: { ...geometry.origin, x } })}
       />
       <NumberField
         label="Origin Y"
         value={geometry.origin.y}
         integer
+        configPath="origin.y"
         onChange={(y) => onChange({ ...geometry, origin: { ...geometry.origin, y } })}
       />
     </div>
@@ -604,6 +658,7 @@ function FixtureSizeFields({
           value={geometry.fixture_size.width}
           min={1}
           integer
+          configPath="fixture_size.width"
           onChange={(width) => update("width", width)}
         />
         <NumberField
@@ -611,6 +666,7 @@ function FixtureSizeFields({
           value={geometry.fixture_size.height}
           min={1}
           integer
+          configPath="fixture_size.height"
           onChange={(height) => update("height", height)}
         />
       </div>
@@ -628,6 +684,7 @@ function FixtureSizeFields({
             value={selectedFixtureId}
             min={fixtureIds[0] ?? 0}
             integer
+            configPath="fixture_size_overrides[].fixture_id"
             onChange={setSelectedFixtureId}
           />
           {selectedFixtureExists ? (
@@ -639,6 +696,7 @@ function FixtureSizeFields({
                   value={selectedSize.width}
                   min={1}
                   integer
+                  configPath="fixture_size_overrides[].size.width"
                   onChange={(width) => updateFixture("width", width)}
                 />
                 <NumberField
@@ -647,6 +705,7 @@ function FixtureSizeFields({
                   value={selectedSize.height}
                   min={1}
                   integer
+                  configPath="fixture_size_overrides[].size.height"
                   onChange={(height) => updateFixture("height", height)}
                 />
               </div>
@@ -681,6 +740,7 @@ function FixtureSizeFields({
 function NumberField({
   label,
   shortLabel,
+  configPath,
   value,
   min,
   max,
@@ -690,6 +750,7 @@ function NumberField({
 }: {
   label: string;
   shortLabel?: string;
+  configPath?: string;
   value: number;
   min?: number;
   max?: number;
@@ -700,7 +761,17 @@ function NumberField({
   const id = useId();
   return (
     <Field>
-      <FieldLabel htmlFor={id}>{shortLabel ?? label}</FieldLabel>
+      <FieldLabel
+        htmlFor={id}
+        title={configPath}
+        className={
+          configPath
+            ? "text-muted-foreground max-w-full min-w-0 overflow-hidden font-mono text-[9px] text-ellipsis whitespace-nowrap"
+            : undefined
+        }
+      >
+        {configPath ?? shortLabel ?? label}
+      </FieldLabel>
       <Input
         id={id}
         aria-label={label}
@@ -709,9 +780,11 @@ function NumberField({
         min={min}
         max={max}
         step={integer ? 1 : (step ?? 0.1)}
-        className="h-7 font-mono text-xs tabular-nums"
+        className="h-6 font-mono text-xs tabular-nums"
         onChange={(event) => {
+          if (!event.target.value.trim()) return;
           const next = Number(event.target.value);
+          if (!Number.isFinite(next)) return;
           onChange(integer ? Math.round(next) : next);
         }}
       />
@@ -721,23 +794,42 @@ function NumberField({
 
 function TextField({
   label,
+  configPath,
   value,
   onChange,
 }: {
   label: string;
+  configPath?: string;
   value: string;
   onChange: (value: string) => void;
 }) {
   const id = useId();
   return (
     <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel
+        htmlFor={id}
+        title={configPath}
+        className={
+          configPath
+            ? "text-muted-foreground max-w-full min-w-0 overflow-hidden font-mono text-[9px] text-ellipsis whitespace-nowrap"
+            : undefined
+        }
+      >
+        {configPath ?? label}
+      </FieldLabel>
       <Input
         id={id}
+        aria-label={label}
         value={value}
-        className="h-7 font-mono text-xs"
+        className="h-6 font-mono text-xs"
         onChange={(event) => onChange(event.target.value)}
       />
     </Field>
   );
+}
+
+function formatMetric(value: number) {
+  return Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }

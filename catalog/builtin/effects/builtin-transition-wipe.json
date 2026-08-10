@@ -8,68 +8,63 @@
     {
       "id": "speed",
       "name": "Speed",
-      "value_type": "scalar",
-      "default_value": {
+      "schema": {
         "type": "scalar",
-        "value": 1
+        "default": 1,
+        "range": {
+          "min": 0.25,
+          "max": 8,
+          "step": 0.25
+        },
+        "unit": "multiplier"
       },
-      "range": [0.25, 8],
-      "step": 0.25,
-      "required": true,
-      "help": "Beat-synced wipe travel speed.",
-      "safe_fallback": {
-        "type": "scalar",
-        "value": 0.5
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "multiplier",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Beat-synced wipe travel speed."
     },
     {
       "id": "phase",
       "name": "Phase",
-      "value_type": "scalar",
-      "default_value": {
+      "schema": {
         "type": "scalar",
-        "value": 0
+        "default": 0,
+        "range": {
+          "min": -1,
+          "max": 1,
+          "step": 0.01
+        },
+        "unit": "cycles"
       },
-      "range": [-1, 1],
-      "step": 0.01,
-      "required": true,
-      "help": "Spatial wipe offset in cycles.",
-      "safe_fallback": {
-        "type": "scalar",
-        "value": 0
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "cycles",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Spatial wipe offset in cycles."
     },
     {
       "id": "intensity",
       "name": "Intensity",
-      "value_type": "scalar",
-      "default_value": {
+      "schema": {
         "type": "scalar",
-        "value": 1
+        "default": 1,
+        "range": {
+          "min": 0,
+          "max": 1,
+          "step": 0.05
+        },
+        "unit": "normalized"
       },
-      "range": [0, 1],
-      "step": 0.05,
-      "required": true,
-      "help": "Peak wipe intensity.",
-      "safe_fallback": {
-        "type": "scalar",
-        "value": 0.5
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Peak wipe intensity."
+    },
+    {
+      "id": "color",
+      "name": "Color",
+      "schema": {
+        "type": "color"
       },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "normalized",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
     }
   ],
   "graph": {
@@ -122,8 +117,6 @@
     "colorfulness": 0,
     "strobe_risk": "none",
     "required_attributes": ["intensity"],
-    "layout_capabilities": ["linear", "matrix", "coordinates"],
-    "parameter_summary": ["speed", "phase", "intensity"],
-    "deprecated": false
+    "layout_capabilities": ["linear", "matrix", "coordinates"]
   }
 }

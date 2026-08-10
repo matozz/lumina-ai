@@ -30,6 +30,7 @@ describe("CueClipBlock native pointer interaction", () => {
   it("batches pointer moves into DOM-only rAF preview and commits once on pointer up", () => {
     const onCommitMove = vi.fn();
     const onCommitResize = vi.fn();
+    let cancel: (() => void) | null = null;
     const viewportRef = createRef<HTMLDivElement>();
     const { container } = render(
       <div ref={viewportRef}>
@@ -43,10 +44,11 @@ describe("CueClipBlock native pointer interaction", () => {
           }}
           cueName="Cue A"
           geometry={createTimelineGeometry(960, 48)}
+          onCancelReady={(next) => {
+            cancel = next;
+          }}
           onCommitMove={onCommitMove}
           onCommitResize={onCommitResize}
-          onDelete={vi.fn()}
-          onDuplicate={vi.fn()}
           onSelect={vi.fn()}
           onSnapPreview={vi.fn()}
           selected
@@ -82,5 +84,83 @@ describe("CueClipBlock native pointer interaction", () => {
     fireEvent.pointerUp(block, { pointerId: 8, clientX: 168 });
     expect(onCommitResize).toHaveBeenCalledOnce();
     expect(onCommitResize).toHaveBeenCalledWith(2_400);
+
+    fireEvent.pointerDown(block, { button: 0, pointerId: 9, clientX: 48 });
+    fireEvent.pointerMove(block, { pointerId: 9, clientX: 72 });
+    flushFrame();
+    expect(cancel).not.toBeNull();
+    (cancel as unknown as () => void)();
+    expect(onCommitMove).toHaveBeenCalledOnce();
+    expect(block.style.transform).toBe("");
+  });
+
+  it("renders a one-beat clip at its truthful compact width in the global view", () => {
+    const viewportRef = createRef<HTMLDivElement>();
+    render(
+      <div ref={viewportRef}>
+        <CueClipBlock
+          arrangementLength={245_760}
+          clip={{
+            id: "drop-beat",
+            cue_ref: { id: "full-flash", revision: 1 },
+            start_tick: 69_120,
+            duration_tick: 960,
+          }}
+          cueName="FullFlash"
+          geometry={createTimelineGeometry(960, 4, 480)}
+          onCancelReady={vi.fn()}
+          onCommitMove={vi.fn()}
+          onCommitResize={vi.fn()}
+          onSelect={vi.fn()}
+          onSnapPreview={vi.fn()}
+          selected={false}
+          top={8}
+          visualRow={0}
+          viewportRef={viewportRef}
+        />
+      </div>,
+    );
+
+    const block = screen.getByRole("button", { name: /FullFlash, starts at tick 69120/ });
+    expect(block.style.width).toBe("4px");
+    expect(block.dataset.compact).toBe("true");
+    expect(block.querySelector("[data-resize-handle]")).toBeNull();
+  });
+
+  it("preserves an existing multi-selection when a selected clip starts moving", () => {
+    const viewportRef = createRef<HTMLDivElement>();
+    const onSelect = vi.fn();
+    render(
+      <div ref={viewportRef}>
+        <CueClipBlock
+          arrangementLength={30_720}
+          clip={{
+            id: "selected-clip",
+            cue_ref: { id: "cue-a", revision: 1 },
+            start_tick: 960,
+            duration_tick: 960,
+          }}
+          cueName="Selected Cue"
+          geometry={createTimelineGeometry(960, 48)}
+          onCancelReady={vi.fn()}
+          onCommitMove={vi.fn()}
+          onCommitResize={vi.fn()}
+          onSelect={onSelect}
+          onSnapPreview={vi.fn()}
+          selected
+          top={8}
+          visualRow={0}
+          viewportRef={viewportRef}
+        />
+      </div>,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: /Selected Cue/ }), {
+      button: 0,
+      pointerId: 30,
+      clientX: 48,
+    });
+
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });

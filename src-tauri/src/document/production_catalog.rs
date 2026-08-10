@@ -6,19 +6,19 @@ use super::{
     CueTriggerMode, CueTriggerPolicy, DirectionDSL, EffectDefinitionDSL, EffectDefinitionDocument,
     EffectFamilyDSL, EffectInstanceDSL, EffectNodeDSL, GeneratorDSL, GroupDSL, GroupFixturesDSL,
     GroupRangeDSL, LayoutCapabilityDSL, LayoutDSL, LayoutDefinition, LayoutGeometry, LayoutType,
-    MetaDSL, OscillatorWaveformDSL, ParameterOverridePolicyDSL, ParameterValueDSL, PatchDSL,
-    ProjectBundle, ProjectManifest, ShowDocumentV1, StageDocument, StrobeRiskDSL,
-    TargetSetDefinition, TargetSetRef, TargetSetSelector, TargetingSceneDefinition,
-    TargetingSceneRef, TargetingTransition, ValidatedProject, CUE_DEFINITION_SCHEMA_VERSION,
-    CURRENT_SCHEMA_VERSION,
+    MetaDSL, OscillatorWaveformDSL, ParameterScopeDSL, ParameterValueDSL, PatchDSL, ProjectBundle,
+    ProjectManifest, ShowDocumentV1, StageDocument, StrobeRiskDSL, TargetSetDefinition,
+    TargetSetRef, TargetSetSelector, TargetingSceneDefinition, TargetingSceneRef,
+    TargetingTransition, ValidatedProject, CUE_DEFINITION_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION,
 };
 use crate::compiler::diagnostic::{
     Diagnostic, CATALOG_METADATA_INVALID, CATALOG_OUTPUT_INVALID, CATALOG_PARAMETER_INVALID,
     CUE_LAYER_ATTRIBUTE_CONFLICT, CUE_RECIPE_INVALID, CUE_RECIPE_UNRESOLVED,
 };
 use crate::compiler::Compiler;
+use crate::engine::effect::COLOR_PARAMETER_ID;
 use crate::engine::profile::profile_by_id;
-use crate::engine::profile::AttributeValue;
+use crate::engine::profile::{AttributeValue, COLOR_RGB_ATTRIBUTE};
 use crate::engine::render::{render_at, LivePhaser, RenderSource, RenderTime};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -524,19 +524,22 @@ pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<D
         if let Some((duplicate_id, duplicate_revision)) =
             signatures.insert(signature, (effect.id.clone(), effect.revision))
         {
-            diagnostics.push(output_diagnostic(
-                effect,
-                "sampled_output",
-                &format!("Sampled output duplicates {duplicate_id} revision {duplicate_revision}."),
-                "Make the Production Effect behavior observably distinct.",
-            ));
+            if duplicate_id != effect.id {
+                diagnostics.push(output_diagnostic(
+                    effect,
+                    "sampled_output",
+                    &format!(
+                        "Sampled output duplicates {duplicate_id} revision {duplicate_revision}."
+                    ),
+                    "Make the Production Effect behavior observably distinct.",
+                ));
+            }
         }
-        for parameter in effect.parameters.iter().filter(|parameter| {
-            matches!(
-                parameter.override_policy,
-                Some(ParameterOverridePolicyDSL::CueOverride)
-            )
-        }) {
+        for parameter in effect
+            .parameters
+            .iter()
+            .filter(|parameter| parameter.allows_cue_override())
+        {
             let Some(alternate) = alternate_parameter_value(parameter) else {
                 continue;
             };
@@ -765,18 +768,19 @@ pub fn materialize_effect_graph_bindings(effect: &mut EffectDefinitionDocument) 
         else {
             continue;
         };
-        let applied = match (binding.property, node, &parameter.default_value) {
+        let default = parameter.default_value();
+        let applied = match (binding.property, node, default.as_ref()) {
             (
                 super::EffectNodePropertyDSL::Waveform,
                 super::EffectNodeDSL::Oscillator { waveform, .. },
-                ParameterValueDSL::Enum(value),
+                Some(ParameterValueDSL::Enum(value)),
             ) => parse_waveform(value)
                 .map(|value| *waveform = value)
                 .is_some(),
             (
                 super::EffectNodePropertyDSL::Attack,
                 super::EffectNodeDSL::Envelope { attack, .. },
-                ParameterValueDSL::Scalar(value),
+                Some(ParameterValueDSL::Scalar(value)),
             ) => {
                 *attack = *value;
                 true
@@ -784,7 +788,7 @@ pub fn materialize_effect_graph_bindings(effect: &mut EffectDefinitionDocument) 
             (
                 super::EffectNodePropertyDSL::Release,
                 super::EffectNodeDSL::Envelope { release, .. },
-                ParameterValueDSL::Scalar(value),
+                Some(ParameterValueDSL::Scalar(value)),
             ) => {
                 *release = *value;
                 true
@@ -792,7 +796,7 @@ pub fn materialize_effect_graph_bindings(effect: &mut EffectDefinitionDocument) 
             (
                 super::EffectNodePropertyDSL::ColorStops,
                 super::EffectNodeDSL::ColorGradient { stops, .. },
-                ParameterValueDSL::ColorStops(value),
+                Some(ParameterValueDSL::ColorStops(value)),
             ) => {
                 *stops = value.clone();
                 true
@@ -805,13 +809,13 @@ pub fn materialize_effect_graph_bindings(effect: &mut EffectDefinitionDocument) 
                     CATALOG_PARAMETER_INVALID,
                     format!("effect.parameters[{index}].graph_binding"),
                     "Typed graph binding cannot be materialized from this parameter value.",
-                    "Restore the safe fallback or repair the binding contract.",
+                    "Restore the last valid value or repair the binding contract.",
                 )
                 .with_asset("effect", effect.id.clone(), effect.revision)
                 .with_recovery(
-                    "restore_safe_fallback",
-                    "Restore safe fallback",
-                    Some(format!("effect.parameters[{index}].default_value")),
+                    "restore_last_valid_value",
+                    "Restore last valid value",
+                    Some(format!("effect.parameters[{index}].schema.default")),
                 ),
             );
         }
@@ -901,7 +905,8 @@ fn effect_sample_document(
 fn alternate_parameter_value(
     parameter: &super::ParameterDefinitionDSL,
 ) -> Option<ParameterValueDSL> {
-    match (&parameter.default_value, parameter.range) {
+    let default = parameter.default_value()?;
+    match (&default, parameter.range()) {
         (ParameterValueDSL::Scalar(default), Some((minimum, maximum))) => {
             let candidate = if parameter.id == "speed" {
                 [0.25, 0.5, 1.0, 2.0, 4.0, 8.0].into_iter().find(|value| {
@@ -926,7 +931,7 @@ fn alternate_parameter_value(
         }
         (ParameterValueDSL::Boolean(value), _) => Some(ParameterValueDSL::Boolean(!value)),
         (ParameterValueDSL::Enum(value), _) => parameter
-            .enum_values
+            .enum_values()
             .iter()
             .find(|candidate| *candidate != value)
             .cloned()
@@ -944,7 +949,7 @@ fn sampled_maximum_strobe_risk(
         .parameters
         .iter()
         .find(|parameter| parameter.id == "speed")
-        .and_then(|parameter| parameter.range.map(|(_, maximum)| maximum));
+        .and_then(|parameter| parameter.range().map(|(_, maximum)| maximum));
     let overrides = maximum_speed.map_or_else(BTreeMap::new, |maximum| {
         BTreeMap::from([("speed".to_string(), ParameterValueDSL::Scalar(maximum))])
     });
@@ -986,6 +991,19 @@ fn frame_intensity(frame: &crate::engine::attribute::FixtureFrame) -> Option<f64
         .find(|attribute| attribute.id == "intensity")
         .and_then(|attribute| match attribute.value {
             AttributeValue::Scalar(value) => Some(f64::from(value)),
+            _ => None,
+        })
+}
+
+#[cfg(test)]
+fn frame_color(frame: &crate::engine::attribute::FixtureFrame) -> Option<[u8; 3]> {
+    frame
+        .to_payload()
+        .attributes
+        .into_iter()
+        .find(|attribute| attribute.id == "color.rgb")
+        .and_then(|attribute| match attribute.value {
+            AttributeValue::Color(value) => Some(value),
             _ => None,
         })
 }
@@ -1120,8 +1138,8 @@ fn validate_cue_recipe<'a>(
                 continue;
             };
             if !matches!(
-                parameter.override_policy,
-                Some(ParameterOverridePolicyDSL::CueOverride)
+                parameter.scope,
+                ParameterScopeDSL::Cue | ParameterScopeDSL::Arrangement
             ) {
                 diagnostics.push(
                     Diagnostic::error(
@@ -1135,9 +1153,9 @@ fn validate_cue_recipe<'a>(
             }
             validate_parameter_value_contract(
                 value,
-                parameter.value_type,
-                parameter.range,
-                &parameter.enum_values,
+                parameter.value_type(),
+                parameter.range(),
+                parameter.enum_values(),
                 &format!("{layer_path}.parameter_overrides.{parameter_id}"),
                 diagnostics,
             );
@@ -1158,14 +1176,20 @@ fn validate_recipe_layer_composition(
         }) else {
             continue;
         };
-        let left_attributes = effect_writer_attributes(left_effect);
+        let left_attributes = effect_writer_attributes(
+            left_effect,
+            left.parameter_overrides.contains_key(COLOR_PARAMETER_ID),
+        );
         for (right_index, right) in recipe.layers.iter().enumerate().skip(left_index + 1) {
             let Some(right_effect) = catalog.effects.iter().find(|effect| {
                 effect.id == right.effect_ref.id && effect.revision == right.effect_ref.revision
             }) else {
                 continue;
             };
-            let right_attributes = effect_writer_attributes(right_effect);
+            let right_attributes = effect_writer_attributes(
+                right_effect,
+                right.parameter_overrides.contains_key(COLOR_PARAMETER_ID),
+            );
             let conflicts = left_attributes
                 .intersection(&right_attributes)
                 .cloned()
@@ -1191,7 +1215,10 @@ fn validate_recipe_layer_composition(
     }
 }
 
-fn effect_writer_attributes(effect: &EffectDefinitionDocument) -> BTreeSet<String> {
+fn effect_writer_attributes(
+    effect: &EffectDefinitionDocument,
+    has_explicit_color: bool,
+) -> BTreeSet<String> {
     let mut attributes = BTreeSet::new();
     let mut has_attribute_set_writer = false;
     for node in &effect.graph.nodes {
@@ -1205,6 +1232,12 @@ fn effect_writer_attributes(effect: &EffectDefinitionDocument) -> BTreeSet<Strin
     }
     if has_attribute_set_writer || attributes.is_empty() {
         attributes.extend(effect.catalog.required_attributes.iter().cloned());
+    }
+    if effect.parameters.iter().any(|parameter| {
+        parameter.id == COLOR_PARAMETER_ID
+            && (parameter.default_value().is_some() || has_explicit_color)
+    }) {
+        attributes.insert(COLOR_RGB_ATTRIBUTE.to_string());
     }
     attributes
 }
@@ -1520,7 +1553,9 @@ pub const DEFAULT_CUE_TRIGGER: CueTriggerPolicy = CueTriggerPolicy {
 mod tests {
     use super::*;
     use crate::compiler::diagnostic::CUE_RECIPE_UNRESOLVED;
-    use crate::document::valid_bundle;
+    use crate::document::{
+        valid_bundle, AutomationPolicyDSL, ParameterScopeDSL, ParameterValueTypeDSL,
+    };
 
     #[test]
     fn checked_in_catalog_meets_production_contract() {
@@ -1531,6 +1566,85 @@ mod tests {
         assert!(diagnostics.is_empty(), "{diagnostics:#?}");
         let runtime_diagnostics = validate_production_catalog_runtime(&catalog);
         assert!(runtime_diagnostics.is_empty(), "{runtime_diagnostics:#?}");
+    }
+
+    #[test]
+    fn every_catalog_effect_exposes_a_typed_optional_color_override() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        for effect in &catalog.effects {
+            let color = effect
+                .parameters
+                .iter()
+                .find(|parameter| parameter.id == COLOR_PARAMETER_ID)
+                .unwrap_or_else(|| panic!("{} has no standard Color parameter", effect.id));
+            assert_eq!(
+                color.value_type(),
+                ParameterValueTypeDSL::Color,
+                "{}",
+                effect.id
+            );
+            assert!(
+                matches!(color.scope, ParameterScopeDSL::Arrangement),
+                "{}",
+                effect.id
+            );
+            assert!(
+                matches!(color.automation(), AutomationPolicyDSL::Continuous),
+                "{}",
+                effect.id
+            );
+        }
+    }
+
+    #[test]
+    fn optional_color_only_writes_when_explicitly_overridden() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        let effect = catalog
+            .effects
+            .iter()
+            .find(|effect| effect.id == "builtin.intensity.wave")
+            .expect("Intensity Wave");
+        let color = effect
+            .parameters
+            .iter()
+            .find(|parameter| parameter.id == COLOR_PARAMETER_ID)
+            .expect("standard Color");
+        assert!(color.default_value().is_none());
+
+        let show = Compiler::compile_document(effect_sample_document(effect, BTreeMap::new()))
+            .expect("optional Color compiles");
+        let active = effect_sample_live(&show);
+        assert_eq!(
+            render_at(
+                &show,
+                RenderTime { beat: 0.25 },
+                RenderSource::Live(&active),
+            )
+            .first()
+            .and_then(frame_color),
+            Some([0, 0, 0]),
+            "disabled Color default must preserve intensity-only output"
+        );
+
+        let show = Compiler::compile_document(effect_sample_document(
+            effect,
+            BTreeMap::from([(
+                COLOR_PARAMETER_ID.to_string(),
+                ParameterValueDSL::Color("#12ABEF".to_string()),
+            )]),
+        ))
+        .expect("Color override compiles");
+        let active = effect_sample_live(&show);
+        assert_eq!(
+            render_at(
+                &show,
+                RenderTime { beat: 0.25 },
+                RenderSource::Live(&active),
+            )
+            .first()
+            .and_then(frame_color),
+            Some([0x12, 0xAB, 0xEF])
+        );
     }
 
     #[test]
@@ -1570,6 +1684,97 @@ mod tests {
     }
 
     #[test]
+    fn intensity_only_catalog_graphs_render_their_default_color() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        for effect_id in [
+            "builtin.spatial.radial-bloom",
+            "builtin.transition.fade-crossfade",
+            "builtin.transition.blackout-safe",
+        ] {
+            let effect = catalog
+                .effects
+                .iter()
+                .find(|effect| effect.id == effect_id)
+                .expect("catalog effect");
+            let show = Compiler::compile_document(effect_sample_document(effect, BTreeMap::new()))
+                .expect("effect compiles");
+            let active = effect_sample_live(&show);
+            let color = render_at(
+                &show,
+                RenderTime { beat: 0.25 },
+                RenderSource::Live(&active),
+            )
+            .first()
+            .and_then(frame_color)
+            .expect("effect writes color");
+
+            assert_ne!(
+                color,
+                [0, 0, 0],
+                "{effect_id} must not render a black frame"
+            );
+        }
+    }
+
+    #[test]
+    fn graph_authored_color_is_not_replaced_by_the_parameter_default() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        let burst = catalog
+            .effects
+            .iter()
+            .find(|effect| effect.id == "builtin.color.pulse")
+            .expect("Short Color Burst");
+        let show = Compiler::compile_document(effect_sample_document(burst, BTreeMap::new()))
+            .expect("Short Color Burst compiles");
+        let active = effect_sample_live(&show);
+        let colors = [0.0, 0.25].map(|beat| {
+            render_at(&show, RenderTime { beat }, RenderSource::Live(&active))
+                .first()
+                .and_then(frame_color)
+                .expect("Short Color Burst writes color")
+        });
+
+        assert_ne!(colors[0], colors[1], "graph color must remain animated");
+    }
+
+    #[test]
+    fn short_color_burst_keeps_its_pulse_with_a_cue_color_override() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        let burst = catalog
+            .effects
+            .iter()
+            .find(|effect| effect.id == "builtin.color.pulse" && effect.revision == 1)
+            .expect("Short Color Burst current source");
+        let document = effect_sample_document(
+            burst,
+            BTreeMap::from([(
+                crate::engine::effect::COLOR_PARAMETER_ID.to_string(),
+                ParameterValueDSL::Color("#FF4FD8".to_string()),
+            )]),
+        );
+        let show = Compiler::compile_document(document).expect("Short Color Burst compiles");
+        let active = effect_sample_live(&show);
+        let intensities = [0.0, 0.25, 0.5, 0.75].map(|beat| {
+            render_at(&show, RenderTime { beat }, RenderSource::Live(&active))
+                .first()
+                .and_then(frame_intensity)
+                .expect("Short Color Burst writes intensity")
+        });
+
+        let minimum = intensities.into_iter().fold(f64::INFINITY, f64::min);
+        let maximum = intensities.into_iter().fold(f64::NEG_INFINITY, f64::max);
+
+        assert!(
+            minimum >= 0.25 - f64::EPSILON,
+            "burst keeps a safe visible floor"
+        );
+        assert!(
+            maximum > minimum + 0.5,
+            "Cue Color must not flatten the burst pulse"
+        );
+    }
+
+    #[test]
     fn corner_spatial_effects_keep_visible_output_on_authored_target_sizes() {
         let catalog = builtin_production_catalog().expect("catalog");
         let template = catalog
@@ -1590,6 +1795,8 @@ mod tests {
         let top_right = (0..10)
             .flat_map(|row| (10..20).map(move |column| row * 20 + column + 1))
             .collect::<BTreeSet<_>>();
+        let top_left_leftmost = (0..10).map(|row| row * 20 + 1).collect::<BTreeSet<_>>();
+        let top_left_rightmost = (0..10).map(|row| row * 20 + 10).collect::<BTreeSet<_>>();
         let visible_target = |beat: f64, fixture_ids: &BTreeSet<u32>| {
             render_at(&snapshot.show, RenderTime { beat }, RenderSource::Timeline)
                 .iter()
@@ -1616,6 +1823,14 @@ mod tests {
         assert!(
             ping_patterns.len() >= 10,
             "Ping-Pong must travel across columns"
+        );
+        assert!(
+            top_left_leftmost.is_subset(&visible_target(0.05, &top_left)),
+            "Ping-Pong must dwell on the leftmost column across nearby render samples"
+        );
+        assert!(
+            top_left_rightmost.is_subset(&visible_target(0.45, &top_left)),
+            "Ping-Pong must dwell on the rightmost column across nearby render samples"
         );
 
         let mut rain_patterns = BTreeSet::new();

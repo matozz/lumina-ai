@@ -26,21 +26,23 @@ function documentFixture(): FullDSL {
           {
             id: "speed",
             name: "Speed",
-            value_type: "scalar",
-            default_value: { type: "scalar", value: 1 },
-            range: [0.1, 4],
-            unit: "multiplier",
-            ui_hint: "slider",
-            automation: "continuous",
+            schema: {
+              type: "scalar",
+              default: 1,
+              range: { min: 0.1, max: 4, step: 0.1 },
+              unit: "multiplier",
+            },
+            scope: "arrangement",
+            section: "main",
+            help: "Playback speed.",
           },
           {
             id: "direction",
             name: "Direction",
-            value_type: "direction",
-            default_value: { type: "direction", value: "forward" },
-            unit: "direction",
-            ui_hint: "segmented",
-            automation: "discrete",
+            schema: { type: "direction", default: "forward" },
+            scope: "arrangement",
+            section: "main",
+            help: "Playback direction.",
           },
         ],
         graph: { nodes: [] },
@@ -97,7 +99,9 @@ describe("automationParameterOptions", () => {
     expect(options[0]).toMatchObject({
       target: { scope: "effect_instance", instance_id: "front", parameter_id: "speed" },
       initialValue: { type: "scalar", value: 2 },
-      definition: { unit: "multiplier", range: [0.1, 4] },
+      definition: {
+        schema: { type: "scalar", unit: "multiplier", range: { min: 0.1, max: 4 } },
+      },
     });
   });
 
@@ -126,8 +130,8 @@ describe("automationParameterOptions", () => {
     expect(resolveAutomationParameter(document, lane.target)).toMatchObject({
       definition: {
         id: "direction",
-        value_type: "direction",
-        automation: "discrete",
+        schema: { type: "direction" },
+        scope: "arrangement",
       },
     });
   });

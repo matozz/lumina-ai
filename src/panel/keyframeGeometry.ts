@@ -1,4 +1,5 @@
 import type { KeyframeDSL, ParameterDefinitionDSL, ParameterValueDSL } from "@/bridge/types";
+import { parameterRange } from "@/document/effectParameter";
 
 const MAX_TICK = 0xffff_ffff;
 
@@ -39,6 +40,20 @@ export function clampKeyframeDelta(deltaTick: number, bounds: KeyframeMoveBounds
   return Math.max(bounds.minimum, Math.min(bounds.maximum, deltaTick));
 }
 
+export function clampKeyframeDeltaToSnap(
+  deltaTick: number,
+  bounds: KeyframeMoveBounds,
+  anchorTick: number,
+  snapTicks: number,
+): number {
+  const interval = Math.max(1, Math.round(snapTicks));
+  const minimumTarget = Math.ceil((anchorTick + bounds.minimum) / interval) * interval;
+  const maximumTarget = Math.floor((anchorTick + bounds.maximum) / interval) * interval;
+  if (minimumTarget > maximumTarget) return 0;
+  const requestedTarget = anchorTick + deltaTick;
+  return Math.max(minimumTarget, Math.min(maximumTarget, requestedTarget)) - anchorTick;
+}
+
 export function keyframeValueY(
   value: ParameterValueDSL,
   definition: ParameterDefinitionDSL,
@@ -46,7 +61,7 @@ export function keyframeValueY(
   inset = 4,
 ): number {
   if (value.type !== "scalar") return height / 2;
-  const [minimum, maximum] = definition.range ?? [0, 1];
+  const [minimum, maximum] = parameterRange(definition) ?? [0, 1];
   if (maximum <= minimum) return height / 2;
   const progress = Math.max(0, Math.min(1, (value.value - minimum) / (maximum - minimum)));
   const safeInset = Math.max(0, Math.min(height / 2, inset));

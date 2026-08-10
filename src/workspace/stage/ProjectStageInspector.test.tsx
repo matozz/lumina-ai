@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProjectBundle } from "@/bridge/types";
+import { polygonFixtureSpacing } from "@/document/layoutDefinition";
 import { activeStage, exactAsset } from "@/document/projectModel";
 import { projectActions, useProjectStore } from "@/stores/project";
 import { useWorkspaceStore, workspaceActions } from "@/stores/workspace";
@@ -219,6 +220,42 @@ describe("ProjectStageInspector Layout workflow", () => {
         rings: 2,
         increment: 10,
       });
+    });
+  });
+
+  it("shows config paths and keeps Polygon fixture spacing while changing capacity", async () => {
+    const polygonRef = useProjectStore
+      .getState()
+      .bundle.manifest.layout_refs.find(
+        (reference) => reference.id === "builtin.layout.polygon-hex-96",
+      );
+    expect(polygonRef).toBeTruthy();
+    act(() => projectActions.setSelectedLayoutRef(polygonRef!));
+
+    render(<ProjectStageInspector />);
+    await waitFor(() => expect(commandMocks.previewLayout).toHaveBeenCalled());
+    expect(screen.getByText("fixture_size.width")).toBeTruthy();
+    expect(screen.getByText("fixtures_per_side")).toBeTruthy();
+    expect(screen.getByText("radius")).toBeTruthy();
+
+    const initialCalls = commandMocks.previewLayout.mock.calls;
+    const initialLayout = initialCalls[
+      initialCalls.length - 1
+    ]?.[0] as ProjectBundle["layouts"][number];
+    if (initialLayout.geometry.shape !== "polygon") throw new Error("polygon preview missing");
+    const initialSpacing = polygonFixtureSpacing(initialLayout.geometry);
+    const initialRadius = initialLayout.geometry.radius;
+    const fixturesPerSide = screen.getByLabelText("Fixtures per side");
+    fireEvent.change(fixturesPerSide, { target: { value: "" } });
+    fireEvent.change(fixturesPerSide, { target: { value: "8" } });
+
+    await waitFor(() => {
+      const calls = commandMocks.previewLayout.mock.calls;
+      const previewLayout = calls[calls.length - 1]?.[0] as ProjectBundle["layouts"][number];
+      if (previewLayout.geometry.shape !== "polygon") throw new Error("polygon preview missing");
+      expect(previewLayout.geometry.fixtures_per_side).toBe(8);
+      expect(previewLayout.geometry.radius).toBeCloseTo(initialRadius / 2, 10);
+      expect(polygonFixtureSpacing(previewLayout.geometry)).toBeCloseTo(initialSpacing, 10);
     });
   });
 

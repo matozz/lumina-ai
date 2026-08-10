@@ -19,24 +19,8 @@
       "mix_overrides",
       "trigger_policy"
     ],
-    "effect_catalog": [
-      "family",
-      "category",
-      "visibility",
-      "layout_capabilities",
-      "parameter_summary",
-      "risk",
-      "deprecation"
-    ],
-    "effect_parameter_authoring": [
-      "step",
-      "required",
-      "help",
-      "safe_fallback",
-      "override_policy",
-      "advanced",
-      "graph_binding"
-    ],
+    "effect_catalog": ["family", "category", "visibility", "layout_capabilities", "risk"],
+    "effect_parameter_authoring": ["typed_schema", "scope", "section", "help", "graph_binding"],
     "effect_parameter_types": ["scalar", "color", "direction", "boolean", "enum", "color_stops"],
     "layout_categories": ["basic", "generated_advanced"],
     "layout_editor_capabilities": ["form", "parameter_schema", "advanced_only", "read_only"],

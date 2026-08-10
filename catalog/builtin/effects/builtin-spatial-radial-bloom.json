@@ -8,66 +8,58 @@
     {
       "id": "speed",
       "name": "Speed",
-      "value_type": "scalar",
-      "default_value": {
+      "schema": {
         "type": "scalar",
-        "value": 0.5
+        "default": 0.5,
+        "range": {
+          "min": 0.25,
+          "max": 8,
+          "step": 0.25
+        },
+        "unit": "multiplier"
       },
-      "range": [0.25, 8],
-      "step": 0.25,
-      "required": true,
-      "help": "Beat-synced radial speed.",
-      "safe_fallback": {
-        "type": "scalar",
-        "value": 0.5
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Beat-synced radial speed."
+    },
+    {
+      "id": "color",
+      "name": "Color",
+      "schema": {
+        "type": "color",
+        "default": "#6E8BFF"
       },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "multiplier",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Single-color output override for Cue and Arrangement authoring."
     },
     {
       "id": "intensity",
       "name": "Intensity",
-      "value_type": "scalar",
-      "default_value": {
+      "schema": {
         "type": "scalar",
-        "value": 0.9
+        "default": 0.9,
+        "range": {
+          "min": 0,
+          "max": 1,
+          "step": 0.05
+        },
+        "unit": "normalized"
       },
-      "range": [0, 1],
-      "step": 0.05,
-      "required": true,
-      "help": "Maximum bloom output.",
-      "safe_fallback": {
-        "type": "scalar",
-        "value": 0.5
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "normalized",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Maximum bloom output."
     },
     {
       "id": "direction",
       "name": "Direction",
-      "value_type": "direction",
-      "default_value": {
+      "schema": {
         "type": "direction",
-        "value": "forward"
+        "default": "forward"
       },
-      "required": true,
-      "help": "Outward or inward travel.",
-      "safe_fallback": {
-        "type": "direction",
-        "value": "forward"
-      },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "direction",
-      "ui_hint": "segmented",
-      "automation": "discrete"
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Outward or inward travel."
     }
   ],
   "graph": {
@@ -117,11 +109,9 @@
     "energy": 0.55,
     "density": 0.8,
     "motion": "organic",
-    "colorfulness": 0,
+    "colorfulness": 0.75,
     "strobe_risk": "none",
-    "required_attributes": ["intensity"],
-    "layout_capabilities": ["coordinates", "radial"],
-    "parameter_summary": ["speed", "intensity", "direction"],
-    "deprecated": false
+    "required_attributes": ["intensity", "color.rgb"],
+    "layout_capabilities": ["coordinates", "radial"]
   }
 }

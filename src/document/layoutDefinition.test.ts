@@ -8,6 +8,8 @@ import {
   fixtureIdsForStage,
   layoutCapacity,
   layoutPositions,
+  polygonFixtureSpacing,
+  polygonRadiusForFixtureSpacing,
   previewBundleForLayout,
 } from "./layoutDefinition";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
@@ -152,6 +154,34 @@ describe("LayoutDefinition geometry", () => {
     expect(layoutPositions(layout, fixtureIdsForLayout(layout))).toHaveLength(4);
   });
 
+  it("resizes Polygon bounds while preserving fixture spacing", () => {
+    const bundle = createStarterProjectBundle();
+    const layout = structuredClone(
+      bundle.layouts.find((candidate) => candidate.id === "builtin.layout.polygon-hex-96")!,
+    );
+    if (layout.geometry.shape !== "polygon") throw new Error("polygon layout missing");
+    const originalSpacing = polygonFixtureSpacing(layout.geometry);
+    const originalPositions = layoutPositions(layout, fixtureIdsForLayout(layout));
+    const originalWidth = positionSpan(originalPositions, "x");
+
+    layout.geometry.fixtures_per_side = 8;
+    layout.geometry.radius = polygonRadiusForFixtureSpacing(
+      layout.geometry.sides,
+      layout.geometry.fixtures_per_side,
+      originalSpacing,
+    );
+    const positions = layoutPositions(layout, fixtureIdsForLayout(layout));
+    const consecutiveDistances = positions.map((position, index) => {
+      const next = positions[(index + 1) % positions.length];
+      return Math.hypot(next.x - position.x, next.y - position.y);
+    });
+
+    expect(polygonFixtureSpacing(layout.geometry)).toBeCloseTo(originalSpacing, 10);
+    expect(positionSpan(positions, "x")).toBeCloseTo(originalWidth / 2, 10);
+    expect(Math.min(...consecutiveDistances)).toBeCloseTo(originalSpacing, 10);
+    expect(Math.max(...consecutiveDistances)).toBeCloseTo(originalSpacing, 10);
+  });
+
   it("resamples Algorithm paths by physical arc length", () => {
     const bundle = createStarterProjectBundle();
     for (const id of [
@@ -180,3 +210,8 @@ describe("LayoutDefinition geometry", () => {
     }
   });
 });
+
+function positionSpan(positions: Array<{ x: number; y: number }>, axis: "x" | "y") {
+  const values = positions.map((position) => position[axis]);
+  return Math.max(...values) - Math.min(...values);
+}

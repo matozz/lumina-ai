@@ -48,6 +48,21 @@ describe("workspace state", () => {
     });
   });
 
+  it("updates the untouched legacy Arrange split without overriding custom sizes", async () => {
+    const migrate = useWorkspaceStore.persist.getOptions().migrate;
+
+    expect(migrate).toBeDefined();
+    const migratedDefault = await Promise.resolve(
+      migrate?.({ activeWorkspace: "arrange", arrangePreviewSize: 38 }, 6),
+    );
+    const migratedCustom = await Promise.resolve(
+      migrate?.({ activeWorkspace: "arrange", arrangePreviewSize: 52 }, 6),
+    );
+
+    expect(migratedDefault).toMatchObject({ arrangePreviewSize: 68 });
+    expect(migratedCustom).toMatchObject({ arrangePreviewSize: 52 });
+  });
+
   it("tracks favorites without duplicating effect IDs", () => {
     workspaceActions.toggleFavoriteEffect("red-pulse");
     workspaceActions.toggleFavoriteEffect("red-pulse");
@@ -90,5 +105,23 @@ describe("workspace state", () => {
         "red-pulse": { mode: "one_shot", exclusiveGroup: "color", oneShotBeats: 8 },
       },
     });
+  });
+
+  it("keeps Arrange focus and splitter size in workspace preferences", () => {
+    workspaceActions.setArrangeTimelineFocus(true);
+    workspaceActions.setArrangePreviewSize(44);
+    workspaceActions.setArrangeTimelineBeatWidth(3.5);
+    workspaceActions.setArrangeTimelineSnapPreset("quarter");
+
+    expect(useWorkspaceStore.getState()).toMatchObject({
+      arrangeTimelineFocus: true,
+      arrangePreviewSize: 44,
+      arrangeTimelineBeatWidth: 3.5,
+      arrangeTimelineSnapPreset: "quarter",
+    });
+  });
+
+  it("defaults Arrange to a shorter Timeline and a larger effect preview", () => {
+    expect(useWorkspaceStore.getState().arrangePreviewSize).toBe(68);
   });
 });

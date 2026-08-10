@@ -23,9 +23,9 @@ describe("LivePadSettings", () => {
   it("edits behavior, exclusive group, and bounded one-shot duration", () => {
     render(<LivePadSettings effects={[liveEffect]} selectedEffectId={liveEffect.instance_id} />);
 
-    fireEvent.change(screen.getByLabelText("Live Pad behavior"), {
-      target: { value: "one_shot" },
-    });
+    fireEvent.click(screen.getByLabelText("Live Pad behavior"));
+    fireEvent.mouseMove(screen.getByRole("option", { name: "One-shot" }));
+    fireEvent.click(screen.getByRole("option", { name: "One-shot" }));
     fireEvent.change(screen.getByLabelText("Exclusive group"), {
       target: { value: "color" },
     });

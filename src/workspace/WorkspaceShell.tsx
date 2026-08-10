@@ -1,4 +1,5 @@
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { isNativeDragTarget, isNativeDropTarget, shouldPreventWebViewShortcut } from "@/lib/dom";
 import { cn } from "@/lib/utils";
 import {
   type WorkspaceId,
@@ -19,7 +20,10 @@ export function WorkspaceShell() {
   const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
   const libraryVisible = useWorkspaceStore(workspaceSelectors.libraryVisible);
   const inspectorVisible = useWorkspaceStore(workspaceSelectors.inspectorVisible);
-  const showContextLibrary = libraryVisible;
+  const arrangeTimelineFocus = useWorkspaceStore(workspaceSelectors.arrangeTimelineFocus);
+  const focusMode = activeWorkspace === "arrange" && arrangeTimelineFocus;
+  const showContextLibrary = libraryVisible && !focusMode;
+  const showContextInspector = inspectorVisible && !focusMode;
   useProjectPreviewController(activeWorkspace);
 
   const selectWorkspace = (workspace: WorkspaceId) => {
@@ -32,6 +36,18 @@ export function WorkspaceShell() {
         "bg-background text-foreground relative flex h-screen min-h-0 w-screen min-w-0 flex-col overflow-hidden",
       )}
       data-layout-root
+      onDragStartCapture={(event) => {
+        if (!isNativeDragTarget(event.target)) event.preventDefault();
+      }}
+      onDragOverCapture={(event) => {
+        if (!isNativeDropTarget(event.target)) event.preventDefault();
+      }}
+      onDropCapture={(event) => {
+        if (!isNativeDropTarget(event.target)) event.preventDefault();
+      }}
+      onKeyDownCapture={(event) => {
+        if (shouldPreventWebViewShortcut(event)) event.preventDefault();
+      }}
     >
       <WorkspaceHeader />
       <div className="flex min-h-0 min-w-0 flex-1">
@@ -56,7 +72,7 @@ export function WorkspaceShell() {
             </main>
           </ResizablePanel>
 
-          {inspectorVisible && (
+          {showContextInspector && (
             <>
               <ResizableHandle withHandle />
               <ResizablePanel

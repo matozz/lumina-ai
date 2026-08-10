@@ -8,7 +8,7 @@ import {
   type AuthoringScope,
 } from "@/authoring/transport";
 import { engine } from "@/bridge/commands";
-import { publishProjectPreview } from "@/canvas/previewBus";
+import { publishLayoutPreview, publishProjectPreview } from "@/canvas/previewBus";
 import type {
   ArrangementDocument,
   AssetRef,
@@ -16,11 +16,12 @@ import type {
   PreviewSource,
   RenderContext,
 } from "@/bridge/types";
-import { assetKey, exactAsset } from "@/document/projectModel";
+import { activeLayout, activeStage, assetKey, exactAsset } from "@/document/projectModel";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import { authoringDraftSelectors, useAuthoringDraftStore } from "@/stores/authoringDraft";
 import { productionCatalogSelectors, useProductionCatalogStore } from "@/stores/productionCatalog";
 import type { WorkspaceId } from "@/stores/workspace";
+import { useWorkspaceStore, workspaceSelectors } from "@/stores/workspace";
 import { materializeAuthoringPreview } from "./authoringPreviewBundle";
 
 interface ActiveAuthoringSession {
@@ -34,6 +35,7 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
   const bundle = useProjectStore(projectSelectors.bundle);
   const selectedEffectRef = useProjectStore(projectSelectors.selectedEffectRef);
   const selectedCueRef = useProjectStore(projectSelectors.selectedCueRef);
+  const selectedLayoutRef = useProjectStore(projectSelectors.selectedLayoutRef);
   const selectedArrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
   const selectedTargetSetId = useProjectStore(projectSelectors.selectedTargetSetId);
   const previewSourceMode = useProjectStore(projectSelectors.previewSource);
@@ -43,8 +45,10 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
   const cueDraft = useAuthoringDraftStore(authoringDraftSelectors.cue);
   const comparison = useAuthoringDraftStore(authoringDraftSelectors.comparison);
   const productionCatalog = useProductionCatalogStore(productionCatalogSelectors.catalog);
+  const inspectorVisible = useWorkspaceStore(workspaceSelectors.inspectorVisible);
   const compiledKeyRef = useRef<string | null>(null);
   const requestRef = useRef(0);
+  const stageRequestRef = useRef(0);
   const previousAuthoringRef = useRef<ActiveAuthoringSession | null>(null);
 
   const materialized = useMemo(
@@ -103,6 +107,8 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
           : { type: "rehearsal_draft" },
     [previewSourceMode, publishedRevision, workspace],
   );
+  const selectedLayout = exactAsset(bundle.layouts, selectedLayoutRef) ?? activeLayout(bundle);
+  const stage = activeStage(bundle);
   const activeAuthoring = useMemo<ActiveAuthoringSession | null>(() => {
     if (!arrangement) return null;
     if (workspace === "effect-lab" && previewEffectRef) {
@@ -121,6 +127,24 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
     source.type === "rehearsal_published"
       ? `published:${source.revision}:${assetKey(selectedArrangementRef)}`
       : `${source.type}:${assetKey(selectedArrangementRef)}:${serializedBundle}`;
+
+  useEffect(() => {
+    if (workspace !== "stage" || inspectorVisible) return;
+    const request = ++stageRequestRef.current;
+    void engine
+      .previewLayout(selectedLayout, stage)
+      .then((coords) => {
+        if (request !== stageRequestRef.current) return;
+        publishLayoutPreview(coords);
+      })
+      .catch((error) => {
+        if (request !== stageRequestRef.current) return;
+        projectActions.setPreviewError(formatPreviewError(error));
+      });
+    return () => {
+      stageRequestRef.current += 1;
+    };
+  }, [inspectorVisible, selectedLayout, stage, workspace]);
 
   useEffect(() => {
     const previous = previousAuthoringRef.current;

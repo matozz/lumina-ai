@@ -28,7 +28,7 @@
           "layer": 0,
           "layer_overrides": [
             {
-              "layer_id": "top-right-rain",
+              "layer_id": "layer_rmrvzr7biw4vox57",
               "parameter_overrides": { "speed": { "type": "scalar", "value": 2 } }
             }
           ]
@@ -40,7 +40,7 @@
           "target": {
             "scope": "cue_layer",
             "clip_id": "quadrant-dialogue-a",
-            "layer_id": "top-left-ping",
+            "layer_id": "layer_3e3tmku2poix5zrt",
             "parameter_id": "speed"
           },
           "keyframes": [

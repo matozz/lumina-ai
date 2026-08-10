@@ -82,6 +82,26 @@ describe("UserAssetPack V1", () => {
     expect(imported.bundle.manifest.arrangement_refs).toContainEqual(toRef(arrangement));
   });
 
+  it("rejects Effects that omit the standard Color contract", () => {
+    const { bundle, effectRef } = projectWithPortableAssets();
+    const pack = createUserAssetPack(bundle, "Legacy Package");
+    const legacyEffect = exactAsset(pack.effects, effectRef)!;
+    legacyEffect.parameters = legacyEffect.parameters.filter(
+      (parameter) => parameter.id !== "color",
+    );
+
+    const validation = validateUserAssetPack(pack);
+    expect(validation.success).toBe(false);
+    if (!validation.success) {
+      expect(validation.issues).toContainEqual(
+        expect.objectContaining({ message: "Effect is missing the standard Color parameter" }),
+      );
+    }
+    expect(() => importUserAssetPack(createStarterProjectBundle(), pack)).toThrow(
+      /missing the standard Color parameter/,
+    );
+  });
+
   it("rejects malformed packs and missing transitive dependencies", () => {
     const { bundle } = projectWithPortableAssets();
     const pack = createUserAssetPack(bundle);

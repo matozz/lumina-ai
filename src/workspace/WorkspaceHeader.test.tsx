@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { engineActions, useEngineStore } from "@/stores/engine";
 import { projectActions, useProjectStore } from "@/stores/project";
+import { useProjectStorageStore } from "@/stores/projectStorage";
 import { useWorkspaceStore, workspaceActions } from "@/stores/workspace";
 import { createStarterProject } from "./defaultProject";
 import { WorkspaceHeader } from "./WorkspaceHeader";
@@ -33,6 +34,19 @@ describe("WorkspaceHeader live workflow", () => {
     workspaceActions.setSnapshotState({ published_revision: 1, live_revision: 1 });
     engineActions.loadCurrentDslCode(JSON.stringify(createStarterProject()));
     useEngineStore.setState({ compileStatus: "success" });
+    useProjectStorageStore.setState(
+      {
+        phase: "ready",
+        directory: "/Users/tester/Documents/Lumina Shows/House",
+        attemptedDirectory: null,
+        latestPath: "/Users/tester/Documents/Lumina Shows/House/lumina-project.json",
+        historyCount: 12,
+        lastSavedAt: null,
+        isSaving: false,
+        error: null,
+      },
+      true,
+    );
   });
 
   it("publishes and activates the current Arrangement through one Live action", async () => {
@@ -84,5 +98,34 @@ describe("WorkspaceHeader live workflow", () => {
       liveRevision: 1,
     });
     expect(commandMocks.publishProject).not.toHaveBeenCalled();
+  });
+
+  it("shows the selected project folder and retained history in Assets", async () => {
+    render(
+      <TooltipProvider>
+        <WorkspaceHeader />
+      </TooltipProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Assets" }));
+
+    expect(await screen.findByText("…/Documents/Lumina Shows/House")).toBeTruthy();
+    expect(screen.getByText("12 of 50 recent versions")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Change project folder" })).toBeTruthy();
+  });
+
+  it("shows autosave failures in Assets without blocking the workspace", async () => {
+    useProjectStorageStore.setState({ error: "temporary save failure" });
+
+    render(
+      <TooltipProvider>
+        <WorkspaceHeader />
+      </TooltipProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Assets" }));
+
+    expect(await screen.findByText("Last save failed. Editing is still available.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Retry save" })).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "Choose a project folder" })).toBeNull();
   });
 });

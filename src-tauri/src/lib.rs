@@ -2,6 +2,7 @@ pub mod commands;
 pub mod compiler;
 pub mod document;
 pub mod engine;
+pub mod project_storage;
 pub mod scheduler;
 pub mod state;
 
@@ -12,6 +13,7 @@ use tokio::sync::RwLock;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let clock: Arc<dyn engine::clock::Clock> =
@@ -72,6 +74,11 @@ pub fn run() {
             commands::load_show,
             commands::save_project,
             commands::load_project,
+            project_storage::load_project_storage_preference,
+            project_storage::save_project_storage_preference,
+            project_storage::clear_project_storage_preference,
+            project_storage::load_project_storage,
+            project_storage::save_project_storage,
             commands::set_sequencer_mode,
             commands::get_layout_coords,
             commands::preview_layout,

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { authoringTransportActions } from "@/authoring/transport";
 import type { AssetRef, CueDefinition, ShowSnapshotState } from "@/bridge/types";
+import type { ArrangementSnapPreset } from "@/panel/timelineGeometry";
 
 export type WorkspaceId = "stage" | "effect-lab" | "cues" | "arrange" | "live";
 export type PublishStatus = "idle" | "publishing" | "activating" | "error";
@@ -29,6 +30,10 @@ export interface WorkspaceState {
   advancedMode: boolean;
   libraryVisible: boolean;
   inspectorVisible: boolean;
+  arrangeTimelineFocus: boolean;
+  arrangePreviewSize: number;
+  arrangeTimelineBeatWidth: number;
+  arrangeTimelineSnapPreset: ArrangementSnapPreset;
   selectedEffectId: string | null;
   selectedLiveEffectId: string | null;
   selectedArrangeBuiltInCue: ArrangeBuiltInCueSelection | null;
@@ -47,6 +52,10 @@ const initialState: WorkspaceState = {
   advancedMode: false,
   libraryVisible: true,
   inspectorVisible: true,
+  arrangeTimelineFocus: false,
+  arrangePreviewSize: 68,
+  arrangeTimelineBeatWidth: 48,
+  arrangeTimelineSnapPreset: "half",
   selectedEffectId: null,
   selectedLiveEffectId: null,
   selectedArrangeBuiltInCue: null,
@@ -60,23 +69,31 @@ const initialState: WorkspaceState = {
   statusMessage: null,
 };
 
-const LOCAL_WORKSPACE_PREFERENCES_VERSION = 5;
+const LOCAL_WORKSPACE_PREFERENCES_VERSION = 7;
+const LEGACY_ARRANGE_PREVIEW_SIZE = 38;
 
 export const useWorkspaceStore = create<WorkspaceState>()(
   persist(() => initialState, {
     name: "lumina-workspace-v1",
     version: LOCAL_WORKSPACE_PREFERENCES_VERSION,
     migrate: (persistedState, version) => {
-      if (version < LOCAL_WORKSPACE_PREFERENCES_VERSION) return structuredClone(initialState);
+      if (version < 6) return structuredClone(initialState);
       const state = persistedState as Omit<Partial<WorkspaceState>, "activeWorkspace"> & {
         activeWorkspace?: string;
       };
+      if (version < 7 && state.arrangePreviewSize === LEGACY_ARRANGE_PREVIEW_SIZE) {
+        return { ...state, arrangePreviewSize: initialState.arrangePreviewSize } as WorkspaceState;
+      }
       return state as WorkspaceState;
     },
     partialize: (state) => ({
       activeWorkspace: state.activeWorkspace,
       libraryVisible: state.libraryVisible,
       inspectorVisible: state.inspectorVisible,
+      arrangeTimelineFocus: state.arrangeTimelineFocus,
+      arrangePreviewSize: state.arrangePreviewSize,
+      arrangeTimelineBeatWidth: state.arrangeTimelineBeatWidth,
+      arrangeTimelineSnapPreset: state.arrangeTimelineSnapPreset,
       favoriteEffectIds: state.favoriteEffectIds,
       livePadQuantize: state.livePadQuantize,
       livePadConfigs: state.livePadConfigs,
@@ -96,6 +113,16 @@ export const workspaceActions = {
   setLibraryVisible: (libraryVisible: boolean) => useWorkspaceStore.setState({ libraryVisible }),
   setInspectorVisible: (inspectorVisible: boolean) =>
     useWorkspaceStore.setState({ inspectorVisible }),
+  setArrangeTimelineFocus: (arrangeTimelineFocus: boolean) =>
+    useWorkspaceStore.setState({ arrangeTimelineFocus }),
+  setArrangePreviewSize: (arrangePreviewSize: number) =>
+    useWorkspaceStore.setState({
+      arrangePreviewSize: Math.max(20, Math.min(70, arrangePreviewSize)),
+    }),
+  setArrangeTimelineBeatWidth: (arrangeTimelineBeatWidth: number) =>
+    useWorkspaceStore.setState({ arrangeTimelineBeatWidth }),
+  setArrangeTimelineSnapPreset: (arrangeTimelineSnapPreset: ArrangementSnapPreset) =>
+    useWorkspaceStore.setState({ arrangeTimelineSnapPreset }),
   setSelectedEffectId: (selectedEffectId: string | null) =>
     useWorkspaceStore.setState({ selectedEffectId }),
   setSelectedLiveEffectId: (selectedLiveEffectId: string | null) =>
@@ -156,6 +183,10 @@ export const workspaceSelectors = {
   advancedMode: (state: WorkspaceState) => state.advancedMode,
   libraryVisible: (state: WorkspaceState) => state.libraryVisible,
   inspectorVisible: (state: WorkspaceState) => state.inspectorVisible,
+  arrangeTimelineFocus: (state: WorkspaceState) => state.arrangeTimelineFocus,
+  arrangePreviewSize: (state: WorkspaceState) => state.arrangePreviewSize,
+  arrangeTimelineBeatWidth: (state: WorkspaceState) => state.arrangeTimelineBeatWidth,
+  arrangeTimelineSnapPreset: (state: WorkspaceState) => state.arrangeTimelineSnapPreset,
   selectedEffectId: (state: WorkspaceState) => state.selectedEffectId,
   selectedLiveEffectId: (state: WorkspaceState) => state.selectedLiveEffectId,
   selectedArrangeBuiltInCue: (state: WorkspaceState) => state.selectedArrangeBuiltInCue,

@@ -53,6 +53,16 @@ describe("AuthoringTransport session state", () => {
     });
   });
 
+  it("fails non-finite cursor values closed instead of serializing them as null", () => {
+    authoringTransportActions.ensureSession({ key, scope: "effect", durationTicks: 3_840 });
+
+    authoringTransportActions.seek(key, Number.NaN, 10);
+    expect(useAuthoringTransportStore.getState().sessions[key].cursorTick).toBe(0);
+
+    authoringTransportActions.publishCursor(key, Number.POSITIVE_INFINITY);
+    expect(useAuthoringTransportStore.getState().sessions[key].cursorTick).toBe(0);
+  });
+
   it("keeps local preview timing in the session store", () => {
     authoringTransportActions.ensureSession({ key, scope: "effect", durationTicks: 3_840 });
     authoringTransportActions.setLocalTiming(

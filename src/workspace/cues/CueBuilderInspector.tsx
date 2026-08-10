@@ -279,7 +279,9 @@ export function CueBuilderInspector() {
                 Save as copy
               </Button>
             )}
-            {advancedMode && session.mode === "edit" && <DeleteCueButton reference={reference} />}
+            {session.mode === "edit" && (
+              <DeleteCueButton cueName={cue.name} reference={reference} />
+            )}
           </div>
         </ScrollArea>
       </aside>
@@ -471,25 +473,66 @@ type CueDraftDiagnostic = NonNullable<
   ReturnType<typeof useAuthoringDraftStore.getState>["cue"]
 >["diagnostics"][number];
 
-function DeleteCueButton({ reference }: { reference: { id: string; revision: number } }) {
+function DeleteCueButton({
+  cueName,
+  reference,
+}: {
+  cueName: string;
+  reference: { id: string; revision: number };
+}) {
+  const bundle = useProjectStore(projectSelectors.bundle);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const usages = bundle.arrangements.flatMap((arrangement) =>
+    arrangement.tracks.flatMap((track) =>
+      (track.clips ?? [])
+        .filter((clip) => assetKey(clip.cue_ref) === assetKey(reference))
+        .map(() => arrangement.name),
+    ),
+  );
+  const arrangementCount = new Set(usages).size;
+  const remove = (removeArrangementClips: boolean) => {
+    try {
+      projectActions.deleteCue(reference, { removeArrangementClips });
+      authoringDraftActions.closeCue();
+      workspaceActions.setPublishStatus("idle", `${cueName} deleted.`);
+      setConfirmOpen(false);
+    } catch (error) {
+      workspaceActions.setPublishStatus(
+        "error",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  };
+
   return (
-    <Button
-      size="xs"
-      variant="destructive"
-      onClick={() => {
-        try {
-          projectActions.deleteCue(reference);
-        } catch (error) {
-          workspaceActions.setPublishStatus(
-            "error",
-            error instanceof Error ? error.message : String(error),
-          );
-        }
-      }}
-    >
-      <Trash2 data-icon="inline-start" aria-hidden="true" />
-      Delete pinned Cue
-    </Button>
+    <>
+      <Button
+        size="sm"
+        variant="destructive"
+        onClick={() => (usages.length > 0 ? setConfirmOpen(true) : remove(false))}
+      >
+        <Trash2 data-icon="inline-start" aria-hidden="true" />
+        Delete Cue
+      </Button>
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Cue and Arrangement clips?</DialogTitle>
+            <DialogDescription>
+              {cueName} is used by {usages.length} CueClip{usages.length === 1 ? "" : "s"} in{" "}
+              {arrangementCount} Arrangement{arrangementCount === 1 ? "" : "s"}. Deleting it also
+              removes those clips and their typed automation in one undoable edit.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <Button variant="destructive" onClick={() => remove(true)}>
+              Delete Cue and clips
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

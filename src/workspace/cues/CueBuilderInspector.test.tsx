@@ -8,6 +8,7 @@ import type {
 } from "@/bridge/types";
 import { authoringSessionKey, useAuthoringTransportStore } from "@/authoring/transport";
 import { assetKey, createCueAsset, createEffectAsset } from "@/document/projectModel";
+import { parameterInitialValue } from "@/document/effectParameter";
 import { authoringDraftActions, useAuthoringDraftStore } from "@/stores/authoringDraft";
 import { productionCatalogActions } from "@/stores/productionCatalog";
 import { projectActions, useProjectStore } from "@/stores/project";
@@ -132,6 +133,104 @@ describe("Cue Builder safe authoring", () => {
     expect(screen.queryByRole("button", { name: "Add selected Effect" })).toBeNull();
   });
 
+  it("labels saved Cues consistently and exposes deletion in basic mode", async () => {
+    workspaceActions.setAdvancedMode(false);
+    const state = useProjectStore.getState();
+    const bundle = structuredClone(state.bundle);
+    const savedCue = structuredClone(cue);
+    bundle.cues.push(savedCue);
+    bundle.manifest.cue_refs.push({ id: savedCue.id, revision: savedCue.revision });
+    useProjectStore.setState({
+      bundle,
+      selectedCueRef: { id: savedCue.id, revision: savedCue.revision },
+    });
+
+    render(<Harness />);
+
+    expect(screen.getByText("My Cues")).toBeTruthy();
+    expect(screen.queryByText("Project Cues")).toBeNull();
+    const deleteCue = await screen.findByRole("button", { name: "Delete Cue" });
+    expect(deleteCue.className).toContain("h-7");
+    fireEvent.click(deleteCue);
+    expect(
+      useProjectStore
+        .getState()
+        .bundle.cues.some(
+          (candidate) => candidate.id === savedCue.id && candidate.revision === savedCue.revision,
+        ),
+    ).toBe(false);
+    expect(assetKey(useAuthoringDraftStore.getState().cue!.pinned)).not.toBe(assetKey(savedCue));
+    expect(assetKey(useProjectStore.getState().selectedCueRef!)).toBe(
+      assetKey(useAuthoringDraftStore.getState().cue!.pinned),
+    );
+  });
+
+  it("confirms and atomically removes referenced CueClips when deleting a Cue", async () => {
+    workspaceActions.setAdvancedMode(false);
+    const state = useProjectStore.getState();
+    const bundle = structuredClone(state.bundle);
+    const savedCue = structuredClone(cue);
+    const clipId = "referenced-cue-clip";
+    const track = bundle.arrangements[0].tracks[0];
+    const parameter = catalog.effects[0].parameters[0];
+    bundle.cues.push(savedCue);
+    bundle.manifest.cue_refs.push({ id: savedCue.id, revision: savedCue.revision });
+    track.clips = [
+      {
+        id: clipId,
+        cue_ref: { id: savedCue.id, revision: savedCue.revision },
+        start_tick: 0,
+        duration_tick: 3_840,
+      },
+    ];
+    track.automation_lanes = [
+      {
+        id: "referenced-cue-lane",
+        target: {
+          scope: "cue_layer",
+          clip_id: clipId,
+          layer_id: savedCue.layers[0].id,
+          parameter_id: parameter.id,
+        },
+        keyframes: [
+          {
+            id: "referenced-cue-keyframe",
+            time_tick: 0,
+            value: parameterInitialValue(parameter),
+            interpolation: "linear",
+          },
+        ],
+      },
+    ];
+    useProjectStore.setState({
+      bundle,
+      selectedCueRef: { id: savedCue.id, revision: savedCue.revision },
+    });
+
+    render(<Harness />);
+    fireEvent.click(await screen.findByRole("button", { name: "Delete Cue" }));
+
+    expect(screen.getByRole("dialog", { name: "Delete Cue and Arrangement clips?" })).toBeTruthy();
+    expect(screen.getByText(/1 CueClip.*1 Arrangement/)).toBeTruthy();
+    expect(
+      useProjectStore.getState().bundle.cues.some((candidate) => candidate.id === savedCue.id),
+    ).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Cue and clips" }));
+
+    let project = useProjectStore.getState();
+    expect(project.bundle.cues.some((candidate) => candidate.id === savedCue.id)).toBe(false);
+    expect(project.bundle.arrangements[0].tracks[0].clips).toHaveLength(0);
+    expect(project.bundle.arrangements[0].tracks[0].automation_lanes).toHaveLength(0);
+    expect(assetKey(useAuthoringDraftStore.getState().cue!.pinned)).not.toBe(assetKey(savedCue));
+
+    act(() => projectActions.undo());
+    project = useProjectStore.getState();
+    expect(project.bundle.cues.some((candidate) => candidate.id === savedCue.id)).toBe(true);
+    expect(project.bundle.arrangements[0].tracks[0].clips).toHaveLength(1);
+    expect(project.bundle.arrangements[0].tracks[0].automation_lanes).toHaveLength(1);
+  });
+
   it("keeps mute, solo, overrides, and automation local until one immutable save", async () => {
     const initialCueRefs = useProjectStore.getState().bundle.cues.map(assetKey);
     render(<Harness />);
@@ -219,6 +318,34 @@ describe("Cue Builder safe authoring", () => {
     expect(value?.className).toContain("min-w-0");
     expect(value?.className).toContain("truncate");
   });
+
+  it("wraps advanced Cue actions and metadata inside a narrow inspector", async () => {
+    render(<Harness />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
+    await waitFor(() => expect(screen.getByText("Selected Effect")).toBeTruthy());
+
+    const actionRows = document.querySelectorAll<HTMLElement>(
+      '[data-layout-region="cue-override-actions"]',
+    );
+    const parameterHeaders = document.querySelectorAll<HTMLElement>(
+      '[data-layout-region="effect-parameter-header"]',
+    );
+    const mixControls = document.querySelector<HTMLElement>(
+      '[data-layout-region="cue-mix-controls"]',
+    );
+
+    expect(actionRows.length).toBeGreaterThan(0);
+    expect(parameterHeaders.length).toBeGreaterThan(0);
+    for (const row of [...actionRows, ...parameterHeaders]) {
+      expect(row.className).toContain("min-w-0");
+      expect(row.className).toContain("flex-wrap");
+    }
+    expect(mixControls?.className).toContain("grid-cols-[repeat(2,minmax(0,1fr))]");
+    expect(screen.getAllByRole("button", { name: "Add automation" })[0]?.className).toContain(
+      "max-w-full",
+    );
+  });
 });
 
 function cueFixture() {
@@ -230,14 +357,11 @@ function cueFixture() {
   effect.catalog.category = "Rhythm";
   effect.catalog.visibility = "standard";
   effect.catalog.layout_capabilities = ["any"];
-  effect.catalog.parameter_summary = ["speed"];
   effect.parameters = effect.parameters.map((parameter) => ({
     ...parameter,
-    required: true,
+    scope: "arrangement",
+    section: "main",
     help: parameter.name,
-    safe_fallback: structuredClone(parameter.default_value),
-    override_policy: "cue_override",
-    advanced: false,
   }));
   scratch.effects.push(effect);
   const strobe = structuredClone(effect);

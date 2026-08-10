@@ -2,7 +2,7 @@ use super::{
     AutomationPolicyDSL, AutomationTargetDSL, EffectDefinitionDSL, EffectDefinitionDocument,
     EffectNodeDSL, EffectNodePropertyDSL, EffectPortDSL, EffectPortRefDSL, EffectSourceDSL,
     GeneratorDSL, GroupFixturesDSL, KeyframeDSL, OverlapPolicyDSL, ParameterDefinitionDSL,
-    ParameterOverridePolicyDSL, ParameterUiHintDSL, ParameterValueDSL, ParameterValueTypeDSL,
+    ParameterSchemaDSL, ParameterScopeDSL, ParameterValueDSL, ParameterValueTypeDSL,
     ShowDocumentV1, CURRENT_SCHEMA_VERSION,
 };
 use crate::compiler::diagnostic::{
@@ -303,7 +303,7 @@ struct ParameterContract {
     value_type: ParameterValueTypeDSL,
     range: Option<(f64, f64)>,
     enum_values: Vec<String>,
-    override_policy: Option<ParameterOverridePolicyDSL>,
+    scope: ParameterScopeDSL,
     automation: AutomationPolicyDSL,
 }
 
@@ -365,7 +365,7 @@ fn validate_effect_definition_contract(
 ) -> HashMap<String, ParameterContract> {
     let parameters = validate_parameter_schema(path, definition, diagnostics);
     validate_effect_graph(path, definition, diagnostics);
-    validate_catalog_metadata(path, definition, &parameters, diagnostics);
+    validate_catalog_metadata(path, definition, diagnostics);
     parameters
 }
 
@@ -388,14 +388,6 @@ fn validate_parameter_schema(
                 "Use a stable unique parameter ID within the definition.",
             ));
         }
-        if parameter.value_type != parameter.default_value.value_type() {
-            diagnostics.push(Diagnostic::error(
-                DOC_PARAMETER_INVALID,
-                format!("{path}.default_value"),
-                "Parameter default value does not match its declared type.",
-                "Use a typed default value matching value_type.",
-            ));
-        }
         if parameter.name.trim().is_empty() {
             diagnostics.push(Diagnostic::error(
                 CATALOG_PARAMETER_INVALID,
@@ -404,173 +396,74 @@ fn validate_parameter_schema(
                 "Provide a concise user-facing parameter name.",
             ));
         }
-        if let Some((min, max)) = parameter.range {
+        if parameter.help.trim().is_empty() {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_PARAMETER_INVALID,
+                format!("{path}.help"),
+                "Parameter help must not be empty.",
+                "Explain the visible authoring behavior in one concise sentence.",
+            ));
+        }
+        if let ParameterSchemaDSL::Scalar { default, range, .. } = &parameter.schema {
+            let (min, max, step) = (range.min, range.max, range.step);
             if !min.is_finite() || !max.is_finite() || min > max {
                 diagnostics.push(Diagnostic::error(
                     DOC_INVALID_RANGE,
-                    format!("{path}.range"),
+                    format!("{path}.schema.range"),
                     "Parameter range must contain finite ordered endpoints.",
-                    "Use a finite [min, max] range.",
+                    "Use finite min/max endpoints with min <= max.",
                 ));
             }
-            if let ParameterValueDSL::Scalar(value) = parameter.default_value {
-                if !value.is_finite() || value < min || value > max {
-                    diagnostics.push(Diagnostic::error(
-                        DOC_PARAMETER_INVALID,
-                        format!("{path}.default_value"),
-                        "Parameter default is outside its declared range.",
-                        "Move the default inside the parameter range.",
-                    ));
-                }
-            }
-            if !matches!(parameter.value_type, ParameterValueTypeDSL::Scalar) {
+            if !default.is_finite() || *default < min || *default > max {
                 diagnostics.push(Diagnostic::error(
-                    CATALOG_PARAMETER_INVALID,
-                    format!("{path}.range"),
-                    "Only scalar parameters can declare a numeric range.",
-                    "Remove the range or change the parameter to scalar.",
+                    DOC_PARAMETER_INVALID,
+                    format!("{path}.schema.default"),
+                    "Parameter default is outside its declared range.",
+                    "Move the default inside the parameter range.",
                 ));
             }
-        } else if matches!(parameter.value_type, ParameterValueTypeDSL::Scalar)
-            && matches!(definition.source, EffectSourceDSL::BuiltIn)
-        {
-            diagnostics.push(Diagnostic::error(
-                CATALOG_PARAMETER_INVALID,
-                format!("{path}.range"),
-                "Production scalar parameters require a finite range.",
-                "Declare the safe inclusive range used by the authoring control.",
-            ));
-        }
-        if let Some(step) = parameter.step {
             if !step.is_finite() || step <= 0.0 {
                 diagnostics.push(Diagnostic::error(
                     CATALOG_PARAMETER_INVALID,
-                    format!("{path}.step"),
+                    format!("{path}.schema.range.step"),
                     "Parameter step must be finite and greater than zero.",
                     "Use a positive authoring increment.",
                 ));
             }
-            if !matches!(parameter.value_type, ParameterValueTypeDSL::Scalar) {
-                diagnostics.push(Diagnostic::error(
-                    CATALOG_PARAMETER_INVALID,
-                    format!("{path}.step"),
-                    "Only scalar parameters can declare a numeric step.",
-                    "Remove the step or change the parameter to scalar.",
-                ));
-            }
-        } else if matches!(parameter.value_type, ParameterValueTypeDSL::Scalar)
-            && matches!(definition.source, EffectSourceDSL::BuiltIn)
+        }
+        if matches!(parameter.schema, ParameterSchemaDSL::ColorStops { .. })
+            && !matches!(parameter.scope, ParameterScopeDSL::Effect)
         {
             diagnostics.push(Diagnostic::error(
                 CATALOG_PARAMETER_INVALID,
-                format!("{path}.step"),
-                "Production scalar parameters require an authoring step.",
-                "Declare a positive step appropriate for the control.",
+                format!("{path}.scope"),
+                "Color-stop structure is only editable at Effect scope.",
+                "Use scope effect; expose a separate Color parameter for Cue or Arrangement color.",
             ));
         }
-        if matches!(parameter.automation, AutomationPolicyDSL::Continuous)
-            && !matches!(
-                parameter.value_type,
-                ParameterValueTypeDSL::Scalar | ParameterValueTypeDSL::Color
-            )
-        {
-            diagnostics.push(Diagnostic::error(
-                DOC_PARAMETER_INVALID,
-                format!("{path}.automation"),
-                "This parameter type cannot use continuous automation.",
-                "Use discrete or disabled automation for non-continuous values.",
-            ));
-        }
-        if parameter
-            .override_policy
-            .is_some_and(|policy| !matches!(policy, ParameterOverridePolicyDSL::CueOverride))
-            && !matches!(parameter.automation, AutomationPolicyDSL::Disabled)
-        {
-            diagnostics.push(Diagnostic::error(
-                CATALOG_PARAMETER_INVALID,
-                format!("{path}.automation"),
-                "Effect-only and locked parameters cannot be automated by Cue or Arrangement.",
-                "Disable automation or mark the parameter as cue_override.",
-            ));
-        }
-        validate_parameter_value_contract(
-            &parameter.default_value,
-            parameter.value_type,
-            parameter.range,
-            &parameter.enum_values,
-            &format!("{path}.default_value"),
-            diagnostics,
-        );
-        if let Some(fallback) = &parameter.safe_fallback {
+        if let Some(default) = parameter.default_value() {
             validate_parameter_value_contract(
-                fallback,
-                parameter.value_type,
-                parameter.range,
-                &parameter.enum_values,
-                &format!("{path}.safe_fallback"),
+                &default,
+                parameter.value_type(),
+                parameter.range(),
+                parameter.enum_values(),
+                &format!("{path}.schema.default"),
                 diagnostics,
             );
         }
-        validate_parameter_ui_contract(parameter.value_type, parameter.ui_hint, &path, diagnostics);
         validate_enum_contract(parameter, &path, diagnostics);
-        if matches!(definition.source, EffectSourceDSL::BuiltIn) {
-            validate_production_parameter_metadata(parameter, &path, diagnostics);
-        }
         parameters.insert(
             parameter.id.clone(),
             ParameterContract {
-                value_type: parameter.value_type,
-                range: parameter.range,
-                enum_values: parameter.enum_values.clone(),
-                override_policy: parameter.override_policy,
-                automation: parameter.automation,
+                value_type: parameter.value_type(),
+                range: parameter.range(),
+                enum_values: parameter.enum_values().to_vec(),
+                scope: parameter.scope,
+                automation: parameter.automation(),
             },
         );
     }
     parameters
-}
-
-fn validate_production_parameter_metadata(
-    parameter: &ParameterDefinitionDSL,
-    path: &str,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    for (field, missing, hint) in [
-        (
-            "required",
-            parameter.required.is_none(),
-            "Declare whether a saved Effect must contain this value.",
-        ),
-        (
-            "help",
-            parameter.help.as_deref().is_none_or(str::is_empty),
-            "Provide concise authoring guidance.",
-        ),
-        (
-            "safe_fallback",
-            parameter.safe_fallback.is_none(),
-            "Provide a typed value that is safe to restore explicitly.",
-        ),
-        (
-            "override_policy",
-            parameter.override_policy.is_none(),
-            "Declare cue_override, effect_only, or locked.",
-        ),
-        (
-            "advanced",
-            parameter.advanced.is_none(),
-            "Declare whether the control belongs in Advanced.",
-        ),
-    ] {
-        if missing {
-            diagnostics.push(Diagnostic::error(
-                CATALOG_PARAMETER_INVALID,
-                format!("{path}.{field}"),
-                format!("Production parameter metadata is missing {field}."),
-                hint,
-            ));
-        }
-    }
 }
 
 fn validate_enum_contract(
@@ -578,72 +471,25 @@ fn validate_enum_contract(
     path: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let is_enum = matches!(parameter.value_type, ParameterValueTypeDSL::Enum);
-    if is_enum && parameter.enum_values.is_empty() {
+    let values = parameter.enum_values();
+    if matches!(parameter.value_type(), ParameterValueTypeDSL::Enum) && values.is_empty() {
         diagnostics.push(Diagnostic::error(
             CATALOG_PARAMETER_INVALID,
-            format!("{path}.enum_values"),
+            format!("{path}.schema.values"),
             "Enum parameters require at least one allowed value.",
             "Declare a stable non-empty list of choices.",
         ));
     }
-    if !is_enum && !parameter.enum_values.is_empty() {
-        diagnostics.push(Diagnostic::error(
-            CATALOG_PARAMETER_INVALID,
-            format!("{path}.enum_values"),
-            "Only enum parameters can declare enum_values.",
-            "Remove enum_values or change value_type to enum.",
-        ));
-    }
     let mut values = HashSet::new();
-    for (index, value) in parameter.enum_values.iter().enumerate() {
+    for (index, value) in parameter.enum_values().iter().enumerate() {
         if value.trim().is_empty() || !values.insert(value.as_str()) {
             diagnostics.push(Diagnostic::error(
                 CATALOG_PARAMETER_INVALID,
-                format!("{path}.enum_values[{index}]"),
+                format!("{path}.schema.values[{index}]"),
                 "Enum values must be non-empty and unique.",
                 "Use stable unique enum tokens.",
             ));
         }
-    }
-}
-
-fn validate_parameter_ui_contract(
-    value_type: ParameterValueTypeDSL,
-    ui_hint: ParameterUiHintDSL,
-    path: &str,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    let compatible = matches!(
-        (value_type, ui_hint),
-        (
-            ParameterValueTypeDSL::Scalar,
-            ParameterUiHintDSL::Slider | ParameterUiHintDSL::Angle
-        ) | (ParameterValueTypeDSL::Color, ParameterUiHintDSL::Color)
-            | (
-                ParameterValueTypeDSL::Direction,
-                ParameterUiHintDSL::Segmented
-            )
-            | (
-                ParameterValueTypeDSL::Boolean,
-                ParameterUiHintDSL::Toggle | ParameterUiHintDSL::Segmented
-            )
-            | (
-                ParameterValueTypeDSL::Enum,
-                ParameterUiHintDSL::Select | ParameterUiHintDSL::Segmented
-            )
-            | (
-                ParameterValueTypeDSL::ColorStops,
-                ParameterUiHintDSL::ColorStops
-            )
-    );
-    if !compatible {
-        diagnostics.push(Diagnostic::error(
-            CATALOG_PARAMETER_INVALID,
-            format!("{path}.ui_hint"),
-            "Parameter UI hint is incompatible with its value type.",
-            "Choose the schema-driven control for this value type.",
-        ));
     }
 }
 
@@ -740,7 +586,6 @@ fn validate_color_stops(
 fn validate_catalog_metadata(
     path: &str,
     definition: &EffectDefinitionDSL,
-    parameters: &HashMap<String, ParameterContract>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     for (field, value) in [
@@ -779,44 +624,6 @@ fn validate_catalog_metadata(
         &format!("{path}.catalog.required_attributes"),
         diagnostics,
     );
-    validate_unique_catalog_tokens(
-        &definition.catalog.parameter_summary,
-        &format!("{path}.catalog.parameter_summary"),
-        diagnostics,
-    );
-    for (index, parameter_id) in definition.catalog.parameter_summary.iter().enumerate() {
-        if !parameters.contains_key(parameter_id) {
-            diagnostics.push(Diagnostic::error(
-                CATALOG_METADATA_INVALID,
-                format!("{path}.catalog.parameter_summary[{index}]"),
-                format!("Catalog summary references unknown parameter {parameter_id:?}."),
-                "Use a parameter ID declared by this exact Effect revision.",
-            ));
-        }
-    }
-    if definition.catalog.deprecated && definition.catalog.replacement.is_none() {
-        diagnostics.push(Diagnostic::error(
-            CATALOG_METADATA_INVALID,
-            format!("{path}.catalog.replacement"),
-            "Deprecated Effect revisions require an explicit replacement.",
-            "Pin the replacement Effect ID and exact revision.",
-        ));
-    }
-    if definition
-        .catalog
-        .replacement
-        .as_ref()
-        .is_some_and(|replacement| {
-            replacement.id == definition.id && replacement.revision == definition.revision
-        })
-    {
-        diagnostics.push(Diagnostic::error(
-            CATALOG_METADATA_INVALID,
-            format!("{path}.catalog.replacement"),
-            "An Effect revision cannot replace itself.",
-            "Reference a different exact Effect revision.",
-        ));
-    }
     if matches!(definition.source, EffectSourceDSL::BuiltIn) {
         for (field, missing, hint) in [
             (
@@ -842,12 +649,6 @@ fn validate_catalog_metadata(
                 "layout_capabilities",
                 definition.catalog.layout_capabilities.is_empty(),
                 "Declare at least one supported layout capability.",
-            ),
-            (
-                "parameter_summary",
-                definition.catalog.parameter_summary.is_empty()
-                    && !definition.parameters.is_empty(),
-                "List the primary parameter IDs in display order.",
             ),
         ] {
             if missing {
@@ -927,7 +728,7 @@ fn validate_graph_bindings(
             continue;
         };
         let compatible = matches!(
-            (binding.property, *node, parameter.value_type),
+            (binding.property, *node, parameter.value_type()),
             (
                 EffectNodePropertyDSL::Waveform,
                 EffectNodeDSL::Oscillator { .. },
@@ -952,40 +753,29 @@ fn validate_graph_bindings(
         } else if !binding_default_matches_node(parameter, node, binding.property) {
             diagnostics.push(Diagnostic::error(
                 CATALOG_GRAPH_BINDING_INVALID,
-                format!("{path}.parameters[{index}].default_value"),
+                format!("{path}.parameters[{index}].schema.default"),
                 "Graph-bound parameter default does not match the pinned node property.",
                 "Materialize typed graph bindings before validating or saving the Effect revision.",
             ));
         }
-        if !matches!(
-            parameter.override_policy,
-            Some(ParameterOverridePolicyDSL::EffectOnly | ParameterOverridePolicyDSL::Locked)
-        ) {
+        if !matches!(parameter.scope, ParameterScopeDSL::Effect) {
             diagnostics.push(Diagnostic::error(
                 CATALOG_GRAPH_BINDING_INVALID,
-                format!("{path}.parameters[{index}].override_policy"),
+                format!("{path}.parameters[{index}].scope"),
                 "Structural graph parameters cannot be overridden by Cue layers.",
-                "Use effect_only or locked override policy.",
-            ));
-        }
-        if !matches!(parameter.automation, AutomationPolicyDSL::Disabled) {
-            diagnostics.push(Diagnostic::error(
-                CATALOG_GRAPH_BINDING_INVALID,
-                format!("{path}.parameters[{index}].automation"),
-                "Structural graph parameters cannot be automated at runtime.",
-                "Disable automation for graph-bound parameters.",
+                "Use Effect scope for graph-bound structural controls.",
             ));
         }
         if matches!(binding.property, EffectNodePropertyDSL::Waveform) {
             let supported = ["sine", "triangle", "saw", "pulse"];
             if parameter
-                .enum_values
+                .enum_values()
                 .iter()
                 .any(|value| !supported.contains(&value.as_str()))
             {
                 diagnostics.push(Diagnostic::error(
                     CATALOG_GRAPH_BINDING_INVALID,
-                    format!("{path}.parameters[{index}].enum_values"),
+                    format!("{path}.parameters[{index}].schema.values"),
                     "Waveform enum contains an unsupported oscillator value.",
                     "Use sine, triangle, saw, or pulse.",
                 ));
@@ -999,7 +789,10 @@ fn binding_default_matches_node(
     node: &EffectNodeDSL,
     property: EffectNodePropertyDSL,
 ) -> bool {
-    match (property, node, &parameter.default_value) {
+    let Some(default) = parameter.default_value() else {
+        return false;
+    };
+    match (property, node, &default) {
         (
             EffectNodePropertyDSL::Waveform,
             EffectNodeDSL::Oscillator { waveform, .. },
@@ -1118,10 +911,10 @@ fn validate_effect_instances(
                     "Use the value type declared by the referenced definition.",
                 ));
             }
-            if value_type
-                .override_policy
-                .is_some_and(|policy| !matches!(policy, ParameterOverridePolicyDSL::CueOverride))
-            {
+            if !matches!(
+                value_type.scope,
+                ParameterScopeDSL::Cue | ParameterScopeDSL::Arrangement
+            ) {
                 diagnostics.push(Diagnostic::error(
                     DOC_PARAMETER_INVALID,
                     format!("{path}.parameter_overrides.{parameter_id}"),

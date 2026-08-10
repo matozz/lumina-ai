@@ -25,7 +25,9 @@ Algorithm 路径按物理距离重采样：开放式 Spiral 直接求相邻灯�
 - Sector：`segments × rings × (rings + 1) / 2`
 - Polygon：`sides × fixtures_per_side`
 
-空间参数只决定几何密度：grid 使用 fixture size、gap 和 pitch；Circle/Sector 使用 fixture diameter、ring gap 和 ring pitch；Polygon 使用 radius。改变 rings、rows、columns、segments 等字段不得重写已保存 gap、pitch 或 radius。
+空间参数只决定几何密度：grid 使用 fixture size、gap 和 pitch；Circle/Sector 使用 fixture diameter、ring gap 和 ring pitch；Polygon 保存 radius，并以 `2 × radius × sin(π / sides) / fixtures_per_side` 得到相邻灯的中心间距。改变 rings、rows、columns、segments 等字段不得重写已保存 gap 或 pitch；Polygon 编辑器是明确例外，改变 `sides` 或 `fixtures_per_side` 时会在同一个表单更新中同步 radius，从而保持当前 fixture spacing 不变并让整体宽高随数量变化。直接编辑 radius 则明确改变 spacing。
+
+Stage 右侧几何表单的可见字段名使用对应 JSON path（例如 `fixture_size.width`、`ring_gap`、`formula.scale`、`parameters.turns`），输入控件的可访问名称仍使用可读领域名称。这样手工配置、Skill 生成和 UI 编辑共享同一组字段，不维护第二套别名。
 
 ## Stage 应用
 

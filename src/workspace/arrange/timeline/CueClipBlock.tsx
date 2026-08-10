@@ -14,11 +14,10 @@ interface CueClipBlockProps {
   clip: CueClip;
   cueName: string;
   geometry: TimelineGeometry;
+  onCancelReady: (cancel: (() => void) | null) => void;
   onCommitMove: (startTick: number) => void;
   onCommitResize: (durationTick: number) => void;
-  onDelete: () => void;
-  onDuplicate: () => void;
-  onSelect: () => void;
+  onSelect: (modifiers: { additive: boolean; toggle: boolean }) => void;
   onSnapPreview: (tick: number | null) => void;
   selected: boolean;
   top: number;
@@ -39,10 +38,9 @@ export const CueClipBlock = memo(function CueClipBlock({
   clip,
   cueName,
   geometry,
+  onCancelReady,
   onCommitMove,
   onCommitResize,
-  onDelete,
-  onDuplicate,
   onSelect,
   onSnapPreview,
   selected,
@@ -53,6 +51,8 @@ export const CueClipBlock = memo(function CueClipBlock({
   const elementRef = useRef<HTMLButtonElement>(null);
   const interactionRef = useRef<ClipInteraction | null>(null);
   const frameRef = useRef<number | null>(null);
+  const clipWidth = ticksToPixels(clip.duration_tick, geometry);
+  const compact = clipWidth < 42;
 
   const flushPreview = () => {
     frameRef.current = null;
@@ -81,7 +81,7 @@ export const CueClipBlock = memo(function CueClipBlock({
       arrangementLength - clip.start_tick,
       snappedDurationForPointerDelta(clip.start_tick, clip.duration_tick, delta, geometry),
     );
-    element.style.width = `${Math.max(20, ticksToPixels(interaction.nextValue, geometry))}px`;
+    element.style.width = `${Math.max(1, ticksToPixels(interaction.nextValue, geometry))}px`;
     onSnapPreview(clip.start_tick + interaction.nextValue);
   };
 
@@ -98,12 +98,10 @@ export const CueClipBlock = memo(function CueClipBlock({
     interactionRef.current = null;
     if (elementRef.current) {
       elementRef.current.style.transform = "";
-      elementRef.current.style.width = `${Math.max(
-        20,
-        ticksToPixels(clip.duration_tick, geometry),
-      )}px`;
+      elementRef.current.style.width = `${Math.max(1, clipWidth)}px`;
     }
     onSnapPreview(null);
+    onCancelReady(null);
     if (!commit || !interaction) return;
     if (interaction.kind === "move" && interaction.nextValue !== clip.start_tick) {
       onCommitMove(interaction.nextValue);
@@ -123,8 +121,11 @@ export const CueClipBlock = memo(function CueClipBlock({
     if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
-    onSelect();
+    if (!selected || event.shiftKey || event.metaKey || event.ctrlKey) {
+      onSelect({ additive: event.shiftKey, toggle: event.metaKey || event.ctrlKey });
+    }
     elementRef.current?.focus();
+    if (event.metaKey || event.ctrlKey) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     interactionRef.current = {
       kind,
@@ -133,6 +134,7 @@ export const CueClipBlock = memo(function CueClipBlock({
       startScrollLeft: viewportRef.current?.scrollLeft ?? 0,
       nextValue: kind === "move" ? clip.start_tick : clip.duration_tick,
     };
+    onCancelReady(() => finish(false));
   };
 
   return (
@@ -140,14 +142,15 @@ export const CueClipBlock = memo(function CueClipBlock({
       ref={elementRef}
       type="button"
       className={cn(
-        "border-primary/50 bg-primary text-primary-foreground group absolute h-10 touch-none overflow-hidden rounded-md border px-2 text-left text-[10px] shadow-sm will-change-transform",
+        "border-primary/50 bg-primary text-primary-foreground group absolute h-10 touch-none overflow-hidden rounded-md border text-left text-[10px] shadow-sm will-change-transform",
         "cursor-grab focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing",
+        compact ? "px-0" : "px-2",
         selected && "ring-primary/40 ring-2",
       )}
       style={{
         left: ticksToPixels(clip.start_tick, geometry),
         top,
-        width: Math.max(20, ticksToPixels(clip.duration_tick, geometry)),
+        width: Math.max(1, clipWidth),
       }}
       aria-label={`${cueName}, starts at tick ${clip.start_tick}, duration ${clip.duration_tick} ticks, layer ${clip.layer ?? 0}, visual row ${visualRow + 1}`}
       aria-pressed={selected}
@@ -155,6 +158,7 @@ export const CueClipBlock = memo(function CueClipBlock({
       data-clip-id={clip.id}
       data-clip-layer={clip.layer ?? 0}
       data-visual-row={visualRow}
+      data-compact={compact || undefined}
       onPointerDown={(event) => start(event, "move")}
       onPointerMove={(event) => {
         if (!interactionRef.current) return;
@@ -166,42 +170,23 @@ export const CueClipBlock = memo(function CueClipBlock({
       onLostPointerCapture={() => {
         if (interactionRef.current) finish(false);
       }}
-      onKeyDown={(event) => {
-        if (event.key === "Delete" || event.key === "Backspace") {
-          event.preventDefault();
-          onDelete();
-          return;
-        }
-        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d") {
-          event.preventDefault();
-          onDuplicate();
-          return;
-        }
-        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-        event.preventDefault();
-        const direction = event.key === "ArrowLeft" ? -1 : 1;
-        const delta = direction * (event.shiftKey ? geometry.ppq : geometry.snapTicks);
-        if (event.altKey) {
-          onCommitResize(
-            Math.max(1, Math.min(arrangementLength - clip.start_tick, clip.duration_tick + delta)),
-          );
-        } else {
-          onCommitMove(
-            Math.max(0, Math.min(arrangementLength - clip.duration_tick, clip.start_tick + delta)),
-          );
-        }
-      }}
     >
-      <span className="pointer-events-none block truncate font-medium">{cueName}</span>
-      <span className="pointer-events-none block truncate opacity-75">
-        Cue · {clip.duration_tick} ticks
-      </span>
-      <span
-        data-resize-handle
-        className="absolute inset-y-0 right-0 w-2 cursor-ew-resize bg-white/0 transition-colors group-hover:bg-white/15"
-        aria-hidden="true"
-        onPointerDown={(event) => start(event, "resize")}
-      />
+      {!compact && (
+        <>
+          <span className="pointer-events-none block truncate font-medium">{cueName}</span>
+          <span className="pointer-events-none block truncate opacity-75">
+            Cue · {clip.duration_tick} ticks
+          </span>
+        </>
+      )}
+      {clipWidth >= 16 && (
+        <span
+          data-resize-handle
+          className="absolute inset-y-0 right-0 w-2 cursor-ew-resize bg-white/0 transition-colors group-hover:bg-white/15"
+          aria-hidden="true"
+          onPointerDown={(event) => start(event, "resize")}
+        />
+      )}
     </button>
   );
 });

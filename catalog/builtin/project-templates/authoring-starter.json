@@ -238,7 +238,7 @@
       "nominal_length_ticks": 15360,
       "layers": [
         {
-          "id": "top-left-ping",
+          "id": "layer_3e3tmku2poix5zrt",
           "effect_ref": { "id": "builtin.spatial.column-ping-pong", "revision": 1 },
           "target_set_ref": {
             "stage_id": "main-stage",
@@ -256,7 +256,7 @@
           "trigger_policy": { "mode": "timeline", "quantize": "beat" }
         },
         {
-          "id": "top-right-rain",
+          "id": "layer_rmrvzr7biw4vox57",
           "effect_ref": { "id": "builtin.spatial.column-rain", "revision": 1 },
           "target_set_ref": {
             "stage_id": "main-stage",
@@ -274,7 +274,7 @@
           "trigger_policy": { "mode": "timeline", "quantize": "beat" }
         },
         {
-          "id": "bottom-left-gradient",
+          "id": "layer_tbekn4kbc4yh22up",
           "effect_ref": { "id": "builtin.color.dual-sweep", "revision": 1 },
           "target_set_ref": {
             "stage_id": "main-stage",
@@ -292,7 +292,7 @@
           "trigger_policy": { "mode": "timeline", "quantize": "beat" }
         },
         {
-          "id": "bottom-right-breathe",
+          "id": "layer_74iyonq7anv37xv2",
           "effect_ref": { "id": "builtin.intensity.breathe", "revision": 1 },
           "target_set_ref": {
             "stage_id": "main-stage",
@@ -323,7 +323,7 @@
       "nominal_length_ticks": 7680,
       "layers": [
         {
-          "id": "corner-top-left",
+          "id": "layer_c7v4dilw4gplwd35",
           "effect_ref": { "id": "builtin.spatial.column-ping-pong", "revision": 1 },
           "target_set_ref": {
             "stage_id": "main-stage",
@@ -354,7 +354,7 @@
       "nominal_length_ticks": 7680,
       "layers": [
         {
-          "id": "corner-top-right",
+          "id": "layer_3gvzosqmxbtgiiad",
           "effect_ref": { "id": "builtin.spatial.column-rain", "revision": 1 },
           "target_set_ref": {
             "stage_id": "main-stage",
@@ -385,7 +385,7 @@
       "nominal_length_ticks": 7680,
       "layers": [
         {
-          "id": "corner-bottom-left",
+          "id": "layer_untftli3dktwu5uv",
           "effect_ref": { "id": "builtin.color.dual-sweep", "revision": 1 },
           "target_set_ref": {
             "stage_id": "main-stage",
@@ -416,7 +416,7 @@
       "nominal_length_ticks": 7680,
       "layers": [
         {
-          "id": "corner-bottom-right",
+          "id": "layer_zewjnwomcic3be4n",
           "effect_ref": { "id": "builtin.intensity.breathe", "revision": 1 },
           "target_set_ref": {
             "stage_id": "main-stage",

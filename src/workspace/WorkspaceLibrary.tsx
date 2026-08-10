@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Boxes,
   Copy,
@@ -49,6 +49,7 @@ import {
 } from "@/document/projectModel";
 import { effectTargetCompatibility, friendlyEffectAttribute } from "@/document/effectCompatibility";
 import { generatorDescriptor } from "@/document/generatorRegistry";
+import { cn } from "@/lib/utils";
 import {
   isInternalProductionCueId,
   productionRecipeCueBaseId,
@@ -71,6 +72,8 @@ import {
 import { createCueDraftFromEffect } from "./cues/cueAuthoring";
 import { StageCollectionEditorDialog } from "./stage/StageCollectionEditorDialog";
 import { WorkspacePanelHeader } from "./WorkspacePanelHeader";
+
+const COMPACT_LIBRARY_ITEM_CLASS = "h-6 min-w-0 items-center justify-start py-0";
 
 export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   const bundle = useProjectStore(projectSelectors.bundle);
@@ -97,6 +100,14 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
     stage.target_sets.find((target) => target.id === "all") ??
     stage.target_sets[0];
   const allTarget = stage.target_sets.find((target) => target.id === "all") ?? stage.target_sets[0];
+  const latestProductionEffects = useMemo(
+    () =>
+      latestRefsById(productionCatalog?.effects ?? []).flatMap((reference) => {
+        const effect = exactAsset(productionCatalog?.effects ?? [], reference);
+        return effect ? [effect] : [];
+      }),
+    [productionCatalog],
+  );
 
   useEffect(() => {
     if (workspace === "effect-lab" && allTarget && selectedTargetSetId !== allTarget.id) {
@@ -111,11 +122,11 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   }, [workspace]);
 
   useEffect(() => {
-    if (workspace === "effect-lab" && !selectedEffectRef && productionCatalog?.effects[0]) {
-      const effect = productionCatalog.effects[0];
+    if (workspace === "effect-lab" && !selectedEffectRef && latestProductionEffects[0]) {
+      const effect = latestProductionEffects[0];
       projectActions.setSelectedEffectRef({ id: effect.id, revision: effect.revision });
     }
-  }, [productionCatalog, selectedEffectRef, workspace]);
+  }, [latestProductionEffects, selectedEffectRef, workspace]);
 
   useEffect(() => {
     const scope = workspace === "effect-lab" ? "effect" : workspace === "cues" ? "cue" : null;
@@ -164,6 +175,10 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
       workspaceActions.setPublishStatus("idle", `${name} selected for placement.`);
       setResolvingRecipeId(null);
       return;
+    }
+    if (workspace === "arrange") {
+      workspaceActions.setSelectedArrangeBuiltInCue(null);
+      projectActions.setSelectedCueRef(null);
     }
     const baseCueId = productionRecipeCueBaseId(recipeId);
     const cueId =
@@ -250,7 +265,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
         )}
       </WorkspacePanelHeader>
       <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-1.5 p-2">
+        <div className="flex flex-col gap-1 p-2">
           {workspace === "stage" && (
             <>
               <LayoutLibrarySection
@@ -278,7 +293,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
           {workspace === "effect-lab" && (
             <>
               <LibrarySectionLabel>Production Catalog</LibrarySectionLabel>
-              {productionCatalog?.effects
+              {latestProductionEffects
                 .filter((effect) => effect.catalog.visibility !== "hidden")
                 .map((effect) => {
                   const reference = { id: effect.id, revision: effect.revision };
@@ -407,7 +422,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                 return (
                   <Button
                     key={`${recipe.id}@${recipe.revision}`}
-                    size="sm"
+                    size="xs"
                     variant={
                       workspace === "arrange" &&
                       selectedArrangeBuiltInCue?.recipeRef.id === recipe.id &&
@@ -417,7 +432,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                         ? "secondary"
                         : "ghost"
                     }
-                    className="h-auto w-full justify-start py-1.5"
+                    className={cn(COMPACT_LIBRARY_ITEM_CLASS, "w-full")}
                     title={disabledReason ?? recipe.description}
                     disabled={Boolean(disabledReason) || resolvingRecipeId !== null}
                     onClick={() => void startRecipeDraft(recipe.id, recipe.revision, recipe.name)}
@@ -442,9 +457,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                   <AlertDescription>{recipeError}</AlertDescription>
                 </Alert>
               )}
-              <LibrarySectionLabel>
-                {workspace === "arrange" ? "My Cues" : "Project Cues"}
-              </LibrarySectionLabel>
+              <LibrarySectionLabel>My Cues</LibrarySectionLabel>
               {workspace === "arrange" && (
                 <p className="text-muted-foreground px-1 text-[10px]">
                   Built-ins stay in the catalog. Saved and customized Cues appear here.
@@ -461,8 +474,8 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
                         ? "secondary"
                         : "ghost"
                     }
-                    size="sm"
-                    className="h-auto w-full justify-start py-1.5"
+                    size="xs"
+                    className={cn(COMPACT_LIBRARY_ITEM_CLASS, "w-full")}
                     onClick={() => {
                       workspaceActions.setSelectedArrangeBuiltInCue(null);
                       projectActions.setSelectedCueRef(reference);
@@ -494,8 +507,8 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
               <Button
                 key={effect.instance_id}
                 variant={selectedLiveEffectId === effect.instance_id ? "secondary" : "ghost"}
-                size="sm"
-                className="h-auto w-full justify-start py-1.5"
+                size="xs"
+                className={cn(COMPACT_LIBRARY_ITEM_CLASS, "w-full")}
                 onClick={() => workspaceActions.setSelectedLiveEffectId(effect.instance_id)}
               >
                 <span className="min-w-0 flex-1 truncate text-left">{effect.name}</span>
@@ -581,8 +594,8 @@ function LayoutLibrarySection({
   advanced: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <p className="text-muted-foreground px-1 pt-1 text-[9px] font-medium tracking-wide uppercase">
+    <div className="flex flex-col gap-0.5">
+      <p className="text-muted-foreground px-1 pt-0.5 text-[9px] font-medium tracking-wide uppercase">
         {title}
       </p>
       {refs.map((reference) => {
@@ -592,8 +605,8 @@ function LayoutLibrarySection({
           <div key={assetKey(reference)} className="flex min-w-0 items-center gap-1">
             <Button
               variant={assetKey(selected) === assetKey(reference) ? "secondary" : "ghost"}
-              size="sm"
-              className="h-auto min-w-0 flex-1 justify-start py-1.5"
+              size="xs"
+              className={cn(COMPACT_LIBRARY_ITEM_CLASS, "flex-1")}
               onClick={() => projectActions.setSelectedLayoutRef(reference)}
             >
               <span className="min-w-0 flex-1 truncate text-left">{layout.name}</span>
@@ -642,7 +655,7 @@ function CompactEmpty({
 
 function LibrarySectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-muted-foreground px-1 pt-1 text-[9px] font-medium tracking-wide uppercase">
+    <p className="text-muted-foreground px-1 pt-0.5 text-[9px] font-medium tracking-wide uppercase">
       {children}
     </p>
   );
@@ -668,8 +681,8 @@ function EffectLibraryButton({
   return (
     <Button
       variant={selected && assetKey(selected) === assetKey(reference) ? "secondary" : "ghost"}
-      size="sm"
-      className="h-auto w-full justify-start py-1.5"
+      size="xs"
+      className={cn(COMPACT_LIBRARY_ITEM_CLASS, "w-full")}
       disabled={disabled}
       title={disabledReason}
       onClick={() => projectActions.setSelectedEffectRef(reference)}

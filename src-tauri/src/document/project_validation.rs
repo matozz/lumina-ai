@@ -2,8 +2,8 @@ use super::validation::{validate_effect_definition_document, validate_parameter_
 use super::{
     layout_capacity, layout_grid_dimensions, validate_layout_geometry, ArrangementAutomationTarget,
     ArrangementDocument, AssetRef, CenterEdgesRegion, CueDefinition, CueLayer, CueMixOverride,
-    EffectDefinitionDocument, EffectNodeDSL, LayoutDefinition, LayoutGeometry,
-    ParameterOverridePolicyDSL, ParameterValueDSL, ProjectBundle, StageDocument,
+    EffectDefinitionDocument, EffectNodeDSL, LayoutDefinition, LayoutGeometry, ParameterSchemaDSL,
+    ParameterScopeDSL, ParameterSectionDSL, ParameterValueDSL, ProjectBundle, StageDocument,
     TargetSetDefinition, TargetSetSelector, TargetingDuration, TargetingDurationUnit,
     TargetingTransition, ARRANGEMENT_DOCUMENT_SCHEMA_VERSION, CUE_DEFINITION_SCHEMA_VERSION,
     EFFECT_DEFINITION_SCHEMA_VERSION, LAYOUT_DEFINITION_SCHEMA_VERSION,
@@ -14,8 +14,8 @@ use crate::compiler::diagnostic::{
     PROJECT_REFERENCE_CYCLE, PROJECT_REFERENCE_NOT_FOUND, PROJECT_REVISION_MISMATCH,
     PROJECT_SCHEMA_INVALID, TARGET_SET_INVALID,
 };
-use crate::engine::effect::is_beat_sync_speed_multiplier;
-use crate::engine::profile::profile_by_id;
+use crate::engine::effect::{is_beat_sync_speed_multiplier, COLOR_PARAMETER_ID};
+use crate::engine::profile::{profile_by_id, COLOR_RGB_ATTRIBUTE};
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone)]
@@ -58,6 +58,11 @@ impl ValidatedProject {
 }
 
 pub fn load_project_bundle(source: &str) -> Result<ValidatedProject, Vec<Diagnostic>> {
+    let bundle = load_project_draft(source)?;
+    ValidatedProject::validate(bundle)
+}
+
+pub fn load_project_draft(source: &str) -> Result<ProjectBundle, Vec<Diagnostic>> {
     let bundle = serde_json::from_str::<ProjectBundle>(source).map_err(|error| {
         vec![Diagnostic::error(
             PROJECT_SCHEMA_INVALID,
@@ -66,7 +71,13 @@ pub fn load_project_bundle(source: &str) -> Result<ValidatedProject, Vec<Diagnos
             "Use a ProjectBundle that matches the current Lumina V1 schema.",
         )]
     })?;
-    ValidatedProject::validate(bundle)
+    let mut diagnostics = Vec::new();
+    validate_schema_versions(&bundle, &mut diagnostics);
+    if diagnostics.is_empty() {
+        Ok(bundle)
+    } else {
+        Err(diagnostics)
+    }
 }
 
 fn validate_schema_versions(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
@@ -381,6 +392,15 @@ fn validate_cues(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
                 continue;
             };
             validate_layer_parameter(bundle, layer, &lane.target.parameter_id, &path, diagnostics);
+            if lane.target.parameter_id == COLOR_PARAMETER_ID {
+                if let Some(target) = stage
+                    .target_sets
+                    .iter()
+                    .find(|target| target.id == layer.target_set_ref.target_set_id)
+                {
+                    validate_explicit_color_capability(stage, layout, target, &path, diagnostics);
+                }
+            }
             validate_keyframes(
                 &lane.keyframes,
                 cue.nominal_length_ticks,
@@ -425,7 +445,8 @@ fn validate_cue_layer_composition(
             continue;
         };
         let left_fixtures = cue_layer_fixture_ids(stage, layout, left);
-        let left_attributes = effect_writer_attributes(left_effect);
+        let left_attributes =
+            effect_writer_attributes(left_effect, cue_layer_has_explicit_color(cue, left));
         for (right_index, right) in cue.layers.iter().enumerate().skip(left_index + 1) {
             let Some(right_effect) = exact_asset(&bundle.effects, &right.effect_ref, |asset| {
                 (&asset.id, asset.revision)
@@ -436,7 +457,8 @@ fn validate_cue_layer_composition(
             if left_fixtures.is_disjoint(&right_fixtures) {
                 continue;
             }
-            let right_attributes = effect_writer_attributes(right_effect);
+            let right_attributes =
+                effect_writer_attributes(right_effect, cue_layer_has_explicit_color(cue, right));
             let conflicts = left_attributes
                 .intersection(&right_attributes)
                 .filter(|attribute| !has_explicit_mix_policy(right, attribute))
@@ -450,9 +472,9 @@ fn validate_cue_layer_composition(
                     CUE_LAYER_ATTRIBUTE_CONFLICT,
                     format!("{path}.layers[{right_index}].mix_overrides"),
                     format!(
-                        "Cue layers {:?} and {:?} overlap fixtures and both write {}; the later layer has no explicit mix policy.",
-                        left.id,
-                        right.id,
+                        "Cue Layer {} and Layer {} overlap fixtures and both write {}; the later layer has no explicit mix policy.",
+                        left_index + 1,
+                        right_index + 1,
                         conflicts.join(", ")
                     ),
                     "Keep one visual intent, choose non-overlapping TargetSets, or explicitly select a mix policy for every shared attribute.",
@@ -467,7 +489,10 @@ fn validate_cue_layer_composition(
     }
 }
 
-fn effect_writer_attributes(effect: &EffectDefinitionDocument) -> BTreeSet<String> {
+fn effect_writer_attributes(
+    effect: &EffectDefinitionDocument,
+    has_explicit_color: bool,
+) -> BTreeSet<String> {
     let mut attributes = BTreeSet::new();
     let mut has_attribute_set_writer = false;
     for node in &effect.graph.nodes {
@@ -482,7 +507,49 @@ fn effect_writer_attributes(effect: &EffectDefinitionDocument) -> BTreeSet<Strin
     if has_attribute_set_writer || attributes.is_empty() {
         attributes.extend(effect.catalog.required_attributes.iter().cloned());
     }
+    if effect.parameters.iter().any(|parameter| {
+        parameter.id == COLOR_PARAMETER_ID
+            && (parameter.default_value().is_some() || has_explicit_color)
+    }) {
+        attributes.insert(COLOR_RGB_ATTRIBUTE.to_string());
+    }
     attributes
+}
+
+fn cue_layer_has_explicit_color(cue: &CueDefinition, layer: &CueLayer) -> bool {
+    layer.parameter_overrides.contains_key(COLOR_PARAMETER_ID)
+        || cue.automation_lanes.iter().any(|lane| {
+            lane.target.layer_id == layer.id && lane.target.parameter_id == COLOR_PARAMETER_ID
+        })
+}
+
+fn clip_layer_has_explicit_color(
+    arrangement: &ArrangementDocument,
+    cue: &CueDefinition,
+    clip: &super::CueClip,
+    layer: &CueLayer,
+) -> bool {
+    cue_layer_has_explicit_color(cue, layer)
+        || clip.layer_overrides.iter().any(|layer_override| {
+            layer_override.layer_id == layer.id
+                && layer_override
+                    .parameter_overrides
+                    .contains_key(COLOR_PARAMETER_ID)
+        })
+        || arrangement.tracks.iter().any(|track| {
+            track.automation_lanes.iter().any(|lane| {
+                matches!(
+                    &lane.target,
+                    super::ArrangementAutomationTarget::CueLayer {
+                        clip_id,
+                        layer_id,
+                        parameter_id,
+                    } if clip_id == &clip.id
+                        && layer_id == &layer.id
+                        && parameter_id == COLOR_PARAMETER_ID
+                )
+            })
+        })
 }
 
 fn has_explicit_mix_policy(layer: &CueLayer, attribute_id: &str) -> bool {
@@ -542,7 +609,6 @@ fn validate_cue_summary(
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let mut required_attributes = BTreeSet::new();
-    let mut strobe_risk = super::StrobeRiskDSL::None;
     for layer in &cue.layers {
         let Some(effect) = exact_asset(&bundle.effects, &layer.effect_ref, |asset| {
             (&asset.id, asset.revision)
@@ -550,9 +616,6 @@ fn validate_cue_summary(
             continue;
         };
         required_attributes.extend(effect.catalog.required_attributes.iter().cloned());
-        if strobe_rank(effect.catalog.strobe_risk) > strobe_rank(strobe_risk) {
-            strobe_risk = effect.catalog.strobe_risk;
-        }
     }
     let expected_attributes: Vec<_> = required_attributes.into_iter().collect();
     let mut actual_attributes = cue.capability_summary.required_attributes.clone();
@@ -573,43 +636,43 @@ fn validate_cue_summary(
             ),
         );
     }
-    if strobe_risk != cue.risk_summary.strobe_risk {
-        diagnostics.push(
-            Diagnostic::error(
-                PROJECT_SCHEMA_INVALID,
-                format!("{path}.risk_summary"),
-                "Cue strobe risk does not match the highest pinned Effect risk.",
-                "Recompute the risk summary from exact Effect revision metadata.",
-            )
-            .with_recovery(
-                "recompute_cue_summary",
-                "Recompute Cue summary",
-                Some(format!("{path}.risk_summary")),
-            ),
-        );
-    }
-}
-
-fn strobe_rank(risk: super::StrobeRiskDSL) -> u8 {
-    match risk {
-        super::StrobeRiskDSL::None => 0,
-        super::StrobeRiskDSL::Low => 1,
-        super::StrobeRiskDSL::Medium => 2,
-        super::StrobeRiskDSL::High => 3,
-    }
 }
 
 fn validate_effects(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnostic>) {
     for (effect_index, effect) in bundle.effects.iter().enumerate() {
         let path = format!("effects[{effect_index}]");
         validate_effect_definition_document(effect, &path, diagnostics);
+        match effect
+            .parameters
+            .iter()
+            .find(|parameter| parameter.id == COLOR_PARAMETER_ID)
+        {
+            Some(parameter)
+                if matches!(parameter.schema, ParameterSchemaDSL::Color { .. })
+                    && matches!(parameter.scope, ParameterScopeDSL::Arrangement)
+                    && matches!(parameter.section, ParameterSectionDSL::Main) => {}
+            Some(_) => diagnostics.push(Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                format!("{path}.parameters"),
+                "The standard Color parameter must use color schema, arrangement scope, and the main section.",
+                "Declare id color with schema type color, scope arrangement, and section main.",
+            )),
+            None => diagnostics.push(Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                format!("{path}.parameters"),
+                "Effect is missing the standard Color parameter.",
+                "Declare an optional color schema so Lab, Cue, and Arrangement share one Color contract.",
+            )),
+        }
         for (parameter_index, parameter) in effect.parameters.iter().enumerate() {
-            validate_beat_sync_speed_override(
-                &parameter.id,
-                &parameter.default_value,
-                &format!("{path}.parameters[{parameter_index}].default_value"),
-                diagnostics,
-            );
+            if let Some(default) = parameter.default_value() {
+                validate_beat_sync_speed_override(
+                    &parameter.id,
+                    &default,
+                    &format!("{path}.parameters[{parameter_index}].schema.default"),
+                    diagnostics,
+                );
+            }
         }
     }
 }
@@ -706,6 +769,15 @@ fn validate_cue_layer(
             parameter_id,
             value,
             &format!("{path}.parameter_overrides.{parameter_id}"),
+            diagnostics,
+        );
+    }
+    if layer.parameter_overrides.contains_key(COLOR_PARAMETER_ID) {
+        validate_explicit_color_capability(
+            stage,
+            layout,
+            target_set,
+            &format!("{path}.parameter_overrides.{COLOR_PARAMETER_ID}"),
             diagnostics,
         );
     }
@@ -830,6 +902,20 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
                                 .iter()
                                 .find(|target| target.id == layer.target_set_ref.target_set_id),
                         ) {
+                            if layer_override
+                                .parameter_overrides
+                                .contains_key(COLOR_PARAMETER_ID)
+                            {
+                                validate_explicit_color_capability(
+                                    stage,
+                                    layout,
+                                    target,
+                                    &format!(
+                                        "{override_path}.parameter_overrides.{COLOR_PARAMETER_ID}"
+                                    ),
+                                    diagnostics,
+                                );
+                            }
                             validate_mix_overrides(
                                 stage,
                                 layout,
@@ -883,6 +969,31 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
                         &format!("{lane_path}.target.parameter_id"),
                         diagnostics,
                     );
+                    if parameter_id == COLOR_PARAMETER_ID {
+                        if let Some(stage) =
+                            exact_asset(&bundle.stages, &cue.compatible_stage_ref, |asset| {
+                                (&asset.id, asset.revision)
+                            })
+                        {
+                            if let (Some(layout), Some(target)) = (
+                                exact_asset(&bundle.layouts, &stage.layout_ref, |asset| {
+                                    (&asset.id, asset.revision)
+                                }),
+                                stage
+                                    .target_sets
+                                    .iter()
+                                    .find(|target| target.id == layer.target_set_ref.target_set_id),
+                            ) {
+                                validate_explicit_color_capability(
+                                    stage,
+                                    layout,
+                                    target,
+                                    &format!("{lane_path}.target.parameter_id"),
+                                    diagnostics,
+                                );
+                            }
+                        }
+                    }
                     if let Some(effect) = exact_asset(&bundle.effects, &layer.effect_ref, |asset| {
                         (&asset.id, asset.revision)
                     }) {
@@ -918,7 +1029,6 @@ fn validate_arrangements(bundle: &ProjectBundle, diagnostics: &mut Vec<Diagnosti
 struct ArrangementClipContext<'a> {
     track_index: usize,
     clip_index: usize,
-    track: &'a super::CueTrack,
     clip: &'a super::CueClip,
     cue: &'a CueDefinition,
 }
@@ -945,7 +1055,6 @@ fn validate_arrangement_clip_composition(
                     .map(|cue| ArrangementClipContext {
                         track_index,
                         clip_index,
-                        track,
                         clip,
                         cue,
                     })
@@ -973,17 +1082,6 @@ fn validate_arrangement_clip_composition(
                 "{path}.tracks[{}].clips[{}]",
                 right.track_index, right.clip_index
             );
-            if left.track_index == right.track_index
-                && right.track.overlap_policy == super::OverlapPolicyDSL::Reject
-            {
-                diagnostics.push(Diagnostic::error(
-                    PROJECT_SCHEMA_INVALID,
-                    format!("{right_path}.start_tick"),
-                    "CueClips overlap on a track whose overlap policy is reject.",
-                    "Move or trim one CueClip, or explicitly choose a compositing overlap policy.",
-                ));
-                continue;
-            }
             if left.cue.compatible_stage_ref != right.cue.compatible_stage_ref {
                 continue;
             }
@@ -1009,7 +1107,10 @@ fn validate_arrangement_clip_composition(
                 else {
                     continue;
                 };
-                let left_attributes = effect_writer_attributes(left_effect);
+                let left_attributes = effect_writer_attributes(
+                    left_effect,
+                    clip_layer_has_explicit_color(arrangement, left.cue, left.clip, left_layer),
+                );
                 for right_layer in &right.cue.layers {
                     let right_fixtures = cue_layer_fixture_ids(stage, layout, right_layer);
                     if left_fixtures.is_disjoint(&right_fixtures) {
@@ -1022,7 +1123,15 @@ fn validate_arrangement_clip_composition(
                     else {
                         continue;
                     };
-                    let right_attributes = effect_writer_attributes(right_effect);
+                    let right_attributes = effect_writer_attributes(
+                        right_effect,
+                        clip_layer_has_explicit_color(
+                            arrangement,
+                            right.cue,
+                            right.clip,
+                            right_layer,
+                        ),
+                    );
                     let conflicts = left_attributes
                         .intersection(&right_attributes)
                         .filter(|attribute| {
@@ -1500,6 +1609,38 @@ fn validate_effect_capability(
     }
 }
 
+fn validate_explicit_color_capability(
+    stage: &StageDocument,
+    layout: &LayoutDefinition,
+    target: &TargetSetDefinition,
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let fixture_profiles = stage_fixture_profile_map(stage);
+    for fixture_id in target_fixture_ids(stage, layout, target) {
+        let supported = fixture_profiles
+            .get(&fixture_id)
+            .and_then(|profile_id| profile_by_id(profile_id))
+            .is_some_and(|profile| {
+                profile
+                    .attributes
+                    .iter()
+                    .any(|attribute| attribute.id == COLOR_RGB_ATTRIBUTE)
+            });
+        if !supported {
+            diagnostics.push(Diagnostic::error(
+                PROJECT_CAPABILITY_MISMATCH,
+                path,
+                format!(
+                    "Fixture {fixture_id} does not support color.rgb required by the explicit Color override."
+                ),
+                "Clear the Color override or choose a TargetSet whose fixtures support color.rgb.",
+            ));
+            break;
+        }
+    }
+}
+
 fn validate_layer_parameter(
     bundle: &ProjectBundle,
     layer: &CueLayer,
@@ -1548,7 +1689,7 @@ fn validate_parameter_value(
         ));
         return;
     };
-    if parameter.value_type != value.value_type() {
+    if parameter.value_type() != value.value_type() {
         diagnostics.push(Diagnostic::error(
             PROJECT_SCHEMA_INVALID,
             format!("{path}.parameter_overrides.{parameter_id}"),
@@ -1556,10 +1697,10 @@ fn validate_parameter_value(
             "Use the value type declared by the referenced Effect revision.",
         ));
     }
-    if parameter
-        .override_policy
-        .is_some_and(|policy| !matches!(policy, ParameterOverridePolicyDSL::CueOverride))
-    {
+    if !matches!(
+        parameter.scope,
+        ParameterScopeDSL::Cue | ParameterScopeDSL::Arrangement
+    ) {
         diagnostics.push(
             Diagnostic::error(
                 PROJECT_SCHEMA_INVALID,
@@ -1576,9 +1717,9 @@ fn validate_parameter_value(
     }
     validate_parameter_value_contract(
         value,
-        parameter.value_type,
-        parameter.range,
-        &parameter.enum_values,
+        parameter.value_type(),
+        parameter.range(),
+        parameter.enum_values(),
         &format!("{path}.parameter_overrides.{parameter_id}"),
         diagnostics,
     );
@@ -2090,10 +2231,19 @@ pub(crate) mod tests {
                 "revision": 1,
                 "source": "project_local",
                 "parameters": [{
-                    "id": "intensity", "name": "Intensity", "value_type": "scalar",
-                    "default_value": { "type": "scalar", "value": 1.0 },
-                    "range": [0.0, 1.0], "unit": "normalized", "ui_hint": "slider",
-                    "automation": "continuous"
+                    "id": "intensity", "name": "Intensity",
+                    "schema": {
+                        "type": "scalar", "default": 1.0,
+                        "range": { "min": 0.0, "max": 1.0, "step": 0.05 },
+                        "unit": "normalized"
+                    },
+                    "scope": "arrangement", "section": "main",
+                    "help": "Maximum output intensity."
+                }, {
+                    "id": "color", "name": "Color",
+                    "schema": { "type": "color" },
+                    "scope": "arrangement", "section": "main",
+                    "help": "Optional single-color output override."
                 }],
                 "graph": { "nodes": [
                     { "type": "time", "id": "time" },
@@ -2170,6 +2320,15 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn cue_risk_summary_does_not_have_to_mirror_the_highest_effect_risk() {
+        let mut bundle = valid_bundle();
+        bundle.cues[0].risk_summary.strobe_risk = super::super::StrobeRiskDSL::None;
+
+        ValidatedProject::validate(bundle)
+            .expect("Effect metadata remains authoritative for runtime strobe safety");
+    }
+
+    #[test]
     fn distinguishes_missing_and_stale_revisions() {
         let mut stale = valid_bundle();
         stale.cues[0].layers[0].effect_ref.revision = 2;
@@ -2212,6 +2371,8 @@ pub(crate) mod tests {
         assert!(diagnostics.iter().any(|diagnostic| {
             diagnostic.code == CUE_LAYER_ATTRIBUTE_CONFLICT
                 && diagnostic.path.ends_with("layers[1].mix_overrides")
+                && diagnostic.message.contains("Layer 1 and Layer 2")
+                && !diagnostic.message.contains("second-intensity")
                 && diagnostic
                     .recovery
                     .as_deref()
@@ -2247,6 +2408,73 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn standard_color_parameters_participate_in_layer_conflict_validation() {
+        let mut bundle = valid_bundle();
+        let color = bundle.effects[0]
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.id == COLOR_PARAMETER_ID)
+            .expect("standard Color parameter");
+        color.schema = ParameterSchemaDSL::Color {
+            default: Some("#FFFFFF".to_string()),
+        };
+        bundle.effects[0]
+            .catalog
+            .required_attributes
+            .push(COLOR_RGB_ATTRIBUTE.to_string());
+        bundle.cues[0]
+            .capability_summary
+            .required_attributes
+            .push(COLOR_RGB_ATTRIBUTE.to_string());
+        let mut second_layer = bundle.cues[0].layers[0].clone();
+        second_layer.id = "second-color".to_string();
+        second_layer.layer = 1;
+        second_layer.priority = 1;
+        second_layer.mix_overrides = vec![CueMixOverride {
+            attribute_id: "intensity".to_string(),
+            policy: crate::document::MixPolicy::Htp,
+        }];
+        bundle.cues[0].layers.push(second_layer);
+
+        let diagnostics = ValidatedProject::validate(bundle)
+            .expect_err("runtime Color writes require an explicit mix policy");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == CUE_LAYER_ATTRIBUTE_CONFLICT
+                && diagnostic.message.contains(COLOR_RGB_ATTRIBUTE)
+        }));
+    }
+
+    #[test]
+    fn requires_the_standard_color_contract_on_project_effects() {
+        let mut missing = valid_bundle();
+        missing.effects[0]
+            .parameters
+            .retain(|parameter| parameter.id != COLOR_PARAMETER_ID);
+        let diagnostics = ValidatedProject::validate(missing)
+            .expect_err("Project Effects must declare the standard Color parameter");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == PROJECT_SCHEMA_INVALID
+                && diagnostic.path == "effects[0].parameters"
+                && diagnostic.message.contains("missing the standard Color")
+        }));
+
+        let mut malformed = valid_bundle();
+        malformed.effects[0]
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.id == COLOR_PARAMETER_ID)
+            .expect("standard Color parameter")
+            .scope = ParameterScopeDSL::Cue;
+        let diagnostics = ValidatedProject::validate(malformed)
+            .expect_err("standard Color must use the shared arrangement scope");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == PROJECT_SCHEMA_INVALID
+                && diagnostic.path == "effects[0].parameters"
+                && diagnostic.message.contains("arrangement scope")
+        }));
+    }
+
+    #[test]
     fn requires_an_explicit_mix_for_overlapping_arrangement_cues() {
         let mut implicit = valid_bundle();
         let mut overlapping = implicit.arrangements[0].tracks[0].clips[0].clone();
@@ -2277,12 +2505,11 @@ pub(crate) mod tests {
             serde_json::from_value(json!({
                 "id": "speed",
                 "name": "Speed",
-                "value_type": "scalar",
-                "default_value": { "type": "scalar", "value": 1.0 },
-                "range": [0.25, 8.0],
-                "unit": "multiplier",
-                "ui_hint": "slider",
-                "automation": "continuous"
+                "schema": { "type": "scalar", "default": 1.0,
+                    "range": { "min": 0.25, "max": 8.0, "step": 0.25 },
+                    "unit": "multiplier" },
+                "scope": "arrangement", "section": "main",
+                "help": "Beat-synced playback speed."
             }))
             .expect("speed parameter"),
         );
@@ -2305,12 +2532,11 @@ pub(crate) mod tests {
             serde_json::from_value(json!({
                 "id": "speed",
                 "name": "Speed",
-                "value_type": "scalar",
-                "default_value": { "type": "scalar", "value": 0.375 },
-                "range": [0.25, 8.0],
-                "unit": "multiplier",
-                "ui_hint": "slider",
-                "automation": "continuous"
+                "schema": { "type": "scalar", "default": 0.375,
+                    "range": { "min": 0.25, "max": 8.0, "step": 0.25 },
+                    "unit": "multiplier" },
+                "scope": "arrangement", "section": "main",
+                "help": "Beat-synced playback speed."
             }))
             .expect("speed parameter"),
         );
@@ -2319,7 +2545,7 @@ pub(crate) mod tests {
             ValidatedProject::validate(bundle).expect_err("default speed must stay musical");
         assert!(diagnostics.iter().any(|diagnostic| {
             diagnostic.code == PROJECT_SCHEMA_INVALID
-                && diagnostic.path.ends_with(".default_value")
+                && diagnostic.path.ends_with(".schema.default")
                 && diagnostic.message.contains("beat-synchronized")
         }));
     }
@@ -2331,12 +2557,11 @@ pub(crate) mod tests {
             serde_json::from_value(json!({
                 "id": "speed",
                 "name": "Speed",
-                "value_type": "scalar",
-                "default_value": { "type": "scalar", "value": 1.0 },
-                "range": [0.25, 8.0],
-                "unit": "multiplier",
-                "ui_hint": "slider",
-                "automation": "continuous"
+                "schema": { "type": "scalar", "default": 1.0,
+                    "range": { "min": 0.25, "max": 8.0, "step": 0.25 },
+                    "unit": "multiplier" },
+                "scope": "arrangement", "section": "main",
+                "help": "Beat-synced playback speed."
             }))
             .expect("speed parameter"),
         );

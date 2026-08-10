@@ -11,6 +11,7 @@ import type {
 } from "@/bridge/types";
 import type { DocumentCommand, DocumentTransaction } from "@/document/commands";
 import { clipOverlapPlan } from "@/document/clipOverlapPlan";
+import { parameterAutomation } from "@/document/effectParameter";
 import { useEngineStore, engineActions, engineSelectors } from "@/stores/engine";
 import type { AutomationParameterOption } from "../automationParameters";
 import {
@@ -128,7 +129,8 @@ export const useTimelineEvents = ({ beatWidth, scrollRef }: TimelineEventsOption
                 id: stableId("keyframe"),
                 time_tick: startTick,
                 value: structuredClone(option.initialValue),
-                interpolation: option.definition.automation === "discrete" ? "hold" : "linear",
+                interpolation:
+                  parameterAutomation(option.definition) === "discrete" ? "hold" : "linear",
               },
               {
                 id: stableId("keyframe"),

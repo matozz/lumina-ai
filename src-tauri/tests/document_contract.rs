@@ -6,7 +6,7 @@ use lumina_ai_lib::compiler::diagnostic::{
 use lumina_ai_lib::compiler::Compiler;
 use lumina_ai_lib::document::{
     load_document, AutomationLaneDSL, AutomationTargetDSL, GlobalParameterDSL, KeyframeDSL,
-    KeyframeInterpolationDSL, OverlapPolicyDSL, ParameterValueDSL,
+    KeyframeInterpolationDSL, OverlapPolicyDSL, ParameterSchemaDSL, ParameterValueDSL,
 };
 
 const VALID_DOCUMENT: &str = r##"{
@@ -32,12 +32,15 @@ const VALID_DOCUMENT: &str = r##"{
     "parameters": [{
       "id": "speed",
       "name": "Speed",
-      "value_type": "scalar",
-      "default_value": { "type": "scalar", "value": 1.0 },
-      "range": [0.25, 8.0],
-      "unit": "multiplier",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "schema": {
+        "type": "scalar",
+        "default": 1.0,
+        "range": { "min": 0.25, "max": 8.0, "step": 0.25 },
+        "unit": "multiplier"
+      },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Beat-synced playback speed."
     }],
     "graph": { "nodes": [
       { "type": "time", "id": "time" },
@@ -210,8 +213,11 @@ fn rejects_invalid_typed_parameters_ports_and_graph_cycles() {
     let mut wrong_default = load_document(VALID_DOCUMENT)
         .expect("valid source")
         .document;
-    wrong_default.effect_definitions[0].parameters[0].default_value =
-        lumina_ai_lib::document::ParameterValueDSL::Color("#ffffff".to_string());
+    if let ParameterSchemaDSL::Scalar { default, .. } =
+        &mut wrong_default.effect_definitions[0].parameters[0].schema
+    {
+        *default = 16.0;
+    }
     assert!(compile_errors(wrong_default)
         .iter()
         .any(|diagnostic| diagnostic.code == DOC_PARAMETER_INVALID));

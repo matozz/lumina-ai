@@ -284,8 +284,8 @@
       "status": "supported",
       "editor_mode": "form",
       "capacity_model": "sides × fixtures_per_side",
-      "coordinate_model": "even linear samples around a regular polygon perimeter",
-      "validation_model": "at least three sides, positive samples per side and positive radius",
+      "coordinate_model": "even linear samples around a regular polygon perimeter; the editor updates radius to preserve adjacent fixture spacing when counts change",
+      "validation_model": "at least three sides, positive samples per side and positive radius; derived fixture spacing must remain positive",
       "grid_targeting": false,
       "parameter_schema": [
         {

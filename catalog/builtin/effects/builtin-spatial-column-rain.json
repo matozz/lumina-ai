@@ -8,43 +8,61 @@
     {
       "id": "speed",
       "name": "Speed",
-      "value_type": "scalar",
-      "default_value": { "type": "scalar", "value": 1 },
-      "range": [0.25, 8],
-      "step": 0.25,
-      "required": true,
-      "help": "Beat-synced top-to-bottom rainfall speed.",
-      "safe_fallback": { "type": "scalar", "value": 0.5 },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "multiplier",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "schema": {
+        "type": "scalar",
+        "default": 1,
+        "range": {
+          "min": 0.25,
+          "max": 8,
+          "step": 0.25
+        },
+        "unit": "multiplier"
+      },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Beat-synced top-to-bottom rainfall speed."
     },
     {
       "id": "intensity",
       "name": "Intensity",
-      "value_type": "scalar",
-      "default_value": { "type": "scalar", "value": 0.85 },
-      "range": [0, 1],
-      "step": 0.05,
-      "required": true,
-      "help": "Peak output of each falling column segment.",
-      "safe_fallback": { "type": "scalar", "value": 0.45 },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "normalized",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "schema": {
+        "type": "scalar",
+        "default": 0.85,
+        "range": {
+          "min": 0,
+          "max": 1,
+          "step": 0.05
+        },
+        "unit": "normalized"
+      },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Peak output of each falling column segment."
+    },
+    {
+      "id": "color",
+      "name": "Color",
+      "schema": {
+        "type": "color"
+      },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
     }
   ],
   "graph": {
     "nodes": [
-      { "type": "time", "id": "time" },
+      {
+        "type": "time",
+        "id": "time"
+      },
       {
         "type": "spatial_phase",
         "id": "seeded-column-phase",
-        "input": { "node_id": "time", "port": "scalar" },
+        "input": {
+          "node_id": "time",
+          "port": "scalar"
+        },
         "basis": "random_x",
         "from": 0,
         "to": 1,
@@ -54,7 +72,10 @@
       {
         "type": "spatial_phase",
         "id": "falling-row-phase",
-        "input": { "node_id": "seeded-column-phase", "port": "scalar" },
+        "input": {
+          "node_id": "seeded-column-phase",
+          "port": "scalar"
+        },
         "basis": "y",
         "from": 0,
         "to": 1,
@@ -64,16 +85,32 @@
       {
         "type": "fixture_mask",
         "id": "rain-head",
-        "input": { "node_id": "falling-row-phase", "port": "scalar" },
+        "input": {
+          "node_id": "falling-row-phase",
+          "port": "scalar"
+        },
         "min": 0,
         "max": 0.18
       },
-      { "type": "constant", "id": "level", "value": { "type": "scalar", "value": 1 } },
+      {
+        "type": "constant",
+        "id": "level",
+        "value": {
+          "type": "scalar",
+          "value": 1
+        }
+      },
       {
         "type": "attribute_writer",
         "id": "writer",
-        "input": { "node_id": "level", "port": "scalar" },
-        "mask": { "node_id": "rain-head", "port": "mask" },
+        "input": {
+          "node_id": "level",
+          "port": "scalar"
+        },
+        "mask": {
+          "node_id": "rain-head",
+          "port": "mask"
+        },
         "attribute_id": "intensity"
       }
     ]
@@ -89,8 +126,6 @@
     "colorfulness": 0,
     "strobe_risk": "none",
     "required_attributes": ["intensity"],
-    "layout_capabilities": ["matrix", "coordinates"],
-    "parameter_summary": ["speed", "intensity"],
-    "deprecated": false
+    "layout_capabilities": ["matrix", "coordinates"]
   }
 }

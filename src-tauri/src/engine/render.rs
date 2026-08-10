@@ -200,14 +200,11 @@ pub(crate) fn render_resolved(
                     values[handle.index()] = Some(value);
                 }
 
+                let color_handle =
+                    super::attribute::resolve_attribute(fixture.profile, COLOR_RGB_ATTRIBUTE);
                 if let (Some(handle), Some((red, green, blue))) = (
-                    super::attribute::resolve_attribute(fixture.profile, COLOR_RGB_ATTRIBUTE),
-                    resolve_effect_color_override(
-                        definition,
-                        instance,
-                        &active.instance,
-                        parameters,
-                    ),
+                    color_handle,
+                    resolve_effect_color(definition, instance, &active.instance, parameters),
                 ) {
                     values[handle.index()] = Some(AttributeValue::Color([red, green, blue]));
                 }
@@ -336,7 +333,7 @@ fn resolve_effect_scalar_override(
         })
 }
 
-fn resolve_effect_color_override(
+fn resolve_effect_color(
     definition: &crate::engine::effect::EffectDefinition,
     instance: &crate::engine::effect::EffectInstance,
     instance_handle: &EffectInstanceHandle,
@@ -346,6 +343,10 @@ fn resolve_effect_color_override(
     parameters
         .get_effect_color(instance_handle, handle)
         .or_else(|| match instance.parameter_overrides.get(&handle)? {
+            ParameterValue::Color(color) => Some((color[0], color[1], color[2])),
+            _ => None,
+        })
+        .or_else(|| match instance.resolve_parameter(definition, handle)? {
             ParameterValue::Color(color) => Some((color[0], color[1], color[2])),
             _ => None,
         })
@@ -511,9 +512,12 @@ mod tests {
                 "effect_definitions": [{
                     "id": "project.pulse", "name": "Pulse", "revision": 1, "source": "project_local",
                     "parameters": [{
-                        "id": "speed", "name": "Speed", "value_type": "scalar",
-                        "default_value": { "type": "scalar", "value": 1.0 }, "range": [0.25, 8.0],
-                        "unit": "multiplier", "ui_hint": "slider", "automation": "continuous"
+                        "id": "speed", "name": "Speed",
+                        "schema": { "type": "scalar", "default": 1.0,
+                            "range": { "min": 0.25, "max": 8.0, "step": 0.25 },
+                            "unit": "multiplier" },
+                        "scope": "arrangement", "section": "main",
+                        "help": "Beat-synced playback speed."
                     }],
                     "graph": { "nodes": [
                         { "type": "time", "id": "time" },

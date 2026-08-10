@@ -10,6 +10,7 @@ import type {
 } from "@/bridge/types";
 import { buildCommonParameters, buildEffectGraph } from "@/workspace/effect-lab/effectGraph";
 import type { EffectFormValues } from "@/workspace/effect-lab/effectFactory";
+import { createOpaqueCueLayerId } from "@/document/cueLayerIdentity";
 
 export type ProjectAssetKind = "stage" | "layout" | "effect" | "cue" | "arrangement";
 
@@ -117,25 +118,27 @@ export function createCueAsset(
     bundle.cues.map((cue) => cue.id),
   );
   const targetIds = stage.target_sets.map((target) => target.id);
-  const layers: CueLayer[] = effectRefs.map((effectRef, index) => ({
-    id: uniqueId(
-      `${effectRef.id}-layer`,
-      effectRefs.slice(0, index).map((reference) => `${reference.id}-layer`),
-    ),
-    effect_ref: toAssetRef(effectRef),
-    target_set_ref: {
-      stage_id: stage.id,
-      stage_revision: stage.revision,
-      target_set_id: targetIds[index] ?? targetIds[0] ?? "all",
-    },
-    parameter_overrides: {},
-    phase: 0,
-    seed: stableSeed(`${id}:${effectRef.id}:${index}`),
-    layer: index,
-    priority: 0,
-    mix_overrides: [],
-    trigger_policy: { mode: "timeline", quantize: "beat" },
-  }));
+  const occupiedLayerIds: string[] = [];
+  const layers: CueLayer[] = effectRefs.map((effectRef, index) => {
+    const layerId = createOpaqueCueLayerId(occupiedLayerIds);
+    occupiedLayerIds.push(layerId);
+    return {
+      id: layerId,
+      effect_ref: toAssetRef(effectRef),
+      target_set_ref: {
+        stage_id: stage.id,
+        stage_revision: stage.revision,
+        target_set_id: targetIds[index] ?? targetIds[0] ?? "all",
+      },
+      parameter_overrides: {},
+      phase: 0,
+      seed: stableSeed(`${id}:${layerId}`),
+      layer: index,
+      priority: 0,
+      mix_overrides: [],
+      trigger_policy: { mode: "timeline", quantize: "beat" },
+    };
+  });
   const requiredAttributes = new Set<string>();
   let strobeRisk: CueDefinition["risk_summary"]["strobe_risk"] = "none";
   for (const reference of effectRefs) {
@@ -263,6 +266,8 @@ export function normalizeProjectAssetRefs(bundle: ProjectBundle) {
   }
   for (const arrangement of bundle.arrangements) {
     for (const track of arrangement.tracks) {
+      track.name = "Cues";
+      track.overlap_policy = "layer";
       for (const clip of track.clips ?? []) clip.cue_ref = toAssetRef(clip.cue_ref);
     }
   }

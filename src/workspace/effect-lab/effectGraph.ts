@@ -3,7 +3,6 @@ import type {
   EffectNodeDSL,
   OscillatorWaveformDSL,
   ParameterDefinitionDSL,
-  ParameterValueDSL,
   SequenceStepDSL,
 } from "@/bridge/types";
 import type { EffectFormValues } from "./effectFactory";
@@ -18,20 +17,21 @@ export function buildCommonParameters(values: EffectFormValues): ParameterDefini
     {
       id: "color",
       name: "Color",
-      value_type: "color",
-      default_value: { type: "color", value: values.color },
-      unit: "color",
-      ui_hint: "color",
-      automation: "continuous",
+      schema: {
+        type: "color",
+        ...(values.attributeMode === "intensity_color" ? { default: values.color } : {}),
+      },
+      scope: "arrangement",
+      section: "main",
+      help: "Single-color output used by this Effect and available to Cue or Arrangement overrides.",
     },
     {
       id: "direction",
       name: "Direction",
-      value_type: "direction",
-      default_value: { type: "direction", value: "forward" },
-      unit: "direction",
-      ui_hint: "segmented",
-      automation: "discrete",
+      schema: { type: "direction", default: "forward" },
+      scope: "arrangement",
+      section: "main",
+      help: "Playback direction.",
     },
   ];
 }
@@ -106,15 +106,14 @@ function scalarParameter(
   return {
     id,
     name,
-    value_type: "scalar",
-    default_value: scalar(value),
-    range,
-    unit,
-    ui_hint: "slider",
-    automation: "continuous",
+    schema: {
+      type: "scalar",
+      default: value,
+      range: { min: range[0], max: range[1], step: id === "speed" ? 0.25 : 0.05 },
+      unit,
+    },
+    scope: "arrangement",
+    section: "main",
+    help: `${name} control.`,
   };
-}
-
-function scalar(value: number): ParameterValueDSL {
-  return { type: "scalar", value };
 }

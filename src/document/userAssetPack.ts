@@ -179,6 +179,25 @@ function validateAssetPackReferences(pack: UserAssetPack) {
   const layouts = new Set(pack.layouts.map(assetKey));
   const effects = new Set(pack.effects.map(assetKey));
   const cues = new Set(pack.cues.map(assetKey));
+  for (const [effectIndex, effect] of pack.effects.entries()) {
+    const color = effect.parameters.find((parameter) => parameter.id === "color");
+    if (!color) {
+      issues.push({
+        path: `effects[${effectIndex}].parameters`,
+        message: "Effect is missing the standard Color parameter",
+      });
+    } else if (
+      color.schema.type !== "color" ||
+      color.scope !== "arrangement" ||
+      color.section !== "main"
+    ) {
+      issues.push({
+        path: `effects[${effectIndex}].parameters`,
+        message:
+          "The standard Color parameter must use color schema, arrangement scope, and the main section",
+      });
+    }
+  }
   for (const [index, stage] of pack.stages.entries()) {
     if (!layouts.has(assetKey(stage.layout_ref))) {
       issues.push({ path: `stages[${index}].layout_ref`, message: "Layout dependency is missing" });

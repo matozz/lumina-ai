@@ -195,7 +195,7 @@ export function StageLayoutImpactPanel({
                 >
                   <SelectTrigger
                     size="sm"
-                    className="h-7 flex-1"
+                    className="h-6 flex-1"
                     aria-label={`Remap ${target.name}`}
                   >
                     <SelectValue />

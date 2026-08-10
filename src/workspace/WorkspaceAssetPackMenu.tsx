@@ -1,4 +1,4 @@
-import { Download, PackageOpen, Upload } from "lucide-react";
+import { Download, FolderOpen, PackageOpen, RotateCw, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import type { UserAssetPack } from "@/bridge/types";
 import { Button } from "@/components/ui/button";
@@ -25,10 +25,19 @@ import {
 } from "@/document/userAssetPack";
 import { downloadUserAssetPack, readUserAssetPackFile } from "@/document/userAssetPackFile";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
+import {
+  projectStorageActions,
+  projectStorageSelectors,
+  useProjectStorageStore,
+} from "@/stores/projectStorage";
 import { workspaceActions } from "@/stores/workspace";
 
 export function WorkspaceAssetPackMenu({ disabled = false }: { disabled?: boolean }) {
   const bundle = useProjectStore(projectSelectors.bundle);
+  const projectDirectory = useProjectStorageStore(projectStorageSelectors.directory);
+  const historyCount = useProjectStorageStore(projectStorageSelectors.historyCount);
+  const isSaving = useProjectStorageStore(projectStorageSelectors.isSaving);
+  const storageError = useProjectStorageStore(projectStorageSelectors.error);
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -49,6 +58,11 @@ export function WorkspaceAssetPackMenu({ disabled = false }: { disabled?: boolea
   const chooseImport = () => {
     setMessage(null);
     inputRef.current?.click();
+  };
+
+  const chooseProjectFolder = () => {
+    setOpen(false);
+    void projectStorageActions.chooseDirectory();
   };
 
   const readImport = async (file: File | undefined) => {
@@ -112,11 +126,48 @@ export function WorkspaceAssetPackMenu({ disabled = false }: { disabled?: boolea
         />
         <PopoverContent align="end" className="w-72">
           <PopoverHeader>
-            <PopoverTitle>Project asset packs</PopoverTitle>
+            <PopoverTitle>Project assets</PopoverTitle>
             <PopoverDescription>
-              Move your Layouts, Effects, Cues, and Arrangements between projects.
+              Choose durable project storage or move authoring assets between projects.
             </PopoverDescription>
           </PopoverHeader>
+          <div className="border-border grid gap-1.5 border-b pb-3">
+            <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+              Project folder
+            </p>
+            <p className="truncate text-xs" title={projectDirectory ?? undefined}>
+              {projectDirectory ? compactPath(projectDirectory) : "Not selected"}
+            </p>
+            <p className="text-muted-foreground text-[11px]">
+              {isSaving
+                ? "Saving…"
+                : `${historyCount} of 50 recent ${historyCount === 1 ? "version" : "versions"}`}
+            </p>
+            {storageError && (
+              <div className="grid gap-1.5">
+                <p
+                  className="text-destructive truncate text-[11px]"
+                  role="alert"
+                  title={storageError}
+                >
+                  Last save failed. Editing is still available.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="justify-start"
+                  onClick={() => void projectStorageActions.retrySave()}
+                >
+                  <RotateCw data-icon="inline-start" aria-hidden="true" />
+                  Retry save
+                </Button>
+              </div>
+            )}
+            <Button variant="outline" className="justify-start" onClick={chooseProjectFolder}>
+              <FolderOpen data-icon="inline-start" aria-hidden="true" />
+              Change project folder
+            </Button>
+          </div>
           <div className="grid gap-1.5">
             <Button variant="outline" className="justify-start" onClick={exportPack}>
               <Download data-icon="inline-start" aria-hidden="true" />
@@ -179,6 +230,12 @@ export function WorkspaceAssetPackMenu({ disabled = false }: { disabled?: boolea
       </Dialog>
     </>
   );
+}
+
+function compactPath(path: string) {
+  const parts = path.split("/").filter(Boolean);
+  if (parts.length <= 3) return path;
+  return `…/${parts.slice(-3).join("/")}`;
 }
 
 function friendlyKind(kind: AssetPackConflict["kind"]) {

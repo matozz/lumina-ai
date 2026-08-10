@@ -8,8 +8,8 @@ use crate::document::{
     AutomationLaneDSL, AutomationTargetDSL, ClipPlaybackDSL, CueAutomationLane,
     CueCapabilitySummary, CueDefinition, CueLayer, CueMixOverride, CueRiskSummary,
     CueTriggerPolicy, EffectClipDSL, EffectDefinitionDSL, EffectInstanceDSL, GroupDSL,
-    GroupFixturesDSL, LayoutDefinition, MetaDSL, MixPolicy as CueMixPolicy, ProjectBundle,
-    ShowDocumentV1, StageDocument, TargetingDuration, TargetingDurationUnit,
+    GroupFixturesDSL, LayoutDefinition, MetaDSL, MixPolicy as CueMixPolicy, OverlapPolicyDSL,
+    ProjectBundle, ShowDocumentV1, StageDocument, TargetingDuration, TargetingDurationUnit,
     TargetingSceneDefinition, TargetingTransition, TimeSignaturePoint, TimelineTrackDSL,
     TimelineV1DSL, ValidatedProject,
 };
@@ -326,8 +326,8 @@ impl Compiler {
             }
             timeline_tracks.push(TimelineTrackDSL {
                 id: track.id.clone(),
-                name: track.name.clone(),
-                overlap_policy: track.overlap_policy,
+                name: "Cues".to_string(),
+                overlap_policy: OverlapPolicyDSL::Layer,
                 clips,
                 automation_lanes: Vec::new(),
             });
@@ -922,7 +922,9 @@ mod tests {
         builtin_production_catalog, resolve_cue_recipe, valid_bundle, AssetRef, CueRecipeRef,
         GridZone, TargetSetDefinition, TargetSetRef, TargetSetSelector,
     };
-    use crate::engine::profile::{AttributeValue, INTENSITY_ATTRIBUTE};
+    use crate::engine::color::lerp_color_lab;
+    use crate::engine::effect::COLOR_PARAMETER_ID;
+    use crate::engine::profile::{AttributeValue, COLOR_RGB_ATTRIBUTE, INTENSITY_ATTRIBUTE};
     use crate::engine::render::{render_at, RenderSource, RenderTime};
     use std::time::Instant;
 
@@ -1219,6 +1221,10 @@ mod tests {
             layer.mix_overrides.push(CueMixOverride {
                 attribute_id: INTENSITY_ATTRIBUTE.to_string(),
                 policy: CueMixPolicy::Htp,
+            });
+            layer.mix_overrides.push(CueMixOverride {
+                attribute_id: COLOR_RGB_ATTRIBUTE.to_string(),
+                policy: CueMixPolicy::Ltp,
             });
             cue.layers.push(layer);
         }
@@ -1755,7 +1761,10 @@ mod tests {
         let pinned_bundle = production_catalog_project();
         assert_eq!(pinned_bundle.cues[0].layers.len(), 5);
         let mut working_bundle = pinned_bundle.clone();
-        working_bundle.cues[0].layers[1].phase += 0.25;
+        working_bundle.cues[0].layers[4].parameter_overrides.insert(
+            crate::engine::effect::COLOR_PARAMETER_ID.to_string(),
+            crate::document::ParameterValueDSL::Color("#FF0000".to_string()),
+        );
 
         let pinned = Compiler::compile_active_project(
             ValidatedProject::validate(pinned_bundle).expect("pinned Production Project validates"),
@@ -1855,6 +1864,94 @@ mod tests {
             journey_timeline
                 .tempo_map
                 .micros_at(MusicalTime::from_ticks(9_600))
+        );
+    }
+
+    #[test]
+    fn arrangement_tracks_compile_with_fixed_layering_semantics() {
+        let mut bundle = matrix_project();
+        bundle.arrangements[0].tracks[0].name = "Legacy editable name".to_string();
+        bundle.arrangements[0].tracks[0].overlap_policy = OverlapPolicyDSL::Reject;
+
+        let snapshot = Compiler::compile_active_project(
+            ValidatedProject::validate(bundle).expect("legacy track metadata validates"),
+        )
+        .expect("Arrangement compiles");
+
+        let track = &snapshot.show.timeline.as_ref().expect("timeline").tracks[0];
+        assert_eq!(track.overlap_policy, OverlapPolicyDSL::Layer);
+    }
+
+    #[test]
+    fn arrangement_color_automation_uses_lab_and_writes_color_rgb() {
+        let mut bundle = valid_bundle();
+        let color = bundle.effects[0]
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.id == COLOR_PARAMETER_ID)
+            .expect("standard Color parameter");
+        color.schema = crate::document::ParameterSchemaDSL::Color {
+            default: Some("#FFFFFF".to_string()),
+        };
+        bundle.effects[0]
+            .catalog
+            .required_attributes
+            .push(COLOR_RGB_ATTRIBUTE.to_string());
+        bundle.cues[0]
+            .capability_summary
+            .required_attributes
+            .push(COLOR_RGB_ATTRIBUTE.to_string());
+        bundle.arrangements[0].tracks[0].automation_lanes.push(
+            serde_json::from_value(serde_json::json!({
+                "id": "clip-color",
+                "target": {
+                    "scope": "cue_layer",
+                    "clip_id": "clip-1",
+                    "layer_id": "pulse-layer",
+                    "parameter_id": "color"
+                },
+                "keyframes": [
+                    {
+                        "id": "red",
+                        "time_tick": 0,
+                        "value": { "type": "color", "value": "#FF0000" },
+                        "interpolation": "linear"
+                    },
+                    {
+                        "id": "blue",
+                        "time_tick": 960,
+                        "value": { "type": "color", "value": "#0000FF" },
+                        "interpolation": "hold"
+                    }
+                ]
+            }))
+            .expect("Arrangement Color automation"),
+        );
+
+        let snapshot = Compiler::compile_active_project(
+            ValidatedProject::validate(bundle).expect("Color Project validates"),
+        )
+        .expect("Color Project compiles");
+        let rendered_color = |beat| {
+            let frame = render_at(&snapshot.show, RenderTime { beat }, RenderSource::Timeline);
+            let handle =
+                crate::engine::attribute::resolve_attribute(frame[0].profile, COLOR_RGB_ATTRIBUTE)
+                    .expect("color.rgb handle");
+            frame[0].value(handle).cloned()
+        };
+        let midpoint = lerp_color_lab((255, 0, 0), (0, 0, 255), 0.5);
+
+        assert_eq!(
+            rendered_color(0.0),
+            Some(AttributeValue::Color([255, 0, 0]))
+        );
+        assert_eq!(
+            rendered_color(0.5),
+            Some(AttributeValue::Color([midpoint.0, midpoint.1, midpoint.2]))
+        );
+        assert_eq!(
+            rendered_color(1.0),
+            Some(AttributeValue::Color([0, 0, 255]))
         );
     }
 

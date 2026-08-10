@@ -362,9 +362,15 @@ export function ProjectStageInspector() {
         <ScrollArea className="min-h-0 flex-1">
           <div className="flex flex-col gap-3 p-3">
             <Field>
-              <FieldLabel htmlFor="layout-draft-name">Library name</FieldLabel>
+              <FieldLabel
+                htmlFor="layout-draft-name"
+                className="text-muted-foreground font-mono text-[9px]"
+              >
+                name
+              </FieldLabel>
               <Input
                 id="layout-draft-name"
+                aria-label="Library name"
                 value={draft.name}
                 disabled={!editable}
                 onChange={(event) => setDraft({ ...draft, name: event.target.value })}

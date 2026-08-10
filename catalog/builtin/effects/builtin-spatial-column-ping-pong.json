@@ -8,49 +8,90 @@
     {
       "id": "speed",
       "name": "Speed",
-      "value_type": "scalar",
-      "default_value": { "type": "scalar", "value": 1 },
-      "range": [0.25, 8],
-      "step": 0.25,
-      "required": true,
-      "help": "Beat-synced left-to-right and right-to-left travel speed.",
-      "safe_fallback": { "type": "scalar", "value": 0.5 },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "multiplier",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "schema": {
+        "type": "scalar",
+        "default": 1,
+        "range": {
+          "min": 0.25,
+          "max": 8,
+          "step": 0.25
+        },
+        "unit": "multiplier"
+      },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Beat-synced left-to-right and right-to-left travel speed."
     },
     {
       "id": "intensity",
       "name": "Intensity",
-      "value_type": "scalar",
-      "default_value": { "type": "scalar", "value": 0.9 },
-      "range": [0, 1],
-      "step": 0.05,
-      "required": true,
-      "help": "Peak output of the traveling column.",
-      "safe_fallback": { "type": "scalar", "value": 0.5 },
-      "override_policy": "cue_override",
-      "advanced": false,
-      "unit": "normalized",
-      "ui_hint": "slider",
-      "automation": "continuous"
+      "schema": {
+        "type": "scalar",
+        "default": 0.9,
+        "range": {
+          "min": 0,
+          "max": 1,
+          "step": 0.05
+        },
+        "unit": "normalized"
+      },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Peak output of the traveling column."
+    },
+    {
+      "id": "color",
+      "name": "Color",
+      "schema": {
+        "type": "color"
+      },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
     }
   ],
   "graph": {
     "nodes": [
-      { "type": "time", "id": "time" },
+      {
+        "type": "time",
+        "id": "time"
+      },
       {
         "type": "oscillator",
         "id": "travel-position",
         "waveform": "triangle",
-        "phase": { "node_id": "time", "port": "scalar" }
+        "phase": {
+          "node_id": "time",
+          "port": "scalar"
+        }
+      },
+      {
+        "type": "map",
+        "id": "endpoint-overrun",
+        "input": {
+          "node_id": "travel-position",
+          "port": "scalar"
+        },
+        "input_range": [0, 1],
+        "output_range": [-0.08, 1.08]
+      },
+      {
+        "type": "clamp",
+        "id": "endpoint-dwell",
+        "input": {
+          "node_id": "endpoint-overrun",
+          "port": "scalar"
+        },
+        "min": 0,
+        "max": 1
       },
       {
         "type": "spatial_phase",
         "id": "column-distance",
-        "input": { "node_id": "travel-position", "port": "scalar" },
+        "input": {
+          "node_id": "endpoint-dwell",
+          "port": "scalar"
+        },
         "basis": "x",
         "from": 0,
         "to": 1,
@@ -60,16 +101,32 @@
       {
         "type": "fixture_mask",
         "id": "traveling-column",
-        "input": { "node_id": "column-distance", "port": "scalar" },
+        "input": {
+          "node_id": "column-distance",
+          "port": "scalar"
+        },
         "min": -0.065,
         "max": 0.065
       },
-      { "type": "constant", "id": "level", "value": { "type": "scalar", "value": 1 } },
+      {
+        "type": "constant",
+        "id": "level",
+        "value": {
+          "type": "scalar",
+          "value": 1
+        }
+      },
       {
         "type": "attribute_writer",
         "id": "writer",
-        "input": { "node_id": "level", "port": "scalar" },
-        "mask": { "node_id": "traveling-column", "port": "mask" },
+        "input": {
+          "node_id": "level",
+          "port": "scalar"
+        },
+        "mask": {
+          "node_id": "traveling-column",
+          "port": "mask"
+        },
         "attribute_id": "intensity"
       }
     ]
@@ -85,8 +142,6 @@
     "colorfulness": 0,
     "strobe_risk": "none",
     "required_attributes": ["intensity"],
-    "layout_capabilities": ["matrix", "coordinates"],
-    "parameter_summary": ["speed", "intensity"],
-    "deprecated": false
+    "layout_capabilities": ["matrix", "coordinates"]
   }
 }

@@ -83,7 +83,7 @@ function TimingInput({ id, label, value, min, max, step, suffix, onCommit }: Tim
         max={max}
         step={step}
         defaultValue={value}
-        className="h-7 w-16 px-2 text-[10px]"
+        className="h-6 w-16 px-2 text-[10px]"
         onBlur={(event) => onCommit(Number(event.currentTarget.value))}
       />
       {suffix && <span className="text-muted-foreground text-[10px]">{suffix}</span>}

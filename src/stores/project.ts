@@ -28,6 +28,7 @@ import {
   duplicateArrangementAsset,
   exactAsset,
   forkAssetRevision,
+  latestRefsById,
   normalizeProjectAssetRefs,
   toAssetRef,
   uniqueId,
@@ -37,6 +38,7 @@ import { createUserAssetPack, importUserAssetPack } from "@/document/userAssetPa
 import { layoutCapacity } from "@/document/layoutDefinition";
 import { analyzeStageTopology, resolveTargetSet, stageForLayout } from "@/document/stageTopology";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
+import { createOpaqueCueLayerId } from "@/document/cueLayerIdentity";
 
 export const PREVIEW_DARK_FRAME_NOTICE_THRESHOLD = 45;
 
@@ -79,7 +81,7 @@ export interface ProjectState {
 }
 
 const starter = createStarterProjectBundle();
-const LOCAL_WORKSPACE_STORAGE_VERSION = 12;
+const LOCAL_WORKSPACE_STORAGE_VERSION = 14;
 
 const initialState: ProjectState = {
   bundle: starter,
@@ -147,15 +149,17 @@ export const useProjectStore = create<ProjectState>()(
 export const projectActions = {
   loadBundle: (bundle: ProjectBundle) => {
     authoringTransportActions.reset();
-    const selectedArrangementRef = activeArrangementRef(bundle);
+    const loadedBundle = normalizeProjectAssetRefs(structuredClone(bundle));
+    const selectedArrangementRef = activeArrangementRef(loadedBundle);
     useProjectStore.setState({
       ...initialState,
-      bundle: structuredClone(bundle),
+      bundle: loadedBundle,
       selectedArrangementRef,
-      selectedLayoutRef: structuredClone(activeStage(bundle).layout_ref),
+      selectedLayoutRef: structuredClone(activeStage(loadedBundle).layout_ref),
       selectedEffectRef:
-        bundle.manifest.effect_refs[bundle.manifest.effect_refs.length - 1] ?? null,
-      selectedCueRef: bundle.manifest.cue_refs[bundle.manifest.cue_refs.length - 1] ?? null,
+        loadedBundle.manifest.effect_refs[loadedBundle.manifest.effect_refs.length - 1] ?? null,
+      selectedCueRef:
+        loadedBundle.manifest.cue_refs[loadedBundle.manifest.cue_refs.length - 1] ?? null,
     });
   },
   exportAssetPack: (name?: string) => createUserAssetPack(useProjectStore.getState().bundle, name),
@@ -890,11 +894,21 @@ export const projectActions = {
       );
       copy.nominal_length_ticks = cue.nominal_length_ticks;
       copy.layers = structuredClone(cue.layers);
+      const layerIdMap = new Map<string, string>();
+      const occupiedLayerIds: string[] = [];
       copy.layers.forEach((layer, index) => {
-        layer.id = `${copy.id}-layer-${index + 1}`;
+        const sourceLayerId = layer.id;
+        layer.id = createOpaqueCueLayerId(occupiedLayerIds);
+        occupiedLayerIds.push(layer.id);
+        layerIdMap.set(sourceLayerId, layer.id);
         layer.seed = stableSeed(`${copy.id}:${layer.id}`);
+        layer.layer = index;
       });
       copy.automation_lanes = structuredClone(cue.automation_lanes ?? []);
+      copy.automation_lanes.forEach((lane) => {
+        const remappedLayerId = layerIdMap.get(lane.target.layer_id);
+        if (remappedLayerId) lane.target.layer_id = remappedLayerId;
+      });
       bundle.cues.push(copy);
       created = { id: copy.id, revision: copy.revision };
       appendExactRef(bundle.manifest.cue_refs, created);
@@ -902,19 +916,35 @@ export const projectActions = {
     useProjectStore.setState({ selectedCueRef: created });
     return created;
   },
-  deleteCue: (reference: AssetRef) => {
+  deleteCue: (reference: AssetRef, options?: { removeArrangementClips?: boolean }) => {
     const state = useProjectStore.getState();
-    if (
-      state.bundle.arrangements.some((arrangement) =>
-        arrangement.tracks.some((track) =>
-          track.clips?.some((clip) => assetKey(clip.cue_ref) === assetKey(reference)),
-        ),
-      )
-    ) {
+    const isReferenced = state.bundle.arrangements.some((arrangement) =>
+      arrangement.tracks.some((track) =>
+        track.clips?.some((clip) => assetKey(clip.cue_ref) === assetKey(reference)),
+      ),
+    );
+    if (isReferenced && !options?.removeArrangementClips) {
       throw new Error("Cue revision is referenced by an Arrangement");
     }
     transact("Delete Cue", (bundle, published) => {
       bumpManifestRevision(bundle, published);
+      if (options?.removeArrangementClips) {
+        for (const arrangement of bundle.arrangements) {
+          for (const track of arrangement.tracks) {
+            const removedClipIds = new Set(
+              (track.clips ?? [])
+                .filter((clip) => assetKey(clip.cue_ref) === assetKey(reference))
+                .map((clip) => clip.id),
+            );
+            if (removedClipIds.size === 0) continue;
+            track.clips = (track.clips ?? []).filter((clip) => !removedClipIds.has(clip.id));
+            track.automation_lanes = (track.automation_lanes ?? []).filter(
+              (lane) =>
+                lane.target.scope !== "cue_layer" || !removedClipIds.has(lane.target.clip_id),
+            );
+          }
+        }
+      }
       bundle.manifest.cue_refs = bundle.manifest.cue_refs.filter(
         (candidate) => assetKey(candidate) !== assetKey(reference),
       );
@@ -933,13 +963,15 @@ export const projectActions = {
     updateCue(reference, "Update Cue layer", (cue) => {
       const layer = cue.layers.find((candidate) => candidate.id === layerId);
       if (!layer) throw new Error("Cue layer is missing");
+      const stableLayerId = layer.id;
       Object.assign(layer, structuredClone(update));
+      layer.id = stableLayerId;
     }),
   addCueLayer: (reference: AssetRef, effectRef: AssetRef) =>
     updateCue(reference, "Add Cue layer", (cue, bundle) => {
       const stage = exactAsset(bundle.stages, cue.compatible_stage_ref);
       if (!stage) throw new Error("Cue Stage revision is missing");
-      const layerId = `${effectRef.id}-layer-${cue.layers.length + 1}`;
+      const layerId = createOpaqueCueLayerId(cue.layers.map((layer) => layer.id));
       cue.layers.push({
         id: layerId,
         effect_ref: effectRef,
@@ -961,6 +993,9 @@ export const projectActions = {
     updateCue(reference, "Remove Cue layer", (cue) => {
       if (cue.layers.length <= 1) throw new Error("A Cue requires at least one layer");
       cue.layers = cue.layers.filter((layer) => layer.id !== layerId);
+      cue.automation_lanes = (cue.automation_lanes ?? []).filter(
+        (lane) => lane.target.layer_id !== layerId,
+      );
     }),
   saveCueWorkingDraft: (
     draft: CueDefinition,
@@ -1021,6 +1056,39 @@ export const projectActions = {
     });
     useProjectStore.setState({ selectedArrangementRef: created ?? source });
     return created;
+  },
+  deleteArrangement: (reference: AssetRef): AssetRef => {
+    const state = useProjectStore.getState();
+    const arrangementRefs = latestRefsById(state.bundle.manifest.arrangement_refs);
+    const deletedIndex = arrangementRefs.findIndex((candidate) => candidate.id === reference.id);
+    if (deletedIndex < 0 || !exactAsset(state.bundle.arrangements, reference)) {
+      throw new Error("Arrangement revision is missing");
+    }
+    if (arrangementRefs.length <= 1) {
+      throw new Error("A Project requires at least one Arrangement");
+    }
+
+    const remainingRefs = arrangementRefs.filter((candidate) => candidate.id !== reference.id);
+    const selected = remainingRefs[Math.min(deletedIndex, remainingRefs.length - 1)];
+    const bundle = structuredClone(state.bundle);
+    bundle.manifest.arrangement_refs = bundle.manifest.arrangement_refs.filter(
+      (candidate) => candidate.id !== reference.id,
+    );
+    bundle.arrangements = bundle.arrangements.filter(
+      (arrangement) => arrangement.id !== reference.id,
+    );
+    bundle.manifest.active_arrangement_id = selected.id;
+    bumpManifestRevision(bundle, state.publishedBundle);
+    normalizeProjectAssetRefs(bundle);
+    authoringTransportActions.pauseAll();
+    useProjectStore.setState({
+      bundle,
+      selectedArrangementRef: selected,
+      history: [],
+      historyCursor: 0,
+      savedHistoryCursor: -1,
+    });
+    return selected;
   },
   renameArrangement: (reference: AssetRef, name: string) =>
     updateArrangement(reference, "Rename Arrangement", (arrangement) => {

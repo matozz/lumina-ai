@@ -2,11 +2,20 @@ import { useEffect, useState } from "react";
 import { Flag, Gauge, Plus, Save, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { assetKey, exactAsset } from "@/document/projectModel";
+import { assetKey, exactAsset, latestRefsById } from "@/document/projectModel";
 import { authoringSessionKey, useAuthoringTransportStore } from "@/authoring/transport";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import { workspaceActions } from "@/stores/workspace";
@@ -83,10 +92,7 @@ export function ArrangementInspector() {
         ...draft.time_signatures.filter((point) => point.time_tick > 0),
       ];
     });
-    workspaceActions.setPublishStatus(
-      "idle",
-      "Arrangement clock saved; CueClip and keyframe ticks were preserved.",
-    );
+    workspaceActions.setPublishStatus("idle", "Arrangement saved.");
   };
 
   const addTempoPoint = () => {
@@ -208,7 +214,7 @@ export function ArrangementInspector() {
           {tempoPoints.map((point, index) => (
             <div
               key={`${index}:${point.time_tick}`}
-              className="grid grid-cols-[1fr_1fr_auto] gap-1.5"
+              className="grid grid-cols-[1fr_1fr_auto] items-center gap-1.5"
             >
               <Input
                 aria-label={`Tempo point ${index + 1} tick`}
@@ -244,7 +250,7 @@ export function ArrangementInspector() {
                 }
               />
               <Button
-                size="icon-sm"
+                size="icon-xs"
                 variant="ghost"
                 aria-label={`Delete tempo point ${index + 1}`}
                 disabled={index === 0}
@@ -281,8 +287,83 @@ export function ArrangementInspector() {
             </Button>
           </div>
           <ArrangementLoopEditor reference={reference} durationTicks={arrangement.length_ticks} />
+          <Separator />
+          <DeleteArrangementButton
+            arrangementName={arrangement.name}
+            reference={reference}
+            disabled={latestRefsById(bundle.manifest.arrangement_refs).length <= 1}
+          />
         </div>
       </ScrollArea>
     </aside>
+  );
+}
+
+function DeleteArrangementButton({
+  arrangementName,
+  reference,
+  disabled,
+}: {
+  arrangementName: string;
+  reference: { id: string; revision: number };
+  disabled: boolean;
+}) {
+  const bundle = useProjectStore(projectSelectors.bundle);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const arrangement = exactAsset(bundle.arrangements, reference);
+  const clipCount =
+    arrangement?.tracks.reduce((count, track) => count + (track.clips?.length ?? 0), 0) ?? 0;
+  const automationCount =
+    arrangement?.tracks.reduce(
+      (count, track) => count + (track.automation_lanes?.length ?? 0),
+      0,
+    ) ?? 0;
+  const markerCount = arrangement?.markers?.length ?? 0;
+
+  const remove = () => {
+    try {
+      projectActions.deleteArrangement(reference);
+      workspaceActions.setPublishStatus("idle", `${arrangementName} deleted.`);
+      setConfirmOpen(false);
+    } catch (error) {
+      workspaceActions.setPublishStatus(
+        "error",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  };
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="destructive"
+        disabled={disabled}
+        title={disabled ? "A Project requires at least one Arrangement." : undefined}
+        onClick={() => setConfirmOpen(true)}
+      >
+        <Trash2 data-icon="inline-start" aria-hidden="true" />
+        Delete Arrangement
+      </Button>
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Arrangement?</DialogTitle>
+            <DialogDescription>
+              {arrangementName} contains {clipCount} CueClip{clipCount === 1 ? "" : "s"},{" "}
+              {automationCount} automation lane{automationCount === 1 ? "" : "s"}, and {markerCount}{" "}
+              marker{markerCount === 1 ? "" : "s"}. The Arrangement and all of this timeline data
+              will be removed. This cannot be undone from editor history.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <Button variant="destructive" onClick={remove}>
+              Delete Arrangement now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -15,6 +15,7 @@ import {
   uniqueId,
   createCueAsset,
 } from "@/document/projectModel";
+import { createOpaqueCueLayerId } from "@/document/cueLayerIdentity";
 
 export type CueLayerUpdate = (layer: CueLayer, cue: CueDefinition) => void;
 
@@ -67,10 +68,7 @@ export function appendCueLayer(
   effect: EffectDefinitionDocument,
   stage: StageDocument,
 ) {
-  const layerId = uniqueId(
-    `${effect.id.replace(/[^a-z0-9-]+/g, "-")}-layer`,
-    cue.layers.map((layer) => layer.id),
-  );
+  const layerId = createOpaqueCueLayerId(cue.layers.map((layer) => layer.id));
   cue.layers.push({
     id: layerId,
     effect_ref: { id: effect.id, revision: effect.revision },
@@ -113,10 +111,7 @@ export function duplicateCueLayer(cue: CueDefinition, layerId: string) {
   if (index < 0) return null;
   const source = cue.layers[index];
   const copy = structuredClone(source);
-  copy.id = uniqueId(
-    `${source.id}-copy`,
-    cue.layers.map((layer) => layer.id),
-  );
+  copy.id = createOpaqueCueLayerId(cue.layers.map((layer) => layer.id));
   copy.seed = stableSeed(`${cue.id}:${copy.id}`);
   cue.layers.splice(index + 1, 0, copy);
   cue.layers.forEach((candidate, order) => {

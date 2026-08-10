@@ -6,11 +6,15 @@ import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
 import {
   addAutomationKeyframe,
   addAutomationLane,
+  automationOptionsForClip,
   automationOptions,
+  automationLaneValueAtTick,
   cueTrackVisualLayout,
   deleteCueClip,
+  ensureAutomationAtTick,
   moveAutomationKeyframes,
   moveCueClip,
+  resolveAutomationOption,
   resizeCueClip,
   updateAutomationKeyframe,
   visibleCueClips,
@@ -47,7 +51,7 @@ describe("Arrangement timeline model", () => {
     );
   });
 
-  it("enforces reject overlap policy with a recoverable diagnostic", () => {
+  it("allows overlap regardless of legacy track policy metadata", () => {
     arrangement.tracks[0].overlap_policy = "reject";
     arrangement.tracks[0].clips?.push({
       id: "clip-b",
@@ -55,7 +59,8 @@ describe("Arrangement timeline model", () => {
       start_tick: 4_000,
       duration_tick: 1_000,
     });
-    expect(() => moveCueClip(arrangement, "clip-a", 3_900)).toThrow(/rejects overlap/);
+    moveCueClip(arrangement, "clip-a", 3_900);
+    expect(arrangement.tracks[0].clips?.[0].start_tick).toBe(3_900);
   });
 
   it("keeps semantic layers separate and packs same-layer overlaps into extra visual rows", () => {
@@ -100,6 +105,7 @@ describe("Arrangement timeline model", () => {
 
   it("resolves typed global and CueLayer parameters and removes dependent lanes with a clip", () => {
     const effect = createEffectAsset(bundle, "Pulse");
+    effect.parameters[0].scope = "arrangement";
     bundle.effects.push(effect);
     const cue = createCueAsset(bundle, [{ id: effect.id, revision: effect.revision }], "Cue A");
     cue.id = "cue-a";
@@ -112,6 +118,121 @@ describe("Arrangement timeline model", () => {
 
     deleteCueClip(arrangement, "clip-a");
     expect(arrangement.tracks[0].automation_lanes?.some((lane) => lane.id === laneId)).toBe(false);
+  });
+
+  it("presents a single-layer automation target without its raw layer ID", () => {
+    const effect = createEffectAsset(bundle, "Pulse");
+    effect.parameters[0].scope = "arrangement";
+    bundle.effects.push(effect);
+    const cue = createCueAsset(bundle, [{ id: effect.id, revision: effect.revision }], "Cue A");
+    cue.id = "cue-a";
+    bundle.cues.push(cue);
+
+    const option = automationOptions(bundle, arrangement).find(
+      (candidate) => candidate.target.scope === "cue_layer",
+    )!;
+
+    expect(option.label).toBe(`${cue.name} · ${option.definition.name}`);
+    const target = structuredClone(option.target);
+    cue.name = "Renamed Cue A";
+    const resolved = resolveAutomationOption(bundle, arrangement, target)!;
+    expect(resolved.label).toBe(`Renamed Cue A · ${option.definition.name}`);
+    expect(resolved.target).toEqual(target);
+  });
+
+  it("filters Effect-only and Cue-only parameters from Arrangement automation", () => {
+    const effect = createEffectAsset(bundle, "Filtered Pulse");
+    effect.parameters.forEach((parameter) => {
+      parameter.scope = "effect";
+    });
+    effect.parameters[0].scope = "arrangement";
+    effect.parameters[1].scope = "cue";
+    bundle.effects.push(effect);
+    const cue = createCueAsset(bundle, [effect], "Filtered Cue");
+    cue.id = "cue-a";
+    bundle.cues.push(cue);
+
+    const options = automationOptionsForClip(bundle, arrangement, "clip-a");
+
+    expect(options.map((option) => option.definition.id)).toEqual([effect.parameters[0].id]);
+  });
+
+  it("scopes Arrangement automation to one CueClip even when Cue references repeat", () => {
+    const effect = createEffectAsset(bundle, "Repeated FullFlash");
+    effect.parameters[0].scope = "arrangement";
+    bundle.effects.push(effect);
+    const cue = createCueAsset(bundle, [effect], "FullFlash");
+    cue.id = "cue-a";
+    bundle.cues.push(cue);
+    arrangement.tracks[0].clips?.push({
+      id: "clip-b",
+      cue_ref: { id: cue.id, revision: cue.revision },
+      start_tick: 3_840,
+      duration_tick: 1_920,
+    });
+
+    const first = automationOptionsForClip(bundle, arrangement, "clip-a").find(
+      (option) => option.definition.id === effect.parameters[0].id,
+    )!;
+    const second = automationOptionsForClip(bundle, arrangement, "clip-b").find(
+      (option) => option.definition.id === effect.parameters[0].id,
+    )!;
+
+    expect(first.target).toMatchObject({ scope: "cue_layer", clip_id: "clip-a" });
+    expect(second.target).toMatchObject({ scope: "cue_layer", clip_id: "clip-b" });
+    expect(first.target).not.toEqual(second.target);
+  });
+
+  it("creates or locates one typed lane at the exact context tick without duplicates", () => {
+    const effect = createEffectAsset(bundle, "Context Pulse");
+    const definition = effect.parameters[0];
+    definition.scope = "arrangement";
+    bundle.effects.push(effect);
+    const cue = createCueAsset(bundle, [effect], "Context Cue");
+    cue.id = "cue-a";
+    cue.automation_lanes = [
+      {
+        id: "cue-speed",
+        target: { layer_id: cue.layers[0].id, parameter_id: definition.id },
+        keyframes: [
+          {
+            id: "cue-start",
+            time_tick: 0,
+            value: { type: "scalar", value: 0.25 },
+            interpolation: "linear",
+          },
+          {
+            id: "cue-end",
+            time_tick: 960,
+            value: { type: "scalar", value: 0.75 },
+            interpolation: "linear",
+          },
+        ],
+      },
+    ];
+    bundle.cues.push(cue);
+    const option = automationOptionsForClip(bundle, arrangement, "clip-a").find(
+      (candidate) => candidate.definition.id === definition.id,
+    )!;
+
+    const created = ensureAutomationAtTick(bundle, arrangement, "cues", option, 1_440);
+    const lane = arrangement.tracks[0].automation_lanes?.[0]!;
+    expect(lane.keyframes).toEqual([
+      expect.objectContaining({
+        id: created.keyframeId,
+        time_tick: 1_440,
+        value: { type: "scalar", value: 0.5 },
+      }),
+    ]);
+
+    const located = ensureAutomationAtTick(bundle, arrangement, "cues", option, 1_440);
+    expect(located).toEqual(created);
+    expect(arrangement.tracks[0].automation_lanes).toHaveLength(1);
+    expect(lane.keyframes).toHaveLength(1);
+
+    const appended = ensureAutomationAtTick(bundle, arrangement, "cues", option, 1_920);
+    expect(appended.laneId).toBe(created.laneId);
+    expect(lane.keyframes).toHaveLength(2);
   });
 
   it("adds, moves, and edits a typed automation curve without duplicate ticks", () => {
@@ -140,6 +261,45 @@ describe("Arrangement timeline model", () => {
     expect(() => moveAutomationKeyframes(arrangement, "cues", laneId, [middle.id], -2_160)).toThrow(
       /collide/,
     );
+  });
+
+  it("evaluates Color in Lab and hold values through the exact boundary tick", () => {
+    const lane = {
+      id: "color-lane",
+      target: { scope: "global" as const, parameter_id: "master_dimmer" as const },
+      keyframes: [
+        {
+          id: "red",
+          time_tick: 0,
+          value: { type: "color" as const, value: "#FF0000" },
+          interpolation: "linear" as const,
+        },
+        {
+          id: "blue",
+          time_tick: 960,
+          value: { type: "color" as const, value: "#0000FF" },
+          interpolation: "hold" as const,
+        },
+        {
+          id: "green",
+          time_tick: 1_920,
+          value: { type: "color" as const, value: "#00FF00" },
+          interpolation: "hold" as const,
+        },
+      ],
+    };
+
+    expect(automationLaneValueAtTick(lane, 480, { type: "color", value: "#000000" })).toEqual(
+      expect.objectContaining({ type: "color", value: expect.not.stringMatching("#800080") }),
+    );
+    expect(automationLaneValueAtTick(lane, 1_919, { type: "color", value: "#000000" })).toEqual({
+      type: "color",
+      value: "#0000FF",
+    });
+    expect(automationLaneValueAtTick(lane, 1_920, { type: "color", value: "#000000" })).toEqual({
+      type: "color",
+      value: "#00FF00",
+    });
   });
 
   it("records a pointer-up style edit as one Project history transaction", () => {

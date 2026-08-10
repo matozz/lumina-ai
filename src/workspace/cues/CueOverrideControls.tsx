@@ -3,11 +3,19 @@ import type {
   CueLayer,
   EffectDefinitionDocument,
   ParameterDefinitionDSL,
+  ParameterValueDSL,
 } from "@/bridge/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FieldDescription } from "@/components/ui/field";
 import { uniqueId } from "@/document/projectModel";
+import {
+  parameterAllowsAutomation,
+  parameterAllowsCueOverride,
+  parameterAutomation,
+  parameterDefaultValue,
+  parameterInitialValue,
+} from "@/document/effectParameter";
 import { EffectParameterControls } from "../effect-lab/EffectParameterControls";
 import type { CueLayerUpdate } from "./cueAuthoring";
 
@@ -24,14 +32,12 @@ export function CueOverrideControls({
   onUpdate: (update: CueLayerUpdate) => void;
   advanced: boolean;
 }) {
-  const overrideable = effect.parameters.filter(
-    (parameter) => parameter.override_policy === "cue_override",
-  );
+  const overrideable = effect.parameters.filter(parameterAllowsCueOverride);
   if (overrideable.length === 0) {
     return <FieldDescription>This Effect exposes no Cue-overridable parameters.</FieldDescription>;
   }
   return (
-    <div className="grid gap-2">
+    <div className="grid min-w-0 gap-2">
       {overrideable.map((parameter) => {
         const override = layer.parameter_overrides?.[parameter.id];
         const lane = cue.automation_lanes?.find(
@@ -39,14 +45,18 @@ export function CueOverrideControls({
             candidate.target.layer_id === layer.id &&
             candidate.target.parameter_id === parameter.id,
         );
-        const displayed: ParameterDefinitionDSL = {
-          ...parameter,
-          default_value: structuredClone(override ?? parameter.default_value),
-        };
+        const effectDefault = parameterDefaultValue(parameter);
+        const displayedValue = structuredClone(override ?? effectDefault);
+        const canToggleColor =
+          parameter.schema.type === "color" &&
+          (override !== undefined || effectDefault === undefined);
         return (
-          <div key={parameter.id} className="grid gap-1.5">
+          <div key={parameter.id} className="grid min-w-0 gap-1.5">
             {advanced && (
-              <div className="flex items-center gap-1.5">
+              <div
+                className="flex min-w-0 flex-wrap items-center gap-1.5"
+                data-layout-region="cue-override-actions"
+              >
                 <Badge variant={override ? "secondary" : "outline"}>
                   {override ? "override" : "Effect default"}
                 </Badge>
@@ -65,11 +75,11 @@ export function CueOverrideControls({
                     Use default
                   </Button>
                 )}
-                {parameter.automation !== "disabled" && (
+                {parameterAllowsAutomation(parameter) && (
                   <Button
                     size="xs"
                     variant={lane ? "secondary" : "outline"}
-                    className="ml-auto"
+                    className="ml-auto max-w-full"
                     onClick={() =>
                       onUpdate((draftLayer, draftCue) =>
                         toggleAutomation(draftLayer, draftCue, parameter, override, lane?.id),
@@ -82,7 +92,8 @@ export function CueOverrideControls({
               </div>
             )}
             <EffectParameterControls
-              parameters={[displayed]}
+              parameters={[parameter]}
+              values={{ [parameter.id]: displayedValue }}
               diagnostics={[]}
               readOnly={false}
               onChange={(_, value) =>
@@ -93,7 +104,23 @@ export function CueOverrideControls({
                   };
                 })
               }
-              onRestoreFallback={() => undefined}
+              onOptionalEnabledChange={
+                canToggleColor
+                  ? (_, enabled) =>
+                      onUpdate((draftLayer) => {
+                        const overrides = { ...(draftLayer.parameter_overrides ?? {}) };
+                        if (enabled) {
+                          overrides[parameter.id] = structuredClone(
+                            parameterInitialValue(parameter),
+                          );
+                        } else {
+                          delete overrides[parameter.id];
+                        }
+                        draftLayer.parameter_overrides = overrides;
+                      })
+                  : undefined
+              }
+              onRestoreLastValid={() => undefined}
               showMetadata={advanced}
             />
           </div>
@@ -107,7 +134,7 @@ function toggleAutomation(
   layer: CueLayer,
   cue: CueDefinition,
   parameter: ParameterDefinitionDSL,
-  override: ParameterDefinitionDSL["default_value"] | undefined,
+  override: ParameterValueDSL | undefined,
   laneId: string | undefined,
 ) {
   if (laneId) {
@@ -116,7 +143,8 @@ function toggleAutomation(
     );
     return;
   }
-  const value = structuredClone(override ?? parameter.default_value);
+  const value = structuredClone(override ?? parameterInitialValue(parameter));
+  const interpolation = parameterAutomation(parameter) === "discrete" ? "hold" : "linear";
   cue.automation_lanes = [
     ...(cue.automation_lanes ?? []),
     {
@@ -126,12 +154,12 @@ function toggleAutomation(
       ),
       target: { layer_id: layer.id, parameter_id: parameter.id },
       keyframes: [
-        { id: "start", time_tick: 0, value, interpolation: "linear" },
+        { id: "start", time_tick: 0, value, interpolation },
         {
           id: "end",
           time_tick: cue.nominal_length_ticks,
           value: structuredClone(value),
-          interpolation: "linear",
+          interpolation,
         },
       ],
     },

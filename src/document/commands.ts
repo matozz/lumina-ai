@@ -11,6 +11,11 @@ import type {
   PatchDSL,
   TimelineTrackDSL,
 } from "@/bridge/types";
+import {
+  parameterAutomation,
+  parameterRange,
+  parameterValueType,
+} from "@/document/effectParameter";
 
 export type DocumentCommand =
   | { type: "replace_stage_setup"; patch: PatchDSL[]; layout: LayoutDSL; groups: GroupDSL[] }
@@ -552,27 +557,26 @@ function assertLane(lane: AutomationLaneDSL) {
 function assertLaneTargetValues(document: FullDSL, lane: AutomationLaneDSL) {
   const parameter =
     lane.target.scope === "global"
-      ? {
-          value_type: "scalar" as const,
-          range: [0, 1] as [number, number],
-          automation: "continuous" as const,
-        }
+      ? undefined
       : resolveEffectParameter(document, lane.target.instance_id, lane.target.parameter_id);
+  const valueType = parameter ? parameterValueType(parameter) : "scalar";
+  const range = parameter ? parameterRange(parameter) : ([0, 1] as [number, number]);
+  const automation = parameter ? parameterAutomation(parameter) : "continuous";
 
   for (const keyframe of lane.keyframes) {
-    if (keyframe.value.type !== parameter.value_type) {
+    if (keyframe.value.type !== valueType) {
       throw new DocumentCommandError(
-        `keyframe value type ${keyframe.value.type} does not match ${parameter.value_type}`,
+        `keyframe value type ${keyframe.value.type} does not match ${valueType}`,
       );
     }
     if (
       keyframe.value.type === "scalar" &&
-      parameter.range &&
-      (keyframe.value.value < parameter.range[0] || keyframe.value.value > parameter.range[1])
+      range &&
+      (keyframe.value.value < range[0] || keyframe.value.value > range[1])
     ) {
       throw new DocumentCommandError("keyframe scalar value is outside the parameter range");
     }
-    if (parameter.automation === "discrete" && keyframe.interpolation !== "hold") {
+    if (automation === "discrete" && keyframe.interpolation !== "hold") {
       throw new DocumentCommandError("discrete automation keyframes must use hold interpolation");
     }
   }

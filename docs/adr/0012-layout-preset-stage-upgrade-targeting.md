@@ -22,7 +22,7 @@ Layout 几何必须可复用、可完整预览并与 Stage Patch 独立，同时
 ### Quantity and spacing
 
 - Quantity fields such as rows, columns, rings, segments and count change capacity only.
-- Gap, pitch and radius change geometry only. Saved spacing is never recomputed because a quantity field changed.
+- Gap and pitch change geometry only. Polygon authoring is the explicit exception: changing `sides` or `fixtures_per_side` atomically derives a new saved radius from the current adjacent fixture spacing, so the perimeter grows or shrinks without changing physical spacing. Direct radius edits still change spacing.
 - Layout preview always materializes full geometry independent of current Stage fixture count.
 
 ### Use on Stage

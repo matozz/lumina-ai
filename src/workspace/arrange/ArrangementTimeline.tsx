@@ -1,19 +1,19 @@
-import { useEffect, useRef, useState } from "react";
-import type { ArrangementDocument, ProjectBundle } from "@/bridge/types";
+import { useCallback, useEffect, useRef } from "react";
 import { AuthoringDiagnosticAlert } from "@/authoring/AuthoringDiagnosticAlert";
-import { authoringDiagnostic, type AuthoringDiagnostic } from "@/authoring/diagnostics";
+import { authoringDiagnostic } from "@/authoring/diagnostics";
 import {
   authoringSessionKey,
   authoringTransportActions,
+  clampAuthoringTick,
   useAuthoringTransportStore,
 } from "@/authoring/transport";
 import { activeStage, appendExactRef, assetKey, exactAsset } from "@/document/projectModel";
-import { isTextEditingTarget } from "@/lib/dom";
-import { BEAT_WIDTH_STEP, ticksToPixels } from "@/panel/timelineGeometry";
+import { ticksToPixels } from "@/panel/timelineGeometry";
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import { productionCatalogSelectors, useProductionCatalogStore } from "@/stores/productionCatalog";
 import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/stores/workspace";
 import { ArrangementClipInspector } from "./timeline/ArrangementClipInspector";
+import { ArrangementMarquee } from "./timeline/ArrangementMarquee";
 import {
   ArrangementGrid,
   ArrangementPlayhead,
@@ -22,14 +22,19 @@ import {
 import { ArrangementTimelineToolbar } from "./timeline/ArrangementTimelineToolbar";
 import { ArrangementTrackHeaders } from "./timeline/ArrangementTrackHeaders";
 import { ArrangementTrackRows } from "./timeline/ArrangementTrackRows";
+import { useArrangementEditorShortcuts } from "./timeline/useArrangementEditorShortcuts";
+import { useArrangementTimelineEditing } from "./timeline/useArrangementTimelineEditing";
 import { useArrangementTimelineViewport } from "./timeline/useArrangementTimelineViewport";
 import {
   addAutomationLane,
   automationOptions,
-  deleteCueClip,
-  duplicateCueClip,
+  deleteAutomationLane,
   updateCueClip,
 } from "./timeline/arrangementTimelineModel";
+import {
+  arrangementSelectionFromItems,
+  arrangementSelectionItemKey,
+} from "./timeline/arrangementSelection";
 
 const HEADER_WIDTH = 192;
 
@@ -41,6 +46,7 @@ export function ArrangementTimeline() {
   const productionCatalog = useProductionCatalogStore(productionCatalogSelectors.catalog);
   const canUndo = useProjectStore(projectSelectors.canUndo);
   const canRedo = useProjectStore(projectSelectors.canRedo);
+  const focusMode = useWorkspaceStore(workspaceSelectors.arrangeTimelineFocus);
   const arrangement = exactAsset(bundle.arrangements, reference);
   const stage = activeStage(bundle);
   const selectedBuiltInCue =
@@ -48,12 +54,112 @@ export function ArrangementTimeline() {
       ? pendingBuiltInCue
       : null;
   const selectedCue = selectedBuiltInCue?.cue ?? exactAsset(bundle.cues, selectedCueRef);
-  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
-  const [diagnostic, setDiagnostic] = useState<AuthoringDiagnostic | null>(null);
   const snapGuideRef = useRef<HTMLDivElement>(null);
-  const { beatWidth, geometry, headersRef, scrollRef, updateViewport, viewport, zoom } =
-    useArrangementTimelineViewport(arrangement?.ppq ?? 960);
+  const firstSignature = arrangement?.time_signatures[0] ?? {
+    time_tick: 0,
+    numerator: 4,
+    denominator: 4,
+  };
+  const {
+    beatWidth,
+    fit,
+    geometry,
+    headersRef,
+    scrollRef,
+    setSnapPreset,
+    snapPreset,
+    trackPointer,
+    updateViewport,
+    viewport,
+    zoomIn,
+    zoomOut,
+  } = useArrangementTimelineViewport(
+    arrangement?.ppq ?? 960,
+    arrangement?.length_ticks ?? 1,
+    firstSignature,
+  );
   const sessionKey = authoringSessionKey("arrangement", assetKey(reference));
+
+  const playheadTick = useCallback(
+    () => useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick ?? 0,
+    [sessionKey],
+  );
+  const handleZoomIn = useCallback(() => zoomIn(playheadTick()), [playheadTick, zoomIn]);
+  const handleZoomOut = useCallback(() => zoomOut(playheadTick()), [playheadTick, zoomOut]);
+  const {
+    cancelGestureOrClearSelection,
+    clearSelection,
+    clipboardKind,
+    copySelection,
+    deleteItems,
+    diagnostic,
+    duplicateItems,
+    ensureAutomation,
+    moveItems,
+    pasteSelection,
+    resizeItems,
+    revealRequest,
+    runCommand,
+    selectAll,
+    selectItem,
+    selection,
+    setDiagnostic,
+    setGestureCancel,
+    setSelection,
+  } = useArrangementTimelineEditing({
+    anchorTick: playheadTick,
+    arrangement,
+    bundle,
+    reference,
+    snapTicks: geometry.snapTicks,
+  });
+
+  const deleteLane = useCallback(
+    (trackId: string, laneId: string) =>
+      runCommand("Delete automation lane", `arrangement.automation.${laneId}`, (draft) =>
+        deleteAutomationLane(draft, trackId, laneId),
+      ),
+    [runCommand],
+  );
+  const seekToTick = useCallback(
+    (tick: number) => {
+      authoringTransportActions.seek(sessionKey, tick);
+      const scroll = scrollRef.current;
+      if (!scroll) return;
+      scroll.scrollLeft = Math.max(0, ticksToPixels(tick, geometry) - scroll.clientWidth / 2);
+      updateViewport(scroll);
+    },
+    [geometry, scrollRef, sessionKey, updateViewport],
+  );
+  const lastCueTick = Math.max(
+    0,
+    ...(arrangement?.tracks.flatMap((track) =>
+      (track.clips ?? []).map((clip) => clip.start_tick),
+    ) ?? []),
+  );
+
+  useArrangementEditorShortcuts({
+    hasSelection: selection.items.length > 0,
+    sessionKey,
+    snapTicks: geometry.snapTicks,
+    ppq: arrangement?.ppq ?? 960,
+    onClearSelection: clearSelection,
+    onCopy: copySelection,
+    onDelete: () => deleteItems(selection.items),
+    onDuplicate: () => duplicateItems(selection.items),
+    onEscape: cancelGestureOrClearSelection,
+    onFit: fit,
+    onJumpToLastCue: () => seekToTick(lastCueTick),
+    onJumpToStart: () => seekToTick(0),
+    onMoveSelection: (deltaTick) => moveItems(selection.items, deltaTick),
+    onPaste: pasteSelection,
+    onRedo: projectActions.redo,
+    onResizeSelection: (deltaTick) => resizeItems(selection.items, deltaTick),
+    onSelectAll: selectAll,
+    onUndo: projectActions.undo,
+    onZoomIn: handleZoomIn,
+    onZoomOut: handleZoomOut,
+  });
 
   useEffect(() => {
     if (!arrangement) return;
@@ -67,22 +173,7 @@ export function ArrangementTimeline() {
 
   if (!arrangement) return null;
 
-  const runCommand = (
-    label: string,
-    path: string,
-    update: (draft: ArrangementDocument, bundle: ProjectBundle) => void,
-  ) => {
-    try {
-      projectActions.updateArrangement(reference, label, update);
-      setDiagnostic(null);
-      return true;
-    } catch (error) {
-      setDiagnostic(authoringDiagnostic(error, path));
-      return false;
-    }
-  };
-
-  const placeSelectedCue = () => {
+  const placeSelectedCue = (requestedTick?: number) => {
     const cue = selectedCue;
     const cueRef = cue ? { id: cue.id, revision: cue.revision } : null;
     if (!cue || !cueRef) {
@@ -94,9 +185,21 @@ export function ArrangementTimeline() {
       );
       return;
     }
+    if (!Number.isInteger(cue.nominal_length_ticks) || cue.nominal_length_ticks < 1) {
+      setDiagnostic(
+        authoringDiagnostic(
+          new Error("The selected Cue has an invalid nominal length."),
+          "arrangement.toolbar.place_cue",
+        ),
+      );
+      return;
+    }
     const durationTick = Math.min(arrangement.length_ticks, cue.nominal_length_ticks);
-    const cursorTick = useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick ?? 0;
-    const startTick = Math.min(arrangement.length_ticks - durationTick, cursorTick);
+    const rawCursorTick =
+      typeof requestedTick === "number"
+        ? requestedTick
+        : (useAuthoringTransportStore.getState().sessions[sessionKey]?.cursorTick ?? 0);
+    const startTick = clampAuthoringTick(rawCursorTick, arrangement.length_ticks - durationTick);
     const placed = runCommand(
       `Place Cue ${cue.name}`,
       "arrangement.toolbar.place_cue",
@@ -138,7 +241,9 @@ export function ArrangementTimeline() {
           layer: 0,
           layer_overrides: [],
         });
-        setSelectedClipId(id);
+        setSelection(
+          arrangementSelectionFromItems([{ type: "clip", trackId: track.id, clipId: id }]),
+        );
       },
     );
     if (placed) {
@@ -161,14 +266,18 @@ export function ArrangementTimeline() {
 
   const laneOptions = automationOptions(bundle, arrangement);
   const contentWidth = Math.max(
-    900,
-    ticksToPixels(arrangement.length_ticks + arrangement.ppq * 2, geometry),
+    scrollRef.current?.clientWidth ?? 0,
+    ticksToPixels(arrangement.length_ticks, geometry),
   );
-  const selected = selectedClipId
-    ? (arrangement.tracks
-        .flatMap((track) => track.clips ?? [])
-        .find((clip) => clip.id === selectedClipId) ?? null)
-    : null;
+  const primaryItem = selection.items.find(
+    (item) => arrangementSelectionItemKey(item) === selection.primary,
+  );
+  const selected =
+    primaryItem?.type === "clip"
+      ? (arrangement.tracks
+          .find((track) => track.id === primaryItem.trackId)
+          ?.clips?.find((clip) => clip.id === primaryItem.clipId) ?? null)
+      : null;
   const selectedCueName = selected
     ? (exactAsset(bundle.cues, selected.cue_ref)?.name ?? selected.cue_ref.id)
     : null;
@@ -179,40 +288,31 @@ export function ArrangementTimeline() {
       className="bg-card flex h-full min-h-0 flex-col"
       aria-label="Arrangement timeline"
       tabIndex={0}
-      onKeyDown={(event) => {
-        if (isTextEditingTarget(event.target) || (!event.metaKey && !event.ctrlKey)) return;
-        const key = event.key.toLowerCase();
-        if (key === "z") {
-          event.preventDefault();
-          if (event.shiftKey) projectActions.redo();
-          else projectActions.undo();
-        } else if (key === "y") {
-          event.preventDefault();
-          projectActions.redo();
-        }
-      }}
     >
       <ArrangementTimelineToolbar
-        arrangement={arrangement}
         beatWidth={beatWidth}
         bundle={bundle}
         canRedo={canRedo}
         canUndo={canUndo}
-        geometry={geometry}
+        focusMode={focusMode}
         onCreate={() => projectActions.createArrangement()}
         onDuplicate={() => projectActions.duplicateArrangement(reference)}
         onPlaceCue={placeSelectedCue}
         onRedo={projectActions.redo}
         onSelectArrangement={(next) => {
-          setSelectedClipId(null);
+          clearSelection();
           setDiagnostic(null);
           projectActions.selectArrangement(next);
         }}
         onUndo={projectActions.undo}
-        onZoomIn={() => zoom(beatWidth + BEAT_WIDTH_STEP)}
-        onZoomOut={() => zoom(beatWidth - BEAT_WIDTH_STEP)}
+        onFit={fit}
+        onSnapChange={setSnapPreset}
+        onToggleFocus={() => workspaceActions.setArrangeTimelineFocus(!focusMode)}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
         reference={reference}
         selectedCueName={selectedCue?.name ?? null}
+        snapPreset={snapPreset}
       />
       {diagnostic && !clipDiagnostic && (
         <AuthoringDiagnosticAlert
@@ -242,11 +342,13 @@ export function ArrangementTimeline() {
                   ),
               )
             }
+            onDeleteAutomationLane={deleteLane}
           />
           <div
             ref={scrollRef}
             data-arrangement-timeline-scroll
             className="bg-background relative min-w-0 flex-1 overflow-auto overscroll-none"
+            onPointerMove={(event) => trackPointer(event.clientX)}
             onScroll={(event) => {
               updateViewport(event.currentTarget);
               if (headersRef.current) headersRef.current.scrollTop = event.currentTarget.scrollTop;
@@ -265,20 +367,45 @@ export function ArrangementTimeline() {
                   geometry={geometry}
                   viewport={viewport}
                 />
-                <ArrangementTrackRows
+                <ArrangementMarquee
                   arrangement={arrangement}
                   bundle={bundle}
                   geometry={geometry}
-                  runCommand={runCommand}
-                  selectedClipId={selectedClipId}
-                  viewport={viewport}
+                  selection={selection}
                   viewportRef={scrollRef}
-                  onSnapPreview={updateSnapPreview}
-                  onSelectClip={(id) => {
-                    setSelectedClipId(id);
-                    setDiagnostic(null);
+                  onCancelReady={(cancel) => {
+                    setGestureCancel(cancel);
                   }}
-                />
+                  onSelectionChange={setSelection}
+                >
+                  <ArrangementTrackRows
+                    arrangement={arrangement}
+                    bundle={bundle}
+                    canPlaceCue={Boolean(selectedCue)}
+                    clipboardKind={clipboardKind}
+                    geometry={geometry}
+                    onCancelReady={setGestureCancel}
+                    onCopyItems={copySelection}
+                    onDeleteAutomationLane={deleteLane}
+                    onDeleteItems={deleteItems}
+                    onDuplicateItems={duplicateItems}
+                    onEnsureAutomation={ensureAutomation}
+                    runCommand={runCommand}
+                    revealRequest={revealRequest}
+                    selection={selection}
+                    viewport={viewport}
+                    viewportRef={scrollRef}
+                    onPasteAt={pasteSelection}
+                    onPlaceCueAt={placeSelectedCue}
+                    onMoveItems={moveItems}
+                    onResizeItems={resizeItems}
+                    onSelectItem={(item, modifiers) => {
+                      selectItem(item, modifiers);
+                      setDiagnostic(null);
+                    }}
+                    onSnapPreview={updateSnapPreview}
+                  />
+                </ArrangementMarquee>
               </div>
               <div
                 ref={snapGuideRef}
@@ -300,7 +427,7 @@ export function ArrangementTimeline() {
           cueName={selectedCueName}
           diagnostic={clipDiagnostic}
           onRecover={() => {
-            setSelectedClipId(null);
+            clearSelection();
             setDiagnostic(null);
           }}
           onUpdate={(changes) =>
@@ -309,24 +436,8 @@ export function ArrangementTimeline() {
               updateCueClip(draft, selected.id, changes),
             )
           }
-          onDelete={() =>
-            selected &&
-            runCommand("Delete CueClip", `arrangement.clip.${selected.id}.delete`, (draft) => {
-              deleteCueClip(draft, selected.id);
-              setSelectedClipId(null);
-            })
-          }
-          onDuplicate={() =>
-            selected &&
-            runCommand(
-              "Duplicate CueClip",
-              `arrangement.clip.${selected.id}.duplicate`,
-              (draft) => {
-                const id = duplicateCueClip(draft, selected.id, geometry.snapTicks);
-                setSelectedClipId(id);
-              },
-            )
-          }
+          onDelete={() => selected && deleteItems(selection.items)}
+          onDuplicate={() => selected && duplicateItems(selection.items)}
         />
       </div>
     </section>

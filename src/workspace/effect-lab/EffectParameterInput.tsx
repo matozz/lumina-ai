@@ -14,19 +14,26 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Toggle } from "@/components/ui/toggle";
+import {
+  parameterEnumValues,
+  parameterRange,
+  parameterStep,
+  parameterUnit,
+} from "@/document/effectParameter";
 
 export function EffectParameterInput({
   parameter,
+  value,
   readOnly,
   onChange,
 }: {
   parameter: ParameterDefinitionDSL;
+  value: ParameterValueDSL;
   readOnly: boolean;
   onChange: (value: ParameterValueDSL) => void;
 }) {
-  const value = parameter.default_value;
   if (value.type === "scalar") {
-    if (parameter.id === "speed" && parameter.unit === "multiplier") {
+    if (parameter.id === "speed" && parameterUnit(parameter) === "multiplier") {
       return (
         <BeatSyncSpeedSelect
           id={`effect-parameter-${parameter.id}`}
@@ -36,15 +43,22 @@ export function EffectParameterInput({
         />
       );
     }
-    return <ScalarInput parameter={parameter} readOnly={readOnly} onChange={onChange} />;
+    return (
+      <ScalarInput
+        parameter={parameter}
+        value={value.value}
+        readOnly={readOnly}
+        onChange={onChange}
+      />
+    );
   }
   if (value.type === "color") {
     return (
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
+      <div className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)] gap-2">
         <Input
           id={`effect-parameter-${parameter.id}`}
           aria-label={`${parameter.name} color picker`}
-          className="h-8 p-1"
+          className="h-6 p-0.5"
           type="color"
           value={validColorInput(value.value) ? value.value : "#000000"}
           disabled={readOnly}
@@ -52,7 +66,7 @@ export function EffectParameterInput({
         />
         <Input
           aria-label={`${parameter.name} color value`}
-          className="h-8 font-mono text-[10px]"
+          className="h-6 font-mono text-[10px]"
           value={value.value}
           disabled={readOnly}
           onChange={(event) => onChange({ type: "color", value: event.currentTarget.value })}
@@ -90,7 +104,7 @@ export function EffectParameterInput({
       <ValueSelect
         id={`effect-parameter-${parameter.id}`}
         value={value.value}
-        values={parameter.enum_values ?? []}
+        values={parameterEnumValues(parameter)}
         disabled={readOnly}
         onChange={(next) => onChange({ type: "enum", value: next })}
       />
@@ -108,30 +122,31 @@ export function EffectParameterInput({
 
 function ScalarInput({
   parameter,
+  value,
   readOnly,
   onChange,
 }: {
   parameter: ParameterDefinitionDSL;
+  value: number;
   readOnly: boolean;
   onChange: (value: ParameterValueDSL) => void;
 }) {
-  const value = parameter.default_value;
-  if (value.type !== "scalar") return null;
-  const [minimum, maximum] = parameter.range ?? [0, 1];
+  const range = parameterRange(parameter);
+  const [minimum, maximum] = range ?? [0, 1];
   return (
-    <div className="grid grid-cols-[1fr_4.5rem] items-center gap-2">
-      {parameter.range ? (
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_4.5rem] items-center gap-2">
+      {range ? (
         <Slider
           id={`effect-parameter-${parameter.id}`}
           min={minimum}
           max={maximum}
-          step={parameter.step ?? 0.01}
-          value={[value.value]}
+          step={parameterStep(parameter) ?? 0.01}
+          value={[value]}
           disabled={readOnly}
           onValueChange={(next) =>
             onChange({
               type: "scalar",
-              value: typeof next === "number" ? next : (next[0] ?? value.value),
+              value: typeof next === "number" ? next : (next[0] ?? value),
             })
           }
         />
@@ -140,12 +155,12 @@ function ScalarInput({
       )}
       <Input
         aria-label={`${parameter.name} numeric value`}
-        className="h-7 font-mono text-[10px] tabular-nums"
+        className="h-6 font-mono text-[10px] tabular-nums"
         type="number"
-        min={parameter.range?.[0]}
-        max={parameter.range?.[1]}
-        step={parameter.step ?? "any"}
-        value={value.value}
+        min={range?.[0]}
+        max={range?.[1]}
+        step={parameterStep(parameter) ?? "any"}
+        value={value}
         disabled={readOnly}
         onChange={(event) => {
           const next = Number(event.currentTarget.value);
@@ -215,7 +230,7 @@ function ColorStopsInput({
         <div key={index} className="grid grid-cols-[2.5rem_1fr_4rem_auto] items-center gap-1.5">
           <Input
             aria-label={`Color stop ${index + 1} color`}
-            className="h-7 p-1"
+            className="h-6 p-0.5"
             type="color"
             value={validColorInput(stop.color) ? stop.color : "#000000"}
             disabled={readOnly}
@@ -236,7 +251,7 @@ function ColorStopsInput({
           />
           <Input
             aria-label={`Color stop ${index + 1} numeric position`}
-            className="h-7 font-mono text-[10px]"
+            className="h-6 font-mono text-[10px]"
             type="number"
             min={0}
             max={1}

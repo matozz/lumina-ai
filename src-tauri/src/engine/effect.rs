@@ -112,46 +112,6 @@ impl ParameterValue {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ParameterUnit {
-    None,
-    Multiplier,
-    Cycles,
-    Percent,
-    Normalized,
-    Color,
-    Direction,
-    Degrees,
-    Boolean,
-    Choice,
-    ColorStops,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ParameterUiHint {
-    Slider,
-    Color,
-    Segmented,
-    Angle,
-    Toggle,
-    Select,
-    ColorStops,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AutomationPolicy {
-    Continuous,
-    Discrete,
-    Disabled,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ParameterOverridePolicy {
-    CueOverride,
-    EffectOnly,
-    Locked,
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum EffectSource {
@@ -211,12 +171,6 @@ pub enum LayoutCapability {
     TargetingScene,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
-pub struct EffectReplacement {
-    pub id: String,
-    pub revision: u32,
-}
-
 #[derive(Clone, Debug, PartialEq, serde::Serialize)]
 pub struct EffectCatalog {
     pub family: Option<EffectFamily>,
@@ -230,9 +184,6 @@ pub struct EffectCatalog {
     pub strobe_risk: StrobeRisk,
     pub required_attributes: Vec<String>,
     pub layout_capabilities: Vec<LayoutCapability>,
-    pub parameter_summary: Vec<String>,
-    pub deprecated: bool,
-    pub replacement: Option<EffectReplacement>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize)]
@@ -324,9 +275,6 @@ impl Default for EffectCatalog {
             strobe_risk: StrobeRisk::None,
             required_attributes: Vec::new(),
             layout_capabilities: Vec::new(),
-            parameter_summary: Vec::new(),
-            deprecated: false,
-            replacement: None,
         }
     }
 }
@@ -452,18 +400,9 @@ pub struct CompiledEffectGraph {
 pub struct ParameterDefinition {
     pub id: String,
     pub value_type: ParameterValueType,
-    pub default_value: ParameterValue,
+    pub default_value: Option<ParameterValue>,
     pub range: Option<(f64, f64)>,
-    pub step: Option<f64>,
-    pub required: Option<bool>,
-    pub help: Option<String>,
-    pub safe_fallback: Option<ParameterValue>,
-    pub override_policy: Option<ParameterOverridePolicy>,
-    pub advanced: Option<bool>,
     pub enum_values: Vec<String>,
-    pub unit: ParameterUnit,
-    pub ui_hint: ParameterUiHint,
-    pub automation: AutomationPolicy,
 }
 
 impl ParameterDefinition {
@@ -967,7 +906,7 @@ impl EffectInstance {
         self.parameter_overrides.get(&handle).or_else(|| {
             definition
                 .parameter(handle)
-                .map(|parameter| &parameter.default_value)
+                .and_then(|parameter| parameter.default_value.as_ref())
         })
     }
 
@@ -980,87 +919,27 @@ impl EffectInstance {
 
 pub fn common_parameters(default_speed: f64) -> Vec<ParameterDefinition> {
     vec![
-        scalar_parameter(
-            SPEED_PARAMETER_ID,
-            default_speed,
-            (0.25, 8.0),
-            ParameterUnit::Multiplier,
-            ParameterUiHint::Slider,
-        ),
-        scalar_parameter(
-            PHASE_PARAMETER_ID,
-            0.0,
-            (-1.0, 1.0),
-            ParameterUnit::Cycles,
-            ParameterUiHint::Slider,
-        ),
-        scalar_parameter(
-            WIDTH_PARAMETER_ID,
-            100.0,
-            (0.0, 100.0),
-            ParameterUnit::Percent,
-            ParameterUiHint::Slider,
-        ),
-        scalar_parameter(
-            TRANSITION_PARAMETER_ID,
-            100.0,
-            (0.0, 100.0),
-            ParameterUnit::Percent,
-            ParameterUiHint::Slider,
-        ),
-        scalar_parameter(
-            INTENSITY_PARAMETER_ID,
-            1.0,
-            (0.0, 1.0),
-            ParameterUnit::Normalized,
-            ParameterUiHint::Slider,
-        ),
+        scalar_parameter(SPEED_PARAMETER_ID, default_speed, (0.25, 8.0)),
+        scalar_parameter(PHASE_PARAMETER_ID, 0.0, (-1.0, 1.0)),
+        scalar_parameter(WIDTH_PARAMETER_ID, 100.0, (0.0, 100.0)),
+        scalar_parameter(TRANSITION_PARAMETER_ID, 100.0, (0.0, 100.0)),
+        scalar_parameter(INTENSITY_PARAMETER_ID, 1.0, (0.0, 1.0)),
         ParameterDefinition {
             id: COLOR_PARAMETER_ID.to_string(),
             value_type: ParameterValueType::Color,
-            default_value: ParameterValue::Color([255, 255, 255]),
+            default_value: Some(ParameterValue::Color([255, 255, 255])),
             range: None,
-            step: None,
-            required: None,
-            help: None,
-            safe_fallback: None,
-            override_policy: None,
-            advanced: None,
             enum_values: Vec::new(),
-            unit: ParameterUnit::Color,
-            ui_hint: ParameterUiHint::Color,
-            automation: AutomationPolicy::Continuous,
         },
         ParameterDefinition {
             id: DIRECTION_PARAMETER_ID.to_string(),
             value_type: ParameterValueType::Direction,
-            default_value: ParameterValue::Direction(Direction::Forward),
+            default_value: Some(ParameterValue::Direction(Direction::Forward)),
             range: None,
-            step: None,
-            required: None,
-            help: None,
-            safe_fallback: None,
-            override_policy: None,
-            advanced: None,
             enum_values: Vec::new(),
-            unit: ParameterUnit::Direction,
-            ui_hint: ParameterUiHint::Segmented,
-            automation: AutomationPolicy::Discrete,
         },
-        scalar_parameter(
-            PAN_PARAMETER_ID,
-            0.0,
-            (-540.0, 540.0),
-            ParameterUnit::Degrees,
-            ParameterUiHint::Angle,
-        ),
-        scalar_parameter(
-            TILT_PARAMETER_ID,
-            0.0,
-            (-270.0, 270.0),
-            ParameterUnit::Degrees,
-            ParameterUiHint::Angle,
-        ),
+        scalar_parameter(PAN_PARAMETER_ID, 0.0, (-540.0, 540.0)),
+        scalar_parameter(TILT_PARAMETER_ID, 0.0, (-270.0, 270.0)),
     ]
 }
 
@@ -1080,28 +959,13 @@ pub fn common_parameter_handle(id: &str) -> Option<ParameterHandle> {
     ParameterHandle::from_index(index)
 }
 
-fn scalar_parameter(
-    id: &str,
-    default_value: f64,
-    range: (f64, f64),
-    unit: ParameterUnit,
-    ui_hint: ParameterUiHint,
-) -> ParameterDefinition {
+fn scalar_parameter(id: &str, default_value: f64, range: (f64, f64)) -> ParameterDefinition {
     ParameterDefinition {
         id: id.to_string(),
         value_type: ParameterValueType::Scalar,
-        default_value: ParameterValue::Scalar(default_value),
+        default_value: Some(ParameterValue::Scalar(default_value)),
         range: Some(range),
-        step: None,
-        required: None,
-        help: None,
-        safe_fallback: None,
-        override_policy: None,
-        advanced: None,
         enum_values: Vec::new(),
-        unit,
-        ui_hint,
-        automation: AutomationPolicy::Continuous,
     }
 }
 
@@ -1218,7 +1082,7 @@ mod tests {
         assert_eq!(
             definition
                 .parameter(speed)
-                .map(|value| &value.default_value),
+                .and_then(|value| value.default_value.as_ref()),
             Some(&ParameterValue::Scalar(1.0))
         );
         assert_eq!(instance.seed, EffectInstance::stable_seed("pulse-a"));

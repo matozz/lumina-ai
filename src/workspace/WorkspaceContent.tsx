@@ -4,22 +4,63 @@ import { CanvasView } from "@/canvas/CanvasView";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { exactAsset } from "@/document/projectModel";
+import { cn } from "@/lib/utils";
 import { projectSelectors, useProjectStore } from "@/stores/project";
 import type { WorkspaceId } from "@/stores/workspace";
+import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/stores/workspace";
 import { EffectLabPreview } from "./effect-lab/EffectLabPreview";
 import { CuePreview } from "./cues/CuePreview";
 import { ArrangementTimeline } from "./arrange/ArrangementTimeline";
 import { WorkspacePanelHeader } from "./WorkspacePanelHeader";
 
 export function WorkspaceContent({ workspace }: { workspace: WorkspaceId }) {
+  const arrangeTimelineFocus = useWorkspaceStore(workspaceSelectors.arrangeTimelineFocus);
+  const arrangePreviewSize = useWorkspaceStore(workspaceSelectors.arrangePreviewSize);
   if (workspace === "arrange") {
+    if (arrangeTimelineFocus) {
+      return (
+        <div className="flex h-full min-h-0 flex-col" data-arrange-focus-mode>
+          <WorkspaceSurface workspace={workspace} compact />
+          <div className="min-h-0 flex-1">
+            <ArrangementTimeline />
+          </div>
+        </div>
+      );
+    }
     return (
-      <ResizablePanelGroup orientation="vertical" className="min-h-0">
-        <ResizablePanel id="arrange-preview" defaultSize="43%" minSize="28%">
+      <ResizablePanelGroup
+        id="arrange-editor-split"
+        orientation="vertical"
+        className="min-h-0"
+        defaultLayout={{
+          "arrange-preview": arrangePreviewSize,
+          "arrange-timeline": 100 - arrangePreviewSize,
+        }}
+        onLayoutChanged={(layout, meta) => {
+          if (meta.isUserInteraction && layout["arrange-preview"] !== undefined) {
+            workspaceActions.setArrangePreviewSize(layout["arrange-preview"]);
+          }
+        }}
+      >
+        <ResizablePanel id="arrange-preview" defaultSize={`${arrangePreviewSize}%`} minSize="10rem">
           <WorkspaceSurface workspace={workspace} />
         </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel id="arrange-timeline" defaultSize="57%" minSize="36%">
+        <ResizableHandle
+          withHandle
+          onKeyDownCapture={(event) => {
+            if (
+              (event.metaKey || event.ctrlKey) &&
+              (event.key === "ArrowUp" || event.key === "ArrowDown")
+            ) {
+              event.preventDefault();
+            }
+          }}
+        />
+        <ResizablePanel
+          id="arrange-timeline"
+          defaultSize={`${100 - arrangePreviewSize}%`}
+          minSize="12rem"
+        >
           <ArrangementTimeline />
         </ResizablePanel>
       </ResizablePanelGroup>
@@ -32,7 +73,13 @@ export function WorkspaceContent({ workspace }: { workspace: WorkspaceId }) {
   return <WorkspaceSurface workspace={workspace} />;
 }
 
-function WorkspaceSurface({ workspace }: { workspace: WorkspaceId }) {
+function WorkspaceSurface({
+  workspace,
+  compact = false,
+}: {
+  workspace: WorkspaceId;
+  compact?: boolean;
+}) {
   const bundle = useProjectStore(projectSelectors.bundle);
   const arrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
   const previewError = useProjectStore(projectSelectors.previewError);
@@ -41,7 +88,13 @@ function WorkspaceSurface({ workspace }: { workspace: WorkspaceId }) {
   const Icon = meta.icon;
 
   return (
-    <section className="bg-background relative flex h-full min-h-0 flex-col">
+    <section
+      className={cn(
+        "bg-background relative flex min-h-0 flex-col",
+        compact ? "shrink-0" : "h-full",
+      )}
+      data-arrange-preview-compact={compact || undefined}
+    >
       <WorkspacePanelHeader icon={Icon} title={meta.title}>
         <span className="text-muted-foreground min-w-0 truncate text-[10px]">
           {meta.description}
@@ -57,22 +110,24 @@ function WorkspaceSurface({ workspace }: { workspace: WorkspaceId }) {
           arrangement={arrangement}
         />
       )}
-      <div className="relative min-h-0 flex-1">
-        <CanvasView
-          frameSource={workspace === "live" ? "live" : "preview"}
-          showIntensityWithoutColor={workspace === "arrange"}
-          layoutOnly={workspace === "stage"}
-        />
-        {workspace === "arrange" && previewError && (
-          <div className="bg-background/80 absolute inset-0 flex items-center justify-center p-6 backdrop-blur-sm">
-            <Alert variant="destructive" className="max-w-md">
-              <TriangleAlert aria-hidden="true" />
-              <AlertTitle>Arrangement preview unavailable</AlertTitle>
-              <AlertDescription>{previewError}</AlertDescription>
-            </Alert>
-          </div>
-        )}
-      </div>
+      {!compact && (
+        <div className="relative min-h-0 flex-1">
+          <CanvasView
+            frameSource={workspace === "live" ? "live" : "preview"}
+            showIntensityWithoutColor={workspace === "arrange"}
+            layoutOnly={workspace === "stage"}
+          />
+          {workspace === "arrange" && previewError && (
+            <div className="bg-background/80 absolute inset-0 flex items-center justify-center p-6 backdrop-blur-sm">
+              <Alert variant="destructive" className="max-w-md">
+                <TriangleAlert aria-hidden="true" />
+                <AlertTitle>Arrangement preview unavailable</AlertTitle>
+                <AlertDescription>{previewError}</AlertDescription>
+              </Alert>
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }

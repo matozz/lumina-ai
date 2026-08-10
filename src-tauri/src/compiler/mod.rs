@@ -9,13 +9,12 @@ use crate::engine::animation::AnimatableValue;
 use crate::engine::attribute::{resolve_attribute, AttributeHandle};
 use crate::engine::color::parse_hex_color;
 use crate::engine::effect::{
-    deterministic_random, AutomationPolicy, CatalogVisibility, CompiledColorStop,
-    CompiledEffectGraph, CompiledEffectNode, CompiledEffectStep, CompiledProfileSequence,
-    Direction, EffectCatalog, EffectCatalogMatch, EffectCatalogQuery, EffectDefinition,
-    EffectDefinitionHandle, EffectFamily, EffectInstance, EffectNodeHandle, EffectReplacement,
-    EffectSource, LayoutCapability, MathOperation, MotionTag, OscillatorWaveform,
-    ParameterDefinition, ParameterHandle, ParameterOverridePolicy, ParameterUiHint, ParameterUnit,
-    ParameterValue, ParameterValueType, SpatialBasis, StrobeRisk,
+    deterministic_random, CatalogVisibility, CompiledColorStop, CompiledEffectGraph,
+    CompiledEffectNode, CompiledEffectStep, CompiledProfileSequence, Direction, EffectCatalog,
+    EffectCatalogMatch, EffectCatalogQuery, EffectDefinition, EffectDefinitionHandle, EffectFamily,
+    EffectInstance, EffectNodeHandle, EffectSource, LayoutCapability, MathOperation, MotionTag,
+    OscillatorWaveform, ParameterDefinition, ParameterHandle, ParameterValue, ParameterValueType,
+    SpatialBasis, StrobeRisk,
 };
 use crate::engine::musical_time::{MusicalTime, TempoMap, TempoPoint};
 use crate::engine::profile::{
@@ -1302,15 +1301,6 @@ fn compile_effect_catalog(catalog: &EffectCatalogDSL) -> EffectCatalog {
                 LayoutCapabilityDSL::TargetingScene => LayoutCapability::TargetingScene,
             })
             .collect(),
-        parameter_summary: catalog.parameter_summary.clone(),
-        deprecated: catalog.deprecated,
-        replacement: catalog
-            .replacement
-            .as_ref()
-            .map(|replacement| EffectReplacement {
-                id: replacement.id.clone(),
-                revision: replacement.revision,
-            }),
     }
 }
 
@@ -1683,10 +1673,13 @@ fn compile_parameter_definition(
     parameter: &ParameterDefinitionDSL,
     errors: &mut Vec<Diagnostic>,
 ) -> Option<ParameterDefinition> {
-    let default_value = compile_parameter_value(&parameter.default_value, errors)?;
+    let default_value = match parameter.default_value() {
+        Some(value) => Some(compile_parameter_value(&value, errors)?),
+        None => None,
+    };
     Some(ParameterDefinition {
         id: parameter.id.clone(),
-        value_type: match parameter.value_type {
+        value_type: match parameter.value_type() {
             ParameterValueTypeDSL::Scalar => ParameterValueType::Scalar,
             ParameterValueTypeDSL::Color => ParameterValueType::Color,
             ParameterValueTypeDSL::Direction => ParameterValueType::Direction,
@@ -1695,48 +1688,8 @@ fn compile_parameter_definition(
             ParameterValueTypeDSL::ColorStops => ParameterValueType::ColorStops,
         },
         default_value,
-        range: parameter.range,
-        step: parameter.step,
-        required: parameter.required,
-        help: parameter.help.clone(),
-        safe_fallback: parameter
-            .safe_fallback
-            .as_ref()
-            .and_then(|fallback| compile_parameter_value(fallback, errors)),
-        override_policy: parameter.override_policy.map(|policy| match policy {
-            ParameterOverridePolicyDSL::CueOverride => ParameterOverridePolicy::CueOverride,
-            ParameterOverridePolicyDSL::EffectOnly => ParameterOverridePolicy::EffectOnly,
-            ParameterOverridePolicyDSL::Locked => ParameterOverridePolicy::Locked,
-        }),
-        advanced: parameter.advanced,
-        enum_values: parameter.enum_values.clone(),
-        unit: match parameter.unit {
-            ParameterUnitDSL::None => ParameterUnit::None,
-            ParameterUnitDSL::Multiplier => ParameterUnit::Multiplier,
-            ParameterUnitDSL::Cycles => ParameterUnit::Cycles,
-            ParameterUnitDSL::Percent => ParameterUnit::Percent,
-            ParameterUnitDSL::Normalized => ParameterUnit::Normalized,
-            ParameterUnitDSL::Color => ParameterUnit::Color,
-            ParameterUnitDSL::Direction => ParameterUnit::Direction,
-            ParameterUnitDSL::Degrees => ParameterUnit::Degrees,
-            ParameterUnitDSL::Boolean => ParameterUnit::Boolean,
-            ParameterUnitDSL::Choice => ParameterUnit::Choice,
-            ParameterUnitDSL::ColorStops => ParameterUnit::ColorStops,
-        },
-        ui_hint: match parameter.ui_hint {
-            ParameterUiHintDSL::Slider => ParameterUiHint::Slider,
-            ParameterUiHintDSL::Color => ParameterUiHint::Color,
-            ParameterUiHintDSL::Segmented => ParameterUiHint::Segmented,
-            ParameterUiHintDSL::Angle => ParameterUiHint::Angle,
-            ParameterUiHintDSL::Toggle => ParameterUiHint::Toggle,
-            ParameterUiHintDSL::Select => ParameterUiHint::Select,
-            ParameterUiHintDSL::ColorStops => ParameterUiHint::ColorStops,
-        },
-        automation: match parameter.automation {
-            AutomationPolicyDSL::Continuous => AutomationPolicy::Continuous,
-            AutomationPolicyDSL::Discrete => AutomationPolicy::Discrete,
-            AutomationPolicyDSL::Disabled => AutomationPolicy::Disabled,
-        },
+        range: parameter.range(),
+        enum_values: parameter.enum_values().to_vec(),
     })
 }
 
@@ -1823,12 +1776,15 @@ mod tests {
         "parameters": [{
           "id": "speed",
           "name": "Speed",
-          "value_type": "scalar",
-          "default_value": { "type": "scalar", "value": 1.0 },
-          "range": [0.25, 8.0],
-          "unit": "multiplier",
-          "ui_hint": "slider",
-          "automation": "continuous"
+          "schema": {
+            "type": "scalar",
+            "default": 1.0,
+            "range": { "min": 0.25, "max": 8.0, "step": 0.25 },
+            "unit": "multiplier"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Beat-synced playback speed."
         }],
         "graph": { "nodes": [
           { "type": "time", "id": "time" },

@@ -7,12 +7,15 @@ const option: AutomationParameterOption = {
   definition: {
     id: "speed",
     name: "Speed",
-    value_type: "scalar",
-    default_value: { type: "scalar", value: 1 },
-    range: [0.1, 4],
-    unit: "multiplier",
-    ui_hint: "slider",
-    automation: "continuous",
+    schema: {
+      type: "scalar",
+      default: 1,
+      range: { min: 0.1, max: 4, step: 0.1 },
+      unit: "multiplier",
+    },
+    scope: "arrangement",
+    section: "main",
+    help: "Playback speed.",
   },
   initialValue: { type: "scalar", value: 2 },
   target: {

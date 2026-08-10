@@ -37,6 +37,7 @@ export const DroppableTrack = memo((props: TrackProps) => {
           event.dataTransfer.dropEffect = "copy";
         }}
         onDrop={(event) => actions.onDropEffect(event, track.id)}
+        data-native-drop-target
         data-track-name={track.id}
       >
         {selectedPhaser && (

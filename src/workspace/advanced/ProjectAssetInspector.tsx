@@ -102,7 +102,10 @@ export function ProjectAssetInspector({ workspace }: { workspace: WorkspaceId })
         </Select>
       </WorkspacePanelHeader>
       <ScrollArea className="min-h-0 flex-1">
-        <pre className="text-foreground overflow-x-auto p-4 font-mono text-xs leading-relaxed">
+        <pre
+          className="text-foreground overflow-x-auto p-4 font-mono text-xs leading-relaxed"
+          data-user-select="text"
+        >
           {JSON.stringify(value, null, 2)}
         </pre>
       </ScrollArea>

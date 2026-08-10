@@ -212,10 +212,6 @@
       "additionalProperties": false,
       "required": ["id", "revision"]
     },
-    "AutomationPolicyDSL": {
-      "type": "string",
-      "enum": ["continuous", "discrete", "disabled"]
-    },
     "CatalogVisibilityDSL": {
       "type": "string",
       "enum": ["standard", "advanced", "hidden"]
@@ -603,10 +599,6 @@
           "maximum": 1.0,
           "minimum": 0.0
         },
-        "deprecated": {
-          "type": "boolean",
-          "default": false
-        },
         "energy": {
           "type": "number",
           "format": "float",
@@ -637,22 +629,6 @@
         },
         "motion": {
           "$ref": "#/$defs/MotionTagDSL"
-        },
-        "parameter_summary": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "replacement": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/EffectReplacementDSL"
-            },
-            {
-              "type": "null"
-            }
-          ]
         },
         "required_attributes": {
           "type": "array",
@@ -1104,21 +1080,6 @@
       },
       "additionalProperties": false,
       "required": ["node_id", "port"]
-    },
-    "EffectReplacementDSL": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "revision": {
-          "type": "integer",
-          "format": "uint32",
-          "minimum": 1
-        }
-      },
-      "additionalProperties": false,
-      "required": ["id", "revision"]
     },
     "EffectSourceDSL": {
       "type": "string",
@@ -1956,21 +1917,6 @@
     "ParameterDefinitionDSL": {
       "type": "object",
       "properties": {
-        "advanced": {
-          "type": ["boolean", "null"]
-        },
-        "automation": {
-          "$ref": "#/$defs/AutomationPolicyDSL"
-        },
-        "default_value": {
-          "$ref": "#/$defs/ParameterValueDSL"
-        },
-        "enum_values": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
         "graph_binding": {
           "anyOf": [
             {
@@ -1982,7 +1928,7 @@
           ]
         },
         "help": {
-          "type": ["string", "null"]
+          "type": "string"
         },
         "id": {
           "type": "string"
@@ -1990,60 +1936,18 @@
         "name": {
           "type": "string"
         },
-        "override_policy": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ParameterOverridePolicyDSL"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "schema": {
+          "$ref": "#/$defs/ParameterSchemaDSL"
         },
-        "range": {
-          "type": ["array", "null"],
-          "maxItems": 2,
-          "minItems": 2,
-          "prefixItems": [
-            {
-              "type": "number",
-              "format": "double"
-            },
-            {
-              "type": "number",
-              "format": "double"
-            }
-          ]
+        "scope": {
+          "$ref": "#/$defs/ParameterScopeDSL"
         },
-        "required": {
-          "type": ["boolean", "null"]
-        },
-        "safe_fallback": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ParameterValueDSL"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "step": {
-          "type": ["number", "null"],
-          "format": "double"
-        },
-        "ui_hint": {
-          "$ref": "#/$defs/ParameterUiHintDSL"
-        },
-        "unit": {
-          "$ref": "#/$defs/ParameterUnitDSL"
-        },
-        "value_type": {
-          "$ref": "#/$defs/ParameterValueTypeDSL"
+        "section": {
+          "$ref": "#/$defs/ParameterSectionDSL"
         }
       },
       "additionalProperties": false,
-      "required": ["id", "name", "value_type", "default_value", "unit", "ui_hint", "automation"]
+      "required": ["id", "name", "schema", "scope", "section", "help"]
     },
     "ParameterGraphBindingDSL": {
       "type": "object",
@@ -2058,29 +1962,117 @@
       "additionalProperties": false,
       "required": ["node_id", "property"]
     },
-    "ParameterOverridePolicyDSL": {
-      "type": "string",
-      "enum": ["cue_override", "effect_only", "locked"]
-    },
-    "ParameterUiHintDSL": {
-      "type": "string",
-      "enum": ["slider", "color", "segmented", "angle", "toggle", "select", "color_stops"]
-    },
-    "ParameterUnitDSL": {
-      "type": "string",
-      "enum": [
-        "none",
-        "multiplier",
-        "cycles",
-        "percent",
-        "normalized",
-        "color",
-        "direction",
-        "degrees",
-        "boolean",
-        "choice",
-        "color_stops"
+    "ParameterSchemaDSL": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "default": {
+              "type": "number",
+              "format": "double"
+            },
+            "range": {
+              "$ref": "#/$defs/ScalarParameterRangeDSL"
+            },
+            "type": {
+              "type": "string",
+              "const": "scalar"
+            },
+            "unit": {
+              "$ref": "#/$defs/ScalarParameterUnitDSL"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "default", "range", "unit"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "default": {
+              "type": ["string", "null"]
+            },
+            "type": {
+              "type": "string",
+              "const": "color"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "default": {
+              "$ref": "#/$defs/DirectionDSL"
+            },
+            "type": {
+              "type": "string",
+              "const": "direction"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "default"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "default": {
+              "type": "boolean"
+            },
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "default"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "default": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "enum"
+            },
+            "values": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "default", "values"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "default": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ColorStopDSL"
+              }
+            },
+            "type": {
+              "type": "string",
+              "const": "color_stops"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "default"]
+        }
       ]
+    },
+    "ParameterScopeDSL": {
+      "type": "string",
+      "enum": ["effect", "cue", "arrangement"]
+    },
+    "ParameterSectionDSL": {
+      "type": "string",
+      "enum": ["main", "advanced"]
     },
     "ParameterValueDSL": {
       "oneOf": [
@@ -2174,10 +2166,6 @@
         }
       ]
     },
-    "ParameterValueTypeDSL": {
-      "type": "string",
-      "enum": ["scalar", "color", "direction", "boolean", "enum", "color_stops"]
-    },
     "PatchDSL": {
       "type": "object",
       "properties": {
@@ -2269,6 +2257,29 @@
         "arrangement_refs",
         "active_arrangement_id"
       ]
+    },
+    "ScalarParameterRangeDSL": {
+      "type": "object",
+      "properties": {
+        "max": {
+          "type": "number",
+          "format": "double"
+        },
+        "min": {
+          "type": "number",
+          "format": "double"
+        },
+        "step": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["min", "max", "step"]
+    },
+    "ScalarParameterUnitDSL": {
+      "type": "string",
+      "enum": ["none", "multiplier", "cycles", "percent", "normalized", "degrees"]
     },
     "SequenceStepDSL": {
       "type": "object",
