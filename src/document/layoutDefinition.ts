@@ -397,6 +397,18 @@ export function circleRingDensity(increment: number) {
   return Math.max(1, Math.floor(increment));
 }
 
+export function polygonFixtureSpacing(geometry: Extract<LayoutGeometry, { shape: "polygon" }>) {
+  return (2 * geometry.radius * Math.sin(Math.PI / geometry.sides)) / geometry.fixtures_per_side;
+}
+
+export function polygonRadiusForFixtureSpacing(
+  sides: number,
+  fixturesPerSide: number,
+  fixtureSpacing: number,
+) {
+  return (fixtureSpacing * fixturesPerSide) / (2 * Math.sin(Math.PI / sides));
+}
+
 function sectorPositions(
   geometry: Extract<LayoutGeometry, { shape: "sector" }>,
   fixtureIds: number[],
