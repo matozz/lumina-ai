@@ -8,7 +8,7 @@ import {
 export function createStarterProject(): FullDSL {
   return {
     schema_version: 1,
-    meta: { name: "Untitled DJ Set" },
+    meta: { name: "DJ Set" },
     patch: [{ profile_id: "generic-rgb", id_range: [1, DEFAULT_STAGE_FIXTURE_COUNT] }],
     layout: {
       type: "generator",

@@ -66,7 +66,7 @@ export function createStarterProjectBundle(): ProjectBundle {
       schema_version: 1,
       project_id: "lumina-project",
       revision: 1,
-      name: "Untitled Lighting Project",
+      name: "Lighting Project",
       stage_ref: { id: template.stage.id, revision: template.stage.revision },
       layout_refs: structuredClone(template.layout_refs),
       effect_refs: [...effectRefs.values()].map((reference) => structuredClone(reference)),

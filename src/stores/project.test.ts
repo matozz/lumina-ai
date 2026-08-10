@@ -222,7 +222,7 @@ describe("Stage 7 Project state", () => {
       migrate?.({ bundle: cachedBundle, selectedEffectRef: toAssetRef(legacyEffect) }, 13),
     )) as ReturnType<typeof useProjectStore.getState>;
 
-    expect(migrated.bundle.manifest.name).toBe("Untitled Lighting Project");
+    expect(migrated.bundle.manifest.name).toBe("Lighting Project");
     expect(migrated.selectedEffectRef).toBeNull();
     expect(migrated.bundle.effects).toEqual(
       expect.arrayContaining([
