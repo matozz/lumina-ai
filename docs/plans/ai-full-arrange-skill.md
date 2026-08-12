@@ -1,6 +1,6 @@
 # AI Full Arrange Skill 独立后续规划
 
-> 状态：基于已完成的 `docs/plans/arrange-editor-experience.md`、当前 Effect 参数 contract 和 Project 文件夹持久化模型的独立后续方向文档。本文件本身不授权或实施 Full Arrange Skill。
+> 状态：首个 repo-local 可用版本已于 2026-08-13 实现于 `.agents/skills/lumina-full-arrange/`。当前交付覆盖显式 Base Pack / Project Pack 输入、资产审查、对话式 brief、新 Project Pack 生成、校验和 section 局部调优；真实窗口、computer-use、App transaction、authoring bridge 与 Live 验收仍是后续方向。
 >
 > 核心决定：这不是固定 pattern 自动生成器，也不应引入 Rust generation engine。Skill 以用户显式提供的 Base Asset Pack 或 Project Pack 为入口，通过多轮对话理解输入资产、设计音乐叙事、创建或修改一版完整 Arrangement，再结合用户试听和视觉反馈持续打磨。
 
