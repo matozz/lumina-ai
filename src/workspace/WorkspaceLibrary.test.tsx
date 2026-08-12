@@ -53,13 +53,13 @@ describe("Live workspace library", () => {
 
     expectCompactLibraryItem(screen.getByRole("button", { name: /Main Matrix 20×20/ }));
     expect(screen.getByText("Generated")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /Sine Ribbon 160 Formula/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Sine Ribbon 50 Formula/ }));
     expect(useProjectStore.getState().selectedLayoutRef).toEqual({
-      id: "builtin.layout.formula-sine-160",
+      id: "builtin.layout.formula-sine-50",
       revision: 1,
     });
     expect(screen.queryByRole("button", { name: /Duplicate Main Matrix 20×20/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Duplicate Sine Ribbon 160/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Duplicate Sine Ribbon 50/ })).toBeNull();
   });
 
   it("opens an Effect preview stopped until the user presses Play", () => {

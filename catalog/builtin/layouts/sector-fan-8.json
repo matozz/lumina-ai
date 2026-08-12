@@ -8,7 +8,7 @@
   "geometry": {
     "shape": "sector",
     "rings": 8,
-    "segments": 6,
+    "segments": 5,
     "fixture_size": { "width": 10, "height": 10 },
     "ring_gap": 12,
     "ring_pitch": 22,

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "id": "builtin.layout.formula-sine-160",
+  "id": "builtin.layout.formula-arch-40",
   "revision": 1,
-  "name": "Sine Ribbon 160",
+  "name": "Parabolic Arch 40",
   "category": "generated_advanced",
   "editor": {
     "mode": "parameter_schema",
@@ -28,11 +28,11 @@
   "geometry": {
     "shape": "formula",
     "formula": {
-      "x": "t * 64",
-      "y": "sin(t) * 80",
-      "t_range": [0, 25.132741228718345],
-      "count": 160,
-      "scale": 1
+      "x": "t * 12",
+      "y": "pow(t, 2) * 0.035",
+      "t_range": [-80, 80],
+      "count": 40,
+      "scale": 0.3
     },
     "fixture_size": { "width": 8, "height": 8 }
   }

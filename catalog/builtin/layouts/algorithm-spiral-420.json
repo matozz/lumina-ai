@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "id": "builtin.layout.algorithm-spiral-200",
+  "id": "builtin.layout.algorithm-spiral-420",
   "revision": 1,
-  "name": "Spiral Sculpture 200",
+  "name": "Spiral Sculpture 420",
   "category": "generated_advanced",
   "editor": {
     "mode": "parameter_schema",
@@ -28,9 +28,9 @@
   "geometry": {
     "shape": "algorithm",
     "algorithm": "spiral",
-    "count": 200,
+    "count": 420,
     "fixture_size": { "width": 8, "height": 8 },
     "origin": { "x": 0, "y": 0 },
-    "parameters": { "turns": 4.5, "radius": 320 }
+    "parameters": { "turns": 10, "radius": 260 }
   }
 }
