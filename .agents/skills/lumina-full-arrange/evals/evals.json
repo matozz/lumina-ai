@@ -1,0 +1,45 @@
+{
+  "skill_name": "lumina-full-arrange",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Use the attached Lumina Base Pack to create a complete 32-bar 4/4 house lighting arrangement at 128 BPM. These creative decisions are confirmed, so proceed without another approval turn: bars 1-8 cool blue foundation, 9-16 magenta buildup with a restrained speed/intensity rise, 17-24 warm amber first drop with clear quadrant call-response, 25-28 blue-violet breakdown, and 29-32 a distinct second-drop/outro hybrid that resolves cleanly. No strobe. Reuse built-in Effects read-only; create the smallest necessary project-local Cues and a project-local Arrangement named `Midnight Geometry 128`. Write a new Project Pack in the requested output directory, never overwrite the input, and include a concise brief/audit/validation transcript.",
+      "expected_output": "A new, validated UserAssetPack V1 containing an end-to-end 32-bar project-local Arrangement and project-local Cue bindings while preserving every built-in dependency and the input file.",
+      "files": ["evals/files/base-assets.lumina-assets.json"],
+      "expectations": [
+        "The output is a schema-, reference-, exact-ref-, and semantic-valid UserAssetPack V1.",
+        "The input file hash is unchanged and the output uses a different filename.",
+        "Every built-in asset present in both input and output is deeply unchanged; every created or customized Effect is project_local and every created Cue/Arrangement has a non-built-in ID.",
+        "`Midnight Geometry 128` uses PPQ 960, 128 BPM, 4/4, 122880 total ticks, legal integer Clip/keyframe ranges, and has no unexplained empty tail.",
+        "CueClips reference Cues only and contain no TargetSet field; exact Cue/Effect/Stage/Layout dependencies resolve.",
+        "The transcript includes the pack inventory, Effect/Cue audit, confirmed full Arrangement brief, and validation handoff without exposing raw Layer IDs."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Modify the attached Project Pack containing `House 128 Custom`. Read the actual document rather than trusting its name. The only confirmed change is to create a new import-safe Arrangement variant named `House 128 Custom – Bars 29–36 Draft` that fills bars 29-36 as a restrained breakdown into a center/edges call-response rebuild. Preserve BPM, meter, PPQ, total length, every existing Clip and automation point before bar 29, and keep bars 37-64 intentionally empty. Do not alter unrelated Effects/Cues or overwrite the input. Write a new validated Project Pack and a concise audit/brief/diff transcript.",
+      "expected_output": "A new validated Project Pack variant that detects the actual 132 BPM, 64-bar length, 28-bar occupied end and four existing lanes, changes only bars 29-36, and preserves the intentional tail.",
+      "files": ["evals/files/house-128-custom-project-pack.lumina-assets.json"],
+      "expectations": [
+        "The output is a schema-, reference-, exact-ref-, and semantic-valid UserAssetPack V1 and the input hash is unchanged.",
+        "The transcript reports actual 132 BPM despite the name, PPQ 960, 4/4, 64 bars, the source occupied end at bar 28, 39 existing Clips, four automation lanes, and the original empty tail.",
+        "The output contains a new non-built-in Arrangement variant with 132 BPM and 245760 ticks; it preserves all source Clips and automation before bar 29 exactly.",
+        "New content is confined to bars 29-36 and there are no Clips or keyframes in bars 37-64.",
+        "Unrelated Effects/Cues and built-ins are unchanged; any copied asset is project-local and exact references resolve.",
+        "CueClips contain no targeting field, and the transcript states the preservation boundary and intentional empty tail without exposing raw Layer IDs."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Evaluate whether `lumina-full-arrange` should trigger for each request below and save a concise JSON decision file plus a short rationale. A: 'Here is my Base Pack; review the Effects/Cues and build a full 48-bar show with two different drops.' B: 'Please change the color default on this one Effect.' C: 'Move this Cue's intensity automation point half a beat later.' D: 'Fix the Timeline resize jitter in the React UI.' E: 'Here is a Project Pack; finish the empty second half of my Arrangement and tune the buildup/drop energy curve.' Classify each independently; do not generate an asset pack.",
+      "expected_output": "A trigger-boundary decision artifact where only the complete Arrangement requests A and E trigger, while single Effect, single point/Cue, and UI implementation requests do not.",
+      "files": [],
+      "expectations": [
+        "The decision file is valid JSON and classifies A and E as trigger=true.",
+        "The decision file classifies B, C, and D as trigger=false.",
+        "The rationale distinguishes full Arrangement collaboration from single-asset, single-point, and Timeline UI work.",
+        "No Lumina asset pack is generated."
+      ]
+    }
+  ]
+}

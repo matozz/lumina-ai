@@ -1,0 +1,2073 @@
+{
+  "schema_version": 1,
+  "id": "asset-pack-house-128-custom-reference",
+  "name": "House 128 Custom Project Pack",
+  "source_project_id": "project.house-128-custom-reference",
+  "stages": [
+    {
+      "schema_version": 1,
+      "id": "main-stage",
+      "revision": 1,
+      "name": "Main Stage",
+      "patch": [
+        {
+          "profile_id": "generic-rgb",
+          "id_range": [1, 400]
+        }
+      ],
+      "layout_ref": {
+        "id": "builtin.layout.matrix-main-20x20",
+        "revision": 1
+      },
+      "groups": [
+        {
+          "id": "all-fixtures",
+          "name": "All fixtures",
+          "fixtures": {
+            "range": [1, 400]
+          },
+          "sort_by": "none"
+        }
+      ],
+      "target_sets": [
+        {
+          "id": "all",
+          "name": "All",
+          "selector": {
+            "type": "all"
+          }
+        },
+        {
+          "id": "rows",
+          "name": "Rows",
+          "selector": {
+            "type": "rows",
+            "indices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+          }
+        },
+        {
+          "id": "columns",
+          "name": "Columns",
+          "selector": {
+            "type": "columns",
+            "indices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+          }
+        },
+        {
+          "id": "zone-2x2-1",
+          "name": "2×2 · Top left",
+          "selector": {
+            "type": "grid_zones",
+            "rows": 2,
+            "columns": 2,
+            "zones": [
+              {
+                "row": 0,
+                "column": 0
+              }
+            ]
+          }
+        },
+        {
+          "id": "zone-2x2-2",
+          "name": "2×2 · Top right",
+          "selector": {
+            "type": "grid_zones",
+            "rows": 2,
+            "columns": 2,
+            "zones": [
+              {
+                "row": 0,
+                "column": 1
+              }
+            ]
+          }
+        },
+        {
+          "id": "zone-2x2-3",
+          "name": "2×2 · Bottom left",
+          "selector": {
+            "type": "grid_zones",
+            "rows": 2,
+            "columns": 2,
+            "zones": [
+              {
+                "row": 1,
+                "column": 0
+              }
+            ]
+          }
+        },
+        {
+          "id": "zone-2x2-4",
+          "name": "2×2 · Bottom right",
+          "selector": {
+            "type": "grid_zones",
+            "rows": 2,
+            "columns": 2,
+            "zones": [
+              {
+                "row": 1,
+                "column": 1
+              }
+            ]
+          }
+        },
+        {
+          "id": "zone-4x4-1",
+          "name": "4×4 · Top left",
+          "selector": {
+            "type": "grid_zones",
+            "rows": 4,
+            "columns": 4,
+            "zones": [
+              {
+                "row": 0,
+                "column": 0
+              }
+            ]
+          }
+        },
+        {
+          "id": "zone-4x4-4",
+          "name": "4×4 · Top right",
+          "selector": {
+            "type": "grid_zones",
+            "rows": 4,
+            "columns": 4,
+            "zones": [
+              {
+                "row": 0,
+                "column": 3
+              }
+            ]
+          }
+        },
+        {
+          "id": "zone-4x4-13",
+          "name": "4×4 · Bottom left",
+          "selector": {
+            "type": "grid_zones",
+            "rows": 4,
+            "columns": 4,
+            "zones": [
+              {
+                "row": 3,
+                "column": 0
+              }
+            ]
+          }
+        },
+        {
+          "id": "zone-4x4-16",
+          "name": "4×4 · Bottom right",
+          "selector": {
+            "type": "grid_zones",
+            "rows": 4,
+            "columns": 4,
+            "zones": [
+              {
+                "row": 3,
+                "column": 3
+              }
+            ]
+          }
+        },
+        {
+          "id": "zones-3x3",
+          "name": "3×3 Sequence Zones",
+          "selector": {
+            "type": "grid_zones",
+            "rows": 3,
+            "columns": 3,
+            "zones": [
+              {
+                "row": 0,
+                "column": 0
+              },
+              {
+                "row": 0,
+                "column": 1
+              },
+              {
+                "row": 0,
+                "column": 2
+              },
+              {
+                "row": 1,
+                "column": 0
+              },
+              {
+                "row": 1,
+                "column": 1
+              },
+              {
+                "row": 1,
+                "column": 2
+              },
+              {
+                "row": 2,
+                "column": 0
+              },
+              {
+                "row": 2,
+                "column": 1
+              },
+              {
+                "row": 2,
+                "column": 2
+              }
+            ]
+          }
+        },
+        {
+          "id": "checkerboard",
+          "name": "Checkerboard",
+          "selector": {
+            "type": "checkerboard",
+            "parity": "even"
+          }
+        },
+        {
+          "id": "center",
+          "name": "Center",
+          "selector": {
+            "type": "center_edges",
+            "region": "center",
+            "thickness": 5
+          }
+        },
+        {
+          "id": "edges",
+          "name": "Edges",
+          "selector": {
+            "type": "center_edges",
+            "region": "edges",
+            "thickness": 2
+          }
+        }
+      ],
+      "targeting_scenes": [
+        {
+          "id": "all-zones-all",
+          "name": "All → 3×3 Zones → All",
+          "looped": false,
+          "phase_continuity": true,
+          "steps": [
+            {
+              "id": "all-in",
+              "selection": {
+                "target_set_id": "all"
+              },
+              "duration": {
+                "value": 1,
+                "unit": "bar"
+              },
+              "transition": {
+                "type": "hard"
+              }
+            },
+            {
+              "id": "zone-1",
+              "selection": {
+                "target_set_id": "zones-3x3",
+                "partition_index": 0
+              },
+              "duration": {
+                "value": 1,
+                "unit": "bar"
+              },
+              "transition": {
+                "type": "hard"
+              }
+            },
+            {
+              "id": "zone-2",
+              "selection": {
+                "target_set_id": "zones-3x3",
+                "partition_index": 1
+              },
+              "duration": {
+                "value": 1,
+                "unit": "bar"
+              },
+              "transition": {
+                "type": "hard"
+              }
+            },
+            {
+              "id": "zone-3",
+              "selection": {
+                "target_set_id": "zones-3x3",
+                "partition_index": 2
+              },
+              "duration": {
+                "value": 1,
+                "unit": "bar"
+              },
+              "transition": {
+                "type": "hard"
+              }
+            },
+            {
+              "id": "zone-4",
+              "selection": {
+                "target_set_id": "zones-3x3",
+                "partition_index": 3
+              },
+              "duration": {
+                "value": 1,
+                "unit": "bar"
+              },
+              "transition": {
+                "type": "hard"
+              }
+            },
+            {
+              "id": "zone-5",
+              "selection": {
+                "target_set_id": "zones-3x3",
+                "partition_index": 4
+              },
+              "duration": {
+                "value": 1,
+                "unit": "bar"
+              },
+              "transition": {
+                "type": "hard"
+              }
+            },
+            {
+              "id": "zone-6",
+              "selection": {
+                "target_set_id": "zones-3x3",
+                "partition_index": 5
+              },
+              "duration": {
+                "value": 1,
+                "unit": "bar"
+              },
+              "transition": {
+                "type": "hard"
+              }
+            },
+            {
+              "id": "zone-7",
+              "selection": {
+                "target_set_id": "zones-3x3",
+                "partition_index": 6
+              },
+              "duration": {
+                "value": 1,
+                "unit": "bar"
+              },
+              "transition": {
+                "type": "hard"
+              }
+            },
+            {
+              "id": "zone-8",
+              "selection": {
+                "target_set_id": "zones-3x3",
+                "partition_index": 7
+              },
+              "duration": {
+                "value": 1,
+                "unit": "bar"
+              },
+              "transition": {
+                "type": "hard"
+              }
+            },
+            {
+              "id": "zone-9",
+              "selection": {
+                "target_set_id": "zones-3x3",
+                "partition_index": 8
+              },
+              "duration": {
+                "value": 1,
+                "unit": "bar"
+              },
+              "transition": {
+                "type": "hard"
+              }
+            },
+            {
+              "id": "all-out",
+              "selection": {
+                "target_set_id": "all"
+              },
+              "duration": {
+                "value": 1,
+                "unit": "bar"
+              },
+              "transition": {
+                "type": "weighted",
+                "duration": {
+                  "value": 1,
+                  "unit": "beat"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "layouts": [
+    {
+      "schema_version": 1,
+      "id": "builtin.layout.matrix-main-20x20",
+      "revision": 1,
+      "name": "Main Matrix 20×20",
+      "category": "basic",
+      "editor": {
+        "mode": "form"
+      },
+      "geometry": {
+        "shape": "matrix",
+        "rows": 20,
+        "columns": 20,
+        "fixture_size": {
+          "width": 12,
+          "height": 12
+        },
+        "gap": {
+          "x": 8,
+          "y": 8
+        },
+        "pitch": {
+          "x": 20,
+          "y": 20
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    }
+  ],
+  "effects": [
+    {
+      "schema_version": 1,
+      "id": "builtin.color.dual-sweep",
+      "name": "Gradient Drift",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "schema": {
+            "type": "scalar",
+            "default": 1,
+            "range": {
+              "min": 0.25,
+              "max": 8,
+              "step": 0.25
+            },
+            "unit": "multiplier"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Beat-synced sweep speed."
+        },
+        {
+          "id": "phase",
+          "name": "Phase",
+          "schema": {
+            "type": "scalar",
+            "default": 0,
+            "range": {
+              "min": -1,
+              "max": 1,
+              "step": 0.05
+            },
+            "unit": "cycles"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Sweep cycle offset."
+        },
+        {
+          "id": "palette",
+          "name": "Palette",
+          "schema": {
+            "type": "color_stops",
+            "default": [
+              {
+                "position": 0,
+                "color": "#FF3B81"
+              },
+              {
+                "position": 1,
+                "color": "#2ED3FF"
+              }
+            ]
+          },
+          "scope": "effect",
+          "section": "advanced",
+          "help": "Two-color sweep palette.",
+          "graph_binding": {
+            "node_id": "gradient",
+            "property": "color_stops"
+          }
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "schema": {
+            "type": "color"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "type": "time",
+            "id": "time"
+          },
+          {
+            "type": "spatial_phase",
+            "id": "spatial",
+            "input": {
+              "node_id": "time",
+              "port": "scalar"
+            },
+            "basis": "y",
+            "from": 0,
+            "to": 1,
+            "wrap": true,
+            "custom_order": []
+          },
+          {
+            "type": "color_gradient",
+            "id": "gradient",
+            "input": {
+              "node_id": "spatial",
+              "port": "scalar"
+            },
+            "stops": [
+              {
+                "position": 0,
+                "color": "#FF3B81"
+              },
+              {
+                "position": 1,
+                "color": "#2ED3FF"
+              }
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": {
+              "node_id": "gradient",
+              "port": "color"
+            },
+            "attribute_id": "color.rgb"
+          },
+          {
+            "type": "constant",
+            "id": "visible-intensity",
+            "value": {
+              "type": "scalar",
+              "value": 1
+            }
+          },
+          {
+            "type": "attribute_writer",
+            "id": "intensity-writer",
+            "input": {
+              "node_id": "visible-intensity",
+              "port": "scalar"
+            },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "color",
+        "category": "Color Motion",
+        "visibility": "standard",
+        "mood": ["modern", "clean"],
+        "energy": 0.55,
+        "density": 0.75,
+        "motion": "sweep",
+        "colorfulness": 0.9,
+        "strobe_risk": "none",
+        "required_attributes": ["color.rgb", "intensity"],
+        "layout_capabilities": ["coordinates"]
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.intensity.breathe",
+      "name": "Breathe",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "schema": {
+            "type": "scalar",
+            "default": 0.5,
+            "range": {
+              "min": 0.25,
+              "max": 8,
+              "step": 0.25
+            },
+            "unit": "multiplier"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Beat-synced breathing speed."
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "schema": {
+            "type": "scalar",
+            "default": 0.7,
+            "range": {
+              "min": 0,
+              "max": 1,
+              "step": 0.05
+            },
+            "unit": "normalized"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Maximum dimmer output."
+        },
+        {
+          "id": "attack",
+          "name": "Attack",
+          "schema": {
+            "type": "scalar",
+            "default": 0.35,
+            "range": {
+              "min": 0,
+              "max": 1,
+              "step": 0.05
+            },
+            "unit": "normalized"
+          },
+          "scope": "effect",
+          "section": "advanced",
+          "help": "Soft rise fraction.",
+          "graph_binding": {
+            "node_id": "envelope",
+            "property": "attack"
+          }
+        },
+        {
+          "id": "release",
+          "name": "Release",
+          "schema": {
+            "type": "scalar",
+            "default": 0.65,
+            "range": {
+              "min": 0,
+              "max": 1,
+              "step": 0.05
+            },
+            "unit": "normalized"
+          },
+          "scope": "effect",
+          "section": "advanced",
+          "help": "Soft fall fraction.",
+          "graph_binding": {
+            "node_id": "envelope",
+            "property": "release"
+          }
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "schema": {
+            "type": "color"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "type": "time",
+            "id": "time"
+          },
+          {
+            "type": "oscillator",
+            "id": "oscillator",
+            "waveform": "sine",
+            "phase": {
+              "node_id": "time",
+              "port": "scalar"
+            }
+          },
+          {
+            "type": "envelope",
+            "id": "envelope",
+            "input": {
+              "node_id": "oscillator",
+              "port": "scalar"
+            },
+            "attack": 0.35,
+            "release": 0.65
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": {
+              "node_id": "envelope",
+              "port": "scalar"
+            },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "intensity",
+        "category": "Atmosphere",
+        "visibility": "standard",
+        "mood": ["calm", "ambient"],
+        "energy": 0.25,
+        "density": 0.35,
+        "motion": "organic",
+        "colorfulness": 0,
+        "strobe_risk": "none",
+        "required_attributes": ["intensity"],
+        "layout_capabilities": ["any"]
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.spatial.column-ping-pong",
+      "name": "Column Ping-Pong",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "schema": {
+            "type": "scalar",
+            "default": 1,
+            "range": {
+              "min": 0.25,
+              "max": 8,
+              "step": 0.25
+            },
+            "unit": "multiplier"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Beat-synced left-to-right and right-to-left travel speed."
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "schema": {
+            "type": "scalar",
+            "default": 0.9,
+            "range": {
+              "min": 0,
+              "max": 1,
+              "step": 0.05
+            },
+            "unit": "normalized"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Peak output of the traveling column."
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "schema": {
+            "type": "color"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "type": "time",
+            "id": "time"
+          },
+          {
+            "type": "oscillator",
+            "id": "travel-position",
+            "waveform": "triangle",
+            "phase": {
+              "node_id": "time",
+              "port": "scalar"
+            }
+          },
+          {
+            "type": "map",
+            "id": "endpoint-overrun",
+            "input": {
+              "node_id": "travel-position",
+              "port": "scalar"
+            },
+            "input_range": [0, 1],
+            "output_range": [-0.08, 1.08]
+          },
+          {
+            "type": "clamp",
+            "id": "endpoint-dwell",
+            "input": {
+              "node_id": "endpoint-overrun",
+              "port": "scalar"
+            },
+            "min": 0,
+            "max": 1
+          },
+          {
+            "type": "spatial_phase",
+            "id": "column-distance",
+            "input": {
+              "node_id": "endpoint-dwell",
+              "port": "scalar"
+            },
+            "basis": "x",
+            "from": 0,
+            "to": 1,
+            "wrap": false,
+            "custom_order": []
+          },
+          {
+            "type": "fixture_mask",
+            "id": "traveling-column",
+            "input": {
+              "node_id": "column-distance",
+              "port": "scalar"
+            },
+            "min": -0.065,
+            "max": 0.065
+          },
+          {
+            "type": "constant",
+            "id": "level",
+            "value": {
+              "type": "scalar",
+              "value": 1
+            }
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": {
+              "node_id": "level",
+              "port": "scalar"
+            },
+            "mask": {
+              "node_id": "traveling-column",
+              "port": "mask"
+            },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "spatial",
+        "category": "Chases",
+        "visibility": "standard",
+        "mood": ["playful", "kinetic"],
+        "energy": 0.7,
+        "density": 0.3,
+        "motion": "chase",
+        "colorfulness": 0,
+        "strobe_risk": "none",
+        "required_attributes": ["intensity"],
+        "layout_capabilities": ["matrix", "coordinates"]
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.spatial.column-rain",
+      "name": "Seeded Column Rain",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "schema": {
+            "type": "scalar",
+            "default": 1,
+            "range": {
+              "min": 0.25,
+              "max": 8,
+              "step": 0.25
+            },
+            "unit": "multiplier"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Beat-synced top-to-bottom rainfall speed."
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "schema": {
+            "type": "scalar",
+            "default": 0.85,
+            "range": {
+              "min": 0,
+              "max": 1,
+              "step": 0.05
+            },
+            "unit": "normalized"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Peak output of each falling column segment."
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "schema": {
+            "type": "color"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "type": "time",
+            "id": "time"
+          },
+          {
+            "type": "spatial_phase",
+            "id": "seeded-column-phase",
+            "input": {
+              "node_id": "time",
+              "port": "scalar"
+            },
+            "basis": "random_x",
+            "from": 0,
+            "to": 1,
+            "wrap": true,
+            "custom_order": []
+          },
+          {
+            "type": "spatial_phase",
+            "id": "falling-row-phase",
+            "input": {
+              "node_id": "seeded-column-phase",
+              "port": "scalar"
+            },
+            "basis": "y",
+            "from": 0,
+            "to": 1,
+            "wrap": true,
+            "custom_order": []
+          },
+          {
+            "type": "fixture_mask",
+            "id": "rain-head",
+            "input": {
+              "node_id": "falling-row-phase",
+              "port": "scalar"
+            },
+            "min": 0,
+            "max": 0.18
+          },
+          {
+            "type": "constant",
+            "id": "level",
+            "value": {
+              "type": "scalar",
+              "value": 1
+            }
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": {
+              "node_id": "level",
+              "port": "scalar"
+            },
+            "mask": {
+              "node_id": "rain-head",
+              "port": "mask"
+            },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "spatial",
+        "category": "Chases",
+        "visibility": "standard",
+        "mood": ["textured", "kinetic"],
+        "energy": 0.65,
+        "density": 0.35,
+        "motion": "chase",
+        "colorfulness": 0,
+        "strobe_risk": "none",
+        "required_attributes": ["intensity"],
+        "layout_capabilities": ["matrix", "coordinates"]
+      }
+    }
+  ],
+  "cues": [
+    {
+      "schema_version": 1,
+      "id": "starter.cue.quadrant-motion",
+      "revision": 1,
+      "name": "Quadrant Motion Dialogue",
+      "compatible_stage_ref": {
+        "id": "main-stage",
+        "revision": 1
+      },
+      "nominal_length_ticks": 15360,
+      "layers": [
+        {
+          "id": "layer_3e3tmku2poix5zrt",
+          "effect_ref": {
+            "id": "builtin.spatial.column-ping-pong",
+            "revision": 1
+          },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-1"
+          },
+          "parameter_overrides": {
+            "speed": {
+              "type": "scalar",
+              "value": 1
+            },
+            "intensity": {
+              "type": "scalar",
+              "value": 0.9
+            }
+          },
+          "phase": 0,
+          "seed": "2100000000000001",
+          "layer": 0,
+          "priority": 0,
+          "trigger_policy": {
+            "mode": "timeline",
+            "quantize": "beat"
+          }
+        },
+        {
+          "id": "layer_rmrvzr7biw4vox57",
+          "effect_ref": {
+            "id": "builtin.spatial.column-rain",
+            "revision": 1
+          },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-2"
+          },
+          "parameter_overrides": {
+            "speed": {
+              "type": "scalar",
+              "value": 1
+            },
+            "intensity": {
+              "type": "scalar",
+              "value": 0.85
+            }
+          },
+          "phase": 0,
+          "seed": "2100000000000002",
+          "layer": 1,
+          "priority": 0,
+          "trigger_policy": {
+            "mode": "timeline",
+            "quantize": "beat"
+          }
+        },
+        {
+          "id": "layer_tbekn4kbc4yh22up",
+          "effect_ref": {
+            "id": "builtin.color.dual-sweep",
+            "revision": 1
+          },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-3"
+          },
+          "parameter_overrides": {
+            "speed": {
+              "type": "scalar",
+              "value": 1
+            },
+            "phase": {
+              "type": "scalar",
+              "value": 0
+            }
+          },
+          "phase": 0,
+          "seed": "2100000000000003",
+          "layer": 2,
+          "priority": 0,
+          "trigger_policy": {
+            "mode": "timeline",
+            "quantize": "beat"
+          }
+        },
+        {
+          "id": "layer_74iyonq7anv37xv2",
+          "effect_ref": {
+            "id": "builtin.intensity.breathe",
+            "revision": 1
+          },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-4"
+          },
+          "parameter_overrides": {
+            "speed": {
+              "type": "scalar",
+              "value": 1
+            },
+            "intensity": {
+              "type": "scalar",
+              "value": 0.7
+            }
+          },
+          "phase": 0,
+          "seed": "2100000000000004",
+          "layer": 3,
+          "priority": 0,
+          "trigger_policy": {
+            "mode": "timeline",
+            "quantize": "beat"
+          }
+        }
+      ],
+      "trigger_policy": {
+        "mode": "timeline",
+        "quantize": "bar"
+      },
+      "capability_summary": {
+        "required_attributes": ["color.rgb", "intensity"]
+      },
+      "risk_summary": {
+        "strobe_risk": "none"
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "starter.cue.corner-top-left",
+      "revision": 1,
+      "name": "Corner · Top Left Ping-Pong",
+      "compatible_stage_ref": {
+        "id": "main-stage",
+        "revision": 1
+      },
+      "nominal_length_ticks": 7680,
+      "layers": [
+        {
+          "id": "layer_c7v4dilw4gplwd35",
+          "effect_ref": {
+            "id": "builtin.spatial.column-ping-pong",
+            "revision": 1
+          },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-1"
+          },
+          "parameter_overrides": {
+            "speed": {
+              "type": "scalar",
+              "value": 1
+            },
+            "intensity": {
+              "type": "scalar",
+              "value": 0.9
+            }
+          },
+          "phase": 0,
+          "seed": "2200000000000001",
+          "layer": 0,
+          "priority": 0,
+          "trigger_policy": {
+            "mode": "timeline",
+            "quantize": "beat"
+          }
+        }
+      ],
+      "trigger_policy": {
+        "mode": "timeline",
+        "quantize": "beat"
+      },
+      "capability_summary": {
+        "required_attributes": ["intensity"]
+      },
+      "risk_summary": {
+        "strobe_risk": "none"
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "starter.cue.corner-top-right",
+      "revision": 1,
+      "name": "Corner · Top Right Rain",
+      "compatible_stage_ref": {
+        "id": "main-stage",
+        "revision": 1
+      },
+      "nominal_length_ticks": 7680,
+      "layers": [
+        {
+          "id": "layer_3gvzosqmxbtgiiad",
+          "effect_ref": {
+            "id": "builtin.spatial.column-rain",
+            "revision": 1
+          },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-2"
+          },
+          "parameter_overrides": {
+            "speed": {
+              "type": "scalar",
+              "value": 1
+            },
+            "intensity": {
+              "type": "scalar",
+              "value": 0.85
+            }
+          },
+          "phase": 0,
+          "seed": "2200000000000002",
+          "layer": 0,
+          "priority": 0,
+          "trigger_policy": {
+            "mode": "timeline",
+            "quantize": "beat"
+          }
+        }
+      ],
+      "trigger_policy": {
+        "mode": "timeline",
+        "quantize": "beat"
+      },
+      "capability_summary": {
+        "required_attributes": ["intensity"]
+      },
+      "risk_summary": {
+        "strobe_risk": "none"
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "starter.cue.corner-bottom-left",
+      "revision": 1,
+      "name": "Corner · Bottom Left Gradient",
+      "compatible_stage_ref": {
+        "id": "main-stage",
+        "revision": 1
+      },
+      "nominal_length_ticks": 7680,
+      "layers": [
+        {
+          "id": "layer_untftli3dktwu5uv",
+          "effect_ref": {
+            "id": "builtin.color.dual-sweep",
+            "revision": 1
+          },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-3"
+          },
+          "parameter_overrides": {
+            "speed": {
+              "type": "scalar",
+              "value": 1
+            },
+            "phase": {
+              "type": "scalar",
+              "value": 0
+            }
+          },
+          "phase": 0,
+          "seed": "2200000000000003",
+          "layer": 0,
+          "priority": 0,
+          "trigger_policy": {
+            "mode": "timeline",
+            "quantize": "beat"
+          }
+        }
+      ],
+      "trigger_policy": {
+        "mode": "timeline",
+        "quantize": "beat"
+      },
+      "capability_summary": {
+        "required_attributes": ["color.rgb", "intensity"]
+      },
+      "risk_summary": {
+        "strobe_risk": "none"
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "starter.cue.corner-bottom-right",
+      "revision": 1,
+      "name": "Corner · Bottom Right Breathe",
+      "compatible_stage_ref": {
+        "id": "main-stage",
+        "revision": 1
+      },
+      "nominal_length_ticks": 7680,
+      "layers": [
+        {
+          "id": "layer_zewjnwomcic3be4n",
+          "effect_ref": {
+            "id": "builtin.intensity.breathe",
+            "revision": 1
+          },
+          "target_set_ref": {
+            "stage_id": "main-stage",
+            "stage_revision": 1,
+            "target_set_id": "zone-2x2-4"
+          },
+          "parameter_overrides": {
+            "speed": {
+              "type": "scalar",
+              "value": 1
+            },
+            "intensity": {
+              "type": "scalar",
+              "value": 0.7
+            }
+          },
+          "phase": 0,
+          "seed": "2200000000000004",
+          "layer": 0,
+          "priority": 0,
+          "trigger_policy": {
+            "mode": "timeline",
+            "quantize": "beat"
+          }
+        }
+      ],
+      "trigger_policy": {
+        "mode": "timeline",
+        "quantize": "beat"
+      },
+      "capability_summary": {
+        "required_attributes": ["intensity"]
+      },
+      "risk_summary": {
+        "strobe_risk": "none"
+      }
+    }
+  ],
+  "arrangements": [
+    {
+      "schema_version": 1,
+      "id": "project.arrangement.house-128-custom",
+      "revision": 2,
+      "name": "House 128 Custom",
+      "ppq": 960,
+      "tempo_map": {
+        "points": [
+          {
+            "time_tick": 0,
+            "bpm": 132
+          }
+        ]
+      },
+      "time_signatures": [
+        {
+          "time_tick": 0,
+          "numerator": 4,
+          "denominator": 4
+        }
+      ],
+      "length_ticks": 245760,
+      "tracks": [
+        {
+          "id": "cues",
+          "name": "Cues",
+          "overlap_policy": "layer",
+          "clips": [
+            {
+              "id": "foundation",
+              "cue_ref": {
+                "id": "starter.cue.quadrant-motion",
+                "revision": 1
+              },
+              "start_tick": 0,
+              "duration_tick": 30720,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "buildup",
+              "cue_ref": {
+                "id": "starter.cue.quadrant-motion",
+                "revision": 1
+              },
+              "start_tick": 30720,
+              "duration_tick": 30720,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-01",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-left",
+                "revision": 1
+              },
+              "start_tick": 61440,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-02",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-right",
+                "revision": 1
+              },
+              "start_tick": 62400,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-03",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-left",
+                "revision": 1
+              },
+              "start_tick": 63360,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-04",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-right",
+                "revision": 1
+              },
+              "start_tick": 64320,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-05",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-left",
+                "revision": 1
+              },
+              "start_tick": 65280,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-06",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-right",
+                "revision": 1
+              },
+              "start_tick": 66240,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-07",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-left",
+                "revision": 1
+              },
+              "start_tick": 67200,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-08",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-right",
+                "revision": 1
+              },
+              "start_tick": 68160,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-09",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-left",
+                "revision": 1
+              },
+              "start_tick": 69120,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-10",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-right",
+                "revision": 1
+              },
+              "start_tick": 70080,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-11",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-left",
+                "revision": 1
+              },
+              "start_tick": 71040,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-12",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-right",
+                "revision": 1
+              },
+              "start_tick": 72000,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-13",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-left",
+                "revision": 1
+              },
+              "start_tick": 72960,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-14",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-right",
+                "revision": 1
+              },
+              "start_tick": 73920,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-15",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-left",
+                "revision": 1
+              },
+              "start_tick": 74880,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-16",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-right",
+                "revision": 1
+              },
+              "start_tick": 75840,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-17",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-left",
+                "revision": 1
+              },
+              "start_tick": 76800,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-18",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-right",
+                "revision": 1
+              },
+              "start_tick": 77760,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-19",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-left",
+                "revision": 1
+              },
+              "start_tick": 78720,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-20",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-right",
+                "revision": 1
+              },
+              "start_tick": 79680,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-21",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-left",
+                "revision": 1
+              },
+              "start_tick": 80640,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-22",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-right",
+                "revision": 1
+              },
+              "start_tick": 81600,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-23",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-left",
+                "revision": 1
+              },
+              "start_tick": 82560,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-24",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-right",
+                "revision": 1
+              },
+              "start_tick": 83520,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-25",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-left",
+                "revision": 1
+              },
+              "start_tick": 84480,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-26",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-right",
+                "revision": 1
+              },
+              "start_tick": 85440,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-27",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-left",
+                "revision": 1
+              },
+              "start_tick": 86400,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-28",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-right",
+                "revision": 1
+              },
+              "start_tick": 87360,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-29",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-left",
+                "revision": 1
+              },
+              "start_tick": 88320,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-30",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-right",
+                "revision": 1
+              },
+              "start_tick": 89280,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-31",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-left",
+                "revision": 1
+              },
+              "start_tick": 90240,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-32",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-right",
+                "revision": 1
+              },
+              "start_tick": 91200,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-33",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-left",
+                "revision": 1
+              },
+              "start_tick": 92160,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-34",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-right",
+                "revision": 1
+              },
+              "start_tick": 93120,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "alternating-drop-35",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-left",
+                "revision": 1
+              },
+              "start_tick": 94080,
+              "duration_tick": 960,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "transition",
+              "cue_ref": {
+                "id": "starter.cue.corner-top-left",
+                "revision": 1
+              },
+              "start_tick": 95040,
+              "duration_tick": 4800,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            },
+            {
+              "id": "recovery",
+              "cue_ref": {
+                "id": "starter.cue.corner-bottom-right",
+                "revision": 1
+              },
+              "start_tick": 99840,
+              "duration_tick": 7680,
+              "source_offset_tick": 0,
+              "playback": "loop",
+              "layer": 0,
+              "layer_overrides": []
+            }
+          ],
+          "automation_lanes": [
+            {
+              "id": "foundation-speed",
+              "target": {
+                "scope": "cue_layer",
+                "clip_id": "foundation",
+                "layer_id": "layer_3e3tmku2poix5zrt",
+                "parameter_id": "speed"
+              },
+              "keyframes": [
+                {
+                  "id": "foundation-speed-start",
+                  "time_tick": 0,
+                  "value": {
+                    "type": "scalar",
+                    "value": 0.5
+                  },
+                  "interpolation": "linear"
+                },
+                {
+                  "id": "foundation-speed-end",
+                  "time_tick": 30719,
+                  "value": {
+                    "type": "scalar",
+                    "value": 1
+                  },
+                  "interpolation": "linear"
+                }
+              ]
+            },
+            {
+              "id": "buildup-intensity",
+              "target": {
+                "scope": "cue_layer",
+                "clip_id": "buildup",
+                "layer_id": "layer_3e3tmku2poix5zrt",
+                "parameter_id": "intensity"
+              },
+              "keyframes": [
+                {
+                  "id": "buildup-intensity-start",
+                  "time_tick": 30720,
+                  "value": {
+                    "type": "scalar",
+                    "value": 0.4
+                  },
+                  "interpolation": "linear"
+                },
+                {
+                  "id": "buildup-intensity-end",
+                  "time_tick": 61439,
+                  "value": {
+                    "type": "scalar",
+                    "value": 1
+                  },
+                  "interpolation": "linear"
+                }
+              ]
+            },
+            {
+              "id": "transition-speed",
+              "target": {
+                "scope": "cue_layer",
+                "clip_id": "transition",
+                "layer_id": "layer_c7v4dilw4gplwd35",
+                "parameter_id": "speed"
+              },
+              "keyframes": [
+                {
+                  "id": "transition-speed-start",
+                  "time_tick": 95040,
+                  "value": {
+                    "type": "scalar",
+                    "value": 2
+                  },
+                  "interpolation": "linear"
+                },
+                {
+                  "id": "transition-speed-end",
+                  "time_tick": 99839,
+                  "value": {
+                    "type": "scalar",
+                    "value": 0.5
+                  },
+                  "interpolation": "linear"
+                }
+              ]
+            },
+            {
+              "id": "recovery-intensity",
+              "target": {
+                "scope": "cue_layer",
+                "clip_id": "recovery",
+                "layer_id": "layer_zewjnwomcic3be4n",
+                "parameter_id": "intensity"
+              },
+              "keyframes": [
+                {
+                  "id": "recovery-intensity-start",
+                  "time_tick": 99840,
+                  "value": {
+                    "type": "scalar",
+                    "value": 0.7
+                  },
+                  "interpolation": "linear"
+                },
+                {
+                  "id": "recovery-intensity-end",
+                  "time_tick": 107519,
+                  "value": {
+                    "type": "scalar",
+                    "value": 0.2
+                  },
+                  "interpolation": "linear"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "markers": [
+        {
+          "id": "foundation",
+          "name": "Foundation",
+          "time_tick": 0
+        },
+        {
+          "id": "buildup",
+          "name": "Buildup",
+          "time_tick": 30720
+        },
+        {
+          "id": "alternating-drop",
+          "name": "Alternating Drop",
+          "time_tick": 61440
+        },
+        {
+          "id": "transition",
+          "name": "Transition",
+          "time_tick": 92160
+        },
+        {
+          "id": "empty-tail",
+          "name": "Unconfirmed Empty Tail",
+          "time_tick": 107520
+        }
+      ]
+    }
+  ]
+}
