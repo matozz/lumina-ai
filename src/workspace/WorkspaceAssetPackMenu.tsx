@@ -1,5 +1,5 @@
-import { Download, FolderOpen, PackageOpen, RotateCw, Upload } from "lucide-react";
-import { useRef, useState } from "react";
+import { Download, FolderOpen, Package, PackageOpen, RotateCw, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { UserAssetPack } from "@/bridge/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -18,6 +20,7 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import {
   assetPackConflicts,
   validateUserAssetPack,
@@ -41,8 +44,30 @@ export function WorkspaceAssetPackMenu({ disabled = false }: { disabled?: boolea
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState(bundle.manifest.name);
   const [pendingPack, setPendingPack] = useState<UserAssetPack | null>(null);
   const [conflicts, setConflicts] = useState<AssetPackConflict[]>([]);
+
+  useEffect(() => setProjectName(bundle.manifest.name), [bundle.manifest.name]);
+
+  const commitProjectName = () => {
+    const nextName = projectName.trim();
+    if (!nextName) {
+      setProjectName(bundle.manifest.name);
+      showError(new Error("Project name cannot be empty."));
+      return;
+    }
+    if (nextName === bundle.manifest.name) return;
+    try {
+      projectActions.renameProject(nextName);
+      setProjectName(nextName);
+      setMessage("Project name updated.");
+      workspaceActions.setPublishStatus("idle", "Project name updated.");
+    } catch (error) {
+      setProjectName(bundle.manifest.name);
+      showError(error);
+    }
+  };
 
   const exportPack = () => {
     try {
@@ -50,6 +75,17 @@ export function WorkspaceAssetPackMenu({ disabled = false }: { disabled?: boolea
       downloadUserAssetPack(pack);
       setMessage("Asset pack downloaded.");
       workspaceActions.setPublishStatus("idle", "Asset pack downloaded.");
+    } catch (error) {
+      showError(error);
+    }
+  };
+
+  const exportBasePack = () => {
+    try {
+      const pack = projectActions.exportBaseAssetPack();
+      downloadUserAssetPack(pack);
+      setMessage("Base asset pack downloaded.");
+      workspaceActions.setPublishStatus("idle", "Base asset pack downloaded.");
     } catch (error) {
       showError(error);
     }
@@ -131,6 +167,22 @@ export function WorkspaceAssetPackMenu({ disabled = false }: { disabled?: boolea
               Choose durable project storage or move authoring assets between projects.
             </PopoverDescription>
           </PopoverHeader>
+          <Field className="border-border border-b pb-3">
+            <FieldLabel htmlFor="project-name">Project name</FieldLabel>
+            <Input
+              id="project-name"
+              value={projectName}
+              onChange={(event) => setProjectName(event.currentTarget.value)}
+              onBlur={commitProjectName}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.currentTarget.blur();
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  setProjectName(bundle.manifest.name);
+                }
+              }}
+            />
+          </Field>
           <div className="border-border grid gap-1.5 border-b pb-3">
             <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
               Project folder
@@ -183,6 +235,16 @@ export function WorkspaceAssetPackMenu({ disabled = false }: { disabled?: boolea
               {message}
             </p>
           )}
+          <Separator />
+          <Button
+            variant="outline"
+            className="justify-start"
+            title="Export the complete current Project asset inventory for Skills and reuse"
+            onClick={exportBasePack}
+          >
+            <Package data-icon="inline-start" aria-hidden="true" />
+            Export base asset pack
+          </Button>
         </PopoverContent>
       </Popover>
       <input

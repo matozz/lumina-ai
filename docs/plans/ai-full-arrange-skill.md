@@ -199,9 +199,10 @@ Skill 需要安全地“读取当前项目、提出变更、应用变更、验�
 ### 5.1 首选能力顺序
 
 1. 当前 App 已加载的 ProjectBundle、项目 store transaction 和正式 Tauri validation/storage commands。
-2. 用户明确需要跨项目迁移时，使用 UserAssetPack 导入导出接口；它不是当前 Project snapshot 的权威来源。
-3. computer-use，用于 UI 观察、播放和用户可见操作。
-4. 只有上述能力无法支持可审计的编辑闭环时，才设计一个最小 authoring bridge。
+2. 用户主动提供的 Base Asset Pack 可作为一次可审计的完整资产输入快照；它不是持续更新的 Project 权威来源，应用修改前仍需确认目标 Project。
+3. 用户明确需要最小跨项目迁移时，使用普通 UserAssetPack 依赖闭包导入导出接口。
+4. computer-use，用于 UI 观察、播放和用户可见操作。
+5. 只有上述能力无法支持可审计的编辑闭环时，才设计一个最小 authoring bridge。
 
 任何 bridge 只负责 transport/CRUD/validation：
 

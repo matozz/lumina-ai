@@ -45,7 +45,7 @@ fn checked_in_multi_tick_golden_matches_deterministic_rendering() {
 }
 
 #[test]
-fn built_in_arrangement_examples_keep_targeting_in_resolved_cue_layers() {
+fn starter_base_assets_keep_targeting_in_resolved_cue_layers() {
     let catalog = builtin_production_catalog().expect("catalog parses");
     let template = catalog
         .project_templates
@@ -74,40 +74,23 @@ fn built_in_arrangement_examples_keep_targeting_in_resolved_cue_layers() {
             "missing selectable {target_id}"
         );
     }
-    let quadrant = catalog
-        .arrangements
-        .iter()
-        .find(|arrangement| arrangement.id == "builtin.arrangement.quadrant-motion-128")
-        .expect("quadrant example");
-    let corners = catalog
-        .arrangements
-        .iter()
-        .find(|arrangement| arrangement.id == "builtin.arrangement.four-corner-chase-128")
-        .expect("corner example");
-    assert_eq!(quadrant.tempo_map.points[0].bpm, 128.0);
-    assert_eq!(corners.tempo_map.points[0].bpm, 128.0);
-    assert_eq!(quadrant.tracks[0].clips.len(), 2);
-    assert_eq!(corners.tracks[0].clips.len(), 5);
-    assert_eq!(corners.tracks[0].name, "2×2 Corner Cues");
+    assert_eq!(catalog.arrangements.len(), 1);
+    let base = &catalog.arrangements[0];
+    assert_eq!(base.id, "builtin.arrangement.house-128");
+    assert_eq!(base.tempo_map.points[0].bpm, 128.0);
+    assert!(base.tracks[0].clips.is_empty());
 }
 
 #[test]
-fn catalog_validation_checks_materialized_arrangement_dependencies() {
+fn catalog_validation_checks_materialized_project_dependencies() {
     let mut catalog = builtin_production_catalog().expect("catalog parses");
-    let arrangement = catalog
-        .arrangements
-        .iter_mut()
-        .find(|arrangement| arrangement.id == "builtin.arrangement.quadrant-motion-128")
-        .expect("quadrant example");
-    arrangement.tracks[0].clips[0].cue_ref.id = "missing.cue".to_string();
+    catalog.project_templates[0].cues[0].layers[0].effect_ref.id = "missing.effect".to_string();
 
     let diagnostics = validate_production_catalog(&catalog);
     assert!(diagnostics.iter().any(|diagnostic| {
         diagnostic.code == PROJECT_REFERENCE_NOT_FOUND
-            && diagnostic
-                .path
-                .contains("materialized_project.arrangements")
-            && diagnostic.path.ends_with("cue_ref")
+            && diagnostic.path.contains("materialized_project")
+            && diagnostic.path.ends_with("effect_ref")
     }));
 }
 

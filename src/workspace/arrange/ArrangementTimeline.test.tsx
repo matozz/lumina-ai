@@ -74,12 +74,13 @@ describe("ArrangementTimeline workflow", () => {
   });
 
   it("keeps shortcuts routed after switching Arrangements", async () => {
+    projectActions.createArrangement("Second Arrangement");
     render(<ArrangementTimeline />);
     const arrangementSelect = screen.getByRole("combobox", { name: "Arrangement" });
     const beatWidthBefore = useWorkspaceStore.getState().arrangeTimelineBeatWidth;
 
     fireEvent.click(arrangementSelect);
-    const option = screen.getByRole("option", { name: "Quadrant Motion · 128" });
+    const option = screen.getByRole("option", { name: "House 128" });
     fireEvent.mouseMove(option);
     fireEvent.click(option);
 

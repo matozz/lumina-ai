@@ -18,7 +18,8 @@ describe("ArrangementInspector", () => {
   });
 
   it("confirms and atomically deletes the selected Arrangement", () => {
-    const reference = useProjectStore.getState().selectedArrangementRef;
+    const source = useProjectStore.getState().selectedArrangementRef;
+    const reference = projectActions.duplicateArrangement(source, "Disposable Arrangement")!;
     const arrangement = useProjectStore
       .getState()
       .bundle.arrangements.find(

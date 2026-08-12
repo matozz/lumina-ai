@@ -92,13 +92,9 @@ describe("Stage topology impact", () => {
         expect.objectContaining({ name: "Quadrant Motion Dialogue", layers: 4 }),
       ]),
     );
-    expect(impact.arrangements).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ name: "House 128", clipCount: 1 }),
-        expect.objectContaining({ name: "Quadrant Motion · 128", clipCount: 2 }),
-        expect.objectContaining({ name: "Four Corner Chase · 128", clipCount: 5 }),
-      ]),
-    );
+    expect(impact.arrangements).toEqual([
+      expect.objectContaining({ name: "House 128", clipCount: 1 }),
+    ]);
   });
 
   it("requires remap when a grid TargetSet is applied to a circle", () => {

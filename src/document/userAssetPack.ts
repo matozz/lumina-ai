@@ -90,26 +90,46 @@ export function createUserAssetPack(
   );
   for (const stage of stages) layoutRefs.set(assetKey(stage.layout_ref), stage.layout_ref);
 
+  return createValidatedAssetPack(bundle, name, {
+    stages,
+    layouts: [...layoutRefs.values()].flatMap((reference) => {
+      const layout = exactAsset(bundle.layouts, reference);
+      return layout ? [layout] : [];
+    }),
+    effects: [...effectRefs.values()].flatMap((reference) => {
+      const effect = exactAsset(bundle.effects, reference);
+      return effect ? [effect] : [];
+    }),
+    cues,
+    arrangements: selectedArrangements,
+  });
+}
+
+export function createBaseAssetPack(bundle: ProjectBundle, name = "Base Assets"): UserAssetPack {
+  return createValidatedAssetPack(bundle, name, {
+    stages: bundle.stages,
+    layouts: bundle.layouts,
+    effects: bundle.effects,
+    cues: bundle.cues,
+    arrangements: bundle.arrangements,
+  });
+}
+
+function createValidatedAssetPack(
+  bundle: ProjectBundle,
+  name: string,
+  assets: Pick<UserAssetPack, "stages" | "layouts" | "effects" | "cues" | "arrangements">,
+) {
   const pack: UserAssetPack = {
     schema_version: 1,
     id: uniqueId(`asset-pack-${slug(name)}`, []),
     name,
     source_project_id: bundle.manifest.project_id,
-    stages: cloneAssets(stages),
-    layouts: cloneAssets(
-      [...layoutRefs.values()].flatMap((reference) => {
-        const layout = exactAsset(bundle.layouts, reference);
-        return layout ? [layout] : [];
-      }),
-    ),
-    effects: cloneAssets(
-      [...effectRefs.values()].flatMap((reference) => {
-        const effect = exactAsset(bundle.effects, reference);
-        return effect ? [effect] : [];
-      }),
-    ),
-    cues: cloneAssets(cues),
-    arrangements: cloneAssets(selectedArrangements),
+    stages: cloneAssets(assets.stages),
+    layouts: cloneAssets(assets.layouts),
+    effects: cloneAssets(assets.effects),
+    cues: cloneAssets(assets.cues),
+    arrangements: cloneAssets(assets.arrangements),
   };
   const validation = validateUserAssetPack(pack);
   if (!validation.success) {

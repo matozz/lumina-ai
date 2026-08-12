@@ -12,6 +12,20 @@ import { PREVIEW_DARK_FRAME_NOTICE_THRESHOLD, projectActions, useProjectStore } 
 describe("Stage 7 Project state", () => {
   beforeEach(() => projectActions.reset());
 
+  it("renames the Project as one undoable transaction", () => {
+    projectActions.renameProject("  Festival Project  ");
+
+    let state = useProjectStore.getState();
+    expect(state.bundle.manifest.name).toBe("Festival Project");
+    expect(state.history).toHaveLength(1);
+    expect(state.history[0].label).toBe("Rename Project");
+
+    projectActions.undo();
+    state = useProjectStore.getState();
+    expect(state.bundle.manifest.name).toBe("Lighting Project");
+    expect(() => projectActions.renameProject("   ")).toThrow(/cannot be empty/);
+  });
+
   it("preserves Layer identity while editing and restores the full edit on Undo", () => {
     const effect = projectActions.createEffect("Identity-safe Pulse")!;
     const cueRef = projectActions.createCue([effect], "Identity-safe Cue")!;
@@ -201,7 +215,9 @@ describe("Stage 7 Project state", () => {
       ]),
     );
     expect(migrated.bundle.cues).toHaveLength(5);
-    expect(migrated.bundle.arrangements).toHaveLength(3);
+    expect(migrated.bundle.arrangements.map((arrangement) => arrangement.id)).toEqual([
+      "builtin.arrangement.house-128",
+    ]);
     expect(migrated.selectedEffectRef).toBeNull();
     expect(activeStage(migrated.bundle).target_sets.map((target) => target.id)).toEqual(
       expect.arrayContaining(["rows", "columns", "zones-3x3", "center", "edges"]),
@@ -280,6 +296,18 @@ describe("Stage 7 Project state", () => {
         (session) => session.playback !== "playing",
       ),
     ).toBe(true);
+  });
+
+  it("exports the full current asset inventory as a base pack", () => {
+    const state = useProjectStore.getState();
+    const pack = projectActions.exportBaseAssetPack("Skill Base");
+
+    expect(pack.name).toBe("Skill Base");
+    expect(pack.layouts).toEqual(state.bundle.layouts);
+    expect(pack.effects).toEqual(state.bundle.effects);
+    expect(pack.cues).toEqual(state.bundle.cues);
+    expect(pack.arrangements).toEqual(state.bundle.arrangements);
+    expect(useProjectStore.getState().bundle).toBe(state.bundle);
   });
 
   it("duplicates a multi-tempo Arrangement without moving clip or keyframe ticks", () => {
