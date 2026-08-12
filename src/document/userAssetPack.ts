@@ -1,6 +1,12 @@
 import Ajv2020, { type ErrorObject } from "ajv/dist/2020.js";
 import schema from "../../schemas/user-asset-pack-v1.schema.json";
 import type { AssetRef, ProjectBundle, UserAssetPack } from "@/bridge/types";
+import {
+  builtinArrangements,
+  builtinEffects,
+  builtinLayouts,
+  builtinProjectTemplate,
+} from "@/catalog/builtinCatalog";
 import { validateProjectBundle } from "./projectBundle";
 import { assetKey, exactAsset, uniqueId } from "./projectModel";
 
@@ -90,7 +96,7 @@ export function createUserAssetPack(
   );
   for (const stage of stages) layoutRefs.set(assetKey(stage.layout_ref), stage.layout_ref);
 
-  return createValidatedAssetPack(bundle, name, {
+  return createValidatedAssetPack(bundle.manifest.project_id, name, {
     stages,
     layouts: [...layoutRefs.values()].flatMap((reference) => {
       const layout = exactAsset(bundle.layouts, reference);
@@ -105,18 +111,19 @@ export function createUserAssetPack(
   });
 }
 
-export function createBaseAssetPack(bundle: ProjectBundle, name = "Base Assets"): UserAssetPack {
-  return createValidatedAssetPack(bundle, name, {
-    stages: bundle.stages,
-    layouts: bundle.layouts,
-    effects: bundle.effects,
-    cues: bundle.cues,
-    arrangements: bundle.arrangements,
+export function createBaseAssetPack(): UserAssetPack {
+  const template = builtinProjectTemplate();
+  return createValidatedAssetPack(template.id, "Base Assets", {
+    stages: [template.stage],
+    layouts: builtinLayouts,
+    effects: builtinEffects,
+    cues: template.cues ?? [],
+    arrangements: builtinArrangements,
   });
 }
 
 function createValidatedAssetPack(
-  bundle: ProjectBundle,
+  sourceProjectId: string,
   name: string,
   assets: Pick<UserAssetPack, "stages" | "layouts" | "effects" | "cues" | "arrangements">,
 ) {
@@ -124,7 +131,7 @@ function createValidatedAssetPack(
     schema_version: 1,
     id: uniqueId(`asset-pack-${slug(name)}`, []),
     name,
-    source_project_id: bundle.manifest.project_id,
+    source_project_id: sourceProjectId,
     stages: cloneAssets(assets.stages),
     layouts: cloneAssets(assets.layouts),
     effects: cloneAssets(assets.effects),

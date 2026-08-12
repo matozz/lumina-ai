@@ -1,5 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  builtinArrangements,
+  builtinEffects,
+  builtinLayouts,
+  builtinProjectTemplate,
+} from "@/catalog/builtinCatalog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { engineActions, useEngineStore } from "@/stores/engine";
 import { projectActions, useProjectStore } from "@/stores/project";
@@ -134,13 +140,15 @@ describe("WorkspaceHeader live workflow", () => {
 
     fireEvent.blur(input);
 
-    expect(useProjectStore.getState().bundle.manifest.name).toBe("Festival Project");
-    expect(useProjectStore.getState().history.at(-1)?.label).toBe("Rename Project");
+    const state = useProjectStore.getState();
+    expect(state.bundle.manifest.name).toBe("Festival Project");
+    expect(state.history[state.history.length - 1]?.label).toBe("Rename Project");
     expect(useWorkspaceStore.getState().statusMessage).toBe("Project name updated.");
   });
 
-  it("downloads the complete current Project inventory as base assets", async () => {
-    const bundle = useProjectStore.getState().bundle;
+  it("downloads the source-controlled built-in assets as the stable base pack", async () => {
+    projectActions.renameProject("Customized Project");
+    projectActions.createEffect("Project-only Effect");
     render(
       <TooltipProvider>
         <WorkspaceHeader />
@@ -153,12 +161,12 @@ describe("WorkspaceHeader live workflow", () => {
     expect(assetPackFileMocks.downloadUserAssetPack).toHaveBeenCalledOnce();
     const pack = assetPackFileMocks.downloadUserAssetPack.mock.calls[0][0];
     expect(pack.name).toBe("Base Assets");
-    expect(pack.layouts).toHaveLength(bundle.layouts.length);
-    expect(pack.effects).toHaveLength(bundle.effects.length);
-    expect(pack.cues).toHaveLength(bundle.cues.length);
-    expect(pack.arrangements.map((arrangement: { id: string }) => arrangement.id)).toEqual([
-      "builtin.arrangement.house-128",
-    ]);
+    expect(pack.source_project_id).toBe("builtin.project-template.authoring-starter");
+    expect(pack.stages).toEqual([builtinProjectTemplate().stage]);
+    expect(pack.layouts).toEqual(builtinLayouts);
+    expect(pack.effects).toEqual(builtinEffects);
+    expect(pack.cues).toEqual(builtinProjectTemplate().cues);
+    expect(pack.arrangements).toEqual(builtinArrangements);
     expect(useWorkspaceStore.getState().statusMessage).toBe("Base asset pack downloaded.");
   });
 

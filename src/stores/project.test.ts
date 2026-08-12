@@ -298,16 +298,30 @@ describe("Stage 7 Project state", () => {
     ).toBe(true);
   });
 
-  it("exports the full current asset inventory as a base pack", () => {
-    const state = useProjectStore.getState();
-    const pack = projectActions.exportBaseAssetPack("Skill Base");
+  it("exports the same built-in base pack regardless of current Project edits", () => {
+    const baseline = projectActions.exportBaseAssetPack();
+    projectActions.renameProject("Customized Project");
+    const customEffect = projectActions.createEffect("Project-only Effect")!;
+    projectActions.createCue([customEffect], "Project-only Cue");
+    projectActions.updateArrangement(
+      useProjectStore.getState().selectedArrangementRef,
+      "Customize House",
+      (arrangement) => {
+        arrangement.name = "House Custom";
+      },
+    );
+    const current = useProjectStore.getState();
+    const pack = projectActions.exportBaseAssetPack();
 
-    expect(pack.name).toBe("Skill Base");
-    expect(pack.layouts).toEqual(state.bundle.layouts);
-    expect(pack.effects).toEqual(state.bundle.effects);
-    expect(pack.cues).toEqual(state.bundle.cues);
-    expect(pack.arrangements).toEqual(state.bundle.arrangements);
-    expect(useProjectStore.getState().bundle).toBe(state.bundle);
+    expect(pack).toEqual(baseline);
+    expect(pack.name).toBe("Base Assets");
+    expect(pack.effects).toHaveLength(17);
+    expect(pack.effects.some((effect) => effect.id === customEffect.id)).toBe(false);
+    expect(pack.arrangements).toEqual([
+      expect.objectContaining({ id: "builtin.arrangement.house-128", name: "House 128" }),
+    ]);
+    expect(useProjectStore.getState().bundle).toBe(current.bundle);
+    expect(useProjectStore.getState().historyCursor).toBe(current.historyCursor);
   });
 
   it("duplicates a multi-tempo Arrangement without moving clip or keyframe ticks", () => {
