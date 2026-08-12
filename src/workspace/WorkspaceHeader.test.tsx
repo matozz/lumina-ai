@@ -23,7 +23,13 @@ const commandMocks = vi.hoisted(() => ({
   getLiveEffects: vi.fn().mockResolvedValue({ show_revision: 2, effects: [] }),
 }));
 
+const assetPackFileMocks = vi.hoisted(() => ({
+  downloadUserAssetPack: vi.fn(),
+  readUserAssetPackFile: vi.fn(),
+}));
+
 vi.mock("@/bridge/commands", () => ({ engine: commandMocks }));
+vi.mock("@/document/userAssetPackFile", () => assetPackFileMocks);
 
 describe("WorkspaceHeader live workflow", () => {
   beforeEach(() => {
@@ -112,6 +118,48 @@ describe("WorkspaceHeader live workflow", () => {
     expect(await screen.findByText("…/Documents/Lumina Shows/House")).toBeTruthy();
     expect(screen.getByText("12 of 50 recent versions")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Change project folder" })).toBeTruthy();
+  });
+
+  it("renames the current Project from Assets on the edit boundary", async () => {
+    render(
+      <TooltipProvider>
+        <WorkspaceHeader />
+      </TooltipProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Assets" }));
+    const input = await screen.findByRole("textbox", { name: "Project name" });
+    fireEvent.change(input, { target: { value: "Festival Project" } });
+    expect(useProjectStore.getState().bundle.manifest.name).toBe("Lighting Project");
+
+    fireEvent.blur(input);
+
+    expect(useProjectStore.getState().bundle.manifest.name).toBe("Festival Project");
+    expect(useProjectStore.getState().history.at(-1)?.label).toBe("Rename Project");
+    expect(useWorkspaceStore.getState().statusMessage).toBe("Project name updated.");
+  });
+
+  it("downloads the complete current Project inventory as base assets", async () => {
+    const bundle = useProjectStore.getState().bundle;
+    render(
+      <TooltipProvider>
+        <WorkspaceHeader />
+      </TooltipProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Assets" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Export base asset pack" }));
+
+    expect(assetPackFileMocks.downloadUserAssetPack).toHaveBeenCalledOnce();
+    const pack = assetPackFileMocks.downloadUserAssetPack.mock.calls[0][0];
+    expect(pack.name).toBe("Base Assets");
+    expect(pack.layouts).toHaveLength(bundle.layouts.length);
+    expect(pack.effects).toHaveLength(bundle.effects.length);
+    expect(pack.cues).toHaveLength(bundle.cues.length);
+    expect(pack.arrangements.map((arrangement: { id: string }) => arrangement.id)).toEqual([
+      "builtin.arrangement.house-128",
+    ]);
+    expect(useWorkspaceStore.getState().statusMessage).toBe("Base asset pack downloaded.");
   });
 
   it("shows autosave failures in Assets without blocking the workspace", async () => {

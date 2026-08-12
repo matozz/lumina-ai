@@ -10,12 +10,32 @@ import {
 } from "./projectModel";
 import {
   assetPackConflicts,
+  createBaseAssetPack,
   createUserAssetPack,
   importUserAssetPack,
   validateUserAssetPack,
 } from "./userAssetPack";
 
 describe("UserAssetPack V1", () => {
+  it("exports every current Project asset as an immutable base pack", () => {
+    const bundle = createStarterProjectBundle();
+    const source = structuredClone(bundle);
+    const pack = createBaseAssetPack(bundle);
+
+    expect(pack.name).toBe("Base Assets");
+    expect(pack.source_project_id).toBe(bundle.manifest.project_id);
+    expect(pack.stages).toEqual(bundle.stages);
+    expect(pack.layouts).toEqual(bundle.layouts);
+    expect(pack.effects).toEqual(bundle.effects);
+    expect(pack.cues).toEqual(bundle.cues);
+    expect(pack.arrangements).toEqual(bundle.arrangements);
+    expect(pack.arrangements.map((arrangement) => arrangement.id)).toEqual([
+      "builtin.arrangement.house-128",
+    ]);
+    expect(validateUserAssetPack(pack)).toEqual({ success: true, data: pack, issues: [] });
+    expect(bundle).toEqual(source);
+  });
+
   it("exports a dependency-complete pack and migrates it across projects", () => {
     const { bundle: source, effectRef, cueRef, arrangementRef } = projectWithPortableAssets();
     const pack = createUserAssetPack(source, "Touring Package");

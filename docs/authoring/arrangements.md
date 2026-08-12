@@ -87,14 +87,11 @@ Automation target 必须能经 Cue → Layer → Effect parameter 精确解析�
 
 Lab、Cues 和 Arrange 共用 Authoring Transport 语义：Play、Pause、Stop、Seek、Loop。页面打开和资产选择不会自动 Play；Lab/Cues 中若当前 session 正在播放，选择另一个 Effect/Cue 会把 cursor、loop 与 playing 状态连续迁移到新 session。切换功能区则执行 Stop 并回到 loop start；未启用 loop 时回到 tick 0。
 
-## 内置多分区示例
+## 内置基础编排
 
-Authoring Starter 物化两份可直接打开、播放和复制的 128 BPM 示例；它们引用 Project Template 中的 starter Cue，不把 TargetSet 复制进 CueClip：
+Authoring Starter 只物化一份空的 **House 128** Arrangement，作为可直接编辑、复制或通过 Base Asset Pack 提供给 Skill 的基础时间轴。Catalog 不再附带 Quadrant Motion 和 Four Corner Chase 示例 Arrangement；删除的示例不会在导出 Base Assets 时重新出现。
 
-- **Quadrant Motion · 128**：一个四 Layer Cue 同时驱动 20×20 Matrix 的四个 10×10 象限。前半段对左上 Ping-Pong 的 speed 做 1×→2× automation；后半段用 Clip layer override 将右上 Column Rain 切到 2×。
-- **Four Corner Chase · 128**：四个单 Layer Cue 分时驱动 2×2 网格中的左上、右上、左下、右下四个 10×10 区域。Clip 交错重叠，但区域互不相交；最后一次回到左上并使用 2× speed。示例使用足够密集的空间采样，不为极小 TargetSet 改写 Effect 的作者宽度。
-
-示例既覆盖“同时效果使用一个多 Layer Cue”，也覆盖“分时效果使用多个 Cue”。若把区域改成相交 TargetSet，并让层或 Clip 写相同属性，仍必须显式提供 MixPolicy，Catalog/Project validation 会 fail closed。
+Project Template 仍保留多分区 starter Cue 与 20×20 Stage 的 quadrant/corner TargetSet，供用户或 Skill 自行编排。CueClip 只引用这些 Cue，不复制 TargetSet；相交区域写同一属性时仍必须显式提供 MixPolicy，Catalog/Project validation 会 fail closed。
 
 ## 关键实现
 
@@ -106,7 +103,7 @@ Authoring Starter 物化两份可直接打开、播放和复制的 128 BPM 示�
 ## 验收
 
 - 多 Cue placement、重叠、resize、automation、Undo/Redo 和 save/reopen 保持 tick 不变。
-- 两份多分区示例的所有 Cue/Effect/Stage exact ref 均可解析；四象限各 100 fixtures，四角各 25 fixtures。
+- 空的 House 128、所有 starter Cue/Effect/Stage exact ref 均可解析；四象限各 100 fixtures，四角各 25 fixtures。
 - 3/4、4/4、拍号切换、多 TempoMap 和任意 Seek/Replay 结果确定。
 - 1,000 CueClip 的 viewport 和 DOM-ref 高频路径满足交互预算。
 - 1100×720 与常用大窗口下，默认/Focus mode、library、canvas、timeline、context menu 和 inspector 均可操作且无横向抖动。

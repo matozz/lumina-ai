@@ -1554,7 +1554,7 @@ mod tests {
     use super::*;
     use crate::compiler::diagnostic::CUE_RECIPE_UNRESOLVED;
     use crate::document::{
-        valid_bundle, AutomationPolicyDSL, ParameterScopeDSL, ParameterValueTypeDSL,
+        valid_bundle, AutomationPolicyDSL, CueClip, ParameterScopeDSL, ParameterValueTypeDSL,
     };
 
     #[test]
@@ -1783,8 +1783,40 @@ mod tests {
             .find(|template| template.id == "builtin.project-template.authoring-starter")
             .expect("authoring starter template");
         let mut bundle = materialize_project_template(&catalog, template);
-        bundle.manifest.active_arrangement_id =
-            "builtin.arrangement.four-corner-chase-128".to_string();
+        let arrangement = bundle
+            .arrangements
+            .iter_mut()
+            .find(|arrangement| arrangement.id == "builtin.arrangement.house-128")
+            .expect("base Arrangement");
+        arrangement.length_ticks = 11_520;
+        arrangement.tracks[0].clips = vec![
+            CueClip {
+                id: "test-top-left".to_string(),
+                cue_ref: AssetRef {
+                    id: "starter.cue.corner-top-left".to_string(),
+                    revision: 1,
+                },
+                start_tick: 0,
+                duration_tick: 7_680,
+                source_offset_tick: 0,
+                playback: Default::default(),
+                layer: 0,
+                layer_overrides: Vec::new(),
+            },
+            CueClip {
+                id: "test-top-right".to_string(),
+                cue_ref: AssetRef {
+                    id: "starter.cue.corner-top-right".to_string(),
+                    revision: 1,
+                },
+                start_tick: 3_840,
+                duration_tick: 7_680,
+                source_offset_tick: 0,
+                playback: Default::default(),
+                layer: 1,
+                layer_overrides: Vec::new(),
+            },
+        ];
         let snapshot = Compiler::compile_active_project(
             ValidatedProject::validate(bundle).expect("corner project validates"),
         )

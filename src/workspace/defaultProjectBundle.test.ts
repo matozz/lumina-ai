@@ -21,18 +21,14 @@ describe("Authoring Starter ProjectBundle", () => {
     ).toBe(true);
   });
 
-  it("materializes dependency-complete multi-region Arrangement examples", () => {
+  it("materializes one base Arrangement with dependency-complete multi-region Cues", () => {
     const bundle = createStarterProjectBundle();
 
     expect(validateProjectBundle(bundle).success).toBe(true);
     expect(bundle.manifest.active_arrangement_id).toBe("builtin.arrangement.house-128");
-    expect(bundle.arrangements.map((arrangement) => arrangement.id)).toEqual(
-      expect.arrayContaining([
-        "builtin.arrangement.house-128",
-        "builtin.arrangement.quadrant-motion-128",
-        "builtin.arrangement.four-corner-chase-128",
-      ]),
-    );
+    expect(bundle.arrangements.map((arrangement) => arrangement.id)).toEqual([
+      "builtin.arrangement.house-128",
+    ]);
     expect(
       bundle.arrangements.every((arrangement) => arrangement.tempo_map.points[0].bpm === 128),
     ).toBe(true);

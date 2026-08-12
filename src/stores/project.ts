@@ -34,7 +34,11 @@ import {
   uniqueId,
 } from "@/document/projectModel";
 import { validateProjectBundle } from "@/document/projectBundle";
-import { createUserAssetPack, importUserAssetPack } from "@/document/userAssetPack";
+import {
+  createBaseAssetPack,
+  createUserAssetPack,
+  importUserAssetPack,
+} from "@/document/userAssetPack";
 import { layoutCapacity } from "@/document/layoutDefinition";
 import { analyzeStageTopology, resolveTargetSet, stageForLayout } from "@/document/stageTopology";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
@@ -162,7 +166,17 @@ export const projectActions = {
         loadedBundle.manifest.cue_refs[loadedBundle.manifest.cue_refs.length - 1] ?? null,
     });
   },
+  renameProject: (name: string) => {
+    const nextName = name.trim();
+    if (!nextName) throw new Error("Project name cannot be empty");
+    transact("Rename Project", (bundle, published) => {
+      bundle.manifest.name = nextName;
+      bumpManifestRevision(bundle, published);
+    });
+  },
   exportAssetPack: (name?: string) => createUserAssetPack(useProjectStore.getState().bundle, name),
+  exportBaseAssetPack: (name?: string) =>
+    createBaseAssetPack(useProjectStore.getState().bundle, name),
   importAssetPack: (pack: UserAssetPack, onConflict: "reject" | "rename" = "reject") => {
     authoringTransportActions.pauseAll();
     let imported: ReturnType<typeof importUserAssetPack> | null = null;
