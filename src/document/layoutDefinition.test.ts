@@ -48,10 +48,10 @@ describe("LayoutDefinition geometry", () => {
       "builtin.layout.strip-runway-30": 30,
       "builtin.layout.frame-arena-12x24": 68,
       "builtin.layout.circle-rings-8": 361,
-      "builtin.layout.sector-fan-8": 216,
+      "builtin.layout.sector-fan-8": 180,
       "builtin.layout.polygon-hex-96": 96,
       "builtin.layout.honeycomb-18x24": 432,
-      "builtin.layout.formula-sine-160": 160,
+      "builtin.layout.formula-sine-50": 50,
       "builtin.layout.algorithm-lissajous-240": 240,
       "builtin.layout.strip-vertical-tower-30": 30,
       "builtin.layout.frame-proscenium-16x24": 76,
@@ -65,7 +65,8 @@ describe("LayoutDefinition geometry", () => {
       "builtin.layout.polygon-pentagon-110": 110,
       "builtin.layout.honeycomb-compact-16x20": 320,
       "builtin.layout.honeycomb-loose-12x18": 216,
-      "builtin.layout.formula-arch-160": 160,
+      "builtin.layout.formula-arch-40": 40,
+      "builtin.layout.algorithm-spiral-420": 420,
     });
     const frame = bundle.layouts.find((layout) => layout.geometry.shape === "frame")!;
     expect(layoutPositions(frame, fixtureIdsForLayout(frame))).toHaveLength(68);
@@ -185,7 +186,7 @@ describe("LayoutDefinition geometry", () => {
   it("resamples Algorithm paths by physical arc length", () => {
     const bundle = createStarterProjectBundle();
     for (const id of [
-      "builtin.layout.algorithm-spiral-200",
+      "builtin.layout.algorithm-spiral-420",
       "builtin.layout.algorithm-lissajous-240",
     ]) {
       const layout = bundle.layouts.find((candidate) => candidate.id === id)!;

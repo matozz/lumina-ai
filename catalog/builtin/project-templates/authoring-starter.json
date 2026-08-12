@@ -462,10 +462,10 @@
     { "id": "builtin.layout.honeycomb-18x24", "revision": 1 },
     { "id": "builtin.layout.honeycomb-compact-16x20", "revision": 1 },
     { "id": "builtin.layout.honeycomb-loose-12x18", "revision": 1 },
-    { "id": "builtin.layout.formula-sine-160", "revision": 1 },
-    { "id": "builtin.layout.formula-arch-160", "revision": 1 },
+    { "id": "builtin.layout.formula-sine-50", "revision": 1 },
+    { "id": "builtin.layout.formula-arch-40", "revision": 1 },
     { "id": "builtin.layout.algorithm-lissajous-240", "revision": 1 },
-    { "id": "builtin.layout.algorithm-spiral-200", "revision": 1 }
+    { "id": "builtin.layout.algorithm-spiral-420", "revision": 1 }
   ],
   "arrangement_ref": { "id": "builtin.arrangement.house-128", "revision": 1 }
 }

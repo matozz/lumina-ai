@@ -23,8 +23,8 @@
       "shape": "algorithm"
     },
     {
-      "capacity": 200,
-      "id": "builtin.layout.algorithm-spiral-200",
+      "capacity": 420,
+      "id": "builtin.layout.algorithm-spiral-420",
       "samples": [
         {
           "id": 1,
@@ -32,14 +32,14 @@
           "y": 0.0
         },
         {
-          "id": 101,
-          "x": 86.547319,
-          "y": 209.504411
+          "id": 211,
+          "x": 154.244645,
+          "y": 101.054083
         },
         {
-          "id": 200,
-          "x": -320.0,
-          "y": 0.0
+          "id": 420,
+          "x": 260.0,
+          "y": -0.0
         }
       ],
       "shape": "algorithm"
@@ -111,30 +111,30 @@
       "shape": "circle"
     },
     {
-      "capacity": 160,
-      "id": "builtin.layout.formula-arch-160",
+      "capacity": 40,
+      "id": "builtin.layout.formula-arch-40",
       "samples": [
         {
           "id": 1,
-          "x": -960.0,
-          "y": 224.0
+          "x": -288.0,
+          "y": 67.2
         },
         {
-          "id": 81,
-          "x": 6.037736,
-          "y": 0.00886
+          "id": 21,
+          "x": 7.384615,
+          "y": 0.044181
         },
         {
-          "id": 160,
-          "x": 960.0,
-          "y": 224.0
+          "id": 40,
+          "x": 288.0,
+          "y": 67.2
         }
       ],
       "shape": "formula"
     },
     {
-      "capacity": 160,
-      "id": "builtin.layout.formula-sine-160",
+      "capacity": 50,
+      "id": "builtin.layout.formula-sine-50",
       "samples": [
         {
           "id": 1,
@@ -142,14 +142,14 @@
           "y": 0.0
         },
         {
-          "id": 81,
-          "x": 809.305881,
-          "y": 6.316122
+          "id": 26,
+          "x": 326.530612,
+          "y": 6.003616
         },
         {
-          "id": 160,
-          "x": 1608.495439,
-          "y": -0.0
+          "id": 50,
+          "x": 640.0,
+          "y": -4.235256
         }
       ],
       "shape": "formula"
@@ -419,7 +419,7 @@
       "shape": "polygon"
     },
     {
-      "capacity": 216,
+      "capacity": 180,
       "id": "builtin.layout.sector-fan-8",
       "samples": [
         {
@@ -428,12 +428,12 @@
           "y": 5.694019
         },
         {
-          "id": 109,
-          "x": 6.908346,
-          "y": -131.819099
+          "id": 91,
+          "x": 8.33592,
+          "y": -131.736527
         },
         {
-          "id": 216,
+          "id": 180,
           "x": 170.002945,
           "y": 45.552152
         }

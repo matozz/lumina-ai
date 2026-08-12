@@ -1336,10 +1336,10 @@ mod tests {
         let bundle = valid_bundle();
         let catalog = crate::document::builtin_production_catalog().expect("catalog");
         for layout_id in [
-            "builtin.layout.formula-sine-160",
-            "builtin.layout.formula-arch-160",
+            "builtin.layout.formula-sine-50",
+            "builtin.layout.formula-arch-40",
             "builtin.layout.algorithm-lissajous-240",
-            "builtin.layout.algorithm-spiral-200",
+            "builtin.layout.algorithm-spiral-420",
         ] {
             let layout = catalog
                 .layouts
