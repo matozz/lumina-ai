@@ -42,10 +42,10 @@ Effect parameter 不再在 Catalog metadata 中维护 `parameter_summary`，也�
 
 Header 的 **Assets** 菜单可修改当前 Project 名称，并显示当前 Project 文件夹及历史数量；名称在失焦或 Enter 时作为一次可撤销 transaction 提交，再进入既有 autosave。菜单也允许切换文件夹；目标中已有 `lumina-project.json` 时打开该项目，空文件夹则以当前 ProjectBundle 初始化。相同菜单提供两种 UserAssetPack V1 导出，并使用同一个导入入口：
 
-- **Export asset pack** 导出适合跨项目迁移的最小依赖闭包：project-local Layout/Effect、当前 Cue、非空或 project-local Arrangement，以及它们精确引用的 Stage/Layout/Effect/Cue。
-- **Export base asset pack** 导出当前 ProjectBundle 中完整的 Stage、Layout、Effect、Cue 和 Arrangement 资产数组，包括仍为空的基础 Arrangement。它使用与 Project 名称无关的通用包名 `Base Assets` 和文件名 `base-assets.lumina-assets.json`，用于 Skill 的显式输入快照、项目引导或其他离线复用；导出不改变当前项目，也不重新加入已从当前 Project 删除的资产。
+- **Export asset pack** 导出适合跨项目迁移或作为 AI Skill 输入的最小依赖闭包：project-local Layout/Effect、当前 Cue、非空或 project-local Arrangement，以及它们精确引用的 Stage/Layout/Effect/Cue。AI 工作流中将这种普通项目导出简称为 **Project Pack**；它不包含 manifest，也不承诺带上闭包之外的项目资产。
+- **Export base asset pack** 始终从受源码管理的内置 Catalog 与 Authoring Starter Project Template 物化同一份基础包：内置 Stage、全部内置 Layout/Effect、模板 starter Cue，以及 `catalog/builtin/arrangements/house-128.json`。它不读取当前 ProjectBundle，因此用户改名、增删资产、编辑 House 或切换项目都不会改变导出内容。包使用通用名称 `Base Assets` 和文件名 `base-assets.lumina-assets.json`，用于 Skill 的稳定能力基线、项目引导或其他离线复用。
 
-两种包都不包含 Project manifest/当前选择、项目文件夹、history、localStorage、UI/transport 状态、Live snapshot 或受源码管理的 Catalog 目录。Base pack 是用户主动导出的可移植快照，不取代 Project 文件夹中 `lumina-project.json` 的持久化权威。
+两种包都不包含 Project manifest/当前选择、项目文件夹、history、localStorage、UI/transport 状态或 Live snapshot。Base pack 是内置 Catalog 的可移植、确定性物化结果，不是当前 Project 快照，也不取代 Project 文件夹中 `lumina-project.json` 的持久化权威。Catalog Cue recipe 是创建 Cue 的配方而不是 `CueDefinition`，因此现有 UserAssetPack V1 导出 Project Template 已物化的 starter Cue，不序列化 recipe metadata。
 
 导入流程：
 
@@ -76,6 +76,6 @@ Reset defaults 恢复 starter Project Template、工作区选择和 Authoring tr
 - 所有内置 JSON 可单独 review，且聚合后 Catalog schema/semantic/Golden 均通过。
 - 复制内置资产后 ID 独立，修改不改变源文件或其他项目。
 - 用户包闭包完整；跨项目 reject/rename 冲突路径均有测试。
-- Base pack 与当前 Project 的五类资产数组精确一致，包含空基础 Arrangement，导出不创建 Project transaction 或 history。
+- Base pack 在任意当前 Project 状态下都与内置 Catalog 物化结果精确一致，包含全部内置 Effect 和空的 `House 128` Arrangement；导出不创建 Project transaction 或 history。
 - Assets 可修改 Project 名称并切换 Project 文件夹；已有 latest 优先加载，空文件夹安全初始化，失败路径不写入缓存或覆盖文件。
 - Reset 后 starter 正常、transport stopped，之前导出的资产包仍可重新导入。

@@ -175,8 +175,7 @@ export const projectActions = {
     });
   },
   exportAssetPack: (name?: string) => createUserAssetPack(useProjectStore.getState().bundle, name),
-  exportBaseAssetPack: (name?: string) =>
-    createBaseAssetPack(useProjectStore.getState().bundle, name),
+  exportBaseAssetPack: () => createBaseAssetPack(),
   importAssetPack: (pack: UserAssetPack, onConflict: "reject" | "rename" = "reject") => {
     authoringTransportActions.pauseAll();
     let imported: ReturnType<typeof importUserAssetPack> | null = null;

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { AssetRef, ProjectBundle } from "@/bridge/types";
+import {
+  builtinArrangements,
+  builtinEffects,
+  builtinLayouts,
+  builtinProjectTemplate,
+} from "@/catalog/builtinCatalog";
 import { createStarterProjectBundle } from "@/workspace/defaultProjectBundle";
 import {
   appendExactRef,
@@ -17,23 +23,32 @@ import {
 } from "./userAssetPack";
 
 describe("UserAssetPack V1", () => {
-  it("exports every current Project asset as an immutable base pack", () => {
-    const bundle = createStarterProjectBundle();
-    const source = structuredClone(bundle);
-    const pack = createBaseAssetPack(bundle);
+  it("exports the immutable built-in Catalog as a base pack", () => {
+    const template = builtinProjectTemplate();
+    const source = {
+      template: structuredClone(template),
+      layouts: structuredClone(builtinLayouts),
+      effects: structuredClone(builtinEffects),
+      arrangements: structuredClone(builtinArrangements),
+    };
+    const pack = createBaseAssetPack();
 
     expect(pack.name).toBe("Base Assets");
-    expect(pack.source_project_id).toBe(bundle.manifest.project_id);
-    expect(pack.stages).toEqual(bundle.stages);
-    expect(pack.layouts).toEqual(bundle.layouts);
-    expect(pack.effects).toEqual(bundle.effects);
-    expect(pack.cues).toEqual(bundle.cues);
-    expect(pack.arrangements).toEqual(bundle.arrangements);
+    expect(pack.source_project_id).toBe("builtin.project-template.authoring-starter");
+    expect(pack.stages).toEqual([template.stage]);
+    expect(pack.layouts).toEqual(builtinLayouts);
+    expect(pack.effects).toEqual(builtinEffects);
+    expect(pack.effects).toHaveLength(17);
+    expect(pack.cues).toEqual(template.cues);
+    expect(pack.arrangements).toEqual(builtinArrangements);
     expect(pack.arrangements.map((arrangement) => arrangement.id)).toEqual([
       "builtin.arrangement.house-128",
     ]);
     expect(validateUserAssetPack(pack)).toEqual({ success: true, data: pack, issues: [] });
-    expect(bundle).toEqual(source);
+    expect(template).toEqual(source.template);
+    expect(builtinLayouts).toEqual(source.layouts);
+    expect(builtinEffects).toEqual(source.effects);
+    expect(builtinArrangements).toEqual(source.arrangements);
   });
 
   it("exports a dependency-complete pack and migrates it across projects", () => {

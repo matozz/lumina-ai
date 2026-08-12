@@ -239,7 +239,7 @@ export function WorkspaceAssetPackMenu({ disabled = false }: { disabled?: boolea
           <Button
             variant="outline"
             className="justify-start"
-            title="Export the complete current Project asset inventory for Skills and reuse"
+            title="Export the source-controlled built-in assets for Skills and reuse"
             onClick={exportBasePack}
           >
             <Package data-icon="inline-start" aria-hidden="true" />

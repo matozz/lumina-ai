@@ -2,7 +2,7 @@
 
 > 状态：基于已完成的 `docs/plans/arrange-editor-experience.md`、当前 Effect 参数 contract 和 Project 文件夹持久化模型的独立后续方向文档。本文件本身不授权或实施 Full Arrange Skill。
 >
-> 核心决定：这不是固定 pattern 自动生成器，也不应引入 Rust generation engine。目标是用一个 repo-local Skill 指引 AI 通过多轮对话理解现有灯光能力、设计音乐叙事、制作一版完整 Arrangement，再结合用户试听和视觉反馈持续打磨。
+> 核心决定：这不是固定 pattern 自动生成器，也不应引入 Rust generation engine。Skill 以用户显式提供的 Base Asset Pack 或 Project Pack 为入口，通过多轮对话理解输入资产、设计音乐叙事、创建或修改一版完整 Arrangement，再结合用户试听和视觉反馈持续打磨。
 
 ## 1. 与当前实现的边界
 
@@ -13,6 +13,7 @@
 - 创建时生成、复制时重生且普通 UI 不暴露的 opaque Cue Layer ID；
 - 所有 Effect 共用的标准可选 Color、Cue override 和单 CueClip Arrangement Color automation；
 - 以 Project 文件夹为权威来源的两秒 trailing autosave、原子 latest 和最近 50 版 history。
+- 两种显式 UserAssetPack V1 输入：确定性的内置 Base Asset Pack，以及普通 **Export asset pack** 导出的项目相关资产依赖闭包（下文简称 Project Pack）。
 
 这些能力不等于已经存在 AI 编排入口。当前实现仍明确不包含：
 
@@ -31,7 +32,7 @@
 
 这个 Skill 应做到：
 
-1. 先理解当前 Project 中真正可用的 Stage、TargetSet、Effect、Cue 和 Arrangement。
+1. 先校验并理解用户显式提供的 Base Pack 或 Project Pack 中真正可用的 Stage、TargetSet、Effect、Cue 和 Arrangement。
 2. 识别哪些 Effect/Cue 在实际布局上有效、重复、过弱、过密或缺乏变化。
 3. 通过对话理解用户想要的音乐类型、BPM、时长、段落、情绪、颜色、能量曲线和关键时刻。
 4. 提出一版有理由的完整灯光叙事，而不是直接倾倒大量 JSON。
@@ -42,9 +43,9 @@
 
 EDM 的 intro、buildup、drop、breakdown、fill、outro 等只作为 AI 的音乐组织知识和对话词汇，不是硬编码的生成状态机。
 
-## 3. 当前 Project 中 `House 128 Custom` 副本提供的参考
+## 3. Project Pack 中 `House 128 Custom` 副本提供的参考
 
-以下数字来自迁移与验收时的项目副本，不是内置 Catalog contract，也不能假设未来打开的同名 Arrangement 仍然相同。Skill 每次都必须从当前已加载的 ProjectBundle 重新计算，不按名称或历史 revision 猜测内容。
+以下数字来自迁移与验收时的项目副本，不是内置 Catalog contract，也不能假设未来提供的同名 Arrangement 仍然相同。只有用户提供的 Project Pack 确实包含该 Arrangement 时，Skill 才从包内内容重新计算；不能按名称、历史 revision 或 Base Pack 猜测。
 
 当时样本的真实信息：
 
@@ -68,25 +69,32 @@ Skill 应把它视为用户审美和工作方式的参考，而不是要逐 tick
 
 ## 4. Skill 的对话式工作流
 
-### 4.1 Context acquisition
+### 4.1 Input pack 与 context acquisition
 
-Skill 首先取得一个明确、可验证的 Project snapshot，并汇报它看到了什么：
+Skill 必须从用户显式提供的一个输入包开始，不默认扫描当前 App 或项目文件夹：
 
-- 当前 App 已从用户选择的 Project 文件夹加载的 ProjectBundle；
-- active Stage、Layout 和 fixture 数；
+- **Base Asset Pack**：Assets 中 **Export base asset pack** 导出的确定性内置基线，包含内置 Stage、全部内置 Layout/Effect、starter Cue 和空的 `House 128`。它适合从基准创建新的 Effect、Cue 或 Arrangement；任何需要修改的 built-in 都必须先成为 project-local 副本。
+- **Project Pack**：Assets 中普通 **Export asset pack** 导出的当前项目相关资产依赖闭包。它适合继续创建、编辑或修改既有 Effect、Cue 和 Arrangement。它不是完整 Project manifest，也不保证包含与导出闭包无关的资产；上下文不足时必须请用户提供覆盖目标内容的新 Project Pack。
+
+两者都使用 UserAssetPack V1，并先经过 schema、semantic/reference 和 exact-ref 校验。不能只根据文件名判断类型；Base Pack 以固定 built-in provenance 和内容识别，其他普通项目导出按 Project Pack 处理。如果用户同时提供两者，必须明确哪一个是本轮主要输入；Project Pack 可作为修改目标，Base Pack 只能补充内置能力参考，不能覆盖项目资产。
+
+校验后，Skill 汇报它看到的输入上下文：
+
+- 输入类型、来源和用途：基准创建，或既有项目资产的编辑/修改；
+- 包中 Stage、Layout 和 fixture 数，以及用户指定的目标 Stage；
 - TargetSet 名称、选择范围和分区；
 - Effect 名称、能力、参数、风险和视觉用途；
 - Cue 名称、Cue Layers、TargetSets、参数覆盖和 MixPolicy；
-- 当前 Arrangement 的 BPM、长度、Clip、automation 和空白区；
+- 包中 Arrangement 的 BPM、长度、Clip、automation 和空白区，以及用户指定的创建/修改目标；
 - exact refs 和任何缺失/不兼容诊断。
 
-Project 文件夹中的 latest 是权威来源；User Asset Pack 只用于用户明确发起的迁移/导入导出，浏览器 recovery cache 只用于空文件夹初始化。Skill 不读取旧 `FullDSL`、`createStarterProject()` 输出、localStorage 或 WebView SQLite 来推断当前项目。
+输入包是本轮创作与审查的可审计边界，不自动等于当前 App 的已加载 Project。真正应用修改前，Skill 必须让用户确认目标 Project，再通过正式导入/Project transaction 写入。Project 文件夹中的 latest 仍是 App 持久化权威；Skill 不直接读取它，也不读取旧 `FullDSL`、`createStarterProject()` 输出、localStorage 或 WebView SQLite 来推断输入之外的状态。
 
-如果无法通过正式 ProjectBundle 路径读取这些内容，Skill 应停止在“缺少项目上下文”，不能凭内置 Cue 名称想象项目状态。exact refs、revision 和 raw Layer ID 可以用于机器校验，但面向用户的摘要只显示可理解的资产名、Layer 序号、TargetSet 和参数名。
+如果没有合法的 Base Pack/Project Pack，或包中缺少目标 Arrangement 及其依赖，Skill 应停止在“缺少输入上下文”，不能凭内置 Cue 名称、App UI 文本或历史记忆想象项目状态。exact refs、revision 和 raw Layer ID 可以用于机器校验，但面向用户的摘要只显示可理解的资产名、Layer 序号、TargetSet 和参数名。
 
 ### 4.2 Effect/Cue audit
 
-AI 对现有资产做一次面向实际编排的 review：
+AI 对输入包中的资产做一次面向实际编排的 review：
 
 - 哪些 Effect 只是在参数上近似，视觉意义重复；
 - 哪些适合铺底、上升、drop、accent、fill、recovery 或 outro；
@@ -128,7 +136,7 @@ Skill 用少量、有信息密度的问题补齐创作约束，优先一次问 1
 - 颜色发展；
 - 重叠和 MixPolicy 风险；
 - 需要新建或打磨的最小资产集合；
-- 与现有 `House 128 Custom` 的保留/替换关系。
+- 如果 Project Pack 含有 `House 128 Custom`，说明其保留/替换关系；Base Pack 创建模式则说明如何从空的 `House 128` 起步。
 
 用户可以只修改其中一部分。Skill 应保留已确认的创作决定，避免每轮重新设计整场。
 
@@ -194,13 +202,13 @@ AI 把反馈映射到最小必要的 Effect、Cue 或 Arrangement 修改，并�
 
 ## 5. 通信机制：先设计，后决定是否实现
 
-Skill 需要安全地“读取当前项目、提出变更、应用变更、验证和打开 UI”。这不等于需要一个内容 Generator。
+Skill 需要安全地“读取输入包、提出变更、确认目标 Project、应用变更、验证和打开 UI”。这不等于需要一个内容 Generator。
 
 ### 5.1 首选能力顺序
 
-1. 当前 App 已加载的 ProjectBundle、项目 store transaction 和正式 Tauri validation/storage commands。
-2. 用户主动提供的 Base Asset Pack 可作为一次可审计的完整资产输入快照；它不是持续更新的 Project 权威来源，应用修改前仍需确认目标 Project。
-3. 用户明确需要最小跨项目迁移时，使用普通 UserAssetPack 依赖闭包导入导出接口。
+1. 用户显式提供并通过校验的 Base Asset Pack 或 Project Pack，作为本轮基准创建、编辑或修改的输入边界。
+2. 用户确认目标 Project 后，使用当前 App 的项目 store transaction 和正式 Tauri validation/storage commands 应用 proposal；输入包本身不直接覆盖已加载项目。
+3. 使用普通 UserAssetPack 导入/导出接口承接可审计的资产传递与结果交付。
 4. computer-use，用于 UI 观察、播放和用户可见操作。
 5. 只有上述能力无法支持可审计的编辑闭环时，才设计一个最小 authoring bridge。
 
@@ -234,6 +242,7 @@ AI 的编排判断、Effect review 和迭代策略仍在 Skill 对话中，不�
 
 - 直接读取或修改 localStorage/WebView SQLite；
 - 绕过 App 直接读取或修改 Project 文件夹中的 `lumina-project.json`、临时文件或 `history/`；
+- 没有合法 Base Pack/Project Pack 时从 App UI 文本、历史对话或内置名称猜测输入资产；
 - 根据 UI 文本拼接未验证 JSON；
 - 在 Skill 中复制 Project Schema 或 compiler 逻辑；
 - 绕过 exact refs、revision 和 semantic validation；
@@ -262,6 +271,8 @@ AI 的编排判断、Effect review 和迭代策略仍在 Skill 对话中，不�
 
 Skill description 应在以下意图触发：
 
+- “基于这个 Base Pack 从零做一套完整灯光编排”；
+- “基于这个 Project Pack 编辑/完善现有 Arrangement”；
 - “帮我做/完善一整套 Lumina 灯光编排”；
 - “分析现有效果并做一个完整 House/EDM arrange”；
 - “根据 buildup/drop 逐段和我打磨灯光”；
@@ -308,10 +319,11 @@ Skill description 应在以下意图触发：
 
 ### 7.3 建议 eval
 
-1. 当前 Project 的 `House 128 Custom` 副本：重新读取而不是假定 revision；指出 128/132 冲突和验收快照中的空尾，经用户确认后完成约定长度。
-2. 素材不足项目：识别缺口，只创建最小必要的 project-local Effect/Cue，再完成 full arrange。
-3. 20×20 多分区：使用 all/center/edges/四象限组织两次不同 Drop，保持 TargetSet/Cue Layer 模型和 MixPolicy。
-4. 反馈迭代：用户要求“第二个 Drop 更左右、颜色更克制”，验证 Skill 做局部修改而不是推翻整场。
+1. Base Pack 创建：从确定性空 `House 128` 和内置能力基线出发，经用户确认后创建 project-local Cue/Arrangement，不修改 built-in。
+2. Project Pack 修改：重新读取包内 `House 128 Custom` 而不是假定 revision；指出 128/132 冲突和空尾，经用户确认后完成约定长度。
+3. 素材不足 Project Pack：识别缺口，只创建最小必要的 project-local Effect/Cue，再完成 full arrange。
+4. 20×20 多分区：使用 all/center/edges/四象限组织两次不同 Drop，保持 TargetSet/Cue Layer 模型和 MixPolicy。
+5. 反馈迭代：用户要求“第二个 Drop 更左右、颜色更克制”，验证 Skill 做局部修改而不是推翻整场。
 
 按照 `skill-creator` 流程运行 with-skill 与 baseline，保存对话 transcript、项目 diff、验证结果和视觉证据，通过 review viewer 收集用户反馈并迭代 Skill。
 
@@ -320,7 +332,7 @@ Skill description 应在以下意图触发：
 ### Phase 0：通信可行性与边界
 
 - 审计现有 Project 文件夹加载/自动保存、ProjectBundle transaction、导入导出、Tauri commands、store actions 和 computer-use；
-- 用最小 read-only prototype 验证能否取得完整项目上下文；
+- 用 Base Pack 与 Project Pack 各验证一次输入识别、完整性诊断和只读 context acquisition；
 - 决定无需新 bridge、扩展正式 API，或确实需要薄 CLI；
 - 输出 ADR/设计说明，不实现任何生成逻辑。
 
@@ -332,13 +344,13 @@ Skill description 应在以下意图触发：
 
 ### Phase 2：最小安全编辑闭环
 
-- 复用现有接口完成 loaded ProjectBundle snapshot → proposal → structural validate → atomic transaction → final semantic/compile validate → autosave/export；
+- 复用现有接口完成 Base Pack/Project Pack → proposal → target Project confirmation → structural validate → atomic transaction → final semantic/compile validate → autosave/export；
 - 只有 Phase 0 证明必要时才增加通信 bridge；
 - computer-use 负责播放和视觉观察。
 
 ### Phase 3：House 参考实战
 
-- 以当前 Project 中 `House 128 Custom` 的正式副本运行完整对话，不在用户确认前自动补齐或改写原 Arrangement；
+- 以用户提供的 Project Pack 中 `House 128 Custom` 正式副本运行完整对话，不在用户确认前自动补齐或改写原 Arrangement；
 - 让用户确认方向；
 - 完成一版 full arrange；
 - 在 Arrange/Live 试听并迭代。
@@ -361,6 +373,8 @@ Skill description 应在以下意图触发：
 只有满足以下条件，未来的 Skill Goal 才可 complete：
 
 - Skill 先审查现有资产并通过对话形成 brief，而非一键套模板；
+- Skill 只从用户显式提供且通过校验的 Base Pack 或 Project Pack 开始，并正确区分基准创建与既有内容编辑/修改；
+- Base Pack 创建与 Project Pack 修改两条入口都完成独立 eval；
 - 能安全读取、修改、验证和导出 project-local authoring 数据；
 - 只通过正式 Project transaction 修改当前项目，不直接读写 latest/history/localStorage/WebView SQLite；
 - 编辑中间状态不会被重复 semantic validation 阻断，最终 Preview/Go Live validation 必须通过；
