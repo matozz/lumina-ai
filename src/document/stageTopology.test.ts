@@ -86,12 +86,7 @@ describe("Stage topology impact", () => {
       true,
     );
     expect(impact.cues).toHaveLength(bundle.cues.length);
-    expect(impact.cues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ name: "Cue" }),
-        expect.objectContaining({ name: "Quadrant Motion Dialogue", layers: 4 }),
-      ]),
-    );
+    expect(impact.cues).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Cue" })]));
     expect(impact.arrangements).toEqual([
       expect.objectContaining({ name: "House 128", clipCount: 1 }),
     ]);

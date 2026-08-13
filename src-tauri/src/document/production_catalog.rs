@@ -1783,6 +1783,94 @@ mod tests {
             .find(|template| template.id == "builtin.project-template.authoring-starter")
             .expect("authoring starter template");
         let mut bundle = materialize_project_template(&catalog, template);
+        let test_effects = catalog
+            .effects
+            .iter()
+            .filter(|effect| {
+                matches!(
+                    effect.id.as_str(),
+                    "builtin.spatial.column-ping-pong" | "builtin.spatial.column-rain"
+                )
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        bundle
+            .manifest
+            .effect_refs
+            .extend(test_effects.iter().map(|effect| AssetRef {
+                id: effect.id.clone(),
+                revision: effect.revision,
+            }));
+        bundle.effects.extend(test_effects);
+        let test_cues = serde_json::from_value::<Vec<CueDefinition>>(serde_json::json!([
+            {
+                "schema_version": 1,
+                "id": "test.cue.corner-top-left",
+                "revision": 1,
+                "name": "Test Top Left Ping-Pong",
+                "compatible_stage_ref": { "id": "main-stage", "revision": 1 },
+                "nominal_length_ticks": 7680,
+                "layers": [{
+                    "id": "layer_testtopleft01",
+                    "effect_ref": { "id": "builtin.spatial.column-ping-pong", "revision": 1 },
+                    "target_set_ref": {
+                        "stage_id": "main-stage",
+                        "stage_revision": 1,
+                        "target_set_id": "zone-2x2-1"
+                    },
+                    "parameter_overrides": {
+                        "speed": { "type": "scalar", "value": 1 },
+                        "intensity": { "type": "scalar", "value": 0.9 }
+                    },
+                    "phase": 0,
+                    "seed": "2200000000000001",
+                    "layer": 0,
+                    "priority": 0,
+                    "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+                }],
+                "trigger_policy": { "mode": "timeline", "quantize": "beat" },
+                "capability_summary": { "required_attributes": ["intensity"] },
+                "risk_summary": { "strobe_risk": "none" }
+            },
+            {
+                "schema_version": 1,
+                "id": "test.cue.corner-top-right",
+                "revision": 1,
+                "name": "Test Top Right Rain",
+                "compatible_stage_ref": { "id": "main-stage", "revision": 1 },
+                "nominal_length_ticks": 7680,
+                "layers": [{
+                    "id": "layer_testtopright1",
+                    "effect_ref": { "id": "builtin.spatial.column-rain", "revision": 1 },
+                    "target_set_ref": {
+                        "stage_id": "main-stage",
+                        "stage_revision": 1,
+                        "target_set_id": "zone-2x2-2"
+                    },
+                    "parameter_overrides": {
+                        "speed": { "type": "scalar", "value": 1 },
+                        "intensity": { "type": "scalar", "value": 0.85 }
+                    },
+                    "phase": 0,
+                    "seed": "2200000000000002",
+                    "layer": 0,
+                    "priority": 0,
+                    "trigger_policy": { "mode": "timeline", "quantize": "beat" }
+                }],
+                "trigger_policy": { "mode": "timeline", "quantize": "beat" },
+                "capability_summary": { "required_attributes": ["intensity"] },
+                "risk_summary": { "strobe_risk": "none" }
+            }
+        ]))
+        .expect("test Cues parse");
+        bundle
+            .manifest
+            .cue_refs
+            .extend(test_cues.iter().map(|cue| AssetRef {
+                id: cue.id.clone(),
+                revision: cue.revision,
+            }));
+        bundle.cues.extend(test_cues);
         let arrangement = bundle
             .arrangements
             .iter_mut()
@@ -1793,7 +1881,7 @@ mod tests {
             CueClip {
                 id: "test-top-left".to_string(),
                 cue_ref: AssetRef {
-                    id: "starter.cue.corner-top-left".to_string(),
+                    id: "test.cue.corner-top-left".to_string(),
                     revision: 1,
                 },
                 start_tick: 0,
@@ -1806,7 +1894,7 @@ mod tests {
             CueClip {
                 id: "test-top-right".to_string(),
                 cue_ref: AssetRef {
-                    id: "starter.cue.corner-top-right".to_string(),
+                    id: "test.cue.corner-top-right".to_string(),
                     revision: 1,
                 },
                 start_tick: 3_840,

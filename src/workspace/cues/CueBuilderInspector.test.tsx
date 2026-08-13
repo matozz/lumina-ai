@@ -159,10 +159,8 @@ describe("Cue Builder safe authoring", () => {
           (candidate) => candidate.id === savedCue.id && candidate.revision === savedCue.revision,
         ),
     ).toBe(false);
-    expect(assetKey(useAuthoringDraftStore.getState().cue!.pinned)).not.toBe(assetKey(savedCue));
-    expect(assetKey(useProjectStore.getState().selectedCueRef!)).toBe(
-      assetKey(useAuthoringDraftStore.getState().cue!.pinned),
-    );
+    expect(useAuthoringDraftStore.getState().cue).toBeNull();
+    expect(useProjectStore.getState().selectedCueRef).toBeNull();
   });
 
   it("confirms and atomically removes referenced CueClips when deleting a Cue", async () => {
@@ -222,7 +220,8 @@ describe("Cue Builder safe authoring", () => {
     expect(project.bundle.cues.some((candidate) => candidate.id === savedCue.id)).toBe(false);
     expect(project.bundle.arrangements[0].tracks[0].clips).toHaveLength(0);
     expect(project.bundle.arrangements[0].tracks[0].automation_lanes).toHaveLength(0);
-    expect(assetKey(useAuthoringDraftStore.getState().cue!.pinned)).not.toBe(assetKey(savedCue));
+    expect(useAuthoringDraftStore.getState().cue).toBeNull();
+    expect(project.selectedCueRef).toBeNull();
 
     act(() => projectActions.undo());
     project = useProjectStore.getState();

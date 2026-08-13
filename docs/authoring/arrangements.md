@@ -91,7 +91,7 @@ Lab、Cues 和 Arrange 共用 Authoring Transport 语义：Play、Pause、Stop�
 
 Authoring Starter 只物化一份空的 **House 128** Arrangement，作为可直接编辑、复制或通过 Base Asset Pack 提供给 Skill 的基础时间轴。Catalog 不再附带 Quadrant Motion 和 Four Corner Chase 示例 Arrangement；删除的示例不会在导出 Base Assets 时重新出现。
 
-Project Template 仍保留多分区 starter Cue 与 20×20 Stage 的 quadrant/corner TargetSet，供用户或 Skill 自行编排。CueClip 只引用这些 Cue，不复制 TargetSet；相交区域写同一属性时仍必须显式提供 MixPolicy，Catalog/Project validation 会 fail closed。
+Project Template 保留 20×20 Stage 的 quadrant/corner TargetSet，但不再物化多分区示例 Cue。用户或 Skill 需要按创作意图创建 project-local Cue，再由 CueClip 精确引用；相交区域写同一属性时仍必须显式提供 MixPolicy，Catalog/Project validation 会 fail closed。
 
 ## 关键实现
 
@@ -103,7 +103,7 @@ Project Template 仍保留多分区 starter Cue 与 20×20 Stage 的 quadrant/co
 ## 验收
 
 - 多 Cue placement、重叠、resize、automation、Undo/Redo 和 save/reopen 保持 tick 不变。
-- 空的 House 128、所有 starter Cue/Effect/Stage exact ref 均可解析；四象限各 100 fixtures，四角各 25 fixtures。
+- 空的 House 128、全部内置 Effect/Stage exact ref 均可解析，Base Pack 的 Cue 集合为空；四象限各 100 fixtures，四角各 25 fixtures。
 - 3/4、4/4、拍号切换、多 TempoMap 和任意 Seek/Replay 结果确定。
 - 1,000 CueClip 的 viewport 和 DOM-ref 高频路径满足交互预算。
 - 1100×720 与常用大窗口下，默认/Focus mode、library、canvas、timeline、context menu 和 inspector 均可操作且无横向抖动。

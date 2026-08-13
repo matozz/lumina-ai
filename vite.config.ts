@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
@@ -17,6 +17,7 @@ export default defineConfig(async () => ({
     environment: "happy-dom",
     setupFiles: ["./src/test/setup.ts"],
     restoreMocks: true,
+    exclude: [...configDefaults.exclude, ".agents/skills/*-workspace/**"],
   },
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

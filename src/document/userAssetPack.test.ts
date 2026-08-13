@@ -19,6 +19,7 @@ import {
   createBaseAssetPack,
   createUserAssetPack,
   importUserAssetPack,
+  replaceProjectAssetsFromPack,
   validateUserAssetPack,
 } from "./userAssetPack";
 
@@ -40,6 +41,7 @@ describe("UserAssetPack V1", () => {
     expect(pack.effects).toEqual(builtinEffects);
     expect(pack.effects).toHaveLength(17);
     expect(pack.cues).toEqual(template.cues);
+    expect(pack.cues).toEqual([]);
     expect(pack.arrangements).toEqual(builtinArrangements);
     expect(pack.arrangements.map((arrangement) => arrangement.id)).toEqual([
       "builtin.arrangement.house-128",
@@ -117,6 +119,58 @@ describe("UserAssetPack V1", () => {
     expect(imported.bundle.manifest.arrangement_refs).toContainEqual(toRef(arrangement));
   });
 
+  it("replaces the complete asset set while preserving Project identity and references", () => {
+    const { bundle: source, effectRef, cueRef, arrangementRef } = projectWithPortableAssets();
+    source.stages[0].name = "Tour Stage";
+    source.layouts.find((layout) => layout.id === source.stages[0].layout_ref.id)!.name =
+      "Tour Matrix";
+    const pack = createUserAssetPack(source, "Replacement Package");
+    const destination = conflictingDestination(pack);
+    destination.manifest.project_id = "destination-project";
+    destination.manifest.name = "Destination Show";
+
+    const replaced = replaceProjectAssetsFromPack(destination, pack);
+    const stage = replaced.importedPack.stages[0];
+    const layout = replaced.importedPack.layouts[0];
+    const effect = replaced.importedPack.effects.find(
+      (candidate) => candidate.id === effectRef.id,
+    )!;
+    const cue = replaced.importedPack.cues.find((candidate) => candidate.id === cueRef.id)!;
+    const arrangement = replaced.importedPack.arrangements.find(
+      (candidate) => candidate.id === arrangementRef.id,
+    )!;
+
+    expect(replaced.bundle.manifest).toMatchObject({
+      project_id: "destination-project",
+      name: "Destination Show",
+      stage_ref: toRef(stage),
+      active_arrangement_id: arrangement.id,
+    });
+    expect(replaced.bundle.effects).toEqual(replaced.importedPack.effects);
+    expect(replaced.bundle.cues).toEqual(replaced.importedPack.cues);
+    expect(replaced.bundle.arrangements).toEqual(replaced.importedPack.arrangements);
+    expect(JSON.stringify(replaced.bundle)).not.toContain("Local Effect");
+    expect(JSON.stringify(replaced.bundle)).not.toContain("Local Cue");
+    expect(JSON.stringify(replaced.bundle)).not.toContain("Local Arrangement");
+    expect(stage.revision).toBeGreaterThan(pack.stages[0].revision);
+    expect(stage.layout_ref).toEqual(toRef(layout));
+    expect(cue.compatible_stage_ref).toEqual(toRef(stage));
+    expect(cue.layers[0].target_set_ref.stage_revision).toBe(stage.revision);
+    expect(cue.layers[0].effect_ref).toEqual(toRef(effect));
+    expect(arrangement.tracks[0].clips?.[0].cue_ref).toEqual(toRef(cue));
+    expect(validateUserAssetPack(replaced.importedPack).success).toBe(true);
+  });
+
+  it("rejects replacement packs that cannot materialize a complete Project", () => {
+    const pack = createBaseAssetPack();
+    pack.arrangements = [];
+    expect(validateUserAssetPack(pack).success).toBe(true);
+
+    expect(() => replaceProjectAssetsFromPack(createStarterProjectBundle(), pack)).toThrow(
+      /no Arrangement.*incremental import/,
+    );
+  });
+
   it("rejects Effects that omit the standard Color contract", () => {
     const { bundle, effectRef } = projectWithPortableAssets();
     const pack = createUserAssetPack(bundle, "Legacy Package");
@@ -135,6 +189,57 @@ describe("UserAssetPack V1", () => {
     expect(() => importUserAssetPack(createStarterProjectBundle(), pack)).toThrow(
       /missing the standard Color parameter/,
     );
+  });
+
+  it("rejects unsynchronized Cue and Arrangement speed values before import", () => {
+    const { bundle, cueRef, arrangementRef } = projectWithPortableAssets();
+    const pack = createUserAssetPack(bundle, "Unsynchronized Package");
+    const cue = exactAsset(pack.cues, cueRef)!;
+    cue.layers[0]!.parameter_overrides = {
+      ...cue.layers[0]!.parameter_overrides,
+      speed: { type: "scalar", value: 0.75 },
+    };
+    const arrangement = exactAsset(pack.arrangements, arrangementRef)!;
+    arrangement.tracks[0].clips![0]!.layer_overrides = [
+      {
+        layer_id: cue.layers[0]!.id,
+        parameter_overrides: { speed: { type: "scalar", value: 1.25 } },
+      },
+    ];
+    arrangement.tracks[0].automation_lanes = [
+      {
+        id: "invalid-speed",
+        target: {
+          scope: "cue_layer",
+          clip_id: "portable-clip",
+          layer_id: cue.layers[0].id,
+          parameter_id: "speed",
+        },
+        keyframes: [
+          {
+            id: "invalid-speed-value",
+            time_tick: 0,
+            value: { type: "scalar", value: 1.5 },
+            interpolation: "linear",
+          },
+        ],
+      },
+    ];
+
+    const validation = validateUserAssetPack(pack);
+    expect(validation.success).toBe(false);
+    if (!validation.success) {
+      expect(validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ message: expect.stringContaining("Speed override") }),
+          expect.objectContaining({
+            path: expect.stringContaining("layer_overrides"),
+            message: expect.stringContaining("Speed override"),
+          }),
+          expect.objectContaining({ message: expect.stringContaining("Speed automation") }),
+        ]),
+      );
+    }
   });
 
   it("rejects malformed packs and missing transitive dependencies", () => {

@@ -1,5 +1,6 @@
 import Ajv2020, { type ErrorObject } from "ajv/dist/2020.js";
 import schema from "../../schemas/user-asset-pack-v1.schema.json";
+import { isBeatSyncSpeedMultiplier } from "@/authoring/speedMultipliers";
 import type { AssetRef, ProjectBundle, UserAssetPack } from "@/bridge/types";
 import {
   builtinArrangements,
@@ -15,6 +16,7 @@ type PackAssetKind = "stage" | "layout" | "effect" | "cue" | "arrangement";
 export interface AssetPackConflict {
   kind: PackAssetKind;
   id: string;
+  name: string;
   incomingRevisions: number[];
   existingRevisions: number[];
 }
@@ -157,8 +159,8 @@ export function assetPackConflicts(bundle: ProjectBundle, pack: UserAssetPack) {
   ).flatMap(([kind, existing, incoming]) =>
     conflictsForKind(
       kind,
-      existing as Array<{ id: string; revision: number }>,
-      incoming as Array<{ id: string; revision: number }>,
+      existing as Array<{ id: string; revision: number; name: string }>,
+      incoming as Array<{ id: string; revision: number; name: string }>,
     ),
   );
 }
@@ -196,6 +198,65 @@ export function importUserAssetPack(
   if (!projectValidation.success) {
     throw new Error(
       projectValidation.issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n"),
+    );
+  }
+  return { bundle: next, conflicts, importedPack: pack };
+}
+
+export function replaceProjectAssetsFromPack(bundle: ProjectBundle, value: unknown) {
+  const validation = validateUserAssetPack(value);
+  if (!validation.success) {
+    throw new Error(validation.issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n"));
+  }
+  const pack = structuredClone(validation.data);
+  const conflicts = assetPackConflicts(bundle, pack);
+  remapReplacementRevisions(bundle, pack);
+
+  const replacementValidation = validateUserAssetPack(pack);
+  if (!replacementValidation.success) {
+    throw new Error(
+      replacementValidation.issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n"),
+    );
+  }
+  const activeArrangement = pack.arrangements[pack.arrangements.length - 1];
+  if (!activeArrangement) {
+    throw new Error(
+      "This asset pack has no Arrangement and cannot replace a Project. Use incremental import instead.",
+    );
+  }
+  const activeStage = replacementStage(pack, activeArrangement);
+  if (!activeStage) {
+    throw new Error(
+      "This asset pack has no Stage and cannot replace a Project. Use incremental import instead.",
+    );
+  }
+
+  const next: ProjectBundle = {
+    schema_version: 1,
+    manifest: {
+      schema_version: 1,
+      project_id: bundle.manifest.project_id,
+      revision: bundle.manifest.revision + 1,
+      name: bundle.manifest.name,
+      stage_ref: toRef(activeStage),
+      layout_refs: pack.layouts.map(toRef),
+      effect_refs: pack.effects.map(toRef),
+      cue_refs: pack.cues.map(toRef),
+      arrangement_refs: pack.arrangements.map(toRef),
+      active_arrangement_id: activeArrangement.id,
+    },
+    stages: cloneAssets(pack.stages),
+    layouts: cloneAssets(pack.layouts),
+    effects: cloneAssets(pack.effects),
+    cues: cloneAssets(pack.cues),
+    arrangements: cloneAssets(pack.arrangements),
+  };
+  const projectValidation = validateProjectBundle(next);
+  if (!projectValidation.success) {
+    throw new Error(
+      `This asset pack cannot replace the current Project: ${projectValidation.issues
+        .map((issue) => `${issue.path}: ${issue.message}`)
+        .join("\n")}`,
     );
   }
   return { bundle: next, conflicts, importedPack: pack };
@@ -272,6 +333,13 @@ function validateAssetPackReferences(pack: UserAssetPack) {
           message: "Targeting Scene dependency is missing or belongs to another Stage",
         });
       }
+      const speed = layer.parameter_overrides?.speed;
+      if (speed?.type === "scalar" && !isBeatSyncSpeedMultiplier(speed.value)) {
+        issues.push({
+          path: `cues[${cueIndex}].layers[${layerIndex}].parameter_overrides.speed`,
+          message: "Speed override must be 0.25, 0.5, 1, 2, 4, or 8",
+        });
+      }
     }
   }
   for (const [arrangementIndex, arrangement] of pack.arrangements.entries()) {
@@ -285,11 +353,38 @@ function validateAssetPackReferences(pack: UserAssetPack) {
         });
       }
     }
+    for (const [trackIndex, track] of arrangement.tracks.entries()) {
+      for (const [clipIndex, clip] of (track.clips ?? []).entries()) {
+        for (const [overrideIndex, layerOverride] of (clip.layer_overrides ?? []).entries()) {
+          const speed = layerOverride.parameter_overrides?.speed;
+          if (speed?.type === "scalar" && !isBeatSyncSpeedMultiplier(speed.value)) {
+            issues.push({
+              path: `arrangements[${arrangementIndex}].tracks[${trackIndex}].clips[${clipIndex}].layer_overrides[${overrideIndex}].parameter_overrides.speed`,
+              message: "Speed override must be 0.25, 0.5, 1, 2, 4, or 8",
+            });
+          }
+        }
+      }
+      for (const [laneIndex, lane] of (track.automation_lanes ?? []).entries()) {
+        if (lane.target.parameter_id !== "speed") continue;
+        for (const [keyframeIndex, keyframe] of lane.keyframes.entries()) {
+          if (
+            keyframe.value.type === "scalar" &&
+            !isBeatSyncSpeedMultiplier(keyframe.value.value)
+          ) {
+            issues.push({
+              path: `arrangements[${arrangementIndex}].tracks[${trackIndex}].automation_lanes[${laneIndex}].keyframes[${keyframeIndex}].value`,
+              message: "Speed automation must be 0.25, 0.5, 1, 2, 4, or 8",
+            });
+          }
+        }
+      }
+    }
   }
   return issues;
 }
 
-function conflictsForKind<T extends { id: string; revision: number }>(
+function conflictsForKind<T extends { id: string; revision: number; name: string }>(
   kind: PackAssetKind,
   existing: T[],
   incoming: T[],
@@ -312,11 +407,115 @@ function conflictsForKind<T extends { id: string; revision: number }>(
           {
             kind,
             id,
+            name: incomingAssets[incomingAssets.length - 1]?.name ?? id,
             incomingRevisions: incomingAssets.map((asset) => asset.revision),
             existingRevisions: existingAssets.map((asset) => asset.revision),
           },
         ];
   });
+}
+
+function remapReplacementRevisions(bundle: ProjectBundle, pack: UserAssetPack) {
+  const maps: Record<PackAssetKind, Map<string, AssetRef>> = {
+    stage: new Map(),
+    layout: new Map(),
+    effect: new Map(),
+    cue: new Map(),
+    arrangement: new Map(),
+  };
+  remapAssetRevisions(bundle.stages, pack.stages, maps.stage);
+  remapAssetRevisions(bundle.layouts, pack.layouts, maps.layout);
+  remapAssetRevisions(bundle.effects, pack.effects, maps.effect);
+  remapAssetRevisions(bundle.cues, pack.cues, maps.cue);
+  remapAssetRevisions(bundle.arrangements, pack.arrangements, maps.arrangement);
+
+  for (const stage of pack.stages) remapExactRef(stage.layout_ref, maps.layout);
+  for (const cue of pack.cues) {
+    remapExactRef(cue.compatible_stage_ref, maps.stage);
+    for (const layer of cue.layers) {
+      remapExactRef(layer.effect_ref, maps.effect);
+      const targetStage = remappedRef(
+        {
+          id: layer.target_set_ref.stage_id,
+          revision: layer.target_set_ref.stage_revision,
+        },
+        maps.stage,
+      );
+      layer.target_set_ref.stage_id = targetStage.id;
+      layer.target_set_ref.stage_revision = targetStage.revision;
+      if (layer.targeting_scene_ref) {
+        const sceneStage = remappedRef(
+          {
+            id: layer.targeting_scene_ref.stage_id,
+            revision: layer.targeting_scene_ref.stage_revision,
+          },
+          maps.stage,
+        );
+        layer.targeting_scene_ref.stage_id = sceneStage.id;
+        layer.targeting_scene_ref.stage_revision = sceneStage.revision;
+      }
+    }
+  }
+  for (const arrangement of pack.arrangements) {
+    for (const clip of arrangement.tracks.flatMap((track) => track.clips ?? [])) {
+      remapExactRef(clip.cue_ref, maps.cue);
+    }
+  }
+}
+
+function remapAssetRevisions<T extends { id: string; revision: number }>(
+  existing: T[],
+  incoming: T[],
+  references: Map<string, AssetRef>,
+) {
+  const nextRevision = new Map<string, number>();
+  for (const asset of [...existing, ...incoming]) {
+    nextRevision.set(asset.id, Math.max(nextRevision.get(asset.id) ?? 0, asset.revision));
+  }
+  for (const asset of incoming) {
+    const sameId = existing.filter((candidate) => candidate.id === asset.id);
+    if (sameId.length === 0) continue;
+    const identical = sameId.some(
+      (candidate) =>
+        candidate.revision === asset.revision &&
+        JSON.stringify(candidate) === JSON.stringify(asset),
+    );
+    if (identical) continue;
+    const previous = { id: asset.id, revision: asset.revision };
+    const revision = (nextRevision.get(asset.id) ?? 0) + 1;
+    nextRevision.set(asset.id, revision);
+    asset.revision = revision;
+    references.set(assetKey(previous), { id: asset.id, revision });
+  }
+}
+
+function replacementStage(pack: UserAssetPack, arrangement: UserAssetPack["arrangements"][number]) {
+  const cueRefs = arrangement.tracks
+    .flatMap((track) => track.clips ?? [])
+    .map((clip) => clip.cue_ref);
+  for (const cueRef of [...cueRefs].reverse()) {
+    const cue = pack.cues.find((candidate) => assetKey(candidate) === assetKey(cueRef));
+    const stage = cue
+      ? pack.stages.find((candidate) => assetKey(candidate) === assetKey(cue.compatible_stage_ref))
+      : undefined;
+    if (stage) return stage;
+  }
+  const lastCue = pack.cues[pack.cues.length - 1];
+  return (
+    (lastCue
+      ? pack.stages.find(
+          (candidate) => assetKey(candidate) === assetKey(lastCue.compatible_stage_ref),
+        )
+      : undefined) ?? pack.stages[pack.stages.length - 1]
+  );
+}
+
+function remapExactRef(reference: AssetRef, references: Map<string, AssetRef>) {
+  Object.assign(reference, remappedRef(reference, references));
+}
+
+function remappedRef(reference: AssetRef, references: Map<string, AssetRef>) {
+  return references.get(assetKey(reference)) ?? reference;
 }
 
 function renameConflictingAssets(
@@ -376,6 +575,10 @@ function renameIds<T extends { id: string }>(assets: T[], ids: Map<string, strin
 
 function remapRef(reference: AssetRef, ids: Map<string, string>) {
   reference.id = ids.get(reference.id) ?? reference.id;
+}
+
+function toRef(asset: { id: string; revision: number }): AssetRef {
+  return { id: asset.id, revision: asset.revision };
 }
 
 function appendDistinct<T extends { id: string; revision: number }>(target: T[], incoming: T[]) {

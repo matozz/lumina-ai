@@ -43,16 +43,19 @@ Effect parameter 不再在 Catalog metadata 中维护 `parameter_summary`，也�
 Header 的 **Assets** 菜单可修改当前 Project 名称，并显示当前 Project 文件夹及历史数量；名称在失焦或 Enter 时作为一次可撤销 transaction 提交，再进入既有 autosave。菜单也允许切换文件夹；目标中已有 `lumina-project.json` 时打开该项目，空文件夹则以当前 ProjectBundle 初始化。相同菜单提供两种 UserAssetPack V1 导出，并使用同一个导入入口：
 
 - **Export asset pack** 导出适合跨项目迁移或作为 AI Skill 输入的最小依赖闭包：project-local Layout/Effect、当前 Cue、非空或 project-local Arrangement，以及它们精确引用的 Stage/Layout/Effect/Cue。AI 工作流中将这种普通项目导出简称为 **Project Pack**；它不包含 manifest，也不承诺带上闭包之外的项目资产。
-- **Export base asset pack** 始终从受源码管理的内置 Catalog 与 Authoring Starter Project Template 物化同一份基础包：内置 Stage、全部内置 Layout/Effect、模板 starter Cue，以及 `catalog/builtin/arrangements/house-128.json`。它不读取当前 ProjectBundle，因此用户改名、增删资产、编辑 House 或切换项目都不会改变导出内容。包使用通用名称 `Base Assets` 和文件名 `base-assets.lumina-assets.json`，用于 Skill 的稳定能力基线、项目引导或其他离线复用。
+- **Export base asset pack** 始终从受源码管理的内置 Catalog 与 Authoring Starter Project Template 物化同一份基础包：内置 Stage、全部内置 Layout/Effect、空 Cue 集合，以及 `catalog/builtin/arrangements/house-128.json`。它不读取当前 ProjectBundle，因此用户改名、增删资产、编辑 House 或切换项目都不会改变导出内容。Base Pack 刻意不提供 `Corner · Top Left Ping-Pong`、`Quadrant Motion Dialogue` 等预制 Cue，避免 AI Skill 把历史示例误当成创作模板；Skill 必须根据 brief 创建最小 project-local Cue 集。包使用通用名称 `Base Assets` 和文件名 `base-assets.lumina-assets.json`，用于 Skill 的稳定能力基线、项目引导或其他离线复用。
 
-两种包都不包含 Project manifest/当前选择、项目文件夹、history、localStorage、UI/transport 状态或 Live snapshot。Base pack 是内置 Catalog 的可移植、确定性物化结果，不是当前 Project 快照，也不取代 Project 文件夹中 `lumina-project.json` 的持久化权威。Catalog Cue recipe 是创建 Cue 的配方而不是 `CueDefinition`，因此现有 UserAssetPack V1 导出 Project Template 已物化的 starter Cue，不序列化 recipe metadata。
+两种包都不包含 Project manifest/当前选择、项目文件夹、history、localStorage、UI/transport 状态或 Live snapshot。Base pack 是内置 Catalog 的可移植、确定性物化结果，不是当前 Project 快照，也不取代 Project 文件夹中 `lumina-project.json` 的持久化权威。Catalog Cue recipe 是创建 Cue 的配方而不是 `CueDefinition`，UserAssetPack V1 不序列化 recipe metadata；Base Pack 也不再物化示例 Cue。
 
 导入流程：
 
 1. JSON Schema + semantic/reference validation；Effect 必须已经使用当前 parameter contract 并声明标准 Color，不在导入时迁移或补字段。
 2. 检测目标项目中的 ID 冲突。
-3. 用户选择拒绝导入，或整体 rename；rename 会同步重写包内所有引用。
-4. 单次 transaction 写入 ProjectBundle。
+3. 用户明确选择 **Incremental import** 或 **Replace all assets**：
+   - Incremental 保留当前资产并在单次 transaction 中追加输入闭包；发生 ID 冲突时将冲突资产整体改为独立 ID，并同步重写包内 exact refs。这一模式进入普通 Undo/history。
+   - Replace 丢弃当前 ProjectBundle 中全部 Stage、Layout、Effect、Cue、Arrangement，以输入包重新物化资产集合；当前 `project_id`、Project 名称和已选择的 Project 文件夹保留。输入包必须至少包含可成为 active Arrangement 的 Arrangement 及其完整 Stage 依赖，否则拒绝并提示改用 Incremental。
+4. Replace 是显式 reset，不创建编辑器 Undo transaction，并清空已有 Undo/Redo history；新的 ProjectBundle 仍进入 autosave。为避免原地改写已存在或已发布的 exact identity，发生内容冲突的输入资产会提升 revision，包内所有受影响引用同步迁移。
+5. 两种模式都不自动发布；已有 Live snapshot 保持不变，直到用户再次执行 Live。
 
 导出的文件用于跨项目迁移；Project 文件夹中的 latest + 最近 50 版 history 是当前项目的持续备份来源。app config cache 只记忆已验证的文件夹路径；localStorage 只保留 recovery shadow 和 UI 状态。
 
@@ -75,7 +78,7 @@ Reset defaults 恢复 starter Project Template、工作区选择和 Authoring tr
 
 - 所有内置 JSON 可单独 review，且聚合后 Catalog schema/semantic/Golden 均通过。
 - 复制内置资产后 ID 独立，修改不改变源文件或其他项目。
-- 用户包闭包完整；跨项目 reject/rename 冲突路径均有测试。
-- Base pack 在任意当前 Project 状态下都与内置 Catalog 物化结果精确一致，包含全部内置 Effect 和空的 `House 128` Arrangement；导出不创建 Project transaction 或 history。
+- 用户包闭包完整；Incremental 的独立副本路径和 Replace 的完整 reset、引用迁移、不可 Undo 路径均有测试。
+- Base pack 在任意当前 Project 状态下都与内置 Catalog 物化结果精确一致，包含全部内置 Effect、空 Cue 集合和空的 `House 128` Arrangement；导出不创建 Project transaction 或 history。
 - Assets 可修改 Project 名称并切换 Project 文件夹；已有 latest 优先加载，空文件夹安全初始化，失败路径不写入缓存或覆盖文件。
 - Reset 后 starter 正常、transport stopped，之前导出的资产包仍可重新导入。
