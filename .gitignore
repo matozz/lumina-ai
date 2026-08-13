@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local skill evaluation workspaces
+.agents/skills/*-workspace/

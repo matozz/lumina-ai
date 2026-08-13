@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { authoringSessionKey, authoringTransportActions } from "@/authoring/transport";
+import { authoringDraftActions } from "@/stores/authoringDraft";
 import type {
   ArrangementDocument,
   AssetRef,
@@ -38,6 +39,7 @@ import {
   createBaseAssetPack,
   createUserAssetPack,
   importUserAssetPack,
+  replaceProjectAssetsFromPack,
 } from "@/document/userAssetPack";
 import { layoutCapacity } from "@/document/layoutDefinition";
 import { analyzeStageTopology, resolveTargetSet, stageForLayout } from "@/document/stageTopology";
@@ -198,6 +200,39 @@ export const projectActions = {
     if (cue) updates.selectedCueRef = toAssetRef(cue);
     if (arrangement) updates.selectedArrangementRef = toAssetRef(arrangement);
     useProjectStore.setState(updates);
+    return result;
+  },
+  replaceAssetPack: (pack: UserAssetPack) => {
+    const current = useProjectStore.getState();
+    const result = replaceProjectAssetsFromPack(current.bundle, pack);
+    const bundle = normalizeProjectAssetRefs(result.bundle);
+    const stage = activeStage(bundle);
+    const selectedEffect = [...result.importedPack.effects]
+      .reverse()
+      .find((candidate) => candidate.source === "project_local");
+    const selectedCue = result.importedPack.cues[result.importedPack.cues.length - 1];
+
+    authoringTransportActions.reset();
+    authoringDraftActions.reset();
+    useProjectStore.setState(
+      {
+        ...structuredClone(initialState),
+        bundle,
+        publishedBundle: current.publishedBundle,
+        selectedLayoutRef: structuredClone(stage.layout_ref),
+        selectedEffectRef: selectedEffect ? toAssetRef(selectedEffect) : null,
+        selectedCueRef: selectedCue ? toAssetRef(selectedCue) : null,
+        selectedArrangementRef: activeArrangementRef(bundle),
+        selectedTargetSetId:
+          stage.target_sets.find((targetSet) => targetSet.id === "all")?.id ??
+          stage.target_sets[0]?.id ??
+          "all",
+        history: [],
+        historyCursor: 0,
+        savedHistoryCursor: -1,
+      },
+      true,
+    );
     return result;
   },
   markPublished: () =>

@@ -1,4 +1,14 @@
-import { Download, FolderOpen, Package, PackageOpen, RotateCw, Upload } from "lucide-react";
+import {
+  AlertTriangle,
+  Download,
+  FolderOpen,
+  ListPlus,
+  Package,
+  PackageOpen,
+  RefreshCcw,
+  RotateCw,
+  Upload,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { UserAssetPack } from "@/bridge/types";
 import { Button } from "@/components/ui/button";
@@ -107,16 +117,17 @@ export function WorkspaceAssetPackMenu({ disabled = false }: { disabled?: boolea
       const value = await readUserAssetPackFile(file);
       const validation = validateUserAssetPack(value);
       if (!validation.success) {
-        throw new Error("This is not a complete Lumina V1 asset pack.");
+        throw new Error(
+          `This asset pack is invalid: ${validation.issues
+            .slice(0, 3)
+            .map((issue) => `${issue.path}: ${issue.message}`)
+            .join(" · ")}`,
+        );
       }
       const nextConflicts = assetPackConflicts(bundle, validation.data);
-      if (nextConflicts.length > 0) {
-        setPendingPack(validation.data);
-        setConflicts(nextConflicts);
-        setOpen(false);
-        return;
-      }
-      importPack(validation.data, "reject");
+      setPendingPack(validation.data);
+      setConflicts(nextConflicts);
+      setOpen(false);
     } catch (error) {
       showError(error);
     } finally {
@@ -124,23 +135,34 @@ export function WorkspaceAssetPackMenu({ disabled = false }: { disabled?: boolea
     }
   };
 
-  const importPack = (pack: UserAssetPack, strategy: "reject" | "rename") => {
+  const importPack = (pack: UserAssetPack, mode: "incremental" | "replace") => {
     try {
-      const result = projectActions.importAssetPack(pack, strategy);
+      const result =
+        mode === "replace"
+          ? projectActions.replaceAssetPack(pack)
+          : projectActions.importAssetPack(pack, "rename");
       const count =
+        result.importedPack.stages.length +
         result.importedPack.layouts.length +
         result.importedPack.effects.length +
         result.importedPack.cues.length +
         result.importedPack.arrangements.length;
-      const success = `${count} assets imported${strategy === "rename" ? " as independent copies" : ""}.`;
+      const success =
+        mode === "replace"
+          ? `Project assets replaced with ${count} incoming assets.`
+          : `${count} assets imported incrementally.`;
       setMessage(success);
-      setPendingPack(null);
-      setConflicts([]);
+      dismissImport();
       setOpen(false);
       workspaceActions.setPublishStatus("idle", success);
     } catch (error) {
       showError(error);
     }
+  };
+
+  const dismissImport = () => {
+    setPendingPack(null);
+    setConflicts([]);
   };
 
   const showError = (error: unknown) => {
@@ -256,36 +278,64 @@ export function WorkspaceAssetPackMenu({ disabled = false }: { disabled?: boolea
         onChange={(event) => void readImport(event.currentTarget.files?.[0])}
       />
 
-      <Dialog
-        open={pendingPack !== null}
-        onOpenChange={(nextOpen) => !nextOpen && setPendingPack(null)}
-      >
-        <DialogContent>
+      <Dialog open={pendingPack !== null} onOpenChange={(nextOpen) => !nextOpen && dismissImport()}>
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Import assets as independent copies?</DialogTitle>
+            <DialogTitle>Choose asset import mode</DialogTitle>
             <DialogDescription>
-              {conflicts.length} incoming{" "}
-              {conflicts.length === 1 ? "asset overlaps" : "assets overlap"}
-              content already in this project. Lumina can import independent copies and keep their
-              links intact.
+              {conflicts.length > 0
+                ? `${conflicts.length} incoming ${conflicts.length === 1 ? "asset overlaps" : "assets overlap"} content already in this project.`
+                : "This pack has no asset identity conflicts with the current project."}
             </DialogDescription>
           </DialogHeader>
-          <ul className="text-muted-foreground grid max-h-40 gap-1 overflow-auto text-sm">
-            {conflicts.map((conflict) => (
-              <li key={`${conflict.kind}:${conflict.id}`}>
-                {friendlyKind(conflict.kind)} conflict
-              </li>
-            ))}
-          </ul>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingPack(null)}>
-              Cancel
-            </Button>
+          {conflicts.length > 0 && (
+            <ul className="text-muted-foreground grid max-h-32 gap-1 overflow-auto rounded-md border p-2 text-xs">
+              {conflicts.map((conflict) => (
+                <li key={`${conflict.kind}:${conflict.id}`}>
+                  <span className="text-foreground font-medium">{conflict.name}</span>
+                  {` · ${friendlyKind(conflict.kind)} · ${conflict.id}`}
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="grid gap-2">
             <Button
-              onClick={() => pendingPack && importPack(pendingPack, "rename")}
+              variant="outline"
+              className="h-auto justify-start px-3 py-3 text-left whitespace-normal"
+              onClick={() => pendingPack && importPack(pendingPack, "incremental")}
               disabled={!pendingPack}
             >
-              Import as copies
+              <ListPlus className="mt-0.5 self-start" aria-hidden="true" />
+              <span className="grid gap-0.5">
+                <span>Incremental import</span>
+                <span className="text-muted-foreground text-xs font-normal">
+                  Keep current assets. Conflicts become independent copies with their links intact.
+                </span>
+              </span>
+            </Button>
+            <Button
+              variant="destructive"
+              className="h-auto justify-start px-3 py-3 text-left whitespace-normal"
+              onClick={() => pendingPack && importPack(pendingPack, "replace")}
+              disabled={!pendingPack}
+            >
+              <RefreshCcw className="mt-0.5 self-start" aria-hidden="true" />
+              <span className="grid gap-0.5">
+                <span>Replace all assets</span>
+                <span className="text-xs font-normal">
+                  Discard every current asset and reset to this pack. Project name and folder stay.
+                </span>
+              </span>
+            </Button>
+            <p className="text-destructive flex items-start gap-1.5 text-xs">
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              Replace cannot be undone. The current Live version stays active until you publish
+              again.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={dismissImport}>
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>

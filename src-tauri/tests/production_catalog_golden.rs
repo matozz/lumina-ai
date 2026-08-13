@@ -31,7 +31,7 @@ fn checked_in_multi_tick_golden_matches_deterministic_rendering() {
         template.id == "builtin.project-template.authoring-starter"
             && template.stage.patch[0].id_range == (1, 400)
             && template.arrangement_ref.id == "builtin.arrangement.house-128"
-            && template.cues.len() == 5
+            && template.cues.is_empty()
     }));
     let actual =
         production_catalog_golden(&catalog).expect("catalog compiles at every golden tick");
@@ -52,17 +52,16 @@ fn starter_base_assets_keep_targeting_in_resolved_cue_layers() {
         .iter()
         .find(|template| template.id == "builtin.project-template.authoring-starter")
         .expect("authoring starter template");
-    let target_ids = template
-        .cues
-        .iter()
-        .flat_map(|cue| {
-            cue.layers
-                .iter()
-                .map(|layer| layer.target_set_ref.target_set_id.as_str())
-        })
-        .collect::<Vec<_>>();
+    assert!(template.cues.is_empty());
     for target_id in ["zone-2x2-1", "zone-2x2-2", "zone-2x2-3", "zone-2x2-4"] {
-        assert!(target_ids.contains(&target_id), "missing {target_id}");
+        assert!(
+            template
+                .stage
+                .target_sets
+                .iter()
+                .any(|target_set| target_set.id == target_id),
+            "missing selectable {target_id}"
+        );
     }
     for target_id in ["zone-4x4-1", "zone-4x4-4", "zone-4x4-13", "zone-4x4-16"] {
         assert!(
@@ -84,13 +83,13 @@ fn starter_base_assets_keep_targeting_in_resolved_cue_layers() {
 #[test]
 fn catalog_validation_checks_materialized_project_dependencies() {
     let mut catalog = builtin_production_catalog().expect("catalog parses");
-    catalog.project_templates[0].cues[0].layers[0].effect_ref.id = "missing.effect".to_string();
+    catalog.project_templates[0].arrangement_ref.id = "missing.arrangement".to_string();
 
     let diagnostics = validate_production_catalog(&catalog);
     assert!(diagnostics.iter().any(|diagnostic| {
         diagnostic.code == PROJECT_REFERENCE_NOT_FOUND
             && diagnostic.path.contains("materialized_project")
-            && diagnostic.path.ends_with("effect_ref")
+            && diagnostic.path.contains("arrangement")
     }));
 }
 

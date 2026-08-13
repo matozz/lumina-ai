@@ -214,7 +214,8 @@ describe("Stage 7 Project state", () => {
         "builtin.spatial.column-rain",
       ]),
     );
-    expect(migrated.bundle.cues).toHaveLength(5);
+    expect(migrated.bundle.effects).toHaveLength(17);
+    expect(migrated.bundle.cues).toHaveLength(0);
     expect(migrated.bundle.arrangements.map((arrangement) => arrangement.id)).toEqual([
       "builtin.arrangement.house-128",
     ]);
@@ -296,6 +297,57 @@ describe("Stage 7 Project state", () => {
         (session) => session.playback !== "playing",
       ),
     ).toBe(true);
+  });
+
+  it("resets to a replacement pack without creating Undo history", () => {
+    const incomingEffect = projectActions.createEffect("Incoming Pulse")!;
+    const incomingCue = projectActions.createCue([incomingEffect], "Incoming Cue")!;
+    const incomingArrangement = projectActions.createArrangement("Incoming Sequence")!;
+    projectActions.updateArrangement(incomingArrangement, "Place Incoming Cue", (arrangement) => {
+      arrangement.tracks[0].clips = [
+        {
+          id: "incoming-clip",
+          cue_ref: incomingCue,
+          start_tick: 0,
+          duration_tick: 3_840,
+        },
+      ];
+    });
+    const pack = projectActions.exportAssetPack("Replacement Pack");
+
+    projectActions.reset();
+    projectActions.renameProject("Resident Show");
+    const discardedEffect = projectActions.createEffect("Discard Me")!;
+    projectActions.markPublished();
+    const before = useProjectStore.getState();
+    const projectId = before.bundle.manifest.project_id;
+    const published = structuredClone(before.publishedBundle);
+
+    const replaced = projectActions.replaceAssetPack(pack);
+    let state = useProjectStore.getState();
+
+    expect(state.bundle.manifest).toMatchObject({
+      project_id: projectId,
+      name: "Resident Show",
+      active_arrangement_id: incomingArrangement.id,
+    });
+    expect(exactAsset(state.bundle.effects, discardedEffect)).toBeUndefined();
+    expect(exactAsset(state.bundle.effects, incomingEffect)).toBeTruthy();
+    expect(state.selectedEffectRef).toEqual(incomingEffect);
+    expect(state.selectedCueRef).toEqual(incomingCue);
+    expect(state.selectedArrangementRef).toEqual(incomingArrangement);
+    expect(state.publishedBundle).toEqual(published);
+    expect(state.history).toHaveLength(0);
+    expect(state.historyCursor).toBe(0);
+    expect(state.savedHistoryCursor).toBe(-1);
+    expect(replaced.importedPack.arrangements.map((asset) => asset.id)).toContain(
+      incomingArrangement.id,
+    );
+
+    const replacement = structuredClone(state.bundle);
+    projectActions.undo();
+    state = useProjectStore.getState();
+    expect(state.bundle).toEqual(replacement);
   });
 
   it("exports the same built-in base pack regardless of current Project edits", () => {

@@ -17,16 +17,12 @@ export function createStarterProjectBundle(): ProjectBundle {
   const arrangements = structuredClone(builtinArrangements);
   const cues = structuredClone(template.cues ?? []);
   const effectRefs = new Map(
-    cues.flatMap((cue) =>
-      cue.layers.map(
-        (layer) =>
-          [`${layer.effect_ref.id}@${layer.effect_ref.revision}`, layer.effect_ref] as const,
-      ),
+    builtinEffects.map(
+      (effect) =>
+        [`${effect.id}@${effect.revision}`, { id: effect.id, revision: effect.revision }] as const,
     ),
   );
-  const effects = structuredClone(
-    builtinEffects.filter((effect) => effectRefs.has(`${effect.id}@${effect.revision}`)),
-  );
+  const effects = structuredClone(builtinEffects);
   const arrangement = arrangements.find(
     (candidate) =>
       candidate.id === template.arrangement_ref.id &&
@@ -43,9 +39,6 @@ export function createStarterProjectBundle(): ProjectBundle {
     )
   ) {
     throw new Error("Authoring Starter references a missing built-in Layout");
-  }
-  if (effects.length !== effectRefs.size) {
-    throw new Error("Authoring Starter Cue references a missing built-in Effect");
   }
   const cueRefs = new Set(cues.map((cue) => `${cue.id}@${cue.revision}`));
   if (

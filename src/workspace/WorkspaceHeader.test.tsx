@@ -166,8 +166,84 @@ describe("WorkspaceHeader live workflow", () => {
     expect(pack.layouts).toEqual(builtinLayouts);
     expect(pack.effects).toEqual(builtinEffects);
     expect(pack.cues).toEqual(builtinProjectTemplate().cues);
+    expect(pack.cues).toEqual([]);
     expect(pack.arrangements).toEqual(builtinArrangements);
     expect(useWorkspaceStore.getState().statusMessage).toBe("Base asset pack downloaded.");
+  });
+
+  it("offers incremental import and keeps the current asset set", async () => {
+    const pack = projectActions.exportBaseAssetPack();
+    pack.effects[0].name = "Incoming Conflict Effect";
+    const retained = projectActions.createEffect("Retained Local Effect")!;
+    assetPackFileMocks.readUserAssetPackFile.mockResolvedValue(pack);
+
+    render(
+      <TooltipProvider>
+        <WorkspaceHeader />
+      </TooltipProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Assets" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Import asset pack" }));
+    fireEvent.change(screen.getByLabelText("Choose Lumina asset pack"), {
+      target: { files: [new File(["{}"], "incoming.lumina-assets.json")] },
+    });
+
+    expect(await screen.findByText("Choose asset import mode")).toBeTruthy();
+    expect(screen.getByText(/Incoming Conflict Effect/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Replace all assets/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Incremental import/ }));
+
+    await waitFor(() => expect(screen.queryByText("Choose asset import mode")).toBeNull());
+    const state = useProjectStore.getState();
+    expect(state.bundle.effects.some((effect) => effect.id === retained.id)).toBe(true);
+    expect(
+      state.bundle.effects.some((effect) => effect.id === `imported-${pack.effects[0].id}`),
+    ).toBe(true);
+    expect(state.history[state.history.length - 1]?.label).toBe("Import asset pack");
+    expect(useWorkspaceStore.getState().statusMessage).toMatch(/imported incrementally/);
+  });
+
+  it("replaces all assets as a non-undoable reset while keeping the Project shell", async () => {
+    const pack = projectActions.exportBaseAssetPack();
+    pack.effects[0].name = "Replacement Effect";
+    projectActions.renameProject("Resident Project");
+    const discarded = projectActions.createEffect("Discarded Local Effect")!;
+    projectActions.markPublished();
+    const before = useProjectStore.getState();
+    const projectId = before.bundle.manifest.project_id;
+    const published = structuredClone(before.publishedBundle);
+    assetPackFileMocks.readUserAssetPackFile.mockResolvedValue(pack);
+
+    render(
+      <TooltipProvider>
+        <WorkspaceHeader />
+      </TooltipProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Assets" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Import asset pack" }));
+    fireEvent.change(screen.getByLabelText("Choose Lumina asset pack"), {
+      target: { files: [new File(["{}"], "replacement.lumina-assets.json")] },
+    });
+
+    expect(await screen.findByText("Choose asset import mode")).toBeTruthy();
+    expect(screen.getByText(/Replace cannot be undone/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Replace all assets/ }));
+
+    await waitFor(() => expect(screen.queryByText("Choose asset import mode")).toBeNull());
+    const state = useProjectStore.getState();
+    expect(state.bundle.manifest).toMatchObject({
+      project_id: projectId,
+      name: "Resident Project",
+    });
+    expect(state.bundle.effects.some((effect) => effect.id === discarded.id)).toBe(false);
+    expect(state.bundle.effects.some((effect) => effect.name === "Replacement Effect")).toBe(true);
+    expect(state.publishedBundle).toEqual(published);
+    expect(state.history).toHaveLength(0);
+    expect(state.historyCursor).toBe(0);
+    expect(state.savedHistoryCursor).toBe(-1);
+    expect(useProjectStorageStore.getState().directory).toBe(
+      "/Users/tester/Documents/Lumina Shows/House",
+    );
   });
 
   it("shows autosave failures in Assets without blocking the workspace", async () => {

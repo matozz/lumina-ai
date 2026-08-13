@@ -33,6 +33,12 @@ Stage、Lab、Cues 和 Arrange 的默认节拍均为 128 BPM。打开页面默�
 
 Arrange 的 Space 固定为播放/暂停。Zoom、Snap 与视觉 Grid 是三个独立状态；Fit 只改变视口，不改动文档、Snap 或 BPM。Cue Layer 的 opaque identity 与 display name 分离，普通 UI 和辅助功能名称只显示可理解的 Cue、TargetSet、Effect、Layer 序号和参数名。
 
+## AI 完整编排协作
+
+Repo-local [`lumina-full-arrange`](../../.agents/skills/lumina-full-arrange/SKILL.md) Skill 提供首版离线协作路径：用户显式导出并提供 Base Asset Pack 或普通 Project Pack，Skill 校验并审查实际资产，经对话确认完整 Arrangement brief 后，生成新的、经过验证的 Project Pack。用户再通过 Assets Import 选择 Incremental 或 Replace 导入结果；完整生成包通常可用 Replace 直接重置当前资产，局部包使用 Incremental 追加。
+
+这条路径不把 UserAssetPack 当作 Project manifest，不读取或写入当前 Project 文件夹、`lumina-project.json`、history、localStorage 或 WebView SQLite，也不自动改写 App 当前项目。首版不包含 authoring bridge、CLI、computer-use 或真实 Arrange/Live 验收；导入后的视觉和 Live acceptance 仍由用户在 App 中完成。
+
 ## 工程约束
 
 ### Frontend

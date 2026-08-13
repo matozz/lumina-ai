@@ -1,6 +1,6 @@
 # AI Full Arrange Skill 独立后续规划
 
-> 状态：基于已完成的 `docs/plans/arrange-editor-experience.md`、当前 Effect 参数 contract 和 Project 文件夹持久化模型的独立后续方向文档。本文件本身不授权或实施 Full Arrange Skill。
+> 状态：首个 repo-local 可用版本已于 2026-08-13 实现于 `.agents/skills/lumina-full-arrange/`。当前交付覆盖显式 Base Pack / Project Pack 输入、资产审查、对话式 brief、新 Project Pack 生成、校验和 section 局部调优；真实窗口、computer-use、App transaction、authoring bridge 与 Live 验收仍是后续方向。
 >
 > 核心决定：这不是固定 pattern 自动生成器，也不应引入 Rust generation engine。Skill 以用户显式提供的 Base Asset Pack 或 Project Pack 为入口，通过多轮对话理解输入资产、设计音乐叙事、创建或修改一版完整 Arrangement，再结合用户试听和视觉反馈持续打磨。
 
@@ -41,7 +41,7 @@
 7. 在 Lumina 中播放、观察并让用户评价具体段落。
 8. 根据反馈迭代，直到它在视觉、节奏和操作上都可用。
 
-EDM 的 intro、buildup、drop、breakdown、fill、outro 等只作为 AI 的音乐组织知识和对话词汇，不是硬编码的生成状态机。
+EDM 的 intro、buildup、drop、breakdown、fill、outro 等首先是 AI 的音乐组织知识和对话词汇，不是硬编码的生成状态机。Skill 可以维护可覆盖的 genre/form 先验，用于用户未提供完整边界时提出 section 长度、phrase quantum 和视觉 pattern cycle；用户给出的 bar/tick anchor、Project Pack 的实际边界和确认过的曲式始终优先。此先验不能宣称为音频检测结果。
 
 ## 3. Project Pack 中 `House 128 Custom` 副本提供的参考
 
@@ -73,7 +73,7 @@ Skill 应把它视为用户审美和工作方式的参考，而不是要逐 tick
 
 Skill 必须从用户显式提供的一个输入包开始，不默认扫描当前 App 或项目文件夹：
 
-- **Base Asset Pack**：Assets 中 **Export base asset pack** 导出的确定性内置基线，包含内置 Stage、全部内置 Layout/Effect、starter Cue 和空的 `House 128`。它适合从基准创建新的 Effect、Cue 或 Arrangement；任何需要修改的 built-in 都必须先成为 project-local 副本。
+- **Base Asset Pack**：Assets 中 **Export base asset pack** 导出的确定性内置基线，包含内置 Stage、全部内置 Layout/Effect、空 Cue 集合和空的 `House 128`。它适合从基准创建新的 Effect、Cue 或 Arrangement；任何需要修改的 built-in 都必须先成为 project-local 副本。
 - **Project Pack**：Assets 中普通 **Export asset pack** 导出的当前项目相关资产依赖闭包。它适合继续创建、编辑或修改既有 Effect、Cue 和 Arrangement。它不是完整 Project manifest，也不保证包含与导出闭包无关的资产；上下文不足时必须请用户提供覆盖目标内容的新 Project Pack。
 
 两者都使用 UserAssetPack V1，并先经过 schema、semantic/reference 和 exact-ref 校验。不能只根据文件名判断类型；Base Pack 以固定 built-in provenance 和内容识别，其他普通项目导出按 Project Pack 处理。如果用户同时提供两者，必须明确哪一个是本轮主要输入；Project Pack 可作为修改目标，Base Pack 只能补充内置能力参考，不能覆盖项目资产。
@@ -257,15 +257,19 @@ AI 的编排判断、Effect review 和迭代策略仍在 Skill 对话中，不�
 ├── SKILL.md
 ├── references/
 │   ├── authoring-model.md
+│   ├── edm-form-patterns.md
 │   ├── edm-arrangement-heuristics.md
 │   ├── effect-and-cue-review.md
 │   ├── playback-review.md
 │   └── communication-boundary.md
+├── scripts/
+│   └── derive-form-window.mjs
 └── evals/
-    └── evals.json
+    ├── evals.json
+    └── form-model.test.ts
 ```
 
-初版不创建 `scripts/`。只有多次评测证明存在重复、确定、非创作性的通信或校验步骤时，才增加薄脚本。
+初版曾不创建 `scripts/`。在 House buildup 起点到第二个 drop 结束的实测中，inclusive bar、exclusive tick、候选 phrase 精确适配被证明是重复且确定的边界计算，因此现在允许一个薄的 `derive-form-window.mjs`；它只计算和验证用户可覆盖的 form window，不生成 Cue、Clip、Effect 或创作内容。
 
 `SKILL.md` 应小于约 500 行，只保存流程和路由。Effect 审查、EDM 编排启发、视觉复核和通信边界分别放入 references，并明确何时读取。
 
@@ -298,6 +302,8 @@ Skill description 应在以下意图触发：
 - exact refs 和 Stage compatibility 有效；
 - TargetSet 只属于 Cue Layer；
 - integer ticks、TempoMap、PPQ 和范围合法；
+- genre/form 先验被标记为 proposed default，用户/文档 anchor 优先，section 连续且精确落在请求终点；
+- section length、phrase quantum 和 visual pattern cycle 被分别记录，pattern cycle 可整除 section，除非用户确认非对称 phrase；
 - automation target/type/interpolation 合法；
 - 最终版本中的重叠同属性有明确 MixPolicy；编辑中间状态可以保留非阻塞 semantic diagnostics；
 - standard Color、可选 default、fallback 和 Effect-only `color_stops` 语义正确；
@@ -324,6 +330,7 @@ Skill description 应在以下意图触发：
 3. 素材不足 Project Pack：识别缺口，只创建最小必要的 project-local Effect/Cue，再完成 full arrange。
 4. 20×20 多分区：使用 all/center/edges/四象限组织两次不同 Drop，保持 TargetSet/Cue Layer 模型和 MixPolicy。
 5. 反馈迭代：用户要求“第二个 Drop 更左右、颜色更克制”，验证 Skill 做局部修改而不是推翻整场。
+6. House form window：指定 buildup 1 从第 33 小节开始但不指定结尾，验证 proposed generic House profile 推导到第二个 drop 的第 104 小节，并正确换算半开 tick 范围；另测可精确适配与不可适配的用户终点。
 
 按照 `skill-creator` 流程运行 with-skill 与 baseline，保存对话 transcript、项目 diff、验证结果和视觉证据，通过 review viewer 收集用户反馈并迭代 Skill。
 
