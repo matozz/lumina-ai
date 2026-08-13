@@ -73,7 +73,7 @@ Skill 应把它视为用户审美和工作方式的参考，而不是要逐 tick
 
 Skill 必须从用户显式提供的一个输入包开始，不默认扫描当前 App 或项目文件夹：
 
-- **Base Asset Pack**：Assets 中 **Export base asset pack** 导出的确定性内置基线，包含内置 Stage、全部内置 Layout/Effect、starter Cue 和空的 `House 128`。它适合从基准创建新的 Effect、Cue 或 Arrangement；任何需要修改的 built-in 都必须先成为 project-local 副本。
+- **Base Asset Pack**：Assets 中 **Export base asset pack** 导出的确定性内置基线，包含内置 Stage、全部内置 Layout/Effect、空 Cue 集合和空的 `House 128`。它适合从基准创建新的 Effect、Cue 或 Arrangement；任何需要修改的 built-in 都必须先成为 project-local 副本。
 - **Project Pack**：Assets 中普通 **Export asset pack** 导出的当前项目相关资产依赖闭包。它适合继续创建、编辑或修改既有 Effect、Cue 和 Arrangement。它不是完整 Project manifest，也不保证包含与导出闭包无关的资产；上下文不足时必须请用户提供覆盖目标内容的新 Project Pack。
 
 两者都使用 UserAssetPack V1，并先经过 schema、semantic/reference 和 exact-ref 校验。不能只根据文件名判断类型；Base Pack 以固定 built-in provenance 和内容识别，其他普通项目导出按 Project Pack 处理。如果用户同时提供两者，必须明确哪一个是本轮主要输入；Project Pack 可作为修改目标，Base Pack 只能补充内置能力参考，不能覆盖项目资产。

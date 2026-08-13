@@ -82,6 +82,8 @@ Use a cue-layer Arrangement automation target only when all of these resolve:
 
 The target Clip must exist, its Cue must contain the Layer, and the Layer Effect must declare that parameter with `scope: arrangement`. Keyframe values must use the matching tagged type. Scalar/color values may use continuous interpolation; enum, boolean, and direction use `hold`.
 
+`speed` is a special beat-synchronized scalar contract. Cue overrides, CueClip Layer overrides, and Arrangement keyframes accept only `0.25`, `0.5`, `1`, `2`, `4`, or `8`. A parameter schema range/step does not authorize intermediate speed values such as `0.75`, `1.25`, or `1.5`; those values fail runtime Project validation. Use legal ratio steps for buildups and releases.
+
 Standard `color` accepts strict `#RRGGBB`. A missing Color default means “preserve Effect-authored/fallback color,” not white. `color_stops` is structural Effect-only data and is never a Cue override or Arrangement lane.
 
 ## Project-local copy rules

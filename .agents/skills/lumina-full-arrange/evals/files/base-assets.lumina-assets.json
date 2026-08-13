@@ -12,7 +12,10 @@
       "patch": [
         {
           "profile_id": "generic-rgb",
-          "id_range": [1, 400]
+          "id_range": [
+            1,
+            400
+          ]
         }
       ],
       "layout_ref": {
@@ -24,7 +27,10 @@
           "id": "all-fixtures",
           "name": "All fixtures",
           "fixtures": {
-            "range": [1, 400]
+            "range": [
+              1,
+              400
+            ]
           },
           "sort_by": "none"
         }
@@ -42,7 +48,28 @@
           "name": "Rows",
           "selector": {
             "type": "rows",
-            "indices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+            "indices": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19
+            ]
           }
         },
         {
@@ -50,7 +77,28 @@
           "name": "Columns",
           "selector": {
             "type": "columns",
-            "indices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+            "indices": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19
+            ]
           }
         },
         {
@@ -632,7 +680,10 @@
         "formula": {
           "x": "t * 12",
           "y": "pow(t, 2) * 0.035",
-          "t_range": [-80, 80],
+          "t_range": [
+            -80,
+            80
+          ],
           "count": 40,
           "scale": 0.3
         },
@@ -674,7 +725,10 @@
         "formula": {
           "x": "t * 64",
           "y": "sin(t) * 80",
-          "t_range": [0, 25],
+          "t_range": [
+            0,
+            25
+          ],
           "count": 50,
           "scale": 0.4
         },
@@ -1384,14 +1438,22 @@
         "family": "color",
         "category": "Color Motion",
         "visibility": "standard",
-        "mood": ["modern", "clean"],
+        "mood": [
+          "modern",
+          "clean"
+        ],
         "energy": 0.55,
         "density": 0.75,
         "motion": "sweep",
         "colorfulness": 0.9,
         "strobe_risk": "none",
-        "required_attributes": ["color.rgb", "intensity"],
-        "layout_capabilities": ["coordinates"]
+        "required_attributes": [
+          "color.rgb",
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "coordinates"
+        ]
       }
     },
     {
@@ -1502,8 +1564,14 @@
               "node_id": "oscillator",
               "port": "scalar"
             },
-            "input_range": [0, 1],
-            "output_range": [0.25, 1]
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              0.25,
+              1
+            ]
           },
           {
             "type": "attribute_writer",
@@ -1520,14 +1588,22 @@
         "family": "color",
         "category": "Rhythm",
         "visibility": "standard",
-        "mood": ["neon", "club"],
+        "mood": [
+          "neon",
+          "club"
+        ],
         "energy": 0.65,
         "density": 0.6,
         "motion": "pulse",
         "colorfulness": 0.9,
         "strobe_risk": "low",
-        "required_attributes": ["color.rgb", "intensity"],
-        "layout_capabilities": ["any"]
+        "required_attributes": [
+          "color.rgb",
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "any"
+        ]
       }
     },
     {
@@ -1691,14 +1767,22 @@
         "family": "color",
         "category": "Color Motion",
         "visibility": "standard",
-        "mood": ["festival", "bright"],
+        "mood": [
+          "festival",
+          "bright"
+        ],
         "energy": 0.7,
         "density": 0.85,
         "motion": "sweep",
         "colorfulness": 1,
         "strobe_risk": "none",
-        "required_attributes": ["color.rgb", "intensity"],
-        "layout_capabilities": ["coordinates"]
+        "required_attributes": [
+          "color.rgb",
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "coordinates"
+        ]
       }
     },
     {
@@ -1835,14 +1919,21 @@
         "family": "intensity",
         "category": "Atmosphere",
         "visibility": "standard",
-        "mood": ["calm", "ambient"],
+        "mood": [
+          "calm",
+          "ambient"
+        ],
         "energy": 0.25,
         "density": 0.35,
         "motion": "organic",
         "colorfulness": 0,
         "strobe_risk": "none",
-        "required_attributes": ["intensity"],
-        "layout_capabilities": ["any"]
+        "required_attributes": [
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "any"
+        ]
       }
     },
     {
@@ -1951,14 +2042,23 @@
         "family": "spatial",
         "category": "Chases",
         "visibility": "standard",
-        "mood": ["driving", "kinetic"],
+        "mood": [
+          "driving",
+          "kinetic"
+        ],
         "energy": 0.8,
         "density": 0.45,
         "motion": "chase",
         "colorfulness": 0,
         "strobe_risk": "low",
-        "required_attributes": ["intensity"],
-        "layout_capabilities": ["linear", "matrix", "coordinates"]
+        "required_attributes": [
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "linear",
+          "matrix",
+          "coordinates"
+        ]
       }
     },
     {
@@ -2073,14 +2173,21 @@
         "family": "spatial",
         "category": "Waves",
         "visibility": "standard",
-        "mood": ["fluid", "wide"],
+        "mood": [
+          "fluid",
+          "wide"
+        ],
         "energy": 0.55,
         "density": 0.7,
         "motion": "sweep",
         "colorfulness": 0,
         "strobe_risk": "none",
-        "required_attributes": ["intensity"],
-        "layout_capabilities": ["coordinates"]
+        "required_attributes": [
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "coordinates"
+        ]
       }
     },
     {
@@ -2151,8 +2258,14 @@
               "node_id": "oscillator",
               "port": "scalar"
             },
-            "input_range": [0, 1],
-            "output_range": [-180, 180]
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              -180,
+              180
+            ]
           },
           {
             "type": "attribute_writer",
@@ -2186,14 +2299,22 @@
         "family": "movement",
         "category": "Movement",
         "visibility": "standard",
-        "mood": ["searching", "wide"],
+        "mood": [
+          "searching",
+          "wide"
+        ],
         "energy": 0.5,
         "density": 0.7,
         "motion": "sweep",
         "colorfulness": 0,
         "strobe_risk": "none",
-        "required_attributes": ["position.pan", "intensity"],
-        "layout_capabilities": ["any"]
+        "required_attributes": [
+          "position.pan",
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "any"
+        ]
       }
     },
     {
@@ -2283,8 +2404,14 @@
               "node_id": "oscillator",
               "port": "scalar"
             },
-            "input_range": [0, 1],
-            "output_range": [-60, 60]
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              -60,
+              60
+            ]
           },
           {
             "type": "attribute_writer",
@@ -2318,14 +2445,24 @@
         "family": "movement",
         "category": "Movement",
         "visibility": "standard",
-        "mood": ["rolling", "kinetic"],
+        "mood": [
+          "rolling",
+          "kinetic"
+        ],
         "energy": 0.55,
         "density": 0.75,
         "motion": "organic",
         "colorfulness": 0,
         "strobe_risk": "none",
-        "required_attributes": ["position.tilt", "intensity"],
-        "layout_capabilities": ["linear", "matrix", "coordinates"]
+        "required_attributes": [
+          "position.tilt",
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "linear",
+          "matrix",
+          "coordinates"
+        ]
       }
     },
     {
@@ -2440,14 +2577,22 @@
         "family": "spatial",
         "category": "Geometry",
         "visibility": "standard",
-        "mood": ["circular", "hypnotic"],
+        "mood": [
+          "circular",
+          "hypnotic"
+        ],
         "energy": 0.65,
         "density": 0.65,
         "motion": "sweep",
         "colorfulness": 0,
         "strobe_risk": "low",
-        "required_attributes": ["intensity"],
-        "layout_capabilities": ["coordinates", "radial"]
+        "required_attributes": [
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "coordinates",
+          "radial"
+        ]
       }
     },
     {
@@ -2524,8 +2669,14 @@
               "node_id": "travel-position",
               "port": "scalar"
             },
-            "input_range": [0, 1],
-            "output_range": [-0.08, 1.08]
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              -0.08,
+              1.08
+            ]
           },
           {
             "type": "clamp",
@@ -2587,14 +2738,22 @@
         "family": "spatial",
         "category": "Chases",
         "visibility": "standard",
-        "mood": ["playful", "kinetic"],
+        "mood": [
+          "playful",
+          "kinetic"
+        ],
         "energy": 0.7,
         "density": 0.3,
         "motion": "chase",
         "colorfulness": 0,
         "strobe_risk": "none",
-        "required_attributes": ["intensity"],
-        "layout_capabilities": ["matrix", "coordinates"]
+        "required_attributes": [
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "matrix",
+          "coordinates"
+        ]
       }
     },
     {
@@ -2718,14 +2877,22 @@
         "family": "spatial",
         "category": "Chases",
         "visibility": "standard",
-        "mood": ["textured", "kinetic"],
+        "mood": [
+          "textured",
+          "kinetic"
+        ],
         "energy": 0.65,
         "density": 0.35,
         "motion": "chase",
         "colorfulness": 0,
         "strobe_risk": "none",
-        "required_attributes": ["intensity"],
-        "layout_capabilities": ["matrix", "coordinates"]
+        "required_attributes": [
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "matrix",
+          "coordinates"
+        ]
       }
     },
     {
@@ -2835,14 +3002,23 @@
         "family": "spatial",
         "category": "Geometry",
         "visibility": "standard",
-        "mood": ["expansive", "cinematic"],
+        "mood": [
+          "expansive",
+          "cinematic"
+        ],
         "energy": 0.55,
         "density": 0.8,
         "motion": "organic",
         "colorfulness": 0.75,
         "strobe_risk": "none",
-        "required_attributes": ["intensity", "color.rgb"],
-        "layout_capabilities": ["coordinates", "radial"]
+        "required_attributes": [
+          "intensity",
+          "color.rgb"
+        ],
+        "layout_capabilities": [
+          "coordinates",
+          "radial"
+        ]
       }
     },
     {
@@ -2927,14 +3103,21 @@
         "family": "strobe",
         "category": "Risk",
         "visibility": "standard",
-        "mood": ["impact", "peak"],
+        "mood": [
+          "impact",
+          "peak"
+        ],
         "energy": 0.9,
         "density": 0.4,
         "motion": "pulse",
         "colorfulness": 0,
         "strobe_risk": "high",
-        "required_attributes": ["intensity"],
-        "layout_capabilities": ["any"]
+        "required_attributes": [
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "any"
+        ]
       }
     },
     {
@@ -3064,8 +3247,14 @@
               "node_id": "safe-envelope",
               "port": "scalar"
             },
-            "input_range": [0, 1],
-            "output_range": [0, 0.7]
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              0,
+              0.7
+            ]
           },
           {
             "type": "attribute_writer",
@@ -3082,14 +3271,22 @@
         "family": "utility",
         "category": "Transition",
         "visibility": "standard",
-        "mood": ["safe", "controlled"],
+        "mood": [
+          "safe",
+          "controlled"
+        ],
         "energy": 0.15,
         "density": 1,
         "motion": "organic",
         "colorfulness": 0.75,
         "strobe_risk": "none",
-        "required_attributes": ["intensity", "color.rgb"],
-        "layout_capabilities": ["any"]
+        "required_attributes": [
+          "intensity",
+          "color.rgb"
+        ],
+        "layout_capabilities": [
+          "any"
+        ]
       }
     },
     {
@@ -3157,8 +3354,14 @@
               "node_id": "seeded-noise",
               "port": "scalar"
             },
-            "input_range": [0, 1],
-            "output_range": [0.08, 0.95]
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              0.08,
+              0.95
+            ]
           },
           {
             "type": "attribute_writer",
@@ -3175,14 +3378,21 @@
         "family": "utility",
         "category": "Transition",
         "visibility": "standard",
-        "mood": ["textured", "cinematic"],
+        "mood": [
+          "textured",
+          "cinematic"
+        ],
         "energy": 0.45,
         "density": 0.7,
         "motion": "organic",
         "colorfulness": 0,
         "strobe_risk": "low",
-        "required_attributes": ["intensity"],
-        "layout_capabilities": ["any"]
+        "required_attributes": [
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "any"
+        ]
       }
     },
     {
@@ -3260,8 +3470,14 @@
               "node_id": "fade-cycle",
               "port": "scalar"
             },
-            "input_range": [0, 1],
-            "output_range": [0.15, 0.9]
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              0.15,
+              0.9
+            ]
           },
           {
             "type": "attribute_writer",
@@ -3278,14 +3494,22 @@
         "family": "utility",
         "category": "Transition",
         "visibility": "standard",
-        "mood": ["smooth", "controlled"],
+        "mood": [
+          "smooth",
+          "controlled"
+        ],
         "energy": 0.3,
         "density": 1,
         "motion": "organic",
         "colorfulness": 0.75,
         "strobe_risk": "none",
-        "required_attributes": ["intensity", "color.rgb"],
-        "layout_capabilities": ["any"]
+        "required_attributes": [
+          "intensity",
+          "color.rgb"
+        ],
+        "layout_capabilities": [
+          "any"
+        ]
       }
     },
     {
@@ -3400,374 +3624,27 @@
         "family": "spatial",
         "category": "Transition",
         "visibility": "standard",
-        "mood": ["directional", "clean"],
+        "mood": [
+          "directional",
+          "clean"
+        ],
         "energy": 0.55,
         "density": 0.55,
         "motion": "sweep",
         "colorfulness": 0,
         "strobe_risk": "none",
-        "required_attributes": ["intensity"],
-        "layout_capabilities": ["linear", "matrix", "coordinates"]
+        "required_attributes": [
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "linear",
+          "matrix",
+          "coordinates"
+        ]
       }
     }
   ],
-  "cues": [
-    {
-      "schema_version": 1,
-      "id": "starter.cue.quadrant-motion",
-      "revision": 1,
-      "name": "Quadrant Motion Dialogue",
-      "compatible_stage_ref": {
-        "id": "main-stage",
-        "revision": 1
-      },
-      "nominal_length_ticks": 15360,
-      "layers": [
-        {
-          "id": "layer_3e3tmku2poix5zrt",
-          "effect_ref": {
-            "id": "builtin.spatial.column-ping-pong",
-            "revision": 1
-          },
-          "target_set_ref": {
-            "stage_id": "main-stage",
-            "stage_revision": 1,
-            "target_set_id": "zone-2x2-1"
-          },
-          "parameter_overrides": {
-            "speed": {
-              "type": "scalar",
-              "value": 1
-            },
-            "intensity": {
-              "type": "scalar",
-              "value": 0.9
-            }
-          },
-          "phase": 0,
-          "seed": "2100000000000001",
-          "layer": 0,
-          "priority": 0,
-          "trigger_policy": {
-            "mode": "timeline",
-            "quantize": "beat"
-          }
-        },
-        {
-          "id": "layer_rmrvzr7biw4vox57",
-          "effect_ref": {
-            "id": "builtin.spatial.column-rain",
-            "revision": 1
-          },
-          "target_set_ref": {
-            "stage_id": "main-stage",
-            "stage_revision": 1,
-            "target_set_id": "zone-2x2-2"
-          },
-          "parameter_overrides": {
-            "speed": {
-              "type": "scalar",
-              "value": 1
-            },
-            "intensity": {
-              "type": "scalar",
-              "value": 0.85
-            }
-          },
-          "phase": 0,
-          "seed": "2100000000000002",
-          "layer": 1,
-          "priority": 0,
-          "trigger_policy": {
-            "mode": "timeline",
-            "quantize": "beat"
-          }
-        },
-        {
-          "id": "layer_tbekn4kbc4yh22up",
-          "effect_ref": {
-            "id": "builtin.color.dual-sweep",
-            "revision": 1
-          },
-          "target_set_ref": {
-            "stage_id": "main-stage",
-            "stage_revision": 1,
-            "target_set_id": "zone-2x2-3"
-          },
-          "parameter_overrides": {
-            "speed": {
-              "type": "scalar",
-              "value": 1
-            },
-            "phase": {
-              "type": "scalar",
-              "value": 0
-            }
-          },
-          "phase": 0,
-          "seed": "2100000000000003",
-          "layer": 2,
-          "priority": 0,
-          "trigger_policy": {
-            "mode": "timeline",
-            "quantize": "beat"
-          }
-        },
-        {
-          "id": "layer_74iyonq7anv37xv2",
-          "effect_ref": {
-            "id": "builtin.intensity.breathe",
-            "revision": 1
-          },
-          "target_set_ref": {
-            "stage_id": "main-stage",
-            "stage_revision": 1,
-            "target_set_id": "zone-2x2-4"
-          },
-          "parameter_overrides": {
-            "speed": {
-              "type": "scalar",
-              "value": 1
-            },
-            "intensity": {
-              "type": "scalar",
-              "value": 0.7
-            }
-          },
-          "phase": 0,
-          "seed": "2100000000000004",
-          "layer": 3,
-          "priority": 0,
-          "trigger_policy": {
-            "mode": "timeline",
-            "quantize": "beat"
-          }
-        }
-      ],
-      "trigger_policy": {
-        "mode": "timeline",
-        "quantize": "bar"
-      },
-      "capability_summary": {
-        "required_attributes": ["color.rgb", "intensity"]
-      },
-      "risk_summary": {
-        "strobe_risk": "none"
-      }
-    },
-    {
-      "schema_version": 1,
-      "id": "starter.cue.corner-top-left",
-      "revision": 1,
-      "name": "Corner · Top Left Ping-Pong",
-      "compatible_stage_ref": {
-        "id": "main-stage",
-        "revision": 1
-      },
-      "nominal_length_ticks": 7680,
-      "layers": [
-        {
-          "id": "layer_c7v4dilw4gplwd35",
-          "effect_ref": {
-            "id": "builtin.spatial.column-ping-pong",
-            "revision": 1
-          },
-          "target_set_ref": {
-            "stage_id": "main-stage",
-            "stage_revision": 1,
-            "target_set_id": "zone-2x2-1"
-          },
-          "parameter_overrides": {
-            "speed": {
-              "type": "scalar",
-              "value": 1
-            },
-            "intensity": {
-              "type": "scalar",
-              "value": 0.9
-            }
-          },
-          "phase": 0,
-          "seed": "2200000000000001",
-          "layer": 0,
-          "priority": 0,
-          "trigger_policy": {
-            "mode": "timeline",
-            "quantize": "beat"
-          }
-        }
-      ],
-      "trigger_policy": {
-        "mode": "timeline",
-        "quantize": "beat"
-      },
-      "capability_summary": {
-        "required_attributes": ["intensity"]
-      },
-      "risk_summary": {
-        "strobe_risk": "none"
-      }
-    },
-    {
-      "schema_version": 1,
-      "id": "starter.cue.corner-top-right",
-      "revision": 1,
-      "name": "Corner · Top Right Rain",
-      "compatible_stage_ref": {
-        "id": "main-stage",
-        "revision": 1
-      },
-      "nominal_length_ticks": 7680,
-      "layers": [
-        {
-          "id": "layer_3gvzosqmxbtgiiad",
-          "effect_ref": {
-            "id": "builtin.spatial.column-rain",
-            "revision": 1
-          },
-          "target_set_ref": {
-            "stage_id": "main-stage",
-            "stage_revision": 1,
-            "target_set_id": "zone-2x2-2"
-          },
-          "parameter_overrides": {
-            "speed": {
-              "type": "scalar",
-              "value": 1
-            },
-            "intensity": {
-              "type": "scalar",
-              "value": 0.85
-            }
-          },
-          "phase": 0,
-          "seed": "2200000000000002",
-          "layer": 0,
-          "priority": 0,
-          "trigger_policy": {
-            "mode": "timeline",
-            "quantize": "beat"
-          }
-        }
-      ],
-      "trigger_policy": {
-        "mode": "timeline",
-        "quantize": "beat"
-      },
-      "capability_summary": {
-        "required_attributes": ["intensity"]
-      },
-      "risk_summary": {
-        "strobe_risk": "none"
-      }
-    },
-    {
-      "schema_version": 1,
-      "id": "starter.cue.corner-bottom-left",
-      "revision": 1,
-      "name": "Corner · Bottom Left Gradient",
-      "compatible_stage_ref": {
-        "id": "main-stage",
-        "revision": 1
-      },
-      "nominal_length_ticks": 7680,
-      "layers": [
-        {
-          "id": "layer_untftli3dktwu5uv",
-          "effect_ref": {
-            "id": "builtin.color.dual-sweep",
-            "revision": 1
-          },
-          "target_set_ref": {
-            "stage_id": "main-stage",
-            "stage_revision": 1,
-            "target_set_id": "zone-2x2-3"
-          },
-          "parameter_overrides": {
-            "speed": {
-              "type": "scalar",
-              "value": 1
-            },
-            "phase": {
-              "type": "scalar",
-              "value": 0
-            }
-          },
-          "phase": 0,
-          "seed": "2200000000000003",
-          "layer": 0,
-          "priority": 0,
-          "trigger_policy": {
-            "mode": "timeline",
-            "quantize": "beat"
-          }
-        }
-      ],
-      "trigger_policy": {
-        "mode": "timeline",
-        "quantize": "beat"
-      },
-      "capability_summary": {
-        "required_attributes": ["color.rgb", "intensity"]
-      },
-      "risk_summary": {
-        "strobe_risk": "none"
-      }
-    },
-    {
-      "schema_version": 1,
-      "id": "starter.cue.corner-bottom-right",
-      "revision": 1,
-      "name": "Corner · Bottom Right Breathe",
-      "compatible_stage_ref": {
-        "id": "main-stage",
-        "revision": 1
-      },
-      "nominal_length_ticks": 7680,
-      "layers": [
-        {
-          "id": "layer_zewjnwomcic3be4n",
-          "effect_ref": {
-            "id": "builtin.intensity.breathe",
-            "revision": 1
-          },
-          "target_set_ref": {
-            "stage_id": "main-stage",
-            "stage_revision": 1,
-            "target_set_id": "zone-2x2-4"
-          },
-          "parameter_overrides": {
-            "speed": {
-              "type": "scalar",
-              "value": 1
-            },
-            "intensity": {
-              "type": "scalar",
-              "value": 0.7
-            }
-          },
-          "phase": 0,
-          "seed": "2200000000000004",
-          "layer": 0,
-          "priority": 0,
-          "trigger_policy": {
-            "mode": "timeline",
-            "quantize": "beat"
-          }
-        }
-      ],
-      "trigger_policy": {
-        "mode": "timeline",
-        "quantize": "beat"
-      },
-      "capability_summary": {
-        "required_attributes": ["intensity"]
-      },
-      "risk_summary": {
-        "strobe_risk": "none"
-      }
-    }
-  ],
+  "cues": [],
   "arrangements": [
     {
       "schema_version": 1,

@@ -42,26 +42,55 @@ describe("lumina-full-arrange eval fixtures", () => {
 function createProjectPack(base: UserAssetPack): UserAssetPack {
   const ppq = 960;
   const barTicks = ppq * 4;
-  const cues = structuredClone(base.cues);
+  const stage = structuredClone(base.stages[0]);
+  const cues = [
+    projectCue(
+      "project.cue.zone-one-ping-pong",
+      "Zone One Ping-Pong",
+      "layer_project_zone_one",
+      "builtin.spatial.column-ping-pong",
+      "zone-2x2-1",
+      { speed: { type: "scalar", value: 1 }, intensity: { type: "scalar", value: 0.9 } },
+    ),
+    projectCue(
+      "project.cue.zone-two-rain",
+      "Zone Two Rain",
+      "layer_project_zone_two",
+      "builtin.spatial.column-rain",
+      "zone-2x2-2",
+      { speed: { type: "scalar", value: 1 }, intensity: { type: "scalar", value: 0.85 } },
+    ),
+    projectCue(
+      "project.cue.zone-three-gradient",
+      "Zone Three Gradient",
+      "layer_project_zone_three",
+      "builtin.color.dual-sweep",
+      "zone-2x2-3",
+      { speed: { type: "scalar", value: 1 }, phase: { type: "scalar", value: 0 } },
+    ),
+    projectCue(
+      "project.cue.zone-four-breathe",
+      "Zone Four Breathe",
+      "layer_project_zone_four",
+      "builtin.intensity.breathe",
+      "zone-2x2-4",
+      { speed: { type: "scalar", value: 1 }, intensity: { type: "scalar", value: 0.7 } },
+    ),
+  ] satisfies CueDefinition[];
   const cueById = new Map(cues.map((cue) => [cue.id, cue]));
   const clips: CueClip[] = [
-    clip("foundation", "starter.cue.quadrant-motion", 0, 8 * barTicks),
-    clip("buildup", "starter.cue.quadrant-motion", 8 * barTicks, 8 * barTicks),
+    clip("foundation", cues[0].id, 0, 8 * barTicks),
+    clip("buildup", cues[0].id, 8 * barTicks, 8 * barTicks),
     ...Array.from({ length: 35 }, (_, index) =>
       clip(
         `alternating-drop-${String(index + 1).padStart(2, "0")}`,
-        [
-          "starter.cue.corner-top-left",
-          "starter.cue.corner-top-right",
-          "starter.cue.corner-bottom-left",
-          "starter.cue.corner-bottom-right",
-        ][index % 4],
+        cues[index % 4].id,
         16 * barTicks + index * ppq,
         ppq,
       ),
     ),
-    clip("transition", "starter.cue.corner-top-left", 16 * barTicks + 35 * ppq, 5 * ppq),
-    clip("recovery", "starter.cue.corner-bottom-right", 26 * barTicks, 2 * barTicks),
+    clip("transition", cues[0].id, 16 * barTicks + 35 * ppq, 5 * ppq),
+    clip("recovery", cues[3].id, 26 * barTicks, 2 * barTicks),
   ];
 
   const automationLanes: ArrangementAutomationLane[] = [
@@ -94,7 +123,6 @@ function createProjectPack(base: UserAssetPack): UserAssetPack {
   const usedEffects = base.effects.filter((effect) =>
     usedEffectRefs.has(`${effect.id}@${effect.revision}`),
   );
-  const stage = structuredClone(base.stages[0]);
   const layout = structuredClone(
     base.layouts.find(
       (candidate) =>
@@ -139,6 +167,44 @@ function createProjectPack(base: UserAssetPack): UserAssetPack {
         ],
       },
     ],
+  };
+}
+
+function projectCue(
+  id: string,
+  name: string,
+  layerId: string,
+  effectId: string,
+  targetSetId: string,
+  parameterOverrides: CueDefinition["layers"][number]["parameter_overrides"],
+): CueDefinition {
+  return {
+    schema_version: 1,
+    id,
+    revision: 1,
+    name,
+    compatible_stage_ref: { id: "main-stage", revision: 1 },
+    nominal_length_ticks: 7_680,
+    layers: [
+      {
+        id: layerId,
+        effect_ref: { id: effectId, revision: 1 },
+        target_set_ref: {
+          stage_id: "main-stage",
+          stage_revision: 1,
+          target_set_id: targetSetId,
+        },
+        parameter_overrides: parameterOverrides,
+        phase: 0,
+        seed: "2300000000000001",
+        layer: 0,
+        priority: 0,
+        trigger_policy: { mode: "timeline", quantize: "beat" },
+      },
+    ],
+    trigger_policy: { mode: "timeline", quantize: "beat" },
+    capability_summary: { required_attributes: ["intensity"] },
+    risk_summary: { strobe_risk: "none" },
   };
 }
 

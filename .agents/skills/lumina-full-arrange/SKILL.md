@@ -41,7 +41,7 @@ Complete each gate in order. A user may provide the creative answers and approva
 2. Run JSON Schema validation, pack reference validation, exact-reference checks, and the available Lumina semantic validation. In this repository, use the existing `validateUserAssetPack` authority through the local test harness described in [authoring-model.md](references/authoring-model.md).
 3. Report every diagnostic with an understandable asset path. Stop on any error.
 4. Classify by content and provenance, never by filename alone:
-   - **Base Pack**: the deterministic built-in starter closure: built-in Stage/Layout/Effects, starter Cues, and an empty built-in `House 128`.
+   - **Base Pack**: the deterministic built-in starter closure: built-in Stage/Layout/Effects, no pre-authored Cues, and an empty built-in `House 128`.
    - **Project Pack**: any valid ordinary asset dependency closure exported from a project, including project-local or non-empty Arrangement content.
 5. If a Project Pack lacks the requested Arrangement or any dependency, report what is missing and request a new Project Pack.
 
@@ -124,7 +124,7 @@ Create a dependency-closed UserAssetPack V1 variant without changing the input f
 - Create new, non-`builtin.*` IDs for the Arrangement and every new or customized asset.
 - Set new/customized Effect `source` to `project_local`.
 - Use built-in Effects as exact, read-only dependencies when no customization is needed.
-- Create project-local Cues for new Effect/TargetSet bindings. Do not edit starter Cues in place.
+- Create the smallest necessary project-local Cues for every Effect/TargetSet binding; Base Packs intentionally contain no example Cues to reuse as creative references.
 - Create a project-local Arrangement rather than editing built-in `House 128`.
 
 #### Project Pack modification
@@ -145,6 +145,7 @@ Create a dependency-closed UserAssetPack V1 variant without changing the input f
 - Keep `start_tick >= 0`, `duration_tick > 0`, and `start_tick + duration_tick <= length_ticks`.
 - Treat CueClip intervals as half-open. Use intentional overlap only with compatible explicit MixPolicy.
 - Automation target and value types must match the resolved Effect parameter. Continuous values may interpolate; direction/boolean/enum use `hold`.
+- Beat-synchronized `speed` is discrete even when represented as a scalar: Cue overrides, CueClip Layer overrides, and every speed keyframe must be exactly `0.25`, `0.5`, `1`, `2`, `4`, or `8`. Do not use intermediate values such as `0.75`, `1.25`, or `1.5`; change at legal ratios instead of authoring unsupported values.
 - Standard `color` may be overridden or automated as typed `#RRGGBB`. Never automate `color_stops`.
 - Generate opaque Cue Layer IDs on creation, preserve them on edit, and regenerate them on copy. Do not derive them from names.
 - Use stable, readable Clip/lane IDs without embedding user secrets.
@@ -155,7 +156,7 @@ Create a dependency-closed UserAssetPack V1 variant without changing the input f
 2. Run Schema, reference, exact-ref, and semantic validation against the written file.
 3. Verify the input hash is unchanged.
 4. Compare built-ins in the output with the same exact identities in the input; require deep equality.
-5. Verify project-local provenance, Arrangement ranges, integer ticks, automation targets/types, and the absence of CueClip targeting.
+5. Verify project-local provenance, Arrangement ranges, integer ticks, automation targets/types, discrete synchronized speed values, and the absence of CueClip targeting.
 6. Re-open the written JSON and validate it again; do not rely on an in-memory object.
 7. If validation fails, keep the invalid draft out of the final handoff, fix a new working copy, and rerun all checks.
 

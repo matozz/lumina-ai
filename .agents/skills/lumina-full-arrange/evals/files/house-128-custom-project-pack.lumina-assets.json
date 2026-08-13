@@ -12,7 +12,10 @@
       "patch": [
         {
           "profile_id": "generic-rgb",
-          "id_range": [1, 400]
+          "id_range": [
+            1,
+            400
+          ]
         }
       ],
       "layout_ref": {
@@ -24,7 +27,10 @@
           "id": "all-fixtures",
           "name": "All fixtures",
           "fixtures": {
-            "range": [1, 400]
+            "range": [
+              1,
+              400
+            ]
           },
           "sort_by": "none"
         }
@@ -42,7 +48,28 @@
           "name": "Rows",
           "selector": {
             "type": "rows",
-            "indices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+            "indices": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19
+            ]
           }
         },
         {
@@ -50,7 +77,28 @@
           "name": "Columns",
           "selector": {
             "type": "columns",
-            "indices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+            "indices": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19
+            ]
           }
         },
         {
@@ -594,14 +642,22 @@
         "family": "color",
         "category": "Color Motion",
         "visibility": "standard",
-        "mood": ["modern", "clean"],
+        "mood": [
+          "modern",
+          "clean"
+        ],
         "energy": 0.55,
         "density": 0.75,
         "motion": "sweep",
         "colorfulness": 0.9,
         "strobe_risk": "none",
-        "required_attributes": ["color.rgb", "intensity"],
-        "layout_capabilities": ["coordinates"]
+        "required_attributes": [
+          "color.rgb",
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "coordinates"
+        ]
       }
     },
     {
@@ -738,14 +794,21 @@
         "family": "intensity",
         "category": "Atmosphere",
         "visibility": "standard",
-        "mood": ["calm", "ambient"],
+        "mood": [
+          "calm",
+          "ambient"
+        ],
         "energy": 0.25,
         "density": 0.35,
         "motion": "organic",
         "colorfulness": 0,
         "strobe_risk": "none",
-        "required_attributes": ["intensity"],
-        "layout_capabilities": ["any"]
+        "required_attributes": [
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "any"
+        ]
       }
     },
     {
@@ -822,8 +885,14 @@
               "node_id": "travel-position",
               "port": "scalar"
             },
-            "input_range": [0, 1],
-            "output_range": [-0.08, 1.08]
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              -0.08,
+              1.08
+            ]
           },
           {
             "type": "clamp",
@@ -885,14 +954,22 @@
         "family": "spatial",
         "category": "Chases",
         "visibility": "standard",
-        "mood": ["playful", "kinetic"],
+        "mood": [
+          "playful",
+          "kinetic"
+        ],
         "energy": 0.7,
         "density": 0.3,
         "motion": "chase",
         "colorfulness": 0,
         "strobe_risk": "none",
-        "required_attributes": ["intensity"],
-        "layout_capabilities": ["matrix", "coordinates"]
+        "required_attributes": [
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "matrix",
+          "coordinates"
+        ]
       }
     },
     {
@@ -1016,31 +1093,39 @@
         "family": "spatial",
         "category": "Chases",
         "visibility": "standard",
-        "mood": ["textured", "kinetic"],
+        "mood": [
+          "textured",
+          "kinetic"
+        ],
         "energy": 0.65,
         "density": 0.35,
         "motion": "chase",
         "colorfulness": 0,
         "strobe_risk": "none",
-        "required_attributes": ["intensity"],
-        "layout_capabilities": ["matrix", "coordinates"]
+        "required_attributes": [
+          "intensity"
+        ],
+        "layout_capabilities": [
+          "matrix",
+          "coordinates"
+        ]
       }
     }
   ],
   "cues": [
     {
       "schema_version": 1,
-      "id": "starter.cue.quadrant-motion",
+      "id": "project.cue.zone-one-ping-pong",
       "revision": 1,
-      "name": "Quadrant Motion Dialogue",
+      "name": "Zone One Ping-Pong",
       "compatible_stage_ref": {
         "id": "main-stage",
         "revision": 1
       },
-      "nominal_length_ticks": 15360,
+      "nominal_length_ticks": 7680,
       "layers": [
         {
-          "id": "layer_3e3tmku2poix5zrt",
+          "id": "layer_project_zone_one",
           "effect_ref": {
             "id": "builtin.spatial.column-ping-pong",
             "revision": 1
@@ -1061,16 +1146,41 @@
             }
           },
           "phase": 0,
-          "seed": "2100000000000001",
+          "seed": "2300000000000001",
           "layer": 0,
           "priority": 0,
           "trigger_policy": {
             "mode": "timeline",
             "quantize": "beat"
           }
-        },
+        }
+      ],
+      "trigger_policy": {
+        "mode": "timeline",
+        "quantize": "beat"
+      },
+      "capability_summary": {
+        "required_attributes": [
+          "intensity"
+        ]
+      },
+      "risk_summary": {
+        "strobe_risk": "none"
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "project.cue.zone-two-rain",
+      "revision": 1,
+      "name": "Zone Two Rain",
+      "compatible_stage_ref": {
+        "id": "main-stage",
+        "revision": 1
+      },
+      "nominal_length_ticks": 7680,
+      "layers": [
         {
-          "id": "layer_rmrvzr7biw4vox57",
+          "id": "layer_project_zone_two",
           "effect_ref": {
             "id": "builtin.spatial.column-rain",
             "revision": 1
@@ -1091,16 +1201,41 @@
             }
           },
           "phase": 0,
-          "seed": "2100000000000002",
-          "layer": 1,
+          "seed": "2300000000000001",
+          "layer": 0,
           "priority": 0,
           "trigger_policy": {
             "mode": "timeline",
             "quantize": "beat"
           }
-        },
+        }
+      ],
+      "trigger_policy": {
+        "mode": "timeline",
+        "quantize": "beat"
+      },
+      "capability_summary": {
+        "required_attributes": [
+          "intensity"
+        ]
+      },
+      "risk_summary": {
+        "strobe_risk": "none"
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "project.cue.zone-three-gradient",
+      "revision": 1,
+      "name": "Zone Three Gradient",
+      "compatible_stage_ref": {
+        "id": "main-stage",
+        "revision": 1
+      },
+      "nominal_length_ticks": 7680,
+      "layers": [
         {
-          "id": "layer_tbekn4kbc4yh22up",
+          "id": "layer_project_zone_three",
           "effect_ref": {
             "id": "builtin.color.dual-sweep",
             "revision": 1
@@ -1121,16 +1256,41 @@
             }
           },
           "phase": 0,
-          "seed": "2100000000000003",
-          "layer": 2,
+          "seed": "2300000000000001",
+          "layer": 0,
           "priority": 0,
           "trigger_policy": {
             "mode": "timeline",
             "quantize": "beat"
           }
-        },
+        }
+      ],
+      "trigger_policy": {
+        "mode": "timeline",
+        "quantize": "beat"
+      },
+      "capability_summary": {
+        "required_attributes": [
+          "intensity"
+        ]
+      },
+      "risk_summary": {
+        "strobe_risk": "none"
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "project.cue.zone-four-breathe",
+      "revision": 1,
+      "name": "Zone Four Breathe",
+      "compatible_stage_ref": {
+        "id": "main-stage",
+        "revision": 1
+      },
+      "nominal_length_ticks": 7680,
+      "layers": [
         {
-          "id": "layer_74iyonq7anv37xv2",
+          "id": "layer_project_zone_four",
           "effect_ref": {
             "id": "builtin.intensity.breathe",
             "revision": 1
@@ -1151,60 +1311,7 @@
             }
           },
           "phase": 0,
-          "seed": "2100000000000004",
-          "layer": 3,
-          "priority": 0,
-          "trigger_policy": {
-            "mode": "timeline",
-            "quantize": "beat"
-          }
-        }
-      ],
-      "trigger_policy": {
-        "mode": "timeline",
-        "quantize": "bar"
-      },
-      "capability_summary": {
-        "required_attributes": ["color.rgb", "intensity"]
-      },
-      "risk_summary": {
-        "strobe_risk": "none"
-      }
-    },
-    {
-      "schema_version": 1,
-      "id": "starter.cue.corner-top-left",
-      "revision": 1,
-      "name": "Corner · Top Left Ping-Pong",
-      "compatible_stage_ref": {
-        "id": "main-stage",
-        "revision": 1
-      },
-      "nominal_length_ticks": 7680,
-      "layers": [
-        {
-          "id": "layer_c7v4dilw4gplwd35",
-          "effect_ref": {
-            "id": "builtin.spatial.column-ping-pong",
-            "revision": 1
-          },
-          "target_set_ref": {
-            "stage_id": "main-stage",
-            "stage_revision": 1,
-            "target_set_id": "zone-2x2-1"
-          },
-          "parameter_overrides": {
-            "speed": {
-              "type": "scalar",
-              "value": 1
-            },
-            "intensity": {
-              "type": "scalar",
-              "value": 0.9
-            }
-          },
-          "phase": 0,
-          "seed": "2200000000000001",
+          "seed": "2300000000000001",
           "layer": 0,
           "priority": 0,
           "trigger_policy": {
@@ -1218,166 +1325,9 @@
         "quantize": "beat"
       },
       "capability_summary": {
-        "required_attributes": ["intensity"]
-      },
-      "risk_summary": {
-        "strobe_risk": "none"
-      }
-    },
-    {
-      "schema_version": 1,
-      "id": "starter.cue.corner-top-right",
-      "revision": 1,
-      "name": "Corner · Top Right Rain",
-      "compatible_stage_ref": {
-        "id": "main-stage",
-        "revision": 1
-      },
-      "nominal_length_ticks": 7680,
-      "layers": [
-        {
-          "id": "layer_3gvzosqmxbtgiiad",
-          "effect_ref": {
-            "id": "builtin.spatial.column-rain",
-            "revision": 1
-          },
-          "target_set_ref": {
-            "stage_id": "main-stage",
-            "stage_revision": 1,
-            "target_set_id": "zone-2x2-2"
-          },
-          "parameter_overrides": {
-            "speed": {
-              "type": "scalar",
-              "value": 1
-            },
-            "intensity": {
-              "type": "scalar",
-              "value": 0.85
-            }
-          },
-          "phase": 0,
-          "seed": "2200000000000002",
-          "layer": 0,
-          "priority": 0,
-          "trigger_policy": {
-            "mode": "timeline",
-            "quantize": "beat"
-          }
-        }
-      ],
-      "trigger_policy": {
-        "mode": "timeline",
-        "quantize": "beat"
-      },
-      "capability_summary": {
-        "required_attributes": ["intensity"]
-      },
-      "risk_summary": {
-        "strobe_risk": "none"
-      }
-    },
-    {
-      "schema_version": 1,
-      "id": "starter.cue.corner-bottom-left",
-      "revision": 1,
-      "name": "Corner · Bottom Left Gradient",
-      "compatible_stage_ref": {
-        "id": "main-stage",
-        "revision": 1
-      },
-      "nominal_length_ticks": 7680,
-      "layers": [
-        {
-          "id": "layer_untftli3dktwu5uv",
-          "effect_ref": {
-            "id": "builtin.color.dual-sweep",
-            "revision": 1
-          },
-          "target_set_ref": {
-            "stage_id": "main-stage",
-            "stage_revision": 1,
-            "target_set_id": "zone-2x2-3"
-          },
-          "parameter_overrides": {
-            "speed": {
-              "type": "scalar",
-              "value": 1
-            },
-            "phase": {
-              "type": "scalar",
-              "value": 0
-            }
-          },
-          "phase": 0,
-          "seed": "2200000000000003",
-          "layer": 0,
-          "priority": 0,
-          "trigger_policy": {
-            "mode": "timeline",
-            "quantize": "beat"
-          }
-        }
-      ],
-      "trigger_policy": {
-        "mode": "timeline",
-        "quantize": "beat"
-      },
-      "capability_summary": {
-        "required_attributes": ["color.rgb", "intensity"]
-      },
-      "risk_summary": {
-        "strobe_risk": "none"
-      }
-    },
-    {
-      "schema_version": 1,
-      "id": "starter.cue.corner-bottom-right",
-      "revision": 1,
-      "name": "Corner · Bottom Right Breathe",
-      "compatible_stage_ref": {
-        "id": "main-stage",
-        "revision": 1
-      },
-      "nominal_length_ticks": 7680,
-      "layers": [
-        {
-          "id": "layer_zewjnwomcic3be4n",
-          "effect_ref": {
-            "id": "builtin.intensity.breathe",
-            "revision": 1
-          },
-          "target_set_ref": {
-            "stage_id": "main-stage",
-            "stage_revision": 1,
-            "target_set_id": "zone-2x2-4"
-          },
-          "parameter_overrides": {
-            "speed": {
-              "type": "scalar",
-              "value": 1
-            },
-            "intensity": {
-              "type": "scalar",
-              "value": 0.7
-            }
-          },
-          "phase": 0,
-          "seed": "2200000000000004",
-          "layer": 0,
-          "priority": 0,
-          "trigger_policy": {
-            "mode": "timeline",
-            "quantize": "beat"
-          }
-        }
-      ],
-      "trigger_policy": {
-        "mode": "timeline",
-        "quantize": "beat"
-      },
-      "capability_summary": {
-        "required_attributes": ["intensity"]
+        "required_attributes": [
+          "intensity"
+        ]
       },
       "risk_summary": {
         "strobe_risk": "none"
@@ -1416,7 +1366,7 @@
             {
               "id": "foundation",
               "cue_ref": {
-                "id": "starter.cue.quadrant-motion",
+                "id": "project.cue.zone-one-ping-pong",
                 "revision": 1
               },
               "start_tick": 0,
@@ -1429,7 +1379,7 @@
             {
               "id": "buildup",
               "cue_ref": {
-                "id": "starter.cue.quadrant-motion",
+                "id": "project.cue.zone-one-ping-pong",
                 "revision": 1
               },
               "start_tick": 30720,
@@ -1442,7 +1392,7 @@
             {
               "id": "alternating-drop-01",
               "cue_ref": {
-                "id": "starter.cue.corner-top-left",
+                "id": "project.cue.zone-one-ping-pong",
                 "revision": 1
               },
               "start_tick": 61440,
@@ -1455,7 +1405,7 @@
             {
               "id": "alternating-drop-02",
               "cue_ref": {
-                "id": "starter.cue.corner-top-right",
+                "id": "project.cue.zone-two-rain",
                 "revision": 1
               },
               "start_tick": 62400,
@@ -1468,7 +1418,7 @@
             {
               "id": "alternating-drop-03",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-left",
+                "id": "project.cue.zone-three-gradient",
                 "revision": 1
               },
               "start_tick": 63360,
@@ -1481,7 +1431,7 @@
             {
               "id": "alternating-drop-04",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-right",
+                "id": "project.cue.zone-four-breathe",
                 "revision": 1
               },
               "start_tick": 64320,
@@ -1494,7 +1444,7 @@
             {
               "id": "alternating-drop-05",
               "cue_ref": {
-                "id": "starter.cue.corner-top-left",
+                "id": "project.cue.zone-one-ping-pong",
                 "revision": 1
               },
               "start_tick": 65280,
@@ -1507,7 +1457,7 @@
             {
               "id": "alternating-drop-06",
               "cue_ref": {
-                "id": "starter.cue.corner-top-right",
+                "id": "project.cue.zone-two-rain",
                 "revision": 1
               },
               "start_tick": 66240,
@@ -1520,7 +1470,7 @@
             {
               "id": "alternating-drop-07",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-left",
+                "id": "project.cue.zone-three-gradient",
                 "revision": 1
               },
               "start_tick": 67200,
@@ -1533,7 +1483,7 @@
             {
               "id": "alternating-drop-08",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-right",
+                "id": "project.cue.zone-four-breathe",
                 "revision": 1
               },
               "start_tick": 68160,
@@ -1546,7 +1496,7 @@
             {
               "id": "alternating-drop-09",
               "cue_ref": {
-                "id": "starter.cue.corner-top-left",
+                "id": "project.cue.zone-one-ping-pong",
                 "revision": 1
               },
               "start_tick": 69120,
@@ -1559,7 +1509,7 @@
             {
               "id": "alternating-drop-10",
               "cue_ref": {
-                "id": "starter.cue.corner-top-right",
+                "id": "project.cue.zone-two-rain",
                 "revision": 1
               },
               "start_tick": 70080,
@@ -1572,7 +1522,7 @@
             {
               "id": "alternating-drop-11",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-left",
+                "id": "project.cue.zone-three-gradient",
                 "revision": 1
               },
               "start_tick": 71040,
@@ -1585,7 +1535,7 @@
             {
               "id": "alternating-drop-12",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-right",
+                "id": "project.cue.zone-four-breathe",
                 "revision": 1
               },
               "start_tick": 72000,
@@ -1598,7 +1548,7 @@
             {
               "id": "alternating-drop-13",
               "cue_ref": {
-                "id": "starter.cue.corner-top-left",
+                "id": "project.cue.zone-one-ping-pong",
                 "revision": 1
               },
               "start_tick": 72960,
@@ -1611,7 +1561,7 @@
             {
               "id": "alternating-drop-14",
               "cue_ref": {
-                "id": "starter.cue.corner-top-right",
+                "id": "project.cue.zone-two-rain",
                 "revision": 1
               },
               "start_tick": 73920,
@@ -1624,7 +1574,7 @@
             {
               "id": "alternating-drop-15",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-left",
+                "id": "project.cue.zone-three-gradient",
                 "revision": 1
               },
               "start_tick": 74880,
@@ -1637,7 +1587,7 @@
             {
               "id": "alternating-drop-16",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-right",
+                "id": "project.cue.zone-four-breathe",
                 "revision": 1
               },
               "start_tick": 75840,
@@ -1650,7 +1600,7 @@
             {
               "id": "alternating-drop-17",
               "cue_ref": {
-                "id": "starter.cue.corner-top-left",
+                "id": "project.cue.zone-one-ping-pong",
                 "revision": 1
               },
               "start_tick": 76800,
@@ -1663,7 +1613,7 @@
             {
               "id": "alternating-drop-18",
               "cue_ref": {
-                "id": "starter.cue.corner-top-right",
+                "id": "project.cue.zone-two-rain",
                 "revision": 1
               },
               "start_tick": 77760,
@@ -1676,7 +1626,7 @@
             {
               "id": "alternating-drop-19",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-left",
+                "id": "project.cue.zone-three-gradient",
                 "revision": 1
               },
               "start_tick": 78720,
@@ -1689,7 +1639,7 @@
             {
               "id": "alternating-drop-20",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-right",
+                "id": "project.cue.zone-four-breathe",
                 "revision": 1
               },
               "start_tick": 79680,
@@ -1702,7 +1652,7 @@
             {
               "id": "alternating-drop-21",
               "cue_ref": {
-                "id": "starter.cue.corner-top-left",
+                "id": "project.cue.zone-one-ping-pong",
                 "revision": 1
               },
               "start_tick": 80640,
@@ -1715,7 +1665,7 @@
             {
               "id": "alternating-drop-22",
               "cue_ref": {
-                "id": "starter.cue.corner-top-right",
+                "id": "project.cue.zone-two-rain",
                 "revision": 1
               },
               "start_tick": 81600,
@@ -1728,7 +1678,7 @@
             {
               "id": "alternating-drop-23",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-left",
+                "id": "project.cue.zone-three-gradient",
                 "revision": 1
               },
               "start_tick": 82560,
@@ -1741,7 +1691,7 @@
             {
               "id": "alternating-drop-24",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-right",
+                "id": "project.cue.zone-four-breathe",
                 "revision": 1
               },
               "start_tick": 83520,
@@ -1754,7 +1704,7 @@
             {
               "id": "alternating-drop-25",
               "cue_ref": {
-                "id": "starter.cue.corner-top-left",
+                "id": "project.cue.zone-one-ping-pong",
                 "revision": 1
               },
               "start_tick": 84480,
@@ -1767,7 +1717,7 @@
             {
               "id": "alternating-drop-26",
               "cue_ref": {
-                "id": "starter.cue.corner-top-right",
+                "id": "project.cue.zone-two-rain",
                 "revision": 1
               },
               "start_tick": 85440,
@@ -1780,7 +1730,7 @@
             {
               "id": "alternating-drop-27",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-left",
+                "id": "project.cue.zone-three-gradient",
                 "revision": 1
               },
               "start_tick": 86400,
@@ -1793,7 +1743,7 @@
             {
               "id": "alternating-drop-28",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-right",
+                "id": "project.cue.zone-four-breathe",
                 "revision": 1
               },
               "start_tick": 87360,
@@ -1806,7 +1756,7 @@
             {
               "id": "alternating-drop-29",
               "cue_ref": {
-                "id": "starter.cue.corner-top-left",
+                "id": "project.cue.zone-one-ping-pong",
                 "revision": 1
               },
               "start_tick": 88320,
@@ -1819,7 +1769,7 @@
             {
               "id": "alternating-drop-30",
               "cue_ref": {
-                "id": "starter.cue.corner-top-right",
+                "id": "project.cue.zone-two-rain",
                 "revision": 1
               },
               "start_tick": 89280,
@@ -1832,7 +1782,7 @@
             {
               "id": "alternating-drop-31",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-left",
+                "id": "project.cue.zone-three-gradient",
                 "revision": 1
               },
               "start_tick": 90240,
@@ -1845,7 +1795,7 @@
             {
               "id": "alternating-drop-32",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-right",
+                "id": "project.cue.zone-four-breathe",
                 "revision": 1
               },
               "start_tick": 91200,
@@ -1858,7 +1808,7 @@
             {
               "id": "alternating-drop-33",
               "cue_ref": {
-                "id": "starter.cue.corner-top-left",
+                "id": "project.cue.zone-one-ping-pong",
                 "revision": 1
               },
               "start_tick": 92160,
@@ -1871,7 +1821,7 @@
             {
               "id": "alternating-drop-34",
               "cue_ref": {
-                "id": "starter.cue.corner-top-right",
+                "id": "project.cue.zone-two-rain",
                 "revision": 1
               },
               "start_tick": 93120,
@@ -1884,7 +1834,7 @@
             {
               "id": "alternating-drop-35",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-left",
+                "id": "project.cue.zone-three-gradient",
                 "revision": 1
               },
               "start_tick": 94080,
@@ -1897,7 +1847,7 @@
             {
               "id": "transition",
               "cue_ref": {
-                "id": "starter.cue.corner-top-left",
+                "id": "project.cue.zone-one-ping-pong",
                 "revision": 1
               },
               "start_tick": 95040,
@@ -1910,7 +1860,7 @@
             {
               "id": "recovery",
               "cue_ref": {
-                "id": "starter.cue.corner-bottom-right",
+                "id": "project.cue.zone-four-breathe",
                 "revision": 1
               },
               "start_tick": 99840,
@@ -1927,7 +1877,7 @@
               "target": {
                 "scope": "cue_layer",
                 "clip_id": "foundation",
-                "layer_id": "layer_3e3tmku2poix5zrt",
+                "layer_id": "layer_project_zone_one",
                 "parameter_id": "speed"
               },
               "keyframes": [
@@ -1956,7 +1906,7 @@
               "target": {
                 "scope": "cue_layer",
                 "clip_id": "buildup",
-                "layer_id": "layer_3e3tmku2poix5zrt",
+                "layer_id": "layer_project_zone_one",
                 "parameter_id": "intensity"
               },
               "keyframes": [
@@ -1985,7 +1935,7 @@
               "target": {
                 "scope": "cue_layer",
                 "clip_id": "transition",
-                "layer_id": "layer_c7v4dilw4gplwd35",
+                "layer_id": "layer_project_zone_one",
                 "parameter_id": "speed"
               },
               "keyframes": [
@@ -2014,7 +1964,7 @@
               "target": {
                 "scope": "cue_layer",
                 "clip_id": "recovery",
-                "layer_id": "layer_zewjnwomcic3be4n",
+                "layer_id": "layer_project_zone_four",
                 "parameter_id": "intensity"
               },
               "keyframes": [
