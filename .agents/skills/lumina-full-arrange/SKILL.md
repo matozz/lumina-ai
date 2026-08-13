@@ -154,6 +154,7 @@ Create a dependency-closed UserAssetPack V1 variant without changing the input f
 - Beat-synchronized `speed` is discrete even when represented as a scalar: Cue overrides, CueClip Layer overrides, and every speed keyframe must be exactly `0.25`, `0.5`, `1`, `2`, `4`, or `8`. Do not use intermediate values such as `0.75`, `1.25`, or `1.5`; change at legal ratios instead of authoring unsupported values.
 - Standard `color` may be overridden or automated as typed `#RRGGBB`. Never automate `color_stops`.
 - Generate opaque Cue Layer IDs on creation, preserve them on edit, and regenerate them on copy. Do not derive them from names.
+- Give every Cue Layer a stable lowercase 16-character hexadecimal `seed`. Friendly labels, UUIDs, and arbitrary strings pass JSON shape checks but fail the Rust preview compiler.
 - Use stable, readable Clip/lane IDs without embedding user secrets.
 
 ### 7. Validate and hand off
@@ -162,7 +163,7 @@ Create a dependency-closed UserAssetPack V1 variant without changing the input f
 2. Run Schema, reference, exact-ref, and semantic validation against the written file.
 3. Verify the input hash is unchanged.
 4. Compare built-ins in the output with the same exact identities in the input; require deep equality.
-5. Verify project-local provenance, Arrangement ranges, integer ticks, automation targets/types, discrete synchronized speed values, and the absence of CueClip targeting.
+5. Verify project-local provenance, Arrangement ranges, integer ticks, automation targets/types, discrete synchronized speed values, 16-hex Cue Layer seeds, and the absence of CueClip targeting.
 6. When a form model was used, verify contiguous section boundaries, the exact requested endpoint, bar-to-tick conversion, pattern-cycle divisibility, and that major Clip/automation changes land on the intended phrase boundary.
 7. Re-open the written JSON and validate it again; do not rely on an in-memory object.
 8. If validation fails, keep the invalid draft out of the final handoff, fix a new working copy, and rerun all checks.

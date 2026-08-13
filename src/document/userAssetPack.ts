@@ -302,6 +302,12 @@ function validateAssetPackReferences(pack: UserAssetPack) {
       });
     }
     for (const [layerIndex, layer] of cue.layers.entries()) {
+      if (!/^[0-9a-fA-F]{16}$/.test(layer.seed)) {
+        issues.push({
+          path: `cues[${cueIndex}].layers[${layerIndex}].seed`,
+          message: "Cue layer seed must contain exactly 16 hexadecimal characters",
+        });
+      }
       if (!effects.has(assetKey(layer.effect_ref))) {
         issues.push({
           path: `cues[${cueIndex}].layers[${layerIndex}].effect_ref`,

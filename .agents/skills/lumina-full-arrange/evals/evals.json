@@ -11,7 +11,7 @@
         "The input file hash is unchanged and the output uses a different filename.",
         "Every built-in asset present in both input and output is deeply unchanged; every created or customized Effect is project_local and every created Cue/Arrangement has a non-built-in ID.",
         "`Midnight Geometry 128` uses PPQ 960, 128 BPM, 4/4, 122880 total ticks, legal integer Clip/keyframe ranges, and has no unexplained empty tail.",
-        "CueClips reference Cues only and contain no TargetSet field; exact Cue/Effect/Stage/Layout dependencies resolve.",
+        "CueClips reference Cues only and contain no TargetSet field; exact Cue/Effect/Stage/Layout dependencies resolve; every Cue Layer seed is exactly 16 hexadecimal characters.",
         "The transcript includes the pack inventory, Effect/Cue audit, confirmed full Arrangement brief, and validation handoff without exposing raw Layer IDs."
       ]
     },

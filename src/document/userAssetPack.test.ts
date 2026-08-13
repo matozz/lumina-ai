@@ -242,6 +242,25 @@ describe("UserAssetPack V1", () => {
     }
   });
 
+  it("rejects invalid Cue layer seeds before import and preview compilation", () => {
+    const { bundle, cueRef } = projectWithPortableAssets();
+    const pack = createUserAssetPack(bundle, "Invalid Seed Package");
+    const cue = exactAsset(pack.cues, cueRef)!;
+    cue.layers[0]!.seed = "friendly-seed";
+
+    const validation = validateUserAssetPack(pack);
+    expect(validation.success).toBe(false);
+    if (!validation.success) {
+      expect(validation.issues).toContainEqual({
+        path: expect.stringContaining("layers[0].seed"),
+        message: "Cue layer seed must contain exactly 16 hexadecimal characters",
+      });
+    }
+    expect(() => importUserAssetPack(createStarterProjectBundle(), pack)).toThrow(
+      /exactly 16 hexadecimal characters/,
+    );
+  });
+
   it("rejects malformed packs and missing transitive dependencies", () => {
     const { bundle } = projectWithPortableAssets();
     const pack = createUserAssetPack(bundle);

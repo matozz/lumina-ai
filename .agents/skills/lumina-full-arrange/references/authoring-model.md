@@ -59,6 +59,7 @@ Do not assume the first tempo or time signature applies forever. Resolve the map
 - Create an opaque ID shaped like `layer_<random base32-like token>`.
 - Preserve the ID while editing the same Layer.
 - Generate a new ID when copying a Layer or Cue, then rewrite copied automation targets atomically.
+- Store `seed` separately as a stable lowercase 64-bit hexadecimal value: exactly 16 characters matching `[0-9a-f]{16}`. The Rust Project validator and preview compiler reject friendly or variable-length seed strings.
 - Never show raw Layer IDs in summaries, labels, diagnostics, or questions. Say `Layer 1`, its Effect, and its TargetSet.
 
 ## Typed parameters and automation

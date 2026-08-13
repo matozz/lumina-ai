@@ -20,7 +20,7 @@ Arrangement CueClip 只引用 Cue，不直接选择 TargetSet。不要在 Clip i
 
 ### Cue Layer identity
 
-Cue Layer 的持久化 `id` 只承担精确引用身份，不承担 Cue 名、Effect、TargetSet、方位或顺序语义。新建 Layer 使用一次性生成的 `layer_<base32-random>` opaque ID，之后编辑 Cue 名、Effect、TargetSet、scene、参数或顺序都保留该 ID；复制 Layer 或整个 Cue 时为每个副本生成新 ID。
+Cue Layer 的持久化 `id` 只承担精确引用身份，不承担 Cue 名、Effect、TargetSet、方位或顺序语义。新建 Layer 使用一次性生成的 `layer_<base32-random>` opaque ID，之后编辑 Cue 名、Effect、TargetSet、scene、参数或顺序都保留该 ID；复制 Layer 或整个 Cue 时为每个副本生成新 ID。Layer 的确定性 `seed` 是另一个字段，必须保存为恰好 16 位的小写十六进制字符串；可读名称、UUID 或任意长度字符串会在 Project runtime validation 与 Preview compile 失败。
 
 复制操作在同一 transaction 内同步重映射 Cue automation target。删除 Layer 同步删除以它为 target 的 Cue automation。任何普通更新入口都会忽略对 Layer ID 的改写，因此不会意外切断 Arrangement 的 `clip_id + layer_id + parameter_id` exact target。
 
