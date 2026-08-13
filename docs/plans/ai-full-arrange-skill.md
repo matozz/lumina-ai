@@ -41,7 +41,7 @@
 7. 在 Lumina 中播放、观察并让用户评价具体段落。
 8. 根据反馈迭代，直到它在视觉、节奏和操作上都可用。
 
-EDM 的 intro、buildup、drop、breakdown、fill、outro 等只作为 AI 的音乐组织知识和对话词汇，不是硬编码的生成状态机。
+EDM 的 intro、buildup、drop、breakdown、fill、outro 等首先是 AI 的音乐组织知识和对话词汇，不是硬编码的生成状态机。Skill 可以维护可覆盖的 genre/form 先验，用于用户未提供完整边界时提出 section 长度、phrase quantum 和视觉 pattern cycle；用户给出的 bar/tick anchor、Project Pack 的实际边界和确认过的曲式始终优先。此先验不能宣称为音频检测结果。
 
 ## 3. Project Pack 中 `House 128 Custom` 副本提供的参考
 
@@ -257,15 +257,19 @@ AI 的编排判断、Effect review 和迭代策略仍在 Skill 对话中，不�
 ├── SKILL.md
 ├── references/
 │   ├── authoring-model.md
+│   ├── edm-form-patterns.md
 │   ├── edm-arrangement-heuristics.md
 │   ├── effect-and-cue-review.md
 │   ├── playback-review.md
 │   └── communication-boundary.md
+├── scripts/
+│   └── derive-form-window.mjs
 └── evals/
-    └── evals.json
+    ├── evals.json
+    └── form-model.test.ts
 ```
 
-初版不创建 `scripts/`。只有多次评测证明存在重复、确定、非创作性的通信或校验步骤时，才增加薄脚本。
+初版曾不创建 `scripts/`。在 House buildup 起点到第二个 drop 结束的实测中，inclusive bar、exclusive tick、候选 phrase 精确适配被证明是重复且确定的边界计算，因此现在允许一个薄的 `derive-form-window.mjs`；它只计算和验证用户可覆盖的 form window，不生成 Cue、Clip、Effect 或创作内容。
 
 `SKILL.md` 应小于约 500 行，只保存流程和路由。Effect 审查、EDM 编排启发、视觉复核和通信边界分别放入 references，并明确何时读取。
 
@@ -298,6 +302,8 @@ Skill description 应在以下意图触发：
 - exact refs 和 Stage compatibility 有效；
 - TargetSet 只属于 Cue Layer；
 - integer ticks、TempoMap、PPQ 和范围合法；
+- genre/form 先验被标记为 proposed default，用户/文档 anchor 优先，section 连续且精确落在请求终点；
+- section length、phrase quantum 和 visual pattern cycle 被分别记录，pattern cycle 可整除 section，除非用户确认非对称 phrase；
 - automation target/type/interpolation 合法；
 - 最终版本中的重叠同属性有明确 MixPolicy；编辑中间状态可以保留非阻塞 semantic diagnostics；
 - standard Color、可选 default、fallback 和 Effect-only `color_stops` 语义正确；
@@ -324,6 +330,7 @@ Skill description 应在以下意图触发：
 3. 素材不足 Project Pack：识别缺口，只创建最小必要的 project-local Effect/Cue，再完成 full arrange。
 4. 20×20 多分区：使用 all/center/edges/四象限组织两次不同 Drop，保持 TargetSet/Cue Layer 模型和 MixPolicy。
 5. 反馈迭代：用户要求“第二个 Drop 更左右、颜色更克制”，验证 Skill 做局部修改而不是推翻整场。
+6. House form window：指定 buildup 1 从第 33 小节开始但不指定结尾，验证 proposed generic House profile 推导到第二个 drop 的第 104 小节，并正确换算半开 tick 范围；另测可精确适配与不可适配的用户终点。
 
 按照 `skill-creator` 流程运行 with-skill 与 baseline，保存对话 transcript、项目 diff、验证结果和视觉证据，通过 review viewer 收集用户反馈并迭代 Skill。
 

@@ -1,6 +1,6 @@
 ---
 name: lumina-full-arrange
-description: Create, complete, review, or section-tune an entire Lumina lighting Arrangement from a user-provided valid Base Pack or Project Pack. Use for full-show requests involving section structure, buildup/drop/breakdown/outro, energy or color arcs, multi-zone call-response, Effect/Cue review, or finishing a partial Arrangement. Do not use for a single Effect, one Cue, one automation point, Timeline UI work, Catalog/Schema maintenance, audio beat detection, or fixed-template bulk JSON generation.
+description: Create, complete, review, or section-tune an entire Lumina lighting Arrangement from a user-provided valid Base Pack or Project Pack. Use for full-show requests involving genre-aware phrase/form planning, section structure, buildup/drop/breakdown/outro, energy or color arcs, multi-zone call-response, Effect/Cue review, or finishing a partial Arrangement. Do not use for a single Effect, one Cue, one automation point, Timeline UI work, Catalog/Schema maintenance, audio beat detection, or fixed-template bulk JSON generation.
 ---
 
 # Lumina Full Arrange
@@ -13,8 +13,9 @@ Read these files before acting:
 
 1. [authoring-model.md](references/authoring-model.md) for ownership, exact references, ticks, automation, and pack validation.
 2. [effect-and-cue-review.md](references/effect-and-cue-review.md) before reporting or changing Effects and Cues.
-3. [edm-arrangement-heuristics.md](references/edm-arrangement-heuristics.md) before drafting the section map or revising musical intent.
-4. [communication-boundary.md](references/communication-boundary.md) before asking questions, writing files, or handing off a pack.
+3. [edm-form-patterns.md](references/edm-form-patterns.md) before interpreting a genre, a section window, or unspecified phrase/pattern lengths.
+4. [edm-arrangement-heuristics.md](references/edm-arrangement-heuristics.md) before drafting section energy or revising musical intent.
+5. [communication-boundary.md](references/communication-boundary.md) before asking questions, writing files, or handing off a pack.
 
 The repository's current `docs/authoring/README.md` and linked authoring documents outrank this Skill if the contract changes.
 
@@ -77,8 +78,8 @@ Share the audit. Prefer reuse and careful tuning; propose only the smallest miss
 
 Gather only information not already provided. Ask one to three high-information questions at a time:
 
-- genre/reference mood, BPM, meter, and total bars or duration;
-- section map and anchor moments;
+- genre/subtype or reference form, BPM, meter, and total bars or duration;
+- section map, absolute bar anchors, requested start/end section, and whether proposed profile defaults are acceptable;
 - energy curve and how repeated drops should differ;
 - primary colors and section color changes;
 - buildup, drop, breakdown, fill, recovery, and outro intent;
@@ -98,10 +99,12 @@ Before writing an output pack, show this complete proposal:
 
 - Target: [new arrangement or source arrangement variant]
 - Timing: [BPM, meter, PPQ, total bars/ticks]
+- Form basis: [user anchors, existing Arrangement, or proposed profile default]
+- Phrase model: [profile, phrase quantum, exact section lengths, and pattern cycles]
 - Preservation boundary: [what remains unchanged]
 
-| Bars/ticks | Section | Energy | Visual role | Cue/Effect plan | Targeting | Color | Automation |
-| ---------- | ------- | ------ | ----------- | --------------- | --------- | ----- | ---------- |
+| Bars/ticks | Section | Section/pattern length | Energy | Visual role | Cue/Effect plan | Targeting | Color | Automation |
+| ---------- | ------- | ---------------------- | ------ | ----------- | --------------- | --------- | ----- | ---------- |
 
 ### Asset plan
 
@@ -137,6 +140,9 @@ Create a dependency-closed UserAssetPack V1 variant without changing the input f
 
 #### Authoring rules
 
+- When genre or section-window defaults affect timing, apply the evidence precedence in [edm-form-patterns.md](references/edm-form-patterns.md). Explicit user anchors and actual Arrangement boundaries outrank every profile prior.
+- Resolve ambiguous section ordinals before calculating. Then use `scripts/derive-form-window.mjs` to calculate the supported named window. Record whether the result is a proposed profile default or an exact fit to a user endpoint; never present it as detected audio structure.
+- Keep section length, phrase quantum, and internal visual pattern cycle distinct. Pattern cycles should divide their section unless a confirmed source boundary authorizes an asymmetric phrase.
 - Effect is target-agnostic and contains no Stage or TargetSet reference.
 - Cue Layer binds an exact Effect to an exact Stage TargetSet.
 - Arrangement schedules exact Cue references only.
@@ -157,8 +163,9 @@ Create a dependency-closed UserAssetPack V1 variant without changing the input f
 3. Verify the input hash is unchanged.
 4. Compare built-ins in the output with the same exact identities in the input; require deep equality.
 5. Verify project-local provenance, Arrangement ranges, integer ticks, automation targets/types, discrete synchronized speed values, and the absence of CueClip targeting.
-6. Re-open the written JSON and validate it again; do not rely on an in-memory object.
-7. If validation fails, keep the invalid draft out of the final handoff, fix a new working copy, and rerun all checks.
+6. When a form model was used, verify contiguous section boundaries, the exact requested endpoint, bar-to-tick conversion, pattern-cycle divisibility, and that major Clip/automation changes land on the intended phrase boundary.
+7. Re-open the written JSON and validate it again; do not rely on an in-memory object.
+8. If validation fails, keep the invalid draft out of the final handoff, fix a new working copy, and rerun all checks.
 
 Handoff must include:
 
@@ -191,6 +198,8 @@ Stop and ask for the smallest missing input when:
 - the target Arrangement is absent from a Project Pack;
 - Stage/TargetSet compatibility cannot be proven;
 - automation target/type cannot be resolved;
+- exact synchronization to a real track is requested but no usable section/bar anchors are supplied;
+- a requested start/end window has no exact phrase-aligned fit and the user has not authorized an asymmetric section;
 - a required MixPolicy or strobe decision is unconfirmed;
 - the requested edit crosses an unconfirmed preservation boundary.
 

@@ -40,6 +40,19 @@
         "The rationale distinguishes full Arrangement collaboration from single-asset, single-point, and Timeline UI work.",
         "No Lumina asset pack is generated."
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "Use the attached Lumina Base Pack to plan and create a generic House lighting Arrangement whose first buildup begins at bar 33 and continues through the end of the second drop. Bars 1-32 are intentionally empty. No source-track section map or explicit ending bar is available, so use the Skill's proposed generic House form profile and state that it is a prior rather than detected audio structure. The creative direction and use of that profile are confirmed. State the form basis, phrase quantum, exact inclusive bar ranges, exclusive tick ranges, section lengths, and internal visual pattern cycles before authoring. No strobe. Write a new validated Project Pack without changing the input.",
+      "expected_output": "A new validated Project Pack whose proposed generic House form runs contiguously from buildup 1 at bar 33 through drop 2 at bar 104, with the first 32 bars intentionally empty and no off-by-one gaps or overlaps.",
+      "files": ["evals/files/base-assets.lumina-assets.json"],
+      "expectations": [
+        "The brief labels the generic House model as a proposed profile default, not audio detection, and records an 8-bar phrase quantum.",
+        "The form is Buildup 1 bars 33-48 with a 4-bar pattern cycle, Drop 1 bars 49-64 with an 8-bar cycle, Breakdown bars 65-80 with an 8-bar cycle, Buildup 2 bars 81-88 with a 4-bar cycle, and Drop 2 bars 89-104 with an 8-bar cycle.",
+        "At PPQ 960 in 4/4, the content window starts at tick 122880 and ends exclusively at tick 399360; all sections are contiguous and pattern cycles divide their sections.",
+        "Bars 1-32 remain intentionally empty, the Arrangement is long enough to include bar 104, and the output has no unexplained tail after the requested endpoint.",
+        "The output is schema-, reference-, exact-ref-, and semantic-valid; the input hash is unchanged and every built-in dependency is deeply unchanged."
+      ]
     }
   ]
 }

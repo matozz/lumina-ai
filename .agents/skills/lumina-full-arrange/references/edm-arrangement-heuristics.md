@@ -29,7 +29,9 @@ Do not increase every dimension at once. Reserve at least one meaningful contras
 
 ## Phrase scale
 
-House and EDM often organize ideas in powers-of-two phrases, but follow the user's actual form. Use bar-scale foundations, phrase-scale transformations, and beat-scale accents only where they serve an audible event.
+Use [edm-form-patterns.md](edm-form-patterns.md) for explicit genre priors, section-window math, and pattern-cycle validation. The model there supplies proposed timing boundaries; this file supplies creative treatment within those boundaries.
+
+House and EDM often organize ideas in powers-of-two phrases, but follow the user's actual form. Use bar-scale foundations, phrase-scale transformations, and beat-scale accents only where they serve an audible event. Never infer a real track's structure from its filename, BPM, or genre label.
 
 Avoid dense one-beat Clip repetition when a longer CueClip plus typed automation or a TargetingScene expresses the same intent more clearly.
 
