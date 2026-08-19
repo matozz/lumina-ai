@@ -4,9 +4,9 @@ use super::{
     builtin_generator_registry, layout_geometry_shape, ArrangementDocument, AssetRef,
     CenterEdgesRegion, CueCapabilitySummary, CueDefinition, CueLayer, CueQuantize, CueRiskSummary,
     CueTriggerMode, CueTriggerPolicy, DirectionDSL, EffectDefinitionDSL, EffectDefinitionDocument,
-    EffectFamilyDSL, EffectInstanceDSL, EffectNodeDSL, GeneratorDSL, GroupDSL, GroupFixturesDSL,
-    GroupRangeDSL, LayoutCapabilityDSL, LayoutDSL, LayoutDefinition, LayoutGeometry, LayoutType,
-    MetaDSL, OscillatorWaveformDSL, ParameterScopeDSL, ParameterValueDSL, PatchDSL, ProjectBundle,
+    EffectInstanceDSL, EffectNodeDSL, GeneratorDSL, GroupDSL, GroupFixturesDSL, GroupRangeDSL,
+    LayoutCapabilityDSL, LayoutDSL, LayoutDefinition, LayoutGeometry, LayoutType, MetaDSL,
+    OscillatorWaveformDSL, ParameterScopeDSL, ParameterValueDSL, PatchDSL, ProjectBundle,
     ProjectManifest, ShowDocumentV1, StageDocument, StrobeRiskDSL, TargetSetDefinition,
     TargetSetRef, TargetSetSelector, TargetingSceneDefinition, TargetingSceneRef,
     TargetingTransition, ValidatedProject, CUE_DEFINITION_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION,
@@ -20,6 +20,10 @@ use crate::engine::effect::COLOR_PARAMETER_ID;
 use crate::engine::profile::profile_by_id;
 use crate::engine::profile::{AttributeValue, COLOR_RGB_ATTRIBUTE};
 use crate::engine::render::{render_at, LivePhaser, RenderSource, RenderTime};
+use crate::engine::temporal::{
+    analyze_project_temporal_behavior, TemporalAnalysisRequest, TemporalSamplingConfig,
+    LEGAL_TEMPORAL_SPEEDS,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -475,7 +479,9 @@ pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<D
                 "Connect time or spatial phase to a visible writer.",
             ));
         }
-        if matches!(effect.catalog.family, Some(EffectFamilyDSL::Strobe)) {
+        if matches!(effect.tempo.kind, super::TempoBehaviorKindDSL::Pulse)
+            || !matches!(effect.catalog.strobe_risk, StrobeRiskDSL::None)
+        {
             match sampled_maximum_strobe_risk(effect) {
                 Ok(observed) if strobe_rank(effect.catalog.strobe_risk) < strobe_rank(observed) => {
                     diagnostics.push(
@@ -661,6 +667,123 @@ pub fn production_catalog_golden(
     }
 }
 
+pub fn production_temporal_project(
+    catalog: &ProductionCatalog,
+) -> Result<ProjectBundle, Diagnostic> {
+    let template = catalog
+        .project_templates
+        .iter()
+        .find(|template| template.id == "builtin.project-template.authoring-starter")
+        .ok_or_else(|| {
+            Diagnostic::error(
+                CATALOG_METADATA_INVALID,
+                "project_templates",
+                "Temporal analysis requires the Authoring Starter Project Template.",
+                "Restore the built-in starter Stage and its representative TargetSets.",
+            )
+        })?;
+    let mut project = materialize_project_template(catalog, template);
+    project.stages[0].id = "analysis.stage.matrix-20x20-moving-head".to_string();
+    project.stages[0].name = "Temporal Matrix · 20×20 Moving Head".to_string();
+    project.stages[0].patch = vec![PatchDSL {
+        profile_id: "generic-moving-head".to_string(),
+        id_range: (1, 400),
+    }];
+    project.manifest.stage_ref = AssetRef {
+        id: project.stages[0].id.clone(),
+        revision: project.stages[0].revision,
+    };
+    project.effects = catalog.effects.clone();
+    project.manifest.effect_refs = catalog
+        .effects
+        .iter()
+        .map(|effect| AssetRef {
+            id: effect.id.clone(),
+            revision: effect.revision,
+        })
+        .collect();
+    Ok(project)
+}
+
+pub fn production_catalog_temporal_golden(
+    catalog: &ProductionCatalog,
+) -> Result<serde_json::Value, Vec<Diagnostic>> {
+    const BPM: f64 = 128.0;
+    const PRIMARY_TARGET: &str = "zone-4x4-1";
+    const TOPOLOGY_TARGET: &str = "zone-2x2-1";
+    let project = production_temporal_project(catalog).map_err(|diagnostic| vec![diagnostic])?;
+    let mut effects = Vec::with_capacity(catalog.effects.len());
+    let mut diagnostics = Vec::new();
+    for effect in &catalog.effects {
+        let request = TemporalAnalysisRequest {
+            effect_ref: AssetRef {
+                id: effect.id.clone(),
+                revision: effect.revision,
+            },
+            target_set_id: PRIMARY_TARGET.to_string(),
+            bpm: BPM,
+            speeds: LEGAL_TEMPORAL_SPEEDS.to_vec(),
+            seed: "0000000000000001".to_string(),
+            parameter_overrides: BTreeMap::new(),
+            sampling: TemporalSamplingConfig::default(),
+        };
+        let report = match analyze_project_temporal_behavior(&project, &request) {
+            Ok(report) => report,
+            Err(mut errors) => {
+                for diagnostic in &mut errors {
+                    diagnostic.asset =
+                        Some(Box::new(crate::compiler::diagnostic::DiagnosticAsset {
+                            kind: "effect".to_string(),
+                            id: effect.id.clone(),
+                            revision: effect.revision,
+                        }));
+                }
+                diagnostics.extend(errors);
+                continue;
+            }
+        };
+        let default_speed = effect
+            .parameters
+            .iter()
+            .find(|parameter| parameter.id == "speed")
+            .and_then(|parameter| parameter.default_value())
+            .and_then(|value| match value {
+                ParameterValueDSL::Scalar(value) => Some(value),
+                _ => None,
+            })
+            .unwrap_or(1.0);
+        let topology_request = TemporalAnalysisRequest {
+            target_set_id: TOPOLOGY_TARGET.to_string(),
+            speeds: vec![default_speed],
+            ..request
+        };
+        let topology_probe = match analyze_project_temporal_behavior(&project, &topology_request) {
+            Ok(report) => report,
+            Err(mut errors) => {
+                diagnostics.append(&mut errors);
+                continue;
+            }
+        };
+        effects.push(serde_json::json!({
+            "effect_ref": { "id": effect.id, "revision": effect.revision },
+            "name": effect.name,
+            "all_legal_speeds": report,
+            "topology_probe": topology_probe,
+        }));
+    }
+    if diagnostics.is_empty() {
+        Ok(serde_json::json!({
+            "schema_version": crate::engine::temporal::TEMPORAL_FINGERPRINT_SCHEMA_VERSION,
+            "bpm": BPM,
+            "primary_target_set_id": PRIMARY_TARGET,
+            "topology_target_set_id": TOPOLOGY_TARGET,
+            "effects": effects,
+        }))
+    } else {
+        Err(diagnostics)
+    }
+}
+
 fn golden_fixture_row(frame: &crate::engine::attribute::FixtureFrame) -> serde_json::Value {
     let mut row = Vec::with_capacity(frame.values().len() + 1);
     row.push(serde_json::json!(frame.id));
@@ -778,6 +901,14 @@ pub fn materialize_effect_graph_bindings(effect: &mut EffectDefinitionDocument) 
                 .map(|value| *waveform = value)
                 .is_some(),
             (
+                super::EffectNodePropertyDSL::DutyCycle,
+                super::EffectNodeDSL::Oscillator { duty_cycle, .. },
+                Some(ParameterValueDSL::Scalar(value)),
+            ) => {
+                *duty_cycle = Some(*value);
+                true
+            }
+            (
                 super::EffectNodePropertyDSL::Attack,
                 super::EffectNodeDSL::Envelope { attack, .. },
                 Some(ParameterValueDSL::Scalar(value)),
@@ -887,6 +1018,7 @@ fn effect_sample_document(
             revision: effect.revision,
             source: effect.source,
             parameters: effect.parameters.clone(),
+            tempo: effect.tempo.clone(),
             graph: effect.graph.clone(),
             catalog: effect.catalog.clone(),
         }],
@@ -943,6 +1075,7 @@ fn alternate_parameter_value(
 fn sampled_maximum_strobe_risk(
     effect: &EffectDefinitionDocument,
 ) -> Result<StrobeRiskDSL, Vec<Diagnostic>> {
+    const SAMPLE_BPM: f64 = 128.0;
     const SAMPLE_BEATS: u32 = 4;
     const SAMPLES_PER_BEAT: u32 = 64;
     let maximum_speed = effect
@@ -965,13 +1098,23 @@ fn sampled_maximum_strobe_risk(
                 RenderSource::Live(&active),
             );
             frames
-                .first()
-                .and_then(frame_intensity)
-                .is_some_and(|value| value > 0.1)
+                .iter()
+                .map(|frame| frame_intensity(frame).is_some_and(|value| value > 0.1))
+                .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
-    let crossings = states.windows(2).filter(|pair| pair[0] != pair[1]).count();
-    let flashes_per_second = crossings as f64 / 2.0 / f64::from(SAMPLE_BEATS) * 2.0;
+    let fixture_count = states.first().map_or(0, Vec::len);
+    let maximum_onsets = (0..fixture_count)
+        .map(|fixture| {
+            states
+                .windows(2)
+                .filter(|pair| !pair[0][fixture] && pair[1][fixture])
+                .count()
+        })
+        .max()
+        .unwrap_or(0);
+    let duration_seconds = f64::from(SAMPLE_BEATS) * 60.0 / SAMPLE_BPM;
+    let flashes_per_second = maximum_onsets as f64 / duration_seconds;
     Ok(if flashes_per_second <= f64::EPSILON {
         StrobeRiskDSL::None
     } else if flashes_per_second < 3.0 {
@@ -1569,6 +1712,123 @@ mod tests {
     }
 
     #[test]
+    fn checked_in_temporal_golden_enforces_normalized_event_semantics() {
+        let golden: serde_json::Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/production_temporal_fingerprint_v1.json"
+        ))
+        .expect("checked-in temporal Golden parses");
+        let entries = golden["effects"]
+            .as_array()
+            .expect("temporal Golden has Effect entries");
+        assert_eq!(entries.len(), 17, "every built-in Effect is fingerprinted");
+
+        let report_for = |effect_id: &str| {
+            let value = entries
+                .iter()
+                .find(|entry| entry["effect_ref"]["id"] == effect_id)
+                .unwrap_or_else(|| panic!("missing temporal Golden for {effect_id}"))
+                ["all_legal_speeds"]
+                .clone();
+            serde_json::from_value::<crate::engine::temporal::TemporalFingerprintReport>(value)
+                .unwrap_or_else(|error| panic!("invalid temporal report for {effect_id}: {error}"))
+        };
+
+        for entry in entries {
+            let report: crate::engine::temporal::TemporalFingerprintReport =
+                serde_json::from_value(entry["all_legal_speeds"].clone())
+                    .expect("temporal report matches generated contract");
+            assert_eq!(
+                report.identity.speeds,
+                crate::engine::temporal::LEGAL_TEMPORAL_SPEEDS,
+                "all legal speed ratios are sampled"
+            );
+            let mut previous_rate = 0.0;
+            for (fingerprint, speed) in report
+                .fingerprints
+                .iter()
+                .zip(crate::engine::temporal::LEGAL_TEMPORAL_SPEEDS)
+            {
+                assert!((fingerprint.speed - speed).abs() < f64::EPSILON);
+                assert!(
+                    (fingerprint.primary_events_per_beat - speed).abs() < f64::EPSILON,
+                    "1× normalization must map speed to primary events/beat"
+                );
+                assert!(
+                    (fingerprint.primary_events_per_second - speed * 128.0 / 60.0).abs() < 1e-10,
+                    "events/s must use the real Golden BPM"
+                );
+                assert!(
+                    fingerprint.primary_events_per_beat > previous_rate,
+                    "primary event rate must increase monotonically"
+                );
+                previous_rate = fingerprint.primary_events_per_beat;
+            }
+            assert_ne!(
+                entry["all_legal_speeds"]["identity"]["target_fixture_count"],
+                entry["topology_probe"]["identity"]["target_fixture_count"],
+                "the topology probe must resolve a distinct TargetSet"
+            );
+        }
+
+        for effect_id in [
+            "builtin.intensity.breathe",
+            "builtin.transition.blackout-safe",
+        ] {
+            let report = report_for(effect_id);
+            let one_x = &report.fingerprints[2];
+            assert_eq!(
+                one_x.peaks.as_ref().map(|peaks| peaks.count),
+                Some(4),
+                "{effect_id} must have one rise-fall peak per beat, not two"
+            );
+        }
+
+        let burst = report_for("builtin.color.pulse");
+        let burst_one_x = &burst.fingerprints[2];
+        assert_eq!(
+            burst_one_x.intensity.as_ref().map(|metric| metric.minimum),
+            Some(0.0)
+        );
+        assert!(
+            burst_one_x
+                .on_duty_cycle
+                .is_some_and(|duty| (0.15..=0.25).contains(&duty)),
+            "Short Color Burst must be a short, fully-off pulse"
+        );
+
+        let ping_pong = report_for("builtin.spatial.column-ping-pong");
+        assert_eq!(ping_pong.behavior.events_per_graph_cycle, 2.0);
+        assert_eq!(ping_pong.fingerprints[2].graph_cycles_per_beat, 0.5);
+        assert!(
+            ping_pong.fingerprints[2]
+                .spatial_centroid
+                .as_ref()
+                .is_some_and(|centroid| centroid.direction_reversals >= 3),
+            "four beats must expose alternating one-way traversals"
+        );
+
+        let strobe = report_for("builtin.strobe.safe-pulse");
+        assert!(strobe.fingerprints[2]
+            .on_duty_cycle
+            .is_some_and(|duty| (0.1..=0.16).contains(&duty)));
+        assert!(
+            !strobe.fingerprints[2]
+                .strobe
+                .as_ref()
+                .expect("pulse safety metrics")
+                .exceeds_authored_safety_limit
+        );
+        assert!(
+            strobe.fingerprints[3]
+                .strobe
+                .as_ref()
+                .expect("2× pulse safety metrics")
+                .exceeds_authored_safety_limit,
+            "real 128 BPM Hz must trip the authored safety limit at 2×"
+        );
+    }
+
+    #[test]
     fn every_catalog_effect_exposes_a_typed_optional_color_override() {
         let catalog = builtin_production_catalog().expect("catalog");
         for effect in &catalog.effects {
@@ -1764,14 +2024,8 @@ mod tests {
         let minimum = intensities.into_iter().fold(f64::INFINITY, f64::min);
         let maximum = intensities.into_iter().fold(f64::NEG_INFINITY, f64::max);
 
-        assert!(
-            minimum >= 0.25 - f64::EPSILON,
-            "burst keeps a safe visible floor"
-        );
-        assert!(
-            maximum > minimum + 0.5,
-            "Cue Color must not flatten the burst pulse"
-        );
+        assert!(minimum <= f64::EPSILON, "burst must turn fully off");
+        assert!(maximum > 0.9, "Cue Color must not flatten the burst pulse");
     }
 
     #[test]
@@ -1949,7 +2203,7 @@ mod tests {
             "Ping-Pong must dwell on the leftmost column across nearby render samples"
         );
         assert!(
-            top_left_rightmost.is_subset(&visible_target(0.45, &top_left)),
+            top_left_rightmost.is_subset(&visible_target(0.95, &top_left)),
             "Ping-Pong must dwell on the rightmost column across nearby render samples"
         );
 

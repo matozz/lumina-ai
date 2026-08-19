@@ -4,7 +4,7 @@ use crate::compiler::diagnostic::{
 use crate::compiler::{CompiledProjectSnapshot, Compiler, LayoutCoord};
 use crate::document::{
     builtin_production_catalog, layout_authoring_capacity, layout_fixture_size_for_fixture,
-    layout_to_show_dsl, load_document, load_project_bundle, resolve_cue_recipe,
+    layout_to_show_dsl, load_document, load_project_bundle, load_project_draft, resolve_cue_recipe,
     validate_effect_draft, validate_layout_geometry, validate_production_catalog, AssetRef,
     CueDefinition, CueRecipeRef, EffectDefinitionDocument, LayoutDefinition, LayoutGeometry,
     MetaDSL, PatchDSL, ProductionCatalog, ProjectBundle, ShowDocumentV1, StageDocument,
@@ -15,6 +15,9 @@ use crate::engine::effect::{
     SPEED_PARAMETER_ID,
 };
 use crate::engine::render::{render_at, LivePhaser, RenderSource, RenderTime};
+use crate::engine::temporal::{
+    analyze_project_temporal_behavior, TemporalAnalysisRequest, TemporalFingerprintReport,
+};
 use crate::engine::transport::OutputRate;
 use crate::state::{
     EngineState, LivePadQuantize, PreviewSession, PreviewSource, RenderContext,
@@ -156,6 +159,24 @@ pub fn validate_effect_working_draft(
     effect: EffectDefinitionDocument,
 ) -> Result<EffectDefinitionDocument, Vec<Diagnostic>> {
     validate_effect_draft(effect)
+}
+
+#[tauri::command]
+pub async fn analyze_effect_temporal(
+    project_json: String,
+    request: TemporalAnalysisRequest,
+) -> Result<TemporalFingerprintReport, Vec<Diagnostic>> {
+    let project = load_project_draft(&project_json)?;
+    tokio::task::spawn_blocking(move || analyze_project_temporal_behavior(&project, &request))
+        .await
+        .map_err(|error| {
+            vec![Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                "temporal.worker",
+                format!("Temporal analysis worker failed: {error}"),
+                "Retry after the current Effect preview compiles successfully.",
+            )]
+        })?
 }
 
 #[tauri::command]
@@ -1372,6 +1393,12 @@ mod tests {
           "groups": [{ "id": "all", "name": "All", "fixtures": { "range": [1, 1] } }],
           "effect_definitions": [{
             "id": "project.red-pulse", "name": "Red Pulse", "revision": 1, "source": "project_local",
+            "tempo": {
+              "kind": "pulse", "primary_event": "pulse_onset",
+              "events_per_graph_cycle": 1.0, "one_x_events_per_beat": 1.0,
+              "phase_anchor": "onset", "duty_cycle": 0.5,
+              "recommended_speed": { "min": 0.25, "max": 8.0 }
+            },
             "parameters": [
               { "id": "speed", "name": "Speed", "schema": { "type": "scalar", "default": 1.0, "range": { "min": 0.25, "max": 8.0, "step": 0.25 }, "unit": "multiplier" }, "scope": "arrangement", "section": "main", "help": "Beat-synced playback speed." },
               { "id": "phase", "name": "Phase", "schema": { "type": "scalar", "default": 0.0, "range": { "min": -1.0, "max": 1.0, "step": 0.05 }, "unit": "cycles" }, "scope": "arrangement", "section": "main", "help": "Cycle offset." },

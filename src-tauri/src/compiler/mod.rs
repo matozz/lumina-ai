@@ -12,9 +12,9 @@ use crate::engine::effect::{
     deterministic_random, CatalogVisibility, CompiledColorStop, CompiledEffectGraph,
     CompiledEffectNode, CompiledEffectStep, CompiledProfileSequence, Direction, EffectCatalog,
     EffectCatalogMatch, EffectCatalogQuery, EffectDefinition, EffectDefinitionHandle, EffectFamily,
-    EffectInstance, EffectNodeHandle, EffectSource, LayoutCapability, MathOperation, MotionTag,
-    OscillatorWaveform, ParameterDefinition, ParameterHandle, ParameterValue, ParameterValueType,
-    SpatialBasis, StrobeRisk,
+    EffectInstance, EffectNodeHandle, EffectSource, EffectTempoBehavior, LayoutCapability,
+    MathOperation, MotionTag, OscillatorWaveform, ParameterDefinition, ParameterHandle,
+    ParameterValue, ParameterValueType, SpatialBasis, StrobeRisk,
 };
 use crate::engine::musical_time::{MusicalTime, TempoMap, TempoPoint};
 use crate::engine::profile::{
@@ -1187,6 +1187,10 @@ fn compile_effect_models(
                 EffectSourceDSL::UserLibrary => EffectSource::UserLibrary,
             },
             parameters,
+            tempo: EffectTempoBehavior {
+                events_per_graph_cycle: definition.tempo.events_per_graph_cycle,
+                one_x_events_per_beat: definition.tempo.one_x_events_per_beat,
+            },
             graph: compile_effect_graph(definition, profiles, errors),
             catalog: compile_effect_catalog(&definition.catalog),
         });
@@ -1401,7 +1405,10 @@ fn compile_effect_node(
                 .collect(),
         },
         EffectNodeDSL::Oscillator {
-            waveform, phase, ..
+            waveform,
+            duty_cycle,
+            phase,
+            ..
         } => CompiledEffectNode::Oscillator {
             waveform: match waveform {
                 OscillatorWaveformDSL::Sine => OscillatorWaveform::Sine,
@@ -1409,6 +1416,7 @@ fn compile_effect_node(
                 OscillatorWaveformDSL::Saw => OscillatorWaveform::Saw,
                 OscillatorWaveformDSL::Pulse => OscillatorWaveform::Pulse,
             },
+            duty_cycle: duty_cycle.unwrap_or(0.5),
             phase: input(&phase.node_id),
         },
         EffectNodeDSL::Envelope {
@@ -1773,6 +1781,15 @@ mod tests {
         "name": "Pulse",
         "revision": 1,
         "source": "project_local",
+        "tempo": {
+          "kind": "one_way_travel",
+          "primary_event": "one_way_traversal",
+          "events_per_graph_cycle": 1.0,
+          "one_x_events_per_beat": 1.0,
+          "phase_anchor": "traversal_start",
+          "topology_sensitivity": ["fixture_order"],
+          "recommended_speed": { "min": 0.25, "max": 8.0 }
+        },
         "parameters": [{
           "id": "speed",
           "name": "Speed",

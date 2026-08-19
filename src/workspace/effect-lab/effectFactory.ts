@@ -6,7 +6,12 @@ import type {
   ParameterValueDSL,
 } from "@/bridge/types";
 import { parameterDefaultValue } from "@/document/effectParameter";
-import { buildCommonParameters, buildEffectGraph, waveformFromDefinition } from "./effectGraph";
+import {
+  buildCommonParameters,
+  buildEffectGraph,
+  buildTempoBehavior,
+  waveformFromDefinition,
+} from "./effectGraph";
 
 export type EffectAttributeMode = "intensity_color" | "intensity";
 
@@ -131,6 +136,7 @@ function buildEffectPair(
     revision,
     source: "project_local",
     parameters: buildCommonParameters(values),
+    tempo: buildTempoBehavior(values),
     graph: { nodes: buildEffectGraph(values) },
     catalog: {
       mood: ["driving"],
@@ -138,7 +144,7 @@ function buildEffectPair(
       density: values.waveform === "pulse" ? 0.55 : 0.7,
       motion: values.waveform === "pulse" ? "pulse" : "organic",
       colorfulness: values.attributeMode === "intensity_color" ? 1 : 0,
-      strobe_risk: values.speed >= 4 && values.waveform === "pulse" ? "medium" : "low",
+      strobe_risk: values.waveform === "pulse" ? "high" : "low",
       required_attributes:
         values.attributeMode === "intensity_color" ? ["intensity", "color.rgb"] : ["intensity"],
     },

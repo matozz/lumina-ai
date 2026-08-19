@@ -66,6 +66,7 @@ export interface EffectDefinitionDSL {
   parameters: Array<ParameterDefinitionDSL>;
   revision: number;
   source: EffectSourceDSL;
+  tempo: EffectTempoBehaviorDSL;
 }
 
 export type EffectFamilyDSL = "intensity" | "color" | "movement" | "spatial" | "strobe" | "utility";
@@ -104,6 +105,7 @@ export type EffectNodeDSL =
       type: "step_sequence";
     }
   | {
+      duty_cycle?: number | null;
       id: string;
       phase: EffectPortRefDSL;
       type: "oscillator";
@@ -169,7 +171,12 @@ export type EffectNodeDSL =
       type: "attribute_writer";
     };
 
-export type EffectNodePropertyDSL = "waveform" | "attack" | "release" | "color_stops";
+export type EffectNodePropertyDSL =
+  | "waveform"
+  | "duty_cycle"
+  | "attack"
+  | "release"
+  | "color_stops";
 
 export type EffectPortDSL =
   | "scalar"
@@ -188,6 +195,19 @@ export interface EffectPortRefDSL {
 }
 
 export type EffectSourceDSL = "built_in" | "project_local" | "user_library";
+
+export interface EffectTempoBehaviorDSL {
+  direction_reversals_per_graph_cycle?: number;
+  duty_cycle?: number | null;
+  events_per_graph_cycle: number;
+  kind: TempoBehaviorKindDSL;
+  one_x_events_per_beat: number;
+  phase_anchor: TempoPhaseAnchorDSL;
+  primary_event: PrimaryVisualEventDSL;
+  recommended_speed: TempoSpeedRangeDSL;
+  safety?: TempoSafetyLimitDSL | null;
+  topology_sensitivity?: Array<TempoTopologySensitivityDSL>;
+}
 
 export interface FormulaDef {
   count: number;
@@ -368,6 +388,16 @@ export interface PatchDSL {
   profile_id: string;
 }
 
+export type PrimaryVisualEventDSL =
+  | "pulse_onset"
+  | "one_way_traversal"
+  | "directional_traversal"
+  | "random_refresh"
+  | "rise_fall_cycle"
+  | "color_cycle"
+  | "movement_cycle"
+  | "spatial_propagation";
+
 export interface ScalarParameterRangeDSL {
   max: number;
   min: number;
@@ -421,14 +451,41 @@ export interface SvgPathDef {
   scale?: number | null;
 }
 
+export type TempoBehaviorKindDSL =
+  | "pulse"
+  | "one_way_travel"
+  | "ping_pong"
+  | "random_refresh"
+  | "continuous_cycle"
+  | "spatial_propagation";
+
 export interface TempoMapDSL {
   points: Array<TempoPointDSL>;
 }
+
+export type TempoPhaseAnchorDSL =
+  | "onset"
+  | "minimum"
+  | "maximum"
+  | "midpoint_rising"
+  | "traversal_start"
+  | "refresh";
 
 export interface TempoPointDSL {
   bpm: number;
   time_tick: number;
 }
+
+export interface TempoSafetyLimitDSL {
+  max_primary_events_per_second: number;
+}
+
+export interface TempoSpeedRangeDSL {
+  max: number;
+  min: number;
+}
+
+export type TempoTopologySensitivityDSL = "target_set" | "fixture_order" | "coordinates";
 
 export interface TimelineTrackDSL {
   automation_lanes?: Array<AutomationLaneDSL>;

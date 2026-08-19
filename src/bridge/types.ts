@@ -21,6 +21,7 @@ export type {
   EffectCatalogDSL,
   EffectDefinitionDSL,
   EffectGraphDSL,
+  EffectTempoBehaviorDSL,
   EffectInstanceDSL,
   EffectNodeDSL,
   EffectPortDSL,
@@ -90,6 +91,7 @@ export type {
   LayoutPoint,
   LayoutSize,
   MixPolicy,
+  PrimaryVisualEventDSL,
   ProjectBundle,
   ProjectManifest,
   StageDocument,
@@ -108,6 +110,20 @@ export type {
 } from "@/generated/project-contract-v1";
 
 export type { UserAssetPack } from "@/generated/user-asset-pack-v1";
+
+export type {
+  TemporalAliasingMetric,
+  TemporalAliasingRisk,
+  TemporalAnalysisIdentity,
+  TemporalAnalysisRequest,
+  TemporalCentroidMetric,
+  TemporalDistributionMetric,
+  TemporalFingerprintReport,
+  TemporalPeakMetric,
+  TemporalSamplingConfig,
+  TemporalSpeedFingerprint,
+  TemporalStrobeMetric,
+} from "@/generated/temporal-fingerprint-v1";
 
 export type FullDSL = ShowDocumentV1;
 export type TimelineDSL = TimelineV1DSL;

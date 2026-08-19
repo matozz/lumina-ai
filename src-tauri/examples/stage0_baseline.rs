@@ -3,7 +3,7 @@ use lumina_ai_lib::engine::attribute::{resolve_attribute, FixtureFrame};
 use lumina_ai_lib::engine::effect::{
     common_parameters, CompiledEffectGraph, CompiledEffectNode, CompiledEffectStep,
     CompiledProfileSequence, EffectCatalog, EffectDefinition, EffectDefinitionHandle,
-    EffectInstance, EffectNodeHandle, EffectSource,
+    EffectInstance, EffectNodeHandle, EffectSource, EffectTempoBehavior,
 };
 use lumina_ai_lib::engine::profile::{
     profile_handle_by_id, AttributeValue, FixtureProfileHandle, COLOR_RGB_ATTRIBUTE,
@@ -175,6 +175,10 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
         revision: 1,
         source: EffectSource::ProjectLocal,
         parameters: common_parameters(1.0),
+        tempo: EffectTempoBehavior {
+            events_per_graph_cycle: 1.0,
+            one_x_events_per_beat: 1.0,
+        },
         graph: CompiledEffectGraph {
             nodes: vec![
                 CompiledEffectNode::Time,

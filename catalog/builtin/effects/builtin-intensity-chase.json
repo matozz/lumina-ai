@@ -20,7 +20,7 @@
       },
       "scope": "arrangement",
       "section": "main",
-      "help": "Beat-synced chase speed."
+      "help": "Normalized chase rate; 1× completes one ordered traversal per beat."
     },
     {
       "id": "intensity",
@@ -61,6 +61,16 @@
       "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
     }
   ],
+  "tempo": {
+    "kind": "one_way_travel",
+    "primary_event": "one_way_traversal",
+    "events_per_graph_cycle": 1,
+    "one_x_events_per_beat": 1,
+    "phase_anchor": "traversal_start",
+    "topology_sensitivity": ["target_set", "fixture_order", "coordinates"],
+    "recommended_speed": { "min": 0.25, "max": 2 },
+    "safety": { "max_primary_events_per_second": 4 }
+  },
   "graph": {
     "nodes": [
       {
@@ -84,6 +94,7 @@
         "type": "oscillator",
         "id": "oscillator",
         "waveform": "pulse",
+        "duty_cycle": 0.4,
         "phase": {
           "node_id": "spatial",
           "port": "scalar"
@@ -109,7 +120,7 @@
     "density": 0.45,
     "motion": "chase",
     "colorfulness": 0,
-    "strobe_risk": "low",
+    "strobe_risk": "high",
     "required_attributes": ["intensity"],
     "layout_capabilities": ["linear", "matrix", "coordinates"]
   }

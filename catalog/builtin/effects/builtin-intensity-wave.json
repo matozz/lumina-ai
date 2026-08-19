@@ -67,6 +67,15 @@
       "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
     }
   ],
+  "tempo": {
+    "kind": "spatial_propagation",
+    "primary_event": "spatial_propagation",
+    "events_per_graph_cycle": 1,
+    "one_x_events_per_beat": 1,
+    "phase_anchor": "midpoint_rising",
+    "topology_sensitivity": ["target_set", "coordinates"],
+    "recommended_speed": { "min": 0.25, "max": 2 }
+  },
   "graph": {
     "nodes": [
       {

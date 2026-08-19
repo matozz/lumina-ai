@@ -19,6 +19,7 @@
     "schema:check": "cargo run --quiet --manifest-path src-tauri/Cargo.toml --example generate_show_schema -- --check",
     "catalog:check": "cargo run --quiet --manifest-path src-tauri/Cargo.toml --example check_production_catalog",
     "catalog:golden:update": "cargo run --quiet --manifest-path src-tauri/Cargo.toml --example check_production_catalog -- --update-golden",
+    "effect:analyze": "cargo run --quiet --manifest-path src-tauri/Cargo.toml --example analyze_effect_temporal --",
     "check": "pnpm schema:check && pnpm catalog:check && pnpm format:check && pnpm typecheck && pnpm test && pnpm build:vite",
     "check:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml -- --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings && cargo test --manifest-path src-tauri/Cargo.toml",
     "check:all": "pnpm check && pnpm check:rust",

@@ -20,18 +20,7 @@
       },
       "scope": "arrangement",
       "section": "main",
-      "help": "Beat-synced pan speed."
-    },
-    {
-      "id": "direction",
-      "name": "Direction",
-      "schema": {
-        "type": "direction",
-        "default": "forward"
-      },
-      "scope": "arrangement",
-      "section": "main",
-      "help": "Sweep travel direction."
+      "help": "Normalized pan rate; 1× completes one directional sweep per beat."
     },
     {
       "id": "color",
@@ -44,6 +33,16 @@
       "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
     }
   ],
+  "tempo": {
+    "kind": "ping_pong",
+    "primary_event": "directional_traversal",
+    "events_per_graph_cycle": 2,
+    "one_x_events_per_beat": 1,
+    "phase_anchor": "traversal_start",
+    "direction_reversals_per_graph_cycle": 2,
+    "topology_sensitivity": ["target_set"],
+    "recommended_speed": { "min": 0.25, "max": 2 }
+  },
   "graph": {
     "nodes": [
       {
@@ -53,7 +52,7 @@
       {
         "type": "oscillator",
         "id": "oscillator",
-        "waveform": "sine",
+        "waveform": "triangle",
         "phase": {
           "node_id": "time",
           "port": "scalar"

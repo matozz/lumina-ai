@@ -1,6 +1,7 @@
 use super::{
-    ClipPlaybackDSL, EffectCatalogDSL, EffectGraphDSL, EffectSourceDSL, GlobalParameterDSL,
-    GroupDSL, KeyframeDSL, ParameterDefinitionDSL, ParameterValueDSL, PatchDSL, TempoMapDSL,
+    ClipPlaybackDSL, EffectCatalogDSL, EffectGraphDSL, EffectSourceDSL, EffectTempoBehaviorDSL,
+    GlobalParameterDSL, GroupDSL, KeyframeDSL, ParameterDefinitionDSL, ParameterValueDSL, PatchDSL,
+    TempoMapDSL,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -426,6 +427,7 @@ pub struct EffectDefinitionDocument {
     pub revision: u32,
     pub source: EffectSourceDSL,
     pub parameters: Vec<ParameterDefinitionDSL>,
+    pub tempo: EffectTempoBehaviorDSL,
     pub graph: EffectGraphDSL,
     pub catalog: EffectCatalogDSL,
 }

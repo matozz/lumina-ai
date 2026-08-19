@@ -161,9 +161,10 @@ pub(crate) fn render_resolved(
                             })
                     })
                     .unwrap_or(Direction::Forward);
+                let graph_phase = definition.graph_phase(active.phase);
                 let phase = match direction {
-                    Direction::Forward => active.phase + phase_offset,
-                    Direction::Reverse => phase_offset - active.phase,
+                    Direction::Forward => graph_phase + phase_offset,
+                    Direction::Reverse => phase_offset - graph_phase,
                 };
                 let mut values = vec![
                     None;
@@ -511,6 +512,12 @@ mod tests {
                 "groups": [{ "id": "all", "name": "All", "fixtures": [1] }],
                 "effect_definitions": [{
                     "id": "project.pulse", "name": "Pulse", "revision": 1, "source": "project_local",
+                    "tempo": {
+                        "kind": "pulse", "primary_event": "pulse_onset",
+                        "events_per_graph_cycle": 1.0, "one_x_events_per_beat": 1.0,
+                        "phase_anchor": "onset", "duty_cycle": 0.5,
+                        "recommended_speed": { "min": 0.25, "max": 8.0 }
+                    },
                     "parameters": [{
                         "id": "speed", "name": "Speed",
                         "schema": { "type": "scalar", "default": 1.0,
@@ -710,6 +717,12 @@ mod tests {
                 "groups": [{ "id": "all", "name": "All", "fixtures": [1] }],
                 "effect_definitions": [{
                     "id": "project.position", "name": "Position", "revision": 1, "source": "project_local",
+                    "tempo": {
+                        "kind": "continuous_cycle", "primary_event": "movement_cycle",
+                        "events_per_graph_cycle": 1.0, "one_x_events_per_beat": 1.0,
+                        "phase_anchor": "minimum",
+                        "recommended_speed": { "min": 0.25, "max": 8.0 }
+                    },
                     "parameters": [],
                     "graph": { "nodes": [
                         { "type": "time", "id": "time" },
@@ -760,6 +773,12 @@ mod tests {
                 "effect_definitions": [
                     {
                         "id": "project.red", "name": "Red", "revision": 1, "source": "project_local", "parameters": [],
+                        "tempo": {
+                            "kind": "continuous_cycle", "primary_event": "color_cycle",
+                            "events_per_graph_cycle": 1.0, "one_x_events_per_beat": 1.0,
+                            "phase_anchor": "minimum",
+                            "recommended_speed": { "min": 0.25, "max": 8.0 }
+                        },
                         "graph": { "nodes": [
                             { "type": "time", "id": "time" },
                             { "type": "step_sequence", "id": "sequence", "phase": { "node_id": "time", "port": "scalar" }, "steps": [{ "values": { "color": "#ff0000", "dimmer": 0.25 }, "width": 100, "transition": 0 }]},
@@ -769,6 +788,12 @@ mod tests {
                     },
                     {
                         "id": "project.blue", "name": "Blue", "revision": 1, "source": "project_local", "parameters": [],
+                        "tempo": {
+                            "kind": "continuous_cycle", "primary_event": "color_cycle",
+                            "events_per_graph_cycle": 1.0, "one_x_events_per_beat": 1.0,
+                            "phase_anchor": "minimum",
+                            "recommended_speed": { "min": 0.25, "max": 8.0 }
+                        },
                         "graph": { "nodes": [
                             { "type": "time", "id": "time" },
                             { "type": "step_sequence", "id": "sequence", "phase": { "node_id": "time", "port": "scalar" }, "steps": [{ "values": { "color": "#0000ff", "dimmer": 0.8 }, "width": 100, "transition": 0 }]},

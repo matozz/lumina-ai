@@ -1,0 +1,653 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TemporalAnalyzerContract",
+  "type": "object",
+  "properties": {
+    "report": {
+      "$ref": "#/$defs/TemporalFingerprintReport"
+    },
+    "request": {
+      "$ref": "#/$defs/TemporalAnalysisRequest"
+    }
+  },
+  "additionalProperties": false,
+  "required": ["request", "report"],
+  "$defs": {
+    "AssetRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "revision"]
+    },
+    "ColorStopDSL": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string"
+        },
+        "position": {
+          "type": "number",
+          "format": "double",
+          "maximum": 1.0,
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false,
+      "required": ["position", "color"]
+    },
+    "DirectionDSL": {
+      "type": "string",
+      "enum": ["forward", "reverse"]
+    },
+    "EffectTempoBehaviorDSL": {
+      "type": "object",
+      "properties": {
+        "direction_reversals_per_graph_cycle": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "duty_cycle": {
+          "type": ["number", "null"],
+          "format": "double",
+          "maximum": 1.0,
+          "minimum": 1e-6
+        },
+        "events_per_graph_cycle": {
+          "type": "number",
+          "format": "double",
+          "minimum": 1e-6
+        },
+        "kind": {
+          "$ref": "#/$defs/TempoBehaviorKindDSL"
+        },
+        "one_x_events_per_beat": {
+          "type": "number",
+          "format": "double",
+          "minimum": 1e-6
+        },
+        "phase_anchor": {
+          "$ref": "#/$defs/TempoPhaseAnchorDSL"
+        },
+        "primary_event": {
+          "$ref": "#/$defs/PrimaryVisualEventDSL"
+        },
+        "recommended_speed": {
+          "$ref": "#/$defs/TempoSpeedRangeDSL"
+        },
+        "safety": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TempoSafetyLimitDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "topology_sensitivity": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TempoTopologySensitivityDSL"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "primary_event",
+        "events_per_graph_cycle",
+        "one_x_events_per_beat",
+        "phase_anchor",
+        "recommended_speed"
+      ]
+    },
+    "ParameterValueDSL": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "scalar"
+            },
+            "value": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "color"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "direction"
+            },
+            "value": {
+              "$ref": "#/$defs/DirectionDSL"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "enum"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "color_stops"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ColorStopDSL"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": ["type", "value"]
+        }
+      ]
+    },
+    "PrimaryVisualEventDSL": {
+      "type": "string",
+      "enum": [
+        "pulse_onset",
+        "one_way_traversal",
+        "directional_traversal",
+        "random_refresh",
+        "rise_fall_cycle",
+        "color_cycle",
+        "movement_cycle",
+        "spatial_propagation"
+      ]
+    },
+    "StrobeRiskDSL": {
+      "type": "string",
+      "enum": ["none", "low", "medium", "high"]
+    },
+    "TempoBehaviorKindDSL": {
+      "type": "string",
+      "enum": [
+        "pulse",
+        "one_way_travel",
+        "ping_pong",
+        "random_refresh",
+        "continuous_cycle",
+        "spatial_propagation"
+      ]
+    },
+    "TempoPhaseAnchorDSL": {
+      "type": "string",
+      "enum": ["onset", "minimum", "maximum", "midpoint_rising", "traversal_start", "refresh"]
+    },
+    "TempoSafetyLimitDSL": {
+      "type": "object",
+      "properties": {
+        "max_primary_events_per_second": {
+          "type": "number",
+          "format": "double",
+          "minimum": 1e-6
+        }
+      },
+      "additionalProperties": false,
+      "required": ["max_primary_events_per_second"]
+    },
+    "TempoSpeedRangeDSL": {
+      "type": "object",
+      "properties": {
+        "max": {
+          "type": "number",
+          "format": "double"
+        },
+        "min": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["min", "max"]
+    },
+    "TempoTopologySensitivityDSL": {
+      "type": "string",
+      "enum": ["target_set", "fixture_order", "coordinates"]
+    },
+    "TemporalAliasingMetric": {
+      "type": "object",
+      "properties": {
+        "frames_per_on_window": {
+          "type": ["number", "null"],
+          "format": "double"
+        },
+        "frames_per_primary_event": {
+          "type": "number",
+          "format": "double"
+        },
+        "preview_fps": {
+          "type": "number",
+          "format": "double"
+        },
+        "risk": {
+          "$ref": "#/$defs/TemporalAliasingRisk"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["preview_fps", "frames_per_primary_event", "risk"]
+    },
+    "TemporalAliasingRisk": {
+      "type": "string",
+      "enum": ["none", "caution", "severe"]
+    },
+    "TemporalAnalysisIdentity": {
+      "type": "object",
+      "properties": {
+        "bpm": {
+          "type": "number",
+          "format": "double"
+        },
+        "effect_ref": {
+          "$ref": "#/$defs/AssetRef"
+        },
+        "layout_ref": {
+          "$ref": "#/$defs/AssetRef"
+        },
+        "parameter_overrides": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/ParameterValueDSL"
+          }
+        },
+        "sampling": {
+          "$ref": "#/$defs/TemporalSamplingConfig"
+        },
+        "seed": {
+          "type": "string"
+        },
+        "speeds": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "stage_ref": {
+          "$ref": "#/$defs/AssetRef"
+        },
+        "target_fixture_count": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "target_set_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "effect_ref",
+        "stage_ref",
+        "layout_ref",
+        "target_set_id",
+        "target_fixture_count",
+        "seed",
+        "parameter_overrides",
+        "bpm",
+        "speeds",
+        "sampling"
+      ]
+    },
+    "TemporalAnalysisRequest": {
+      "type": "object",
+      "properties": {
+        "bpm": {
+          "type": "number",
+          "format": "double",
+          "maximum": 400.0,
+          "minimum": 20.0
+        },
+        "effect_ref": {
+          "$ref": "#/$defs/AssetRef"
+        },
+        "parameter_overrides": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/ParameterValueDSL"
+          }
+        },
+        "sampling": {
+          "$ref": "#/$defs/TemporalSamplingConfig"
+        },
+        "seed": {
+          "type": "string"
+        },
+        "speeds": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "target_set_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["effect_ref", "target_set_id", "bpm", "speeds", "seed", "sampling"]
+    },
+    "TemporalCentroidMetric": {
+      "type": "object",
+      "properties": {
+        "direction_reversals": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "end": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "double"
+          },
+          "maxItems": 2,
+          "minItems": 2
+        },
+        "path_distance": {
+          "type": "number",
+          "format": "double"
+        },
+        "start": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "double"
+          },
+          "maxItems": 2,
+          "minItems": 2
+        }
+      },
+      "additionalProperties": false,
+      "required": ["start", "end", "path_distance", "direction_reversals"]
+    },
+    "TemporalDistributionMetric": {
+      "type": "object",
+      "properties": {
+        "maximum": {
+          "type": "number",
+          "format": "double"
+        },
+        "mean": {
+          "type": "number",
+          "format": "double"
+        },
+        "minimum": {
+          "type": "number",
+          "format": "double"
+        },
+        "variance": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["mean", "variance", "minimum", "maximum"]
+    },
+    "TemporalFingerprintReport": {
+      "type": "object",
+      "properties": {
+        "behavior": {
+          "$ref": "#/$defs/EffectTempoBehaviorDSL"
+        },
+        "cache_key": {
+          "type": "string"
+        },
+        "fingerprints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TemporalSpeedFingerprint"
+          }
+        },
+        "identity": {
+          "$ref": "#/$defs/TemporalAnalysisIdentity"
+        },
+        "schema_version": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": ["schema_version", "cache_key", "identity", "behavior", "fingerprints"]
+    },
+    "TemporalPeakMetric": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "phases": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": ["count", "phases"]
+    },
+    "TemporalSamplingConfig": {
+      "type": "object",
+      "properties": {
+        "base_samples_per_beat": {
+          "type": "integer",
+          "format": "uint32",
+          "maximum": 2048,
+          "minimum": 16
+        },
+        "minimum_samples_per_event": {
+          "type": "integer",
+          "format": "uint32",
+          "maximum": 256,
+          "minimum": 8
+        },
+        "preview_fps": {
+          "type": "number",
+          "format": "double",
+          "maximum": 240.0,
+          "minimum": 1.0
+        },
+        "primary_event_window": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "primary_event_window",
+        "base_samples_per_beat",
+        "minimum_samples_per_event",
+        "preview_fps"
+      ]
+    },
+    "TemporalSpeedFingerprint": {
+      "type": "object",
+      "properties": {
+        "active_fixture_fraction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemporalDistributionMetric"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "aliasing": {
+          "$ref": "#/$defs/TemporalAliasingMetric"
+        },
+        "color_change_energy": {
+          "type": ["number", "null"],
+          "format": "double"
+        },
+        "frame_delta_change_energy": {
+          "type": "number",
+          "format": "double"
+        },
+        "graph_cycles_per_beat": {
+          "type": "number",
+          "format": "double"
+        },
+        "intensity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemporalDistributionMetric"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "on_duty_cycle": {
+          "type": ["number", "null"],
+          "format": "double"
+        },
+        "peaks": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemporalPeakMetric"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "primary_events_per_beat": {
+          "type": "number",
+          "format": "double"
+        },
+        "primary_events_per_second": {
+          "type": "number",
+          "format": "double"
+        },
+        "sample_count": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "sample_duration_beats": {
+          "type": "number",
+          "format": "double"
+        },
+        "spatial_centroid": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemporalCentroidMetric"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "speed": {
+          "type": "number",
+          "format": "double"
+        },
+        "strobe": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemporalStrobeMetric"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "speed",
+        "graph_cycles_per_beat",
+        "primary_events_per_beat",
+        "primary_events_per_second",
+        "sample_duration_beats",
+        "sample_count",
+        "frame_delta_change_energy",
+        "aliasing"
+      ]
+    },
+    "TemporalStrobeMetric": {
+      "type": "object",
+      "properties": {
+        "exceeds_authored_safety_limit": {
+          "type": "boolean"
+        },
+        "maximum_fixture_flash_hz": {
+          "type": "number",
+          "format": "double"
+        },
+        "observed_risk": {
+          "$ref": "#/$defs/StrobeRiskDSL"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["maximum_fixture_flash_hz", "observed_risk", "exceeds_authored_safety_limit"]
+    }
+  }
+}

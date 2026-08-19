@@ -8,7 +8,11 @@ import type {
   ProjectBundle,
   StageDocument,
 } from "@/bridge/types";
-import { buildCommonParameters, buildEffectGraph } from "@/workspace/effect-lab/effectGraph";
+import {
+  buildCommonParameters,
+  buildEffectGraph,
+  buildTempoBehavior,
+} from "@/workspace/effect-lab/effectGraph";
 import type { EffectFormValues } from "@/workspace/effect-lab/effectFactory";
 import { createOpaqueCueLayerId } from "@/document/cueLayerIdentity";
 
@@ -88,6 +92,7 @@ export function createEffectAsset(bundle: ProjectBundle, requestedName = "Pulse"
     name,
     source: "project_local",
     parameters: buildCommonParameters(values),
+    tempo: buildTempoBehavior(values),
     graph: { nodes: graph },
     catalog: {
       mood: gradient ? ["expansive"] : ["driving"],
@@ -95,7 +100,7 @@ export function createEffectAsset(bundle: ProjectBundle, requestedName = "Pulse"
       density: gradient ? 0.7 : 0.55,
       motion: gradient ? "sweep" : "pulse",
       colorfulness: 1,
-      strobe_risk: "low",
+      strobe_risk: gradient ? "low" : "high",
       required_attributes: ["intensity", "color.rgb"],
     },
   };

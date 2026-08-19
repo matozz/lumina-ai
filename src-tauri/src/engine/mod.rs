@@ -9,6 +9,7 @@ pub mod musical_time;
 pub mod output;
 pub mod profile;
 pub mod render;
+pub mod temporal;
 pub mod timeline;
 pub mod transport;
 

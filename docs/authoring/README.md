@@ -37,7 +37,7 @@ Arrange 的 Space 固定为播放/暂停。Zoom、Snap 与视觉 Grid 是三个�
 
 Repo-local [`lumina-full-arrange`](../../.agents/skills/lumina-full-arrange/SKILL.md) Skill 提供首版离线协作路径：用户显式导出并提供 Base Asset Pack 或普通 Project Pack，Skill 校验并审查实际资产，经对话确认完整 Arrangement brief 后，生成新的、经过验证的 Project Pack。用户再通过 Assets Import 选择 Incremental 或 Replace 导入结果；完整生成包通常可用 Replace 直接重置当前资产，局部包使用 Incremental 追加。
 
-这条路径不把 UserAssetPack 当作 Project manifest，不读取或写入当前 Project 文件夹、`lumina-project.json`、history、localStorage 或 WebView SQLite，也不自动改写 App 当前项目。首版不包含 authoring bridge、CLI、computer-use 或真实 Arrange/Live 验收；导入后的视觉和 Live acceptance 仍由用户在 App 中完成。
+这条路径不把 UserAssetPack 当作 Project manifest，不读取或写入当前 Project 文件夹、`lumina-project.json`、history、localStorage 或 WebView SQLite，也不自动改写 App 当前项目。Skill 可调用 checked-in temporal analyzer CLI，以真实 runtime fingerprint/contact sheet 审计 Effect 选择、生成和调速；它仍不替代导入后的真实 Arrange/Live 窗口验收。
 
 ## 工程约束
 
@@ -65,4 +65,4 @@ Repo-local [`lumina-full-arrange`](../../.agents/skills/lumina-full-arrange/SKIL
 5. 运行 `pnpm check:all`。
 6. 对用户路径做真实窗口复核，至少覆盖 1100×720 和常用大窗口。
 
-必要架构决策见 ADR-0001、0002、0003、0004、0005、0010、0011、0012 和 0013。
+必要架构决策见 ADR-0001、0002、0003、0004、0005、0010、0011、0012、0013 和 0014。

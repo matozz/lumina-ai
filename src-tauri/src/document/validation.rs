@@ -352,6 +352,7 @@ pub(super) fn validate_effect_definition_document(
         revision: document.revision,
         source: document.source,
         parameters: document.parameters.clone(),
+        tempo: document.tempo.clone(),
         graph: document.graph.clone(),
         catalog: document.catalog.clone(),
     };
@@ -364,9 +365,153 @@ fn validate_effect_definition_contract(
     diagnostics: &mut Vec<Diagnostic>,
 ) -> HashMap<String, ParameterContract> {
     let parameters = validate_parameter_schema(path, definition, diagnostics);
+    validate_tempo_behavior(path, definition, diagnostics);
     validate_effect_graph(path, definition, diagnostics);
     validate_catalog_metadata(path, definition, diagnostics);
     parameters
+}
+
+fn validate_tempo_behavior(
+    definition_path: &str,
+    definition: &EffectDefinitionDSL,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let path = format!("{definition_path}.tempo");
+    let tempo = &definition.tempo;
+    if !tempo.events_per_graph_cycle.is_finite() || tempo.events_per_graph_cycle <= 0.0 {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.events_per_graph_cycle"),
+            "events_per_graph_cycle must be finite and greater than zero.",
+            "Declare how many primary visual events one graph cycle produces.",
+        ));
+    }
+    if !tempo.one_x_events_per_beat.is_finite()
+        || (tempo.one_x_events_per_beat - 1.0).abs() > f64::EPSILON
+    {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.one_x_events_per_beat"),
+            "Arrangement-facing 1× must declare exactly one primary event per beat.",
+            "Use 1.0; choose a slower default speed without changing the 1× normalization.",
+        ));
+    }
+    if tempo
+        .duty_cycle
+        .is_some_and(|duty| !duty.is_finite() || duty <= 0.0 || duty > 1.0)
+    {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.duty_cycle"),
+            "Pulse duty cycle must be finite and inside (0, 1].",
+            "Declare the authored on-window fraction of one normalized event cycle.",
+        ));
+    }
+    if matches!(tempo.kind, super::TempoBehaviorKindDSL::Pulse) && tempo.duty_cycle.is_none() {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.duty_cycle"),
+            "Pulse behavior requires an explicit duty cycle.",
+            "Declare and graph-bind a production-visible on-window fraction.",
+        ));
+    }
+    if !matches!(tempo.kind, super::TempoBehaviorKindDSL::Pulse) && tempo.duty_cycle.is_some() {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.duty_cycle"),
+            "Duty cycle is only meaningful for pulse behavior.",
+            "Remove the field or classify the primary behavior as pulse.",
+        ));
+    }
+    let range = tempo.recommended_speed;
+    if !range.min.is_finite()
+        || !range.max.is_finite()
+        || range.min > range.max
+        || !crate::engine::effect::is_beat_sync_speed_multiplier(range.min)
+        || !crate::engine::effect::is_beat_sync_speed_multiplier(range.max)
+    {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.recommended_speed"),
+            "Recommended speed endpoints must be ordered legal beat-sync multipliers.",
+            "Use endpoints from 0.25, 0.5, 1, 2, 4, or 8.",
+        ));
+    }
+    if tempo.safety.is_some_and(|safety| {
+        !safety.max_primary_events_per_second.is_finite()
+            || safety.max_primary_events_per_second <= 0.0
+    }) {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.safety.max_primary_events_per_second"),
+            "Temporal safety limit must be finite and greater than zero.",
+            "Declare the maximum reviewed primary-event rate in events per second.",
+        ));
+    }
+
+    let has_random = definition
+        .graph
+        .nodes
+        .iter()
+        .any(|node| matches!(node, EffectNodeDSL::Random { .. }));
+    let has_spatial = definition
+        .graph
+        .nodes
+        .iter()
+        .any(|node| matches!(node, EffectNodeDSL::SpatialPhase { .. }));
+    let pulse_duties = definition.graph.nodes.iter().filter_map(|node| match node {
+        EffectNodeDSL::Oscillator {
+            waveform: super::OscillatorWaveformDSL::Pulse,
+            duty_cycle,
+            ..
+        } => Some(duty_cycle.unwrap_or(0.5)),
+        EffectNodeDSL::StepSequence { steps, .. } => {
+            let total = steps
+                .iter()
+                .map(|step| step.width.unwrap_or(100.0))
+                .sum::<f64>();
+            let on = steps
+                .iter()
+                .filter(|step| step.values.dimmer.unwrap_or(1.0) > 0.1)
+                .map(|step| step.width.unwrap_or(100.0))
+                .sum::<f64>();
+            (total > f64::EPSILON).then_some(on / total)
+        }
+        _ => None,
+    });
+    if matches!(tempo.kind, super::TempoBehaviorKindDSL::RandomRefresh) && !has_random {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.kind"),
+            "random_refresh behavior requires a deterministic Random graph node.",
+            "Repair the graph or declare the visual behavior it actually implements.",
+        ));
+    }
+    if matches!(
+        tempo.kind,
+        super::TempoBehaviorKindDSL::OneWayTravel | super::TempoBehaviorKindDSL::SpatialPropagation
+    ) && !has_spatial
+    {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.kind"),
+            "Spatial travel behavior requires a SpatialPhase graph node.",
+            "Repair the graph or use a non-spatial behavior kind.",
+        ));
+    }
+    if let Some(declared) = tempo.duty_cycle {
+        let matches_graph = pulse_duties
+            .into_iter()
+            .any(|graph| (graph - declared).abs() <= f64::EPSILON);
+        if !matches_graph {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_METADATA_INVALID,
+                format!("{path}.duty_cycle"),
+                "Declared pulse duty does not match a Pulse oscillator in the EffectGraph.",
+                "Keep authored temporal intent and the graph duty cycle synchronized.",
+            ));
+        }
+    }
 }
 
 fn validate_parameter_schema(
@@ -734,6 +879,10 @@ fn validate_graph_bindings(
                 EffectNodeDSL::Oscillator { .. },
                 ParameterValueTypeDSL::Enum
             ) | (
+                EffectNodePropertyDSL::DutyCycle,
+                EffectNodeDSL::Oscillator { .. },
+                ParameterValueTypeDSL::Scalar
+            ) | (
                 EffectNodePropertyDSL::Attack | EffectNodePropertyDSL::Release,
                 EffectNodeDSL::Envelope { .. },
                 ParameterValueTypeDSL::Scalar
@@ -748,7 +897,7 @@ fn validate_graph_bindings(
                 CATALOG_GRAPH_BINDING_INVALID,
                 format!("{binding_path}.property"),
                 "Graph binding property, node type, and parameter type are incompatible.",
-                "Bind waveform→oscillator enum, attack/release→envelope scalar, or color_stops→gradient.",
+                "Bind waveform/duty_cycle→oscillator, attack/release→envelope, or color_stops→gradient.",
             ));
         } else if !binding_default_matches_node(parameter, node, binding.property) {
             diagnostics.push(Diagnostic::error(
@@ -806,6 +955,11 @@ fn binding_default_matches_node(
             };
             value == waveform
         }
+        (
+            EffectNodePropertyDSL::DutyCycle,
+            EffectNodeDSL::Oscillator { duty_cycle, .. },
+            ParameterValueDSL::Scalar(value),
+        ) => duty_cycle.is_some_and(|duty| (*value - duty).abs() <= f64::EPSILON),
         (
             EffectNodePropertyDSL::Attack,
             EffectNodeDSL::Envelope { attack, .. },
@@ -1176,6 +1330,28 @@ fn validate_effect_node_values(
                 if let Some(color) = &step.values.color {
                     validate_color(color, format!("{step_path}.values.color"), diagnostics);
                 }
+            }
+        }
+        EffectNodeDSL::Oscillator {
+            waveform,
+            duty_cycle,
+            ..
+        } => {
+            if duty_cycle.is_some_and(|duty| !duty.is_finite() || duty <= 0.0 || duty > 1.0) {
+                diagnostics.push(Diagnostic::error(
+                    DOC_INVALID_RANGE,
+                    format!("{path}.duty_cycle"),
+                    "Oscillator duty_cycle must be finite and inside (0, 1].",
+                    "Use the fraction of a graph cycle that remains on.",
+                ));
+            }
+            if duty_cycle.is_some() && !matches!(waveform, super::OscillatorWaveformDSL::Pulse) {
+                diagnostics.push(Diagnostic::error(
+                    DOC_EFFECT_GRAPH_INVALID,
+                    format!("{path}.duty_cycle"),
+                    "Only a Pulse oscillator accepts duty_cycle.",
+                    "Remove duty_cycle or select the pulse waveform.",
+                ));
             }
         }
         EffectNodeDSL::Envelope {

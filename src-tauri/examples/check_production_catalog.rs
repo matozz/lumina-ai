@@ -1,6 +1,7 @@
 use lumina_ai_lib::document::{
     builtin_production_catalog, layout_capacity, layout_geometry_shape, layout_positions,
-    production_catalog_compatibility, production_catalog_golden, validate_production_catalog,
+    production_catalog_compatibility, production_catalog_golden,
+    production_catalog_temporal_golden, validate_production_catalog,
     validate_production_catalog_runtime, ProductionCatalog,
 };
 use std::fs;
@@ -53,6 +54,8 @@ fn main() {
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let golden_path = manifest_dir.join("tests/fixtures/production_catalog_golden_v1.json");
         let compatibility_path = manifest_dir.join("../catalog/production-compatibility-v1.json");
+        let temporal_golden_path =
+            manifest_dir.join("tests/fixtures/production_temporal_fingerprint_v1.json");
         let generator_golden_path =
             manifest_dir.join("../catalog/builtin/generators/golden-v1.json");
         let golden = production_catalog_golden(&catalog).unwrap_or_else(|errors| {
@@ -63,15 +66,25 @@ fn main() {
             std::process::exit(1);
         });
         let compatibility = production_catalog_compatibility(&catalog);
+        let temporal_golden =
+            production_catalog_temporal_golden(&catalog).unwrap_or_else(|errors| {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&errors).expect("diagnostics serialize")
+                );
+                std::process::exit(1);
+            });
         let generator_golden = generator_golden(&catalog);
         if update_golden {
             write_artifact(&golden_path, &golden);
             write_artifact(&compatibility_path, &compatibility);
+            write_artifact(&temporal_golden_path, &temporal_golden);
             write_artifact(&generator_golden_path, &generator_golden);
             println!(
-                "Updated {}, {}, and {}",
+                "Updated {}, {}, {}, and {}",
                 golden_path.display(),
                 compatibility_path.display(),
+                temporal_golden_path.display(),
                 generator_golden_path.display()
             );
         } else {
@@ -80,6 +93,11 @@ fn main() {
                 "layout compatibility matrix",
                 &compatibility_path,
                 &compatibility,
+            );
+            check_artifact(
+                "temporal fingerprint golden",
+                &temporal_golden_path,
+                &temporal_golden,
             );
             check_artifact(
                 "Generator coordinate golden",

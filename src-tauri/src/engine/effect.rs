@@ -305,6 +305,12 @@ pub enum OscillatorWaveform {
     Pulse,
 }
 
+#[derive(Clone, Debug)]
+pub struct EffectTempoBehavior {
+    pub events_per_graph_cycle: f64,
+    pub one_x_events_per_beat: f64,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SpatialBasis {
     Index,
@@ -343,6 +349,7 @@ pub enum CompiledEffectNode {
     },
     Oscillator {
         waveform: OscillatorWaveform,
+        duty_cycle: f64,
         phase: EffectNodeHandle,
     },
     Envelope {
@@ -437,6 +444,7 @@ pub struct EffectDefinition {
     pub revision: u32,
     pub source: EffectSource,
     pub parameters: Vec<ParameterDefinition>,
+    pub tempo: EffectTempoBehavior,
     pub graph: CompiledEffectGraph,
     pub catalog: EffectCatalog,
 }
@@ -451,6 +459,10 @@ impl EffectDefinition {
 
     pub fn parameter(&self, handle: ParameterHandle) -> Option<&ParameterDefinition> {
         self.parameters.get(handle.index())
+    }
+
+    pub fn graph_phase(&self, primary_event_phase: f64) -> f64 {
+        primary_event_phase * self.tempo.one_x_events_per_beat / self.tempo.events_per_graph_cycle
     }
 }
 
@@ -682,13 +694,17 @@ pub fn evaluate_effect_graph(
                     }
                 }
             }
-            CompiledEffectNode::Oscillator { waveform, phase } => {
+            CompiledEffectNode::Oscillator {
+                waveform,
+                duty_cycle,
+                phase,
+            } => {
                 let cycle = values[phase.index()].scalar().rem_euclid(1.0);
                 let output = match waveform {
                     OscillatorWaveform::Sine => ((cycle * std::f64::consts::TAU).sin() + 1.0) * 0.5,
                     OscillatorWaveform::Triangle => 1.0 - (cycle * 2.0 - 1.0).abs(),
                     OscillatorWaveform::Saw => cycle,
-                    OscillatorWaveform::Pulse => f64::from(cycle < 0.5),
+                    OscillatorWaveform::Pulse => f64::from(cycle < *duty_cycle),
                 };
                 EffectValue::Scalar(output)
             }
@@ -976,9 +992,9 @@ mod tests {
         CompiledColorStop, CompiledEffectGraph, CompiledEffectNode, CompiledEffectStep,
         CompiledTargetingScene, CompiledTargetingStep, Direction, EffectCatalog,
         EffectCatalogQuery, EffectDefinition, EffectDefinitionHandle, EffectInstance,
-        EffectNodeHandle, EffectSource, MathOperation, MotionTag, OscillatorWaveform,
-        ParameterValue, SpatialBasis, StrobeRisk, COLOR_PARAMETER_ID, DIRECTION_PARAMETER_ID,
-        SPEED_PARAMETER_ID,
+        EffectNodeHandle, EffectSource, EffectTempoBehavior, MathOperation, MotionTag,
+        OscillatorWaveform, ParameterValue, SpatialBasis, StrobeRisk, COLOR_PARAMETER_ID,
+        DIRECTION_PARAMETER_ID, SPEED_PARAMETER_ID,
     };
     use crate::engine::attribute::resolve_attribute;
     use crate::engine::profile::{
@@ -994,6 +1010,10 @@ mod tests {
             revision: 1,
             source: EffectSource::ProjectLocal,
             parameters: common_parameters(default_speed),
+            tempo: EffectTempoBehavior {
+                events_per_graph_cycle: 1.0,
+                one_x_events_per_beat: 1.0,
+            },
             graph: CompiledEffectGraph::default(),
             catalog: EffectCatalog::default(),
         }
@@ -1127,6 +1147,10 @@ mod tests {
             revision: 1,
             source: EffectSource::ProjectLocal,
             parameters: Vec::new(),
+            tempo: EffectTempoBehavior {
+                events_per_graph_cycle: 1.0,
+                one_x_events_per_beat: 1.0,
+            },
             graph: CompiledEffectGraph {
                 nodes: vec![
                     CompiledEffectNode::Time,
@@ -1141,6 +1165,7 @@ mod tests {
                     },
                     CompiledEffectNode::Oscillator {
                         waveform: OscillatorWaveform::Saw,
+                        duty_cycle: 0.5,
                         phase: handles(1),
                     },
                     CompiledEffectNode::Envelope {
@@ -1264,11 +1289,16 @@ mod tests {
                 revision: 1,
                 source: EffectSource::ProjectLocal,
                 parameters: Vec::new(),
+                tempo: EffectTempoBehavior {
+                    events_per_graph_cycle: 1.0,
+                    one_x_events_per_beat: 1.0,
+                },
                 graph: CompiledEffectGraph {
                     nodes: vec![
                         CompiledEffectNode::Time,
                         CompiledEffectNode::Oscillator {
                             waveform,
+                            duty_cycle: 0.5,
                             phase: EffectNodeHandle::from_index(0).expect("time"),
                         },
                         CompiledEffectNode::AttributeWriter {

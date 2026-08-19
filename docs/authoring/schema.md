@@ -27,6 +27,8 @@ pnpm schema:check
 
 生成物位于 `schemas/*-v1.*` 和 `src/generated/*-v1.ts`。前端 Project/User Asset Pack runtime validation 使用这些 Schema；不要另建一棵语义不等价的手写 schema。
 
+`schemas/temporal-fingerprint-v1.schema.json` 与 `src/generated/temporal-fingerprint-v1.ts` 由同一 Rust generator 产生，覆盖 analyzer request、identity 和 report。它是 derived runtime evidence 的交换契约，不是持久化 Effect authored intent 的替代品；Effect 的 `tempo` 仍属于 Project/Show contract。
+
 ## 校验顺序
 
 1. 识别 `schema_version` 并严格反序列化；unknown fields 拒绝。
@@ -37,7 +39,7 @@ pnpm schema:check
 
 同版本非法输入不会被“修复”后继续加载。UI normalization 只能处理不改变语义的显示细节，且必须可见。
 
-Effect parameter 的类型事实只来自 tagged `schema`，Cue override 与 Arrangement automation 从最大 `scope` 派生。Project/User Asset Pack 中的每个 Effect 还必须声明标准 Color；validator 不根据 Graph、Effect name 或缺失字段猜默认色。
+Effect parameter 的类型事实只来自 tagged `schema`，Cue override 与 Arrangement automation 从最大 `scope` 派生。Project/User Asset Pack 中的每个 Effect还必须声明标准 Color 和完整 `tempo`；validator 不根据 Graph、Effect name 或缺失字段猜默认色或 tempo behavior。旧 Effect 缺少 `tempo`、使用未知字段或声明与 Graph 可证明事实冲突时均 fail closed；当前内部 V1 资产、Catalog、Base/Project Pack fixture 和 Golden 必须同步迁移。
 
 ## 本地缓存重置
 

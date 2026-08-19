@@ -28,6 +28,37 @@ Random 将 phase 0 保留为停止状态的静态预览；Transport 离开零点
 - 参数 UI 只读取当前 Effect 的 parameter schema，不能按 Effect 名称写分支。
 - 默认 speed 以及 Cue override 只接受 0.25×、0.5×、1×、2×、4×、8×。
 
+### Tempo behavior contract
+
+每个 Effect 必须声明 typed `tempo`。它描述作者认定的主要视觉事件，不要求不同 family 具有相同画面：
+
+- `kind` 与 `primary_event` 区分 pulse onset、单向 traversal、ping-pong 的单方向 traversal、random refresh、连续 rise-fall/color/movement cycle 和 spatial propagation；
+- `events_per_graph_cycle` 把 Graph 自身周期换算为主要事件；`one_x_events_per_beat` 在当前 V1 必须为 `1`；runtime 先在 musical domain 积分 normalized speed，再映射为 Graph phase；
+- `phase_anchor`、pulse `duty_cycle`、每 Graph cycle 的方向反转数和 topology sensitivity 记录可验证的 landmark；
+- `recommended_speed` 是作者的可读性范围，`safety.max_primary_events_per_second` 是需要真实 BPM/Hz 验证的上限。
+
+因此 arrangement-facing 语义固定为：pulse 每拍一次 onset；one-way wipe/chase 每拍一次完整 traversal；ping-pong 每拍一个方向、完整往返两拍；random/dissolve 每拍刷新一次；breathe/continuous 的 1× 是每拍一个明确 cycle。0.25× 到 8× 的主要事件率必须严格单调。Graph wave cycle 不能直接当作这个产品语义：例如 triangle 的完整左右往返包含两个 directional traversal。
+
+`tempo` 是 authored intent；runtime temporal fingerprint 是 derived evidence。validator 只对能够静态证明的关系做交叉检查，例如 pulse duty 必须与 Pulse oscillator 或 StepSequence 一致、random refresh 必须含 Random、空间行为必须含 SpatialPhase。它不把采样值复制回 metadata，从而避免两套不可校验的真相。
+
+### Temporal analysis 与高速预览
+
+`analyze_effect_temporal` 使用真实 Rust compile + `render_at`，在固定 Stage/Layout/TargetSet、seed、BPM、参数和 dense musical-time sampling 下输出：主要事件率、峰值与 phase、on-duty、intensity 分布、active fixture fraction、空间质心路径/反转、frame delta、颜色变化、逐 fixture strobe Hz、安全越限和 UI fps 混叠风险。不适用的 family metric 使用缺省值，而不是伪造数字。
+
+Effect Lab 的 speed 选项显示例如 `1× · 1 traversal/beat · 2.13 events/s`。Lab Effect preview 以最高 60fps 请求真实 runtime frame；4×/8× 不足以可靠读取时显示 analyzer 的 caution/severe 提示，并提供 1×/4×/8×实测对比、轨迹距离和 phase scrubbing，避免把时间混叠误判为减速或反向。
+
+AI/自动化可用同一路径生成结构化报告和 runtime contact sheet：
+
+```sh
+pnpm effect:analyze --pack base-assets.lumina-assets.json \
+  --effect-id builtin.spatial.column-ping-pong --revision 1 \
+  --target-set-id zone-4x4-1 --bpm 128 --speeds all \
+  --preview-fps 60 --output ping-pong.json \
+  --contact-sheet ping-pong.svg --contact-speed 4
+```
+
+cache identity 包含 exact Effect、Stage、Layout、TargetSet、resolved fixture count、seed、parameter overrides、BPM、speed 集合和 sampling 配置；任一项变化都产生新 key。
+
 ### Parameter contract
 
 参数只声明一份类型事实，并用最大 authoring scope 推导可用入口：
@@ -92,6 +123,7 @@ Effect 写入 typed fixture attributes。Profile 提供默认 HTP/LTP policy，�
 - Contract：`src-tauri/src/document/effect.rs`
 - Graph validation/evaluation：`src-tauri/src/document/validation.rs`、`src-tauri/src/engine/effect.rs`
 - Catalog validation：`src-tauri/src/document/production_catalog.rs`
+- Temporal analyzer/CLI：`src-tauri/src/engine/temporal.rs`、`src-tauri/examples/analyze_effect_temporal.rs`
 - Lab：`src/workspace/effect-lab/`
 - Working copy state：`src/stores/authoringDraft.ts`
 
@@ -101,4 +133,5 @@ Effect 写入 typed fixture attributes。Profile 提供默认 HTP/LTP policy，�
 - 参数变化在 Canvas 可见；无效参数不会替换最后有效预览。
 - standard Color 在 Lab、Cue override、Arrangement lane 和 `color.rgb` render output 间保持 typed round-trip；清除后恢复 Effect authored/fallback 行为；`color_stops` 不出现在 automation 菜单。
 - Effect 不包含任何 Stage/TargetSet identity。
+- 全部内置 Effect 的 0.25×–8× fingerprint 与契约一致；BPM/TargetSet/seed/override/sampling 都进入分析 identity。
 - 1,000 fixtures × 多 Effect layers 仍保持确定性并满足 60Hz 预算。

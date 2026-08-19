@@ -12,6 +12,7 @@ pub struct EffectDefinitionDSL {
     pub revision: u32,
     pub source: EffectSourceDSL,
     pub parameters: Vec<ParameterDefinitionDSL>,
+    pub tempo: EffectTempoBehaviorDSL,
     pub graph: EffectGraphDSL,
     pub catalog: EffectCatalogDSL,
 }
@@ -22,6 +23,89 @@ pub enum EffectSourceDSL {
     BuiltIn,
     ProjectLocal,
     UserLibrary,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct EffectTempoBehaviorDSL {
+    pub kind: TempoBehaviorKindDSL,
+    pub primary_event: PrimaryVisualEventDSL,
+    #[schemars(range(min = 0.000_001))]
+    pub events_per_graph_cycle: f64,
+    #[schemars(range(min = 0.000_001))]
+    pub one_x_events_per_beat: f64,
+    pub phase_anchor: TempoPhaseAnchorDSL,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0.000_001, max = 1.0))]
+    pub duty_cycle: Option<f64>,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub direction_reversals_per_graph_cycle: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub topology_sensitivity: Vec<TempoTopologySensitivityDSL>,
+    pub recommended_speed: TempoSpeedRangeDSL,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub safety: Option<TempoSafetyLimitDSL>,
+}
+
+const fn is_zero(value: &u32) -> bool {
+    *value == 0
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum TempoBehaviorKindDSL {
+    Pulse,
+    OneWayTravel,
+    PingPong,
+    RandomRefresh,
+    ContinuousCycle,
+    SpatialPropagation,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PrimaryVisualEventDSL {
+    PulseOnset,
+    OneWayTraversal,
+    DirectionalTraversal,
+    RandomRefresh,
+    RiseFallCycle,
+    ColorCycle,
+    MovementCycle,
+    SpatialPropagation,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum TempoPhaseAnchorDSL {
+    Onset,
+    Minimum,
+    Maximum,
+    MidpointRising,
+    TraversalStart,
+    Refresh,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum TempoTopologySensitivityDSL {
+    TargetSet,
+    FixtureOrder,
+    Coordinates,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[serde(deny_unknown_fields)]
+pub struct TempoSpeedRangeDSL {
+    pub min: f64,
+    pub max: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy)]
+#[serde(deny_unknown_fields)]
+pub struct TempoSafetyLimitDSL {
+    #[schemars(range(min = 0.000_001))]
+    pub max_primary_events_per_second: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
@@ -227,6 +311,7 @@ pub struct ParameterGraphBindingDSL {
 #[serde(rename_all = "snake_case")]
 pub enum EffectNodePropertyDSL {
     Waveform,
+    DutyCycle,
     Attack,
     Release,
     ColorStops,
@@ -373,6 +458,9 @@ pub enum EffectNodeDSL {
     Oscillator {
         id: String,
         waveform: OscillatorWaveformDSL,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        #[schemars(range(min = 0.000_001, max = 1.0))]
+        duty_cycle: Option<f64>,
         phase: EffectPortRefDSL,
     },
     Envelope {

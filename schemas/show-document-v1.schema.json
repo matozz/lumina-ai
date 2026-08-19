@@ -295,10 +295,13 @@
         },
         "source": {
           "$ref": "#/$defs/EffectSourceDSL"
+        },
+        "tempo": {
+          "$ref": "#/$defs/EffectTempoBehaviorDSL"
         }
       },
       "additionalProperties": false,
-      "required": ["id", "name", "revision", "source", "parameters", "graph", "catalog"]
+      "required": ["id", "name", "revision", "source", "parameters", "tempo", "graph", "catalog"]
     },
     "EffectFamilyDSL": {
       "type": "string",
@@ -420,6 +423,12 @@
         {
           "type": "object",
           "properties": {
+            "duty_cycle": {
+              "type": ["number", "null"],
+              "format": "double",
+              "maximum": 1.0,
+              "minimum": 1e-6
+            },
             "id": {
               "type": "string"
             },
@@ -687,7 +696,7 @@
     },
     "EffectNodePropertyDSL": {
       "type": "string",
-      "enum": ["waveform", "attack", "release", "color_stops"]
+      "enum": ["waveform", "duty_cycle", "attack", "release", "color_stops"]
     },
     "EffectPortDSL": {
       "type": "string",
@@ -719,6 +728,69 @@
     "EffectSourceDSL": {
       "type": "string",
       "enum": ["built_in", "project_local", "user_library"]
+    },
+    "EffectTempoBehaviorDSL": {
+      "type": "object",
+      "properties": {
+        "direction_reversals_per_graph_cycle": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "duty_cycle": {
+          "type": ["number", "null"],
+          "format": "double",
+          "maximum": 1.0,
+          "minimum": 1e-6
+        },
+        "events_per_graph_cycle": {
+          "type": "number",
+          "format": "double",
+          "minimum": 1e-6
+        },
+        "kind": {
+          "$ref": "#/$defs/TempoBehaviorKindDSL"
+        },
+        "one_x_events_per_beat": {
+          "type": "number",
+          "format": "double",
+          "minimum": 1e-6
+        },
+        "phase_anchor": {
+          "$ref": "#/$defs/TempoPhaseAnchorDSL"
+        },
+        "primary_event": {
+          "$ref": "#/$defs/PrimaryVisualEventDSL"
+        },
+        "recommended_speed": {
+          "$ref": "#/$defs/TempoSpeedRangeDSL"
+        },
+        "safety": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TempoSafetyLimitDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "topology_sensitivity": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TempoTopologySensitivityDSL"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "primary_event",
+        "events_per_graph_cycle",
+        "one_x_events_per_beat",
+        "phase_anchor",
+        "recommended_speed"
+      ]
     },
     "FormulaDef": {
       "type": "object",
@@ -1344,6 +1416,19 @@
       "additionalProperties": false,
       "required": ["profile_id", "id_range"]
     },
+    "PrimaryVisualEventDSL": {
+      "type": "string",
+      "enum": [
+        "pulse_onset",
+        "one_way_traversal",
+        "directional_traversal",
+        "random_refresh",
+        "rise_fall_cycle",
+        "color_cycle",
+        "movement_cycle",
+        "spatial_propagation"
+      ]
+    },
     "ScalarParameterRangeDSL": {
       "type": "object",
       "properties": {
@@ -1465,6 +1550,17 @@
       "additionalProperties": false,
       "required": ["d", "sample_count"]
     },
+    "TempoBehaviorKindDSL": {
+      "type": "string",
+      "enum": [
+        "pulse",
+        "one_way_travel",
+        "ping_pong",
+        "random_refresh",
+        "continuous_cycle",
+        "spatial_propagation"
+      ]
+    },
     "TempoMapDSL": {
       "type": "object",
       "properties": {
@@ -1477,6 +1573,10 @@
       },
       "additionalProperties": false,
       "required": ["points"]
+    },
+    "TempoPhaseAnchorDSL": {
+      "type": "string",
+      "enum": ["onset", "minimum", "maximum", "midpoint_rising", "traversal_start", "refresh"]
     },
     "TempoPointDSL": {
       "type": "object",
@@ -1495,6 +1595,37 @@
       },
       "additionalProperties": false,
       "required": ["time_tick", "bpm"]
+    },
+    "TempoSafetyLimitDSL": {
+      "type": "object",
+      "properties": {
+        "max_primary_events_per_second": {
+          "type": "number",
+          "format": "double",
+          "minimum": 1e-6
+        }
+      },
+      "additionalProperties": false,
+      "required": ["max_primary_events_per_second"]
+    },
+    "TempoSpeedRangeDSL": {
+      "type": "object",
+      "properties": {
+        "max": {
+          "type": "number",
+          "format": "double"
+        },
+        "min": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["min", "max"]
+    },
+    "TempoTopologySensitivityDSL": {
+      "type": "string",
+      "enum": ["target_set", "fixture_order", "coordinates"]
     },
     "TimelineTrackDSL": {
       "type": "object",

@@ -2230,6 +2230,14 @@ pub(crate) mod tests {
                 "name": "Pulse",
                 "revision": 1,
                 "source": "project_local",
+                "tempo": {
+                    "kind": "continuous_cycle",
+                    "primary_event": "movement_cycle",
+                    "events_per_graph_cycle": 1.0,
+                    "one_x_events_per_beat": 1.0,
+                    "phase_anchor": "minimum",
+                    "recommended_speed": { "min": 0.25, "max": 8.0 }
+                },
                 "parameters": [{
                     "id": "intensity", "name": "Intensity",
                     "schema": {

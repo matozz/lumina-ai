@@ -169,6 +169,7 @@ impl Compiler {
                 revision: effect.revision,
                 source: effect.source,
                 parameters: effect.parameters.clone(),
+                tempo: effect.tempo.clone(),
                 graph: effect.graph.clone(),
                 catalog: effect.catalog.clone(),
             })
