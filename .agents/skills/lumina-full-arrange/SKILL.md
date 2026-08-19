@@ -13,9 +13,10 @@ Read these files before acting:
 
 1. [authoring-model.md](references/authoring-model.md) for ownership, exact references, ticks, automation, and pack validation.
 2. [effect-and-cue-review.md](references/effect-and-cue-review.md) before reporting or changing Effects and Cues.
-3. [edm-form-patterns.md](references/edm-form-patterns.md) before interpreting a genre, a section window, or unspecified phrase/pattern lengths.
-4. [edm-arrangement-heuristics.md](references/edm-arrangement-heuristics.md) before drafting section energy or revising musical intent.
-5. [communication-boundary.md](references/communication-boundary.md) before asking questions, writing files, or handing off a pack.
+3. [temporal-behavior.md](references/temporal-behavior.md) before selecting, generating, copying, or changing the speed of any Effect.
+4. [edm-form-patterns.md](references/edm-form-patterns.md) before interpreting a genre, a section window, or unspecified phrase/pattern lengths.
+5. [edm-arrangement-heuristics.md](references/edm-arrangement-heuristics.md) before drafting section energy or revising musical intent.
+6. [communication-boundary.md](references/communication-boundary.md) before asking questions, writing files, or handing off a pack.
 
 The repository's current `docs/authoring/README.md` and linked authoring documents outrank this Skill if the contract changes.
 
@@ -53,6 +54,7 @@ Present a compact inventory before creative work:
 - Pack type, pack name, and intended use.
 - Stage and Layout names, fixture capacity, TargetSets, and TargetingScenes.
 - Effects by visual role, authoring parameters, layout requirements, and risk.
+- Authored tempo behavior plus runtime-measured default/1× event rate, duty or trajectory where applicable, using the actual Stage, TargetSet, seed, overrides, and BPM.
 - Cues by readable Layer number, Effect, TargetSet, overrides, and MixPolicy.
 - Arrangements by name, actual BPM, meter, PPQ, total bars/ticks, Clip count, automation count, occupied range, and empty regions.
 - Missing references, compatibility concerns, or same-attribute overlap risks.
@@ -71,6 +73,8 @@ Use [effect-and-cue-review.md](references/effect-and-cue-review.md) to determine
 - Effect-only `color_stops` limitations;
 - shared-attribute writers that need explicit MixPolicy;
 - strobe and density risks.
+
+Use [temporal-behavior.md](references/temporal-behavior.md) to run or consume the real runtime analyzer before choosing candidate Effects. Do not infer final event rate from Effect names, motion tags, legal speed ratios, oscillator waveform, or raw Graph cycles. For topology-sensitive candidates, analyze the TargetSets actually proposed in the brief.
 
 Share the audit. Prefer reuse and careful tuning; propose only the smallest missing set of project-local Effects and Cues.
 
@@ -112,6 +116,7 @@ Before writing an output pack, show this complete proposal:
 - Create project-local: [...]
 - Copy before editing: [...]
 - MixPolicy decisions: [...]
+- Measured temporal plan: [Effect/TargetSet/BPM, primary event rate, readable ratios, pulse duty/trajectory, safety and aliasing decisions]
 - Intentional silence/blackout: [...]
 ```
 
@@ -152,6 +157,8 @@ Create a dependency-closed UserAssetPack V1 variant without changing the input f
 - Treat CueClip intervals as half-open. Use intentional overlap only with compatible explicit MixPolicy.
 - Automation target and value types must match the resolved Effect parameter. Continuous values may interpolate; direction/boolean/enum use `hold`.
 - Beat-synchronized `speed` is discrete even when represented as a scalar: Cue overrides, CueClip Layer overrides, and every speed keyframe must be exactly `0.25`, `0.5`, `1`, `2`, `4`, or `8`. Do not use intermediate values such as `0.75`, `1.25`, or `1.5`; change at legal ratios instead of authoring unsupported values.
+- A legal ratio is not automatically readable or safe. Before selecting a ratio, use the actual Arrangement BPM and TargetSet to compare measured `primary_events_per_second`, spatial path/reversals, on-duty, strobe Hz, and preview aliasing. Buildup/drop speed changes must follow this evidence, not a larger multiplier by itself.
+- Every new or copied Effect must retain a complete authored `tempo` contract. If its Graph or duty changes, update authored intent and validate the statically provable relationship; never copy a runtime fingerprint into the Effect as metadata.
 - Standard `color` may be overridden or automated as typed `#RRGGBB`. Never automate `color_stops`.
 - Generate opaque Cue Layer IDs on creation, preserve them on edit, and regenerate them on copy. Do not derive them from names.
 - Give every Cue Layer a stable lowercase 16-character hexadecimal `seed`. Friendly labels, UUIDs, and arbitrary strings pass JSON shape checks but fail the Rust preview compiler.
@@ -164,9 +171,10 @@ Create a dependency-closed UserAssetPack V1 variant without changing the input f
 3. Verify the input hash is unchanged.
 4. Compare built-ins in the output with the same exact identities in the input; require deep equality.
 5. Verify project-local provenance, Arrangement ranges, integer ticks, automation targets/types, discrete synchronized speed values, 16-hex Cue Layer seeds, and the absence of CueClip targeting.
-6. When a form model was used, verify contiguous section boundaries, the exact requested endpoint, bar-to-tick conversion, pattern-cycle divisibility, and that major Clip/automation changes land on the intended phrase boundary.
-7. Re-open the written JSON and validate it again; do not rely on an in-memory object.
-8. If validation fails, keep the invalid draft out of the final handoff, fix a new working copy, and rerun all checks.
+6. Run the real temporal analyzer on every selected Effect/TargetSet/BPM/speed combination that affects the Arrangement. Re-run it after generating or changing an Effect and after changing speed decisions. Compare the measured report to the brief; revise the Graph, Cue override, speed step, TargetSet, or section plan until primary event rate, readability, topology, duty, and safety agree.
+7. When a form model was used, verify contiguous section boundaries, the exact requested endpoint, bar-to-tick conversion, pattern-cycle divisibility, and that major Clip/automation changes land on the intended phrase boundary.
+8. Re-open the written JSON and validate it again; do not rely on an in-memory object. Re-run the analyzer against those written bytes so the final fingerprint identity matches the handoff pack.
+9. If validation or temporal comparison fails, keep the invalid draft out of the final handoff, fix a new working copy, and rerun all checks.
 
 Handoff must include:
 
@@ -176,6 +184,7 @@ Handoff must include:
 - created/reused project-local Effects and Cues;
 - color, targeting, automation, and MixPolicy summary;
 - validation results and input-integrity result;
+- runtime temporal audit summary and artifact paths, including measured rates, relevant duty/trajectory/topology, real-BPM strobe result, and high-speed alias/readability decisions;
 - deliberate silence/empty regions;
 - current limitation: import through Assets, then use Arrange/Live for visual and runtime acceptance.
 
@@ -187,8 +196,9 @@ When the user identifies a section:
 2. Restate the requested local change and preservation boundary.
 3. Modify the smallest necessary copied Effect, Cue, Clip, or automation set.
 4. Keep unrelated sections byte-equivalent where possible and semantically equivalent otherwise.
-5. Write another newly named Project Pack; never replace the previous draft.
-6. Rerun the complete validation and summarize the section diff.
+5. Re-run temporal analysis for every changed Effect, TargetSet, BPM, or speed step; compare it to the local intent before accepting the tune.
+6. Write another newly named Project Pack; never replace the previous draft.
+7. Rerun the complete validation and summarize the section diff.
 
 ## Failure behavior
 
@@ -202,6 +212,7 @@ Stop and ask for the smallest missing input when:
 - exact synchronization to a real track is requested but no usable section/bar anchors are supplied;
 - a requested start/end window has no exact phrase-aligned fit and the user has not authorized an asymmetric section;
 - a required MixPolicy or strobe decision is unconfirmed;
+- the runtime temporal analyzer cannot compile the exact Effect/Stage/Layout/TargetSet identity, or measured behavior contradicts the brief and cannot be revised safely;
 - the requested edit crosses an unconfirmed preservation boundary.
 
 Do not paper over a validation failure by deleting content, inventing a dependency, or switching to a different Arrangement.

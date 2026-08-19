@@ -1369,6 +1369,21 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "spatial_propagation",
+        "primary_event": "spatial_propagation",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "traversal_start",
+        "topology_sensitivity": [
+          "target_set",
+          "coordinates"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 2
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -1478,7 +1493,28 @@
           },
           "scope": "arrangement",
           "section": "main",
-          "help": "Beat-synced color pulse speed."
+          "help": "Normalized burst rate; 1× produces one short onset per beat."
+        },
+        {
+          "id": "duty_cycle",
+          "name": "Duty cycle",
+          "schema": {
+            "type": "scalar",
+            "default": 0.2,
+            "range": {
+              "min": 0.05,
+              "max": 0.5,
+              "step": 0.05
+            },
+            "unit": "normalized"
+          },
+          "scope": "effect",
+          "section": "advanced",
+          "help": "Fraction of each event cycle that remains visibly on.",
+          "graph_binding": {
+            "node_id": "oscillator",
+            "property": "duty_cycle"
+          }
         },
         {
           "id": "palette",
@@ -1515,6 +1551,24 @@
           "help": "Single-color output override for Cue and Arrangement authoring."
         }
       ],
+      "tempo": {
+        "kind": "pulse",
+        "primary_event": "pulse_onset",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "onset",
+        "duty_cycle": 0.2,
+        "topology_sensitivity": [
+          "target_set"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 1
+        },
+        "safety": {
+          "max_primary_events_per_second": 3
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -1524,7 +1578,8 @@
           {
             "type": "oscillator",
             "id": "oscillator",
-            "waveform": "sine",
+            "waveform": "pulse",
+            "duty_cycle": 0.2,
             "phase": {
               "node_id": "time",
               "port": "scalar"
@@ -1569,7 +1624,7 @@
               1
             ],
             "output_range": [
-              0.25,
+              0,
               1
             ]
           },
@@ -1596,7 +1651,7 @@
         "density": 0.6,
         "motion": "pulse",
         "colorfulness": 0.9,
-        "strobe_risk": "low",
+        "strobe_risk": "high",
         "required_attributes": [
           "color.rgb",
           "intensity"
@@ -1690,6 +1745,21 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "spatial_propagation",
+        "primary_event": "color_cycle",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "traversal_start",
+        "topology_sensitivity": [
+          "target_set",
+          "coordinates"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 2
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -1807,7 +1877,7 @@
           },
           "scope": "arrangement",
           "section": "main",
-          "help": "Beat-synced breathing speed."
+          "help": "Normalized breathing rate; 1× produces one rise-fall cycle per beat."
         },
         {
           "id": "intensity",
@@ -1879,6 +1949,20 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "continuous_cycle",
+        "primary_event": "rise_fall_cycle",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "minimum",
+        "topology_sensitivity": [
+          "target_set"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 1
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -1886,19 +1970,10 @@
             "id": "time"
           },
           {
-            "type": "oscillator",
-            "id": "oscillator",
-            "waveform": "sine",
-            "phase": {
-              "node_id": "time",
-              "port": "scalar"
-            }
-          },
-          {
             "type": "envelope",
             "id": "envelope",
             "input": {
-              "node_id": "oscillator",
+              "node_id": "time",
               "port": "scalar"
             },
             "attack": 0.35,
@@ -1958,7 +2033,7 @@
           },
           "scope": "arrangement",
           "section": "main",
-          "help": "Beat-synced chase speed."
+          "help": "Normalized chase rate; 1× completes one ordered traversal per beat."
         },
         {
           "id": "intensity",
@@ -1999,6 +2074,25 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "one_way_travel",
+        "primary_event": "one_way_traversal",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "traversal_start",
+        "topology_sensitivity": [
+          "target_set",
+          "fixture_order",
+          "coordinates"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 2
+        },
+        "safety": {
+          "max_primary_events_per_second": 4
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -2022,6 +2116,7 @@
             "type": "oscillator",
             "id": "oscillator",
             "waveform": "pulse",
+            "duty_cycle": 0.4,
             "phase": {
               "node_id": "spatial",
               "port": "scalar"
@@ -2050,7 +2145,7 @@
         "density": 0.45,
         "motion": "chase",
         "colorfulness": 0,
-        "strobe_risk": "low",
+        "strobe_risk": "high",
         "required_attributes": [
           "intensity"
         ],
@@ -2130,6 +2225,21 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "spatial_propagation",
+        "primary_event": "spatial_propagation",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "midpoint_rising",
+        "topology_sensitivity": [
+          "target_set",
+          "coordinates"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 2
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -2212,18 +2322,7 @@
           },
           "scope": "arrangement",
           "section": "main",
-          "help": "Beat-synced pan speed."
-        },
-        {
-          "id": "direction",
-          "name": "Direction",
-          "schema": {
-            "type": "direction",
-            "default": "forward"
-          },
-          "scope": "arrangement",
-          "section": "main",
-          "help": "Sweep travel direction."
+          "help": "Normalized pan rate; 1× completes one directional sweep per beat."
         },
         {
           "id": "color",
@@ -2236,6 +2335,21 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "ping_pong",
+        "primary_event": "directional_traversal",
+        "events_per_graph_cycle": 2,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "traversal_start",
+        "direction_reversals_per_graph_cycle": 2,
+        "topology_sensitivity": [
+          "target_set"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 2
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -2245,7 +2359,7 @@
           {
             "type": "oscillator",
             "id": "oscillator",
-            "waveform": "sine",
+            "waveform": "triangle",
             "phase": {
               "node_id": "time",
               "port": "scalar"
@@ -2369,6 +2483,22 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "continuous_cycle",
+        "primary_event": "movement_cycle",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "midpoint_rising",
+        "topology_sensitivity": [
+          "target_set",
+          "fixture_order",
+          "coordinates"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 2
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -2534,6 +2664,21 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "spatial_propagation",
+        "primary_event": "spatial_propagation",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "traversal_start",
+        "topology_sensitivity": [
+          "target_set",
+          "coordinates"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 2
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -2585,7 +2730,7 @@
         "density": 0.65,
         "motion": "sweep",
         "colorfulness": 0,
-        "strobe_risk": "low",
+        "strobe_risk": "high",
         "required_attributes": [
           "intensity"
         ],
@@ -2617,7 +2762,7 @@
           },
           "scope": "arrangement",
           "section": "main",
-          "help": "Beat-synced left-to-right and right-to-left travel speed."
+          "help": "Normalized travel rate; 1× crosses in one direction per beat and returns on the next."
         },
         {
           "id": "intensity",
@@ -2647,6 +2792,22 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "ping_pong",
+        "primary_event": "directional_traversal",
+        "events_per_graph_cycle": 2,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "traversal_start",
+        "direction_reversals_per_graph_cycle": 2,
+        "topology_sensitivity": [
+          "target_set",
+          "coordinates"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 2
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -2808,6 +2969,21 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "one_way_travel",
+        "primary_event": "one_way_traversal",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "traversal_start",
+        "topology_sensitivity": [
+          "target_set",
+          "coordinates"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 2
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -2959,6 +3135,21 @@
           "help": "Outward or inward travel."
         }
       ],
+      "tempo": {
+        "kind": "spatial_propagation",
+        "primary_event": "spatial_propagation",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "midpoint_rising",
+        "topology_sensitivity": [
+          "target_set",
+          "coordinates"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 2
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -3033,7 +3224,7 @@
           "name": "Speed",
           "schema": {
             "type": "scalar",
-            "default": 2,
+            "default": 1,
             "range": {
               "min": 0.25,
               "max": 8,
@@ -3043,7 +3234,28 @@
           },
           "scope": "arrangement",
           "section": "main",
-          "help": "Beat-synced flash rate; review risk before use."
+          "help": "Normalized flash rate; 1× is one short onset per beat. Review measured Hz before use."
+        },
+        {
+          "id": "duty_cycle",
+          "name": "Duty cycle",
+          "schema": {
+            "type": "scalar",
+            "default": 0.125,
+            "range": {
+              "min": 0.05,
+              "max": 0.25,
+              "step": 0.025
+            },
+            "unit": "normalized"
+          },
+          "scope": "effect",
+          "section": "advanced",
+          "help": "Fraction of each flash cycle that remains on.",
+          "graph_binding": {
+            "node_id": "oscillator",
+            "property": "duty_cycle"
+          }
         },
         {
           "id": "intensity",
@@ -3073,6 +3285,24 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "pulse",
+        "primary_event": "pulse_onset",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "onset",
+        "duty_cycle": 0.125,
+        "topology_sensitivity": [
+          "target_set"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 1
+        },
+        "safety": {
+          "max_primary_events_per_second": 3
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -3083,6 +3313,7 @@
             "type": "oscillator",
             "id": "oscillator",
             "waveform": "pulse",
+            "duty_cycle": 0.125,
             "phase": {
               "node_id": "time",
               "port": "scalar"
@@ -3142,7 +3373,7 @@
           },
           "scope": "arrangement",
           "section": "main",
-          "help": "Slow beat-synced transition speed."
+          "help": "Normalized transition rate; 1× produces one fade-in/fade-out cycle per beat."
         },
         {
           "id": "color",
@@ -3215,6 +3446,20 @@
           }
         }
       ],
+      "tempo": {
+        "kind": "continuous_cycle",
+        "primary_event": "rise_fall_cycle",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "minimum",
+        "topology_sensitivity": [
+          "target_set"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 0.5
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -3222,19 +3467,10 @@
             "id": "time"
           },
           {
-            "type": "oscillator",
-            "id": "safe-cycle",
-            "waveform": "sine",
-            "phase": {
-              "node_id": "time",
-              "port": "scalar"
-            }
-          },
-          {
             "type": "envelope",
             "id": "safe-envelope",
             "input": {
-              "node_id": "safe-cycle",
+              "node_id": "time",
               "port": "scalar"
             },
             "attack": 0.35,
@@ -3341,6 +3577,20 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "random_refresh",
+        "primary_event": "random_refresh",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "refresh",
+        "topology_sensitivity": [
+          "target_set"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 2
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -3448,6 +3698,20 @@
           "help": "Single-color output override for Cue and Arrangement authoring."
         }
       ],
+      "tempo": {
+        "kind": "continuous_cycle",
+        "primary_event": "rise_fall_cycle",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "minimum",
+        "topology_sensitivity": [
+          "target_set"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 1
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -3581,6 +3845,21 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "one_way_travel",
+        "primary_event": "one_way_traversal",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "traversal_start",
+        "topology_sensitivity": [
+          "target_set",
+          "coordinates"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 2
+        }
+      },
       "graph": {
         "nodes": [
           {

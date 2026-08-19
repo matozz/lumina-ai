@@ -573,6 +573,21 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "spatial_propagation",
+        "primary_event": "spatial_propagation",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "traversal_start",
+        "topology_sensitivity": [
+          "target_set",
+          "coordinates"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 2
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -682,7 +697,7 @@
           },
           "scope": "arrangement",
           "section": "main",
-          "help": "Beat-synced breathing speed."
+          "help": "Normalized breathing rate; 1× produces one rise-fall cycle per beat."
         },
         {
           "id": "intensity",
@@ -754,6 +769,20 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "continuous_cycle",
+        "primary_event": "rise_fall_cycle",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "minimum",
+        "topology_sensitivity": [
+          "target_set"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 1
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -761,19 +790,10 @@
             "id": "time"
           },
           {
-            "type": "oscillator",
-            "id": "oscillator",
-            "waveform": "sine",
-            "phase": {
-              "node_id": "time",
-              "port": "scalar"
-            }
-          },
-          {
             "type": "envelope",
             "id": "envelope",
             "input": {
-              "node_id": "oscillator",
+              "node_id": "time",
               "port": "scalar"
             },
             "attack": 0.35,
@@ -833,7 +853,7 @@
           },
           "scope": "arrangement",
           "section": "main",
-          "help": "Beat-synced left-to-right and right-to-left travel speed."
+          "help": "Normalized travel rate; 1× crosses in one direction per beat and returns on the next."
         },
         {
           "id": "intensity",
@@ -863,6 +883,22 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "ping_pong",
+        "primary_event": "directional_traversal",
+        "events_per_graph_cycle": 2,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "traversal_start",
+        "direction_reversals_per_graph_cycle": 2,
+        "topology_sensitivity": [
+          "target_set",
+          "coordinates"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 2
+        }
+      },
       "graph": {
         "nodes": [
           {
@@ -1024,6 +1060,21 @@
           "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
         }
       ],
+      "tempo": {
+        "kind": "one_way_travel",
+        "primary_event": "one_way_traversal",
+        "events_per_graph_cycle": 1,
+        "one_x_events_per_beat": 1,
+        "phase_anchor": "traversal_start",
+        "topology_sensitivity": [
+          "target_set",
+          "coordinates"
+        ],
+        "recommended_speed": {
+          "min": 0.25,
+          "max": 2
+        }
+      },
       "graph": {
         "nodes": [
           {

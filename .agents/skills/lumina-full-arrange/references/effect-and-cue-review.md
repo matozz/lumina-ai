@@ -6,18 +6,20 @@ Read this after the pack validates and before proposing the Arrangement.
 
 For each Effect, report readable facts from its document:
 
-| Field                              | Review question                                                                                |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Family/category                    | Is this primarily intensity, color, movement, spatial, strobe, or utility?                     |
-| Graph/output                       | What visible attribute and motion does it actually produce?                                    |
-| Energy/density/motion/colorfulness | Which section role fits it?                                                                    |
-| Required attributes                | Does the Stage profile provide them?                                                           |
-| Layout capabilities                | Does it require coordinates, matrix topology, radial order, or a sufficiently large TargetSet? |
-| Parameters                         | Which are Effect-only, Cue-overridable, or Arrangement-automatable?                            |
-| Standard Color                     | Does it have a default, preserve authored Palette, or act as an explicit override only?        |
-| Strobe risk                        | Is explicit user confirmation or a venue limitation required?                                  |
+| Field                              | Review question                                                                                                |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Family/category                    | Is this primarily intensity, color, movement, spatial, strobe, or utility?                                     |
+| Graph/output                       | What visible attribute and motion does it actually produce?                                                    |
+| Authored tempo behavior            | What is the declared primary event, 1× anchor, events/Graph cycle, duty/reversal/topology intent?              |
+| Runtime temporal fingerprint       | On the actual TargetSet/BPM, what are measured events/s, duty/trajectory/change energy, safety and alias risk? |
+| Energy/density/motion/colorfulness | Which section role fits it?                                                                                    |
+| Required attributes                | Does the Stage profile provide them?                                                                           |
+| Layout capabilities                | Does it require coordinates, matrix topology, radial order, or a sufficiently large TargetSet?                 |
+| Parameters                         | Which are Effect-only, Cue-overridable, or Arrangement-automatable?                                            |
+| Standard Color                     | Does it have a default, preserve authored Palette, or act as an explicit override only?                        |
+| Strobe risk                        | Is explicit user confirmation or a venue limitation required?                                                  |
 
-Do not infer behavior only from the Effect name. Inspect the graph, Catalog metadata, parameter help, capabilities, and risk.
+Do not infer behavior only from the Effect name, motion tag, legal speed, oscillator waveform, or raw Graph cycle. Inspect the authored tempo contract, graph, Catalog metadata, parameter help, capabilities, and risk, then use the real runtime analyzer as required by [temporal-behavior.md](temporal-behavior.md).
 
 ## Visual role map
 

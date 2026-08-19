@@ -28,7 +28,8 @@ The pack must carry the dependency closure it uses:
 - every Stage Layout ref resolves inside `layouts`;
 - every Cue Stage, Layer Effect, TargetSet, and optional TargetingScene resolves inside the pack;
 - every Arrangement CueClip ref resolves inside `cues`;
-- every Effect contains the standard `color` parameter using `schema.type: color`, `scope: arrangement`, and `section: main`.
+- every Effect contains the standard `color` parameter using `schema.type: color`, `scope: arrangement`, and `section: main`;
+- every Effect contains the current typed `tempo` contract. Missing or legacy tempo fields fail closed; do not infer or insert them during pack import.
 
 ### Classifying Base versus Project
 

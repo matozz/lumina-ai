@@ -53,6 +53,33 @@
         "Bars 1-32 remain intentionally empty, the Arrangement is long enough to include bar 104, and the output has no unexplained tail after the requested endpoint.",
         "The output is schema-, reference-, exact-ref-, and semantic-valid; the input hash is unchanged and every built-in dependency is deeply unchanged."
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "Audit temporal behavior from the attached Lumina Base Pack before proposing any Arrangement. Use the real runtime analyzer, not Effect names or JavaScript waveform math. At 128 BPM: verify normalized 1× and 4× rates; explain Column Ping-Pong directional traversal versus Graph cycles; measure Short Color Burst and Safe Strobe Pulse duty; compare Spatial Wipe on two materially different TargetSets; report real per-fixture strobe Hz/safety; and identify 4×/8× preview aliasing at 30fps. Save compact JSON reports and at least one runtime contact sheet. Do not generate an Arrangement pack.",
+      "expected_output": "A source-backed temporal audit whose structured reports come from Lumina compile + render_at and cover normalized rate, ping-pong, pulse duty, topology, BPM/Hz safety, and high-speed aliasing.",
+      "files": ["evals/files/base-assets.lumina-assets.json"],
+      "expectations": [
+        "The reports show 1× = 1 primary event/beat and 4× = 4 primary events/beat with strictly increasing measured rate.",
+        "Column Ping-Pong reports two directional traversals per Graph cycle, 0.5 Graph cycles/beat at 1×, and spatial reversals.",
+        "Short Color Burst measures a short roughly 20% on-duty with a zero intensity minimum; Safe Strobe Pulse measures roughly 12.5% on-duty.",
+        "Spatial Wipe is analyzed on two exact TargetSets with distinct cache identities and resolved fixture counts, with applicable centroid/path metrics.",
+        "Safe Strobe Pulse uses 128 BPM real Hz and reports the authored safety limit exceeded at 2× but not 1×.",
+        "The 30fps comparison identifies 4× as caution and 8× as severe for continuous primary events, and the output includes a runtime SVG contact sheet."
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Use the attached Base Pack to create a confirmed 16-bar Arrangement that needs a project-local short accent pulse with a 25% duty cycle. Follow the full temporal loop: audit candidates before selection; copy rather than mutate a built-in; keep authored tempo intent and the Pulse graph/binding consistent; validate; run the real runtime analyzer on the generated Effect and actual TargetSet/BPM at every used speed; compare the measured duty, event rate, strobe safety, and aliasing to the brief; revise if needed; then hand off a new validated Project Pack plus report and contact sheet paths.",
+      "expected_output": "A validated import-safe Arrangement pack with an unchanged built-in source, a project-local 25%-duty pulse whose real runtime fingerprint matches the authored contract, and a documented temporal before/after audit.",
+      "files": ["evals/files/base-assets.lumina-assets.json"],
+      "expectations": [
+        "The built-in source Effect is deeply unchanged and the generated Effect is project_local with a non-built-in exact identity and complete typed tempo contract.",
+        "The generated Pulse Graph or typed duty binding and authored tempo duty both equal 0.25 and pass semantic validation.",
+        "The final written Pack is re-opened and analyzed through the real runtime path; measured 1× primary rate is one event/beat and measured on-duty is close to 25%.",
+        "The transcript records actual BPM/TargetSet/seed/overrides, measured events/s, per-fixture strobe safety, alias risk, report cache key, and report/contact-sheet paths.",
+        "Any speed used by the Arrangement was analyzed after generation, and the handoff distinguishes runtime metrics from subjective Arrange/Live acceptance."
+      ]
     }
   ]
 }
