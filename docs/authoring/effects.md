@@ -41,6 +41,8 @@ Random 将 phase 0 保留为停止状态的静态预览；Transport 离开零点
 
 `tempo` 是 authored intent；runtime temporal fingerprint 是 derived evidence。validator 只对能够静态证明的关系做交叉检查，例如 pulse duty 必须与 Pulse oscillator 或 StepSequence 一致、random refresh 必须含 Random、空间行为必须含 SpatialPhase。它不把采样值复制回 metadata，从而避免两套不可校验的真相。
 
+Validator 还会 fail closed 拒绝矛盾的 behavior kind、primary event 和 phase anchor，要求 ping-pong 的 directional event 数与非零 reversal 数一致，并确保默认 speed 落在作者声明的 recommended range 内。Topology sensitivity 不允许重复 token。
+
 ### Temporal analysis 与高速预览
 
 `analyze_effect_temporal` 使用真实 Rust compile + `render_at`，在固定 Stage/Layout/TargetSet、seed、BPM、参数和 dense musical-time sampling 下输出：主要事件率、峰值与 phase、on-duty、intensity 分布、active fixture fraction、空间质心路径/反转、frame delta、颜色变化、逐 fixture strobe Hz、安全越限和 UI fps 混叠风险。不适用的 family metric 使用缺省值，而不是伪造数字。

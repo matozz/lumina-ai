@@ -1712,6 +1712,55 @@ mod tests {
     }
 
     #[test]
+    fn tempo_contract_rejects_contradictory_authored_intent() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        let pulse = catalog
+            .effects
+            .iter()
+            .find(|effect| effect.id == "builtin.color.pulse")
+            .expect("Short Color Burst");
+
+        let mut wrong_event = pulse.clone();
+        wrong_event.tempo.primary_event = crate::document::PrimaryVisualEventDSL::ColorCycle;
+        let diagnostics = validate_effect_draft(wrong_event).expect_err("event mismatch fails");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == CATALOG_METADATA_INVALID
+                && diagnostic.path == "effect.tempo.primary_event"
+        }));
+
+        let mut wrong_anchor = pulse.clone();
+        wrong_anchor.tempo.phase_anchor = crate::document::TempoPhaseAnchorDSL::Refresh;
+        let diagnostics = validate_effect_draft(wrong_anchor).expect_err("anchor mismatch fails");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == CATALOG_METADATA_INVALID
+                && diagnostic.path == "effect.tempo.phase_anchor"
+        }));
+
+        let mut unreadable_default = pulse.clone();
+        unreadable_default.tempo.recommended_speed.max = 0.5;
+        let diagnostics =
+            validate_effect_draft(unreadable_default).expect_err("default range mismatch fails");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == CATALOG_METADATA_INVALID
+                && diagnostic.path == "effect.tempo.recommended_speed"
+        }));
+
+        let ping_pong = catalog
+            .effects
+            .iter()
+            .find(|effect| effect.id == "builtin.spatial.column-ping-pong")
+            .expect("Column Ping-Pong");
+        let mut wrong_reversals = ping_pong.clone();
+        wrong_reversals.tempo.direction_reversals_per_graph_cycle = 1;
+        let diagnostics =
+            validate_effect_draft(wrong_reversals).expect_err("reversal mismatch fails");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == CATALOG_METADATA_INVALID
+                && diagnostic.path == "effect.tempo.direction_reversals_per_graph_cycle"
+        }));
+    }
+
+    #[test]
     fn checked_in_temporal_golden_enforces_normalized_event_semantics() {
         let golden: serde_json::Value = serde_json::from_str(include_str!(
             "../../tests/fixtures/production_temporal_fingerprint_v1.json"

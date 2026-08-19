@@ -378,6 +378,76 @@ fn validate_tempo_behavior(
 ) {
     let path = format!("{definition_path}.tempo");
     let tempo = &definition.tempo;
+    let primary_event_matches_kind = matches!(
+        (tempo.kind, tempo.primary_event),
+        (
+            super::TempoBehaviorKindDSL::Pulse,
+            super::PrimaryVisualEventDSL::PulseOnset
+        ) | (
+            super::TempoBehaviorKindDSL::OneWayTravel,
+            super::PrimaryVisualEventDSL::OneWayTraversal
+        ) | (
+            super::TempoBehaviorKindDSL::PingPong,
+            super::PrimaryVisualEventDSL::DirectionalTraversal
+        ) | (
+            super::TempoBehaviorKindDSL::RandomRefresh,
+            super::PrimaryVisualEventDSL::RandomRefresh
+        ) | (
+            super::TempoBehaviorKindDSL::ContinuousCycle,
+            super::PrimaryVisualEventDSL::RiseFallCycle
+                | super::PrimaryVisualEventDSL::ColorCycle
+                | super::PrimaryVisualEventDSL::MovementCycle
+        ) | (
+            super::TempoBehaviorKindDSL::SpatialPropagation,
+            super::PrimaryVisualEventDSL::SpatialPropagation
+                | super::PrimaryVisualEventDSL::ColorCycle
+        )
+    );
+    if !primary_event_matches_kind {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.primary_event"),
+            "Primary visual event is incompatible with the declared tempo behavior kind.",
+            "Choose the event semantic defined for this behavior family.",
+        ));
+    }
+    let phase_anchor_matches_kind = match tempo.kind {
+        super::TempoBehaviorKindDSL::Pulse => {
+            matches!(tempo.phase_anchor, super::TempoPhaseAnchorDSL::Onset)
+        }
+        super::TempoBehaviorKindDSL::OneWayTravel | super::TempoBehaviorKindDSL::PingPong => {
+            matches!(
+                tempo.phase_anchor,
+                super::TempoPhaseAnchorDSL::TraversalStart
+            )
+        }
+        super::TempoBehaviorKindDSL::RandomRefresh => {
+            matches!(tempo.phase_anchor, super::TempoPhaseAnchorDSL::Refresh)
+        }
+        super::TempoBehaviorKindDSL::ContinuousCycle => matches!(
+            tempo.phase_anchor,
+            super::TempoPhaseAnchorDSL::Onset
+                | super::TempoPhaseAnchorDSL::Minimum
+                | super::TempoPhaseAnchorDSL::Maximum
+                | super::TempoPhaseAnchorDSL::MidpointRising
+        ),
+        super::TempoBehaviorKindDSL::SpatialPropagation => matches!(
+            tempo.phase_anchor,
+            super::TempoPhaseAnchorDSL::Onset
+                | super::TempoPhaseAnchorDSL::Minimum
+                | super::TempoPhaseAnchorDSL::Maximum
+                | super::TempoPhaseAnchorDSL::MidpointRising
+                | super::TempoPhaseAnchorDSL::TraversalStart
+        ),
+    };
+    if !phase_anchor_matches_kind {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.phase_anchor"),
+            "Phase anchor is incompatible with the declared tempo behavior kind.",
+            "Use onset for pulses, traversal_start for travel, refresh for random refresh, or a cycle landmark for continuous behavior.",
+        ));
+    }
     if !tempo.events_per_graph_cycle.is_finite() || tempo.events_per_graph_cycle <= 0.0 {
         diagnostics.push(Diagnostic::error(
             CATALOG_METADATA_INVALID,
@@ -423,6 +493,36 @@ fn validate_tempo_behavior(
             "Remove the field or classify the primary behavior as pulse.",
         ));
     }
+    if matches!(tempo.kind, super::TempoBehaviorKindDSL::PingPong) {
+        if tempo.direction_reversals_per_graph_cycle == 0
+            || (tempo.events_per_graph_cycle - f64::from(tempo.direction_reversals_per_graph_cycle))
+                .abs()
+                > f64::EPSILON
+        {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_METADATA_INVALID,
+                format!("{path}.direction_reversals_per_graph_cycle"),
+                "Ping-pong directional traversals must match a non-zero reversal count per graph cycle.",
+                "Declare one primary directional traversal for each graph direction reversal.",
+            ));
+        }
+    } else if tempo.direction_reversals_per_graph_cycle != 0 {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.direction_reversals_per_graph_cycle"),
+            "Direction reversals are only valid for ping-pong behavior.",
+            "Remove the reversal count or classify the behavior as ping_pong.",
+        ));
+    }
+    let unique_topology: HashSet<_> = tempo.topology_sensitivity.iter().collect();
+    if unique_topology.len() != tempo.topology_sensitivity.len() {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.topology_sensitivity"),
+            "Topology sensitivity entries must be unique.",
+            "Declare each of target_set, fixture_order, and coordinates at most once.",
+        ));
+    }
     let range = tempo.recommended_speed;
     if !range.min.is_finite()
         || !range.max.is_finite()
@@ -436,6 +536,25 @@ fn validate_tempo_behavior(
             "Recommended speed endpoints must be ordered legal beat-sync multipliers.",
             "Use endpoints from 0.25, 0.5, 1, 2, 4, or 8.",
         ));
+    }
+    if let Some(default_speed) = definition
+        .parameters
+        .iter()
+        .find(|parameter| parameter.id == crate::engine::effect::SPEED_PARAMETER_ID)
+        .and_then(ParameterDefinitionDSL::default_value)
+        .and_then(|value| match value {
+            ParameterValueDSL::Scalar(value) => Some(value),
+            _ => None,
+        })
+    {
+        if default_speed < range.min || default_speed > range.max {
+            diagnostics.push(Diagnostic::error(
+                CATALOG_METADATA_INVALID,
+                format!("{path}.recommended_speed"),
+                "The authored default speed must be inside the recommended speed range.",
+                "Adjust the Effect default or the reviewed readability range.",
+            ));
+        }
     }
     if tempo.safety.is_some_and(|safety| {
         !safety.max_primary_events_per_second.is_finite()
@@ -507,8 +626,8 @@ fn validate_tempo_behavior(
             diagnostics.push(Diagnostic::error(
                 CATALOG_METADATA_INVALID,
                 format!("{path}.duty_cycle"),
-                "Declared pulse duty does not match a Pulse oscillator in the EffectGraph.",
-                "Keep authored temporal intent and the graph duty cycle synchronized.",
+                "Declared pulse duty does not match a pulse-producing node in the EffectGraph.",
+                "Keep authored temporal intent and the oscillator or step-sequence duty synchronized.",
             ));
         }
     }
