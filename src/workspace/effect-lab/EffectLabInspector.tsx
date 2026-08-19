@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -55,14 +55,18 @@ import {
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/stores/workspace";
 import { AuthoringSignalSpine } from "../AuthoringSignalSpine";
+import { materializeAuthoringPreview } from "../authoringPreviewBundle";
 import { createCueDraftFromEffect } from "../cues/cueAuthoring";
 import { StageCollectionEditorDialog } from "../stage/StageCollectionEditorDialog";
 import { WorkspacePanelHeader } from "../WorkspacePanelHeader";
 import { EffectParameterControls } from "./EffectParameterControls";
+import { EffectTemporalBehaviorPanel } from "./EffectTemporalBehaviorPanel";
+import { formatTemporalSpeedLabel } from "./temporalPresentation";
 
 export function EffectLabInspector() {
   const bundle = useProjectStore(projectSelectors.bundle);
   const reference = useProjectStore(projectSelectors.selectedEffectRef);
+  const arrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
   const targetSetId = useProjectStore(projectSelectors.selectedTargetSetId);
   const catalog = useProductionCatalogStore(productionCatalogSelectors.catalog);
   const catalogStatus = useProductionCatalogStore(productionCatalogSelectors.status);
@@ -75,6 +79,19 @@ export function EffectLabInspector() {
   const [targetEditorOpen, setTargetEditorOpen] = useState(false);
   const selectedEffect =
     exactAsset(bundle.effects, reference) ?? exactAsset(catalog?.effects ?? [], reference);
+  const arrangement = exactAsset(bundle.arrangements, arrangementRef);
+  const bpm = arrangement?.tempo_map.points[0]?.bpm ?? 128;
+  const temporalPreview = useMemo(() => {
+    if (!reference || !session) return null;
+    return materializeAuthoringPreview(
+      bundle,
+      reference,
+      null,
+      { effect: session, cue: null, comparison },
+      catalog,
+      { scope: "effect", arrangementRef },
+    );
+  }, [arrangementRef, bundle, catalog, comparison, reference, session]);
   const stage = activeStage(bundle);
   const layout = activeLayout(bundle);
   const fixtureCount = fixtureIdsForStage(stage).length;
@@ -157,6 +174,10 @@ export function EffectLabInspector() {
     (diagnostic) => !diagnostic.path.includes("parameters["),
   );
   const canSave = !readOnly && session.status === "valid";
+  const speedParameter = effect.parameters.find((parameter) => parameter.id === "speed");
+  const selectedSpeed =
+    speedParameter?.schema.type === "scalar" ? speedParameter.schema.default : 1;
+  const speedLabel = (speed: number) => formatTemporalSpeedLabel(effect.tempo, speed, bpm);
 
   const updateParameter = (parameterId: string, value: ParameterValueDSL) => {
     authoringDraftActions.updateEffect((draft) => {
@@ -375,6 +396,17 @@ export function EffectLabInspector() {
               </Badge>
             </div>
 
+            {temporalPreview?.effectRef && selectedTarget && (
+              <EffectTemporalBehaviorPanel
+                project={temporalPreview.bundle}
+                effectRef={temporalPreview.effectRef}
+                behavior={effect.tempo}
+                targetSetId={selectedTarget.id}
+                bpm={bpm}
+                selectedSpeed={selectedSpeed}
+              />
+            )}
+
             <Separator />
             <EffectParameterControls
               parameters={commonParameters}
@@ -385,6 +417,7 @@ export function EffectLabInspector() {
               onOptionalEnabledChange={updateOptionalParameter}
               onRestoreLastValid={authoringDraftActions.restoreEffectLastValid}
               showMetadata={advancedMode}
+              speedLabel={speedLabel}
             />
 
             {advancedParameters.length > 0 && (
@@ -413,6 +446,7 @@ export function EffectLabInspector() {
                     onOptionalEnabledChange={updateOptionalParameter}
                     onRestoreLastValid={authoringDraftActions.restoreEffectLastValid}
                     showMetadata={advancedMode}
+                    speedLabel={speedLabel}
                   />
                 )}
               </div>

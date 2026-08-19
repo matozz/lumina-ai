@@ -217,6 +217,7 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
     let lastRenderedAt = 0;
     let renderPending = false;
     let queuedTick: number | null = null;
+    const previewFrameRate = activeAuthoring.scope === "effect" ? 60 : 30;
     let commandRevision = useAuthoringTransportStore.getState().sessions[key]?.commandRevision ?? 0;
 
     const renderTick = (tick: number) => {
@@ -258,7 +259,7 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
           if (next.tick !== session.cursorTick || next.ended) {
             authoringTransportActions.publishCursor(key, next.tick, next.ended);
           }
-          if (now - lastRenderedAt >= 1_000 / 30) {
+          if (now - lastRenderedAt >= 1_000 / previewFrameRate) {
             lastRenderedAt = now;
             renderTick(next.tick);
           }

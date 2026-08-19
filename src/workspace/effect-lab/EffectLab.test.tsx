@@ -1,6 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { EffectDefinitionDocument, ProductionCatalog } from "@/bridge/types";
+import type {
+  EffectDefinitionDocument,
+  ProductionCatalog,
+  ProjectBundle,
+  TemporalAnalysisRequest,
+} from "@/bridge/types";
 import { createEffectAsset, exactAsset } from "@/document/projectModel";
 import { authoringDraftActions, useAuthoringDraftStore } from "@/stores/authoringDraft";
 import { productionCatalogActions } from "@/stores/productionCatalog";
@@ -15,6 +20,51 @@ const bridge = vi.hoisted(() => ({
     structuredClone(effect),
   ),
   getProductionCatalog: vi.fn(),
+  analyzeEffectTemporal: vi.fn(async (project: ProjectBundle, request: TemporalAnalysisRequest) => {
+    const effect = project.effects.find(
+      (candidate) =>
+        candidate.id === request.effect_ref.id &&
+        candidate.revision === request.effect_ref.revision,
+    )!;
+    const stage = project.stages.find(
+      (candidate) =>
+        candidate.id === project.manifest.stage_ref.id &&
+        candidate.revision === project.manifest.stage_ref.revision,
+    )!;
+    return {
+      schema_version: 1,
+      cache_key: "test-temporal",
+      behavior: effect.tempo,
+      identity: {
+        effect_ref: request.effect_ref,
+        stage_ref: project.manifest.stage_ref,
+        layout_ref: stage.layout_ref,
+        target_set_id: request.target_set_id,
+        target_fixture_count: 400,
+        seed: request.seed,
+        parameter_overrides: request.parameter_overrides ?? {},
+        bpm: request.bpm,
+        speeds: request.speeds,
+        sampling: request.sampling,
+      },
+      fingerprints: request.speeds.map((speed) => ({
+        speed,
+        graph_cycles_per_beat: speed / effect.tempo.events_per_graph_cycle,
+        primary_events_per_beat: speed,
+        primary_events_per_second: (speed * request.bpm) / 60,
+        sample_duration_beats: 4,
+        sample_count: 257,
+        intensity: { mean: 0.5, variance: 0.1, minimum: 0, maximum: 1 },
+        active_fixture_fraction: { mean: 0.5, variance: 0.1, minimum: 0, maximum: 1 },
+        frame_delta_change_energy: speed / 100,
+        aliasing: {
+          preview_fps: request.sampling.preview_fps,
+          frames_per_primary_event: request.sampling.preview_fps / ((speed * request.bpm) / 60),
+          risk: speed >= 8 ? "caution" : "none",
+        },
+      })),
+    };
+  }),
 }));
 
 vi.mock("@/bridge/commands", () => ({ engine: bridge }));
@@ -39,6 +89,7 @@ describe("Effect Lab safe authoring", () => {
     workspaceActions.setAdvancedMode(true);
     productionCatalogActions.setCatalog(productionCatalog());
     bridge.validateEffectWorkingDraft.mockClear();
+    bridge.analyzeEffectTemporal.mockClear();
   });
 
   it("separates read-only Production revisions from Project drafts", async () => {
@@ -63,6 +114,7 @@ describe("Effect Lab safe authoring", () => {
       expect(screen.getAllByText("2×2 · Top left · 100 of 400").length).toBeGreaterThan(0),
     );
     fireEvent.click(useInCue);
+    fireEvent.click(await screen.findByRole("button", { name: "Use high-risk Effect" }));
 
     expect(useWorkspaceStore.getState().activeWorkspace).toBe("cues");
     expect(useProjectStore.getState().selectedCueRef).toBeTruthy();
@@ -128,7 +180,9 @@ describe("Effect Lab safe authoring", () => {
 
     fireEvent.click(screen.getByLabelText("Speed"));
     expect(screen.queryByRole("option", { name: "0.375×" })).toBeNull();
-    const doubleSpeed = screen.getByRole("option", { name: "2×" });
+    const doubleSpeed = screen.getByRole("option", {
+      name: /2× · 2 onset\/beat · 4\.27 events\/s/,
+    });
     fireEvent.mouseMove(doubleSpeed);
     fireEvent.click(doubleSpeed);
 
@@ -144,6 +198,26 @@ describe("Effect Lab safe authoring", () => {
       default: 2,
     });
     expect(exactAsset(state.bundle.effects, original)?.revision).toBe(1);
+  });
+
+  it("shows runtime-measured multi-speed comparison and high-speed readability", async () => {
+    workspaceActions.setAdvancedMode(false);
+    projectActions.createEffect("Pulse");
+    render(<EffectLabHarness />);
+
+    await waitFor(() => expect(bridge.analyzeEffectTemporal).toHaveBeenCalled());
+    expect(screen.getByText("Runtime analyzed")).toBeTruthy();
+    expect(screen.getByLabelText("Measured speed comparison")).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Speed"));
+    const eightSpeed = screen.getByRole("option", {
+      name: /8× · 8 onset\/beat · 17\.07 events\/s/,
+    });
+    fireEvent.mouseMove(eightSpeed);
+    fireEvent.click(eightSpeed);
+
+    await waitFor(() => expect(screen.getByText("High-speed readability is limited")).toBeTruthy());
+    expect(screen.getByText(/At 60fps, 8× has 3\.52 frames/)).toBeTruthy();
   });
 });
 
