@@ -8,7 +8,7 @@ use crate::document::{
     CURRENT_SCHEMA_VERSION,
 };
 use crate::engine::attribute::{resolve_attribute, FixtureFrame};
-use crate::engine::effect::is_beat_sync_speed_multiplier;
+use crate::engine::effect::{is_beat_sync_speed_multiplier, CompiledEffectNode, EffectNodeHandle};
 use crate::engine::profile::{
     AttributeValue, COLOR_RGB_ATTRIBUTE, INTENSITY_ATTRIBUTE, PAN_ATTRIBUTE, TILT_ATTRIBUTE,
 };
@@ -176,6 +176,11 @@ struct CompiledTemporalRequest<'a> {
     layout: &'a LayoutDefinition,
     target: &'a TargetSetDefinition,
     target_fixture_ids: Vec<u32>,
+}
+
+struct SpatialProgressBasis {
+    offsets: Vec<f64>,
+    wraps: bool,
 }
 
 pub fn analyze_project_temporal_behavior(
@@ -473,11 +478,13 @@ fn analyze_speed(
                 .position(|fixture| fixture.id == *fixture_id)
         })
         .collect();
+    let spatial_progress_basis = spatial_progress_basis(&show, &target_indices);
     let normalized_coords = normalized_target_coords(&show, &compiled_request.target_fixture_ids);
     let target_count = target_indices.len();
     let mut intensity_values = Vec::with_capacity((steps + 1) as usize);
     let mut active_fractions = Vec::with_capacity((steps + 1) as usize);
     let mut centroids = Vec::with_capacity((steps + 1) as usize);
+    let mut spatial_progress = Vec::with_capacity((steps + 1) as usize);
     let mut pan_values = Vec::with_capacity((steps + 1) as usize);
     let mut tilt_values = Vec::with_capacity((steps + 1) as usize);
     let mut color_luminance = Vec::with_capacity((steps + 1) as usize);
@@ -501,6 +508,9 @@ fn analyze_speed(
         let mut centroid_weight = 0.0;
         let mut centroid_x = 0.0;
         let mut centroid_y = 0.0;
+        let mut progress_linear = 0.0;
+        let mut progress_sine = 0.0;
+        let mut progress_cosine = 0.0;
         let mut pan_sum = 0.0;
         let mut pan_count = 0_u32;
         let mut tilt_sum = 0.0;
@@ -524,6 +534,15 @@ fn analyze_speed(
             centroid_weight += intensity;
             centroid_x += normalized_coords[index].0 * intensity;
             centroid_y += normalized_coords[index].1 * intensity;
+            if let Some(basis) = &spatial_progress_basis {
+                if basis.wraps {
+                    let angle = basis.offsets[index].rem_euclid(1.0) * std::f64::consts::TAU;
+                    progress_sine += angle.sin() * intensity;
+                    progress_cosine += angle.cos() * intensity;
+                } else {
+                    progress_linear += basis.offsets[index] * intensity;
+                }
+            }
             if let Some(value) = frame_scalar(frame, PAN_ATTRIBUTE) {
                 pan_sum += value;
                 pan_count += 1;
@@ -546,6 +565,19 @@ fn analyze_speed(
             (centroid_weight > f64::EPSILON)
                 .then_some((centroid_x / centroid_weight, centroid_y / centroid_weight)),
         );
+        spatial_progress.push(spatial_progress_basis.as_ref().and_then(|basis| {
+            if centroid_weight <= f64::EPSILON {
+                return None;
+            }
+            if basis.wraps {
+                let concentration = progress_sine.hypot(progress_cosine) / centroid_weight;
+                (concentration > 0.01).then_some(
+                    (progress_sine.atan2(progress_cosine) / std::f64::consts::TAU).rem_euclid(1.0),
+                )
+            } else {
+                Some(progress_linear / centroid_weight)
+            }
+        }));
         pan_values.push((pan_count > 0).then_some(pan_sum / f64::from(pan_count)));
         tilt_values.push((tilt_count > 0).then_some(tilt_sum / f64::from(tilt_count)));
         color_luminance.push((color_count > 0).then_some(luminance_sum / f64::from(color_count)));
@@ -564,7 +596,13 @@ fn analyze_speed(
     let transitions = f64::from(steps.max(1));
     let intensity = distribution(&intensity_values);
     let active_fixture_fraction = distribution(&active_fractions);
-    let centroid = centroid_metric(&centroids);
+    let centroid = centroid_metric(
+        &centroids,
+        &spatial_progress,
+        spatial_progress_basis
+            .as_ref()
+            .is_some_and(|basis| basis.wraps),
+    );
     let primary_signal = select_primary_signal(
         &centroids,
         &pan_values,
@@ -642,6 +680,35 @@ fn stage_fixture_ids(stage: &StageDocument) -> Vec<u32> {
         .iter()
         .flat_map(|patch| patch.id_range.0..=patch.id_range.1)
         .collect()
+}
+
+fn spatial_progress_basis(
+    show: &crate::compiler::CompiledShow,
+    target_indices: &[usize],
+) -> Option<SpatialProgressBasis> {
+    let instance = show.effect_instances.get(TEMPORAL_INSTANCE_ID)?;
+    let definition = show.effect_definitions.get(instance.definition.index())?;
+    let (node_index, wraps) =
+        definition
+            .graph
+            .nodes
+            .iter()
+            .enumerate()
+            .rev()
+            .find_map(|(index, node)| match node {
+                CompiledEffectNode::SpatialPhase { wrap, .. } => Some((index, *wrap)),
+                _ => None,
+            })?;
+    let handle = EffectNodeHandle::from_index(node_index)?;
+    let offsets = instance.spatial_offsets.get(&handle)?;
+    let selected = target_indices
+        .iter()
+        .map(|index| offsets.get(*index).copied())
+        .collect::<Option<Vec<_>>>()?;
+    (signal_range(&selected) > f64::EPSILON).then_some(SpatialProgressBasis {
+        offsets: selected,
+        wraps,
+    })
 }
 
 fn normalized_target_coords(
@@ -759,7 +826,11 @@ fn distribution(values: &[f64]) -> Option<TemporalDistributionMetric> {
     })
 }
 
-fn centroid_metric(values: &[Option<(f64, f64)>]) -> Option<TemporalCentroidMetric> {
+fn centroid_metric(
+    values: &[Option<(f64, f64)>],
+    spatial_progress: &[Option<f64>],
+    spatial_progress_wraps: bool,
+) -> Option<TemporalCentroidMetric> {
     let points: Vec<_> = values.iter().flatten().copied().collect();
     if points.len() < 3 {
         return None;
@@ -791,12 +862,34 @@ fn centroid_metric(values: &[Option<(f64, f64)>]) -> Option<TemporalCentroidMetr
         .iter()
         .map(|point| if x_range >= y_range { point.0 } else { point.1 })
         .collect();
+    let progress = unwrap_spatial_progress(spatial_progress, spatial_progress_wraps);
     Some(TemporalCentroidMetric {
         start: [points[0].0, points[0].1],
         end: [points[points.len() - 1].0, points[points.len() - 1].1],
         path_distance,
-        direction_reversals: direction_reversals(&axis),
+        direction_reversals: progress
+            .as_deref()
+            .map_or_else(|| direction_reversals(&axis), direction_reversals),
     })
+}
+
+fn unwrap_spatial_progress(values: &[Option<f64>], wraps: bool) -> Option<Vec<f64>> {
+    let raw = values.iter().copied().collect::<Option<Vec<_>>>()?;
+    if raw.is_empty() || !wraps {
+        return Some(raw);
+    }
+    let mut unwrapped = Vec::with_capacity(raw.len());
+    unwrapped.push(raw[0]);
+    for pair in raw.windows(2) {
+        let mut delta = pair[1] - pair[0];
+        if delta > 0.5 {
+            delta -= 1.0;
+        } else if delta < -0.5 {
+            delta += 1.0;
+        }
+        unwrapped.push(unwrapped.last().copied().unwrap_or(0.0) + delta);
+    }
+    Some(unwrapped)
 }
 
 fn select_primary_signal(
@@ -865,23 +958,52 @@ fn signal_range(values: &[f64]) -> f64 {
 }
 
 fn direction_reversals(values: &[f64]) -> u32 {
-    let mut previous_sign = 0_i8;
-    let mut reversals = 0_u32;
+    let range = signal_range(values);
+    if values.len() < 4 || range <= f64::EPSILON {
+        return 0;
+    }
+    let noise_floor = (range * 0.001).max(0.000_001);
+    let minimum_run_displacement = range * 0.02;
+    let mut runs = Vec::<(i8, u32, f64)>::new();
+    let mut current_sign = 0_i8;
+    let mut current_steps = 0_u32;
+    let mut current_displacement = 0.0;
     for pair in values.windows(2) {
         let delta = pair[1] - pair[0];
-        let sign = if delta > 0.000_1 {
+        let sign = if delta > noise_floor {
             1
-        } else if delta < -0.000_1 {
+        } else if delta < -noise_floor {
             -1
         } else {
             0
         };
-        if sign != 0 {
-            if previous_sign != 0 && sign != previous_sign {
-                reversals = reversals.saturating_add(1);
-            }
-            previous_sign = sign;
+        if sign == 0 {
+            continue;
         }
+        if current_sign != 0 && sign != current_sign {
+            runs.push((current_sign, current_steps, current_displacement));
+            current_steps = 0;
+            current_displacement = 0.0;
+        }
+        current_sign = sign;
+        current_steps = current_steps.saturating_add(1);
+        current_displacement += delta.abs();
+    }
+    if current_sign != 0 {
+        runs.push((current_sign, current_steps, current_displacement));
+    }
+
+    let meaningful_signs = runs
+        .into_iter()
+        .filter(|(_, steps, displacement)| *steps >= 3 && *displacement >= minimum_run_displacement)
+        .map(|(sign, _, _)| sign);
+    let mut previous_sign = 0_i8;
+    let mut reversals = 0_u32;
+    for sign in meaningful_signs {
+        if previous_sign != 0 && sign != previous_sign {
+            reversals = reversals.saturating_add(1);
+        }
+        previous_sign = sign;
     }
     reversals
 }
@@ -950,5 +1072,44 @@ mod tests {
         assert_eq!(strobe_risk(2.99), StrobeRiskDSL::Low);
         assert_eq!(strobe_risk(3.0), StrobeRiskDSL::Medium);
         assert_eq!(strobe_risk(8.0), StrobeRiskDSL::High);
+    }
+
+    #[test]
+    fn direction_reversals_ignore_jitter_and_single_sample_cycle_resets() {
+        let one_way_cycles = [
+            0.0, 0.24, 0.5, 0.74, 1.0, 0.0, 0.24, 0.5, 0.74, 1.0, 0.0, 0.24, 0.5, 0.74, 1.0,
+        ];
+        let jittering_one_way = [0.0, 0.1, 0.099, 0.2, 0.199, 0.3, 0.299, 0.4, 0.399, 0.5];
+
+        assert_eq!(direction_reversals(&one_way_cycles), 0);
+        assert_eq!(direction_reversals(&jittering_one_way), 0);
+    }
+
+    #[test]
+    fn direction_reversals_count_sustained_ping_pong_travel() {
+        let ping_pong = [
+            0.0, 0.25, 0.5, 0.75, 1.0, 0.75, 0.5, 0.25, 0.0, 0.25, 0.5, 0.75, 1.0, 0.75, 0.5, 0.25,
+            0.0,
+        ];
+
+        assert_eq!(direction_reversals(&ping_pong), 3);
+    }
+
+    #[test]
+    fn wrapped_spatial_progress_keeps_one_way_motion_continuous() {
+        let wrapped = [
+            Some(0.7),
+            Some(0.8),
+            Some(0.9),
+            Some(0.0),
+            Some(0.1),
+            Some(0.2),
+        ];
+        let unwrapped = unwrap_spatial_progress(&wrapped, true).expect("complete progress");
+
+        for (actual, expected) in unwrapped.iter().zip([0.7, 0.8, 0.9, 1.0, 1.1, 1.2]) {
+            assert!((actual - expected).abs() < 1e-12);
+        }
+        assert_eq!(direction_reversals(&unwrapped), 0);
     }
 }

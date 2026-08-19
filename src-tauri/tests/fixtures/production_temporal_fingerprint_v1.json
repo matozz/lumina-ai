@@ -411,7 +411,7 @@
             "sample_count": 2049,
             "sample_duration_beats": 16.0,
             "spatial_centroid": {
-              "direction_reversals": 23,
+              "direction_reversals": 0,
               "end": [
                 0.45454545454545453,
                 0.7954545454545454
@@ -459,7 +459,7 @@
             "sample_count": 1025,
             "sample_duration_beats": 8.0,
             "spatial_centroid": {
-              "direction_reversals": 23,
+              "direction_reversals": 0,
               "end": [
                 0.45454545454545453,
                 0.7954545454545454
@@ -507,7 +507,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 23,
+              "direction_reversals": 0,
               "end": [
                 0.45454545454545453,
                 0.7954545454545454
@@ -564,7 +564,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 47,
+              "direction_reversals": 0,
               "end": [
                 0.45454545454545453,
                 0.7954545454545454
@@ -629,7 +629,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 63,
+              "direction_reversals": 0,
               "end": [
                 0.45454545454545453,
                 0.7954545454545454
@@ -694,7 +694,7 @@
             "sample_count": 1025,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 127,
+              "direction_reversals": 0,
               "end": [
                 0.45454545454545453,
                 0.7954545454545454
@@ -810,7 +810,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 55,
+              "direction_reversals": 0,
               "end": [
                 0.4878048780487806,
                 0.813008130081301
@@ -1314,7 +1314,7 @@
             "sample_count": 2049,
             "sample_duration_beats": 16.0,
             "spatial_centroid": {
-              "direction_reversals": 64,
+              "direction_reversals": 0,
               "end": [
                 0.4166666666666667,
                 0.5
@@ -1356,7 +1356,7 @@
             "sample_count": 1025,
             "sample_duration_beats": 8.0,
             "spatial_centroid": {
-              "direction_reversals": 64,
+              "direction_reversals": 0,
               "end": [
                 0.4166666666666667,
                 0.5
@@ -1398,7 +1398,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 64,
+              "direction_reversals": 0,
               "end": [
                 0.4166666666666667,
                 0.5
@@ -1457,7 +1457,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 128,
+              "direction_reversals": 0,
               "end": [
                 0.4166666666666667,
                 0.5
@@ -1516,7 +1516,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 256,
+              "direction_reversals": 0,
               "end": [
                 0.4166666666666667,
                 0.5
@@ -1575,7 +1575,7 @@
             "sample_count": 1025,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 512,
+              "direction_reversals": 0,
               "end": [
                 0.4166666666666667,
                 0.5
@@ -1693,7 +1693,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 168,
+              "direction_reversals": 0,
               "end": [
                 0.4927536231884059,
                 0.5652173913043478
@@ -1786,7 +1786,7 @@
             "sample_count": 2049,
             "sample_duration_beats": 16.0,
             "spatial_centroid": {
-              "direction_reversals": 8,
+              "direction_reversals": 0,
               "end": [
                 0.6,
                 0.5
@@ -1828,7 +1828,7 @@
             "sample_count": 1025,
             "sample_duration_beats": 8.0,
             "spatial_centroid": {
-              "direction_reversals": 8,
+              "direction_reversals": 0,
               "end": [
                 0.6,
                 0.5
@@ -1870,7 +1870,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 8,
+              "direction_reversals": 0,
               "end": [
                 0.6,
                 0.5
@@ -1912,7 +1912,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 16,
+              "direction_reversals": 0,
               "end": [
                 0.6,
                 0.5
@@ -1954,7 +1954,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 32,
+              "direction_reversals": 0,
               "end": [
                 0.6,
                 0.5
@@ -1996,7 +1996,7 @@
             "sample_count": 1025,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 64,
+              "direction_reversals": 0,
               "end": [
                 0.6,
                 0.5
@@ -2097,7 +2097,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 8,
+              "direction_reversals": 0,
               "end": [
                 0.6373738697524112,
                 0.5000000000000001
@@ -3680,7 +3680,7 @@
             "sample_count": 2049,
             "sample_duration_beats": 16.0,
             "spatial_centroid": {
-              "direction_reversals": 7,
+              "direction_reversals": 0,
               "end": [
                 0.7022962836603017,
                 0.5499429575348131
@@ -3728,7 +3728,7 @@
             "sample_count": 1025,
             "sample_duration_beats": 8.0,
             "spatial_centroid": {
-              "direction_reversals": 7,
+              "direction_reversals": 0,
               "end": [
                 0.7022962836603017,
                 0.5499429575348131
@@ -3776,7 +3776,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 7,
+              "direction_reversals": 0,
               "end": [
                 0.7022962836603017,
                 0.5499429575348131
@@ -3824,7 +3824,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 15,
+              "direction_reversals": 0,
               "end": [
                 0.7022962836603017,
                 0.5499429575348131
@@ -3888,7 +3888,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 31,
+              "direction_reversals": 0,
               "end": [
                 0.7022962836603017,
                 0.5499429575348131
@@ -3953,7 +3953,7 @@
             "sample_count": 1025,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 63,
+              "direction_reversals": 0,
               "end": [
                 0.7022962836603017,
                 0.5499429575348131
@@ -4060,7 +4060,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 7,
+              "direction_reversals": 0,
               "end": [
                 0.6783682183876926,
                 0.49999999999999994
@@ -5572,7 +5572,7 @@
             "sample_count": 2049,
             "sample_duration_beats": 16.0,
             "spatial_centroid": {
-              "direction_reversals": 23,
+              "direction_reversals": 0,
               "end": [
                 0.40625,
                 0.5
@@ -5614,7 +5614,7 @@
             "sample_count": 1025,
             "sample_duration_beats": 8.0,
             "spatial_centroid": {
-              "direction_reversals": 23,
+              "direction_reversals": 0,
               "end": [
                 0.40625,
                 0.5
@@ -5661,7 +5661,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 23,
+              "direction_reversals": 0,
               "end": [
                 0.40625,
                 0.5
@@ -5720,7 +5720,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 47,
+              "direction_reversals": 0,
               "end": [
                 0.40625,
                 0.5
@@ -5779,7 +5779,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 95,
+              "direction_reversals": 0,
               "end": [
                 0.40625,
                 0.5
@@ -5838,7 +5838,7 @@
             "sample_count": 1025,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 191,
+              "direction_reversals": 0,
               "end": [
                 0.40625,
                 0.5
@@ -5939,7 +5939,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 24,
+              "direction_reversals": 0,
               "end": [
                 0.4722222224291831,
                 0.5000000000000001
@@ -6032,7 +6032,7 @@
             "sample_count": 2049,
             "sample_duration_beats": 16.0,
             "spatial_centroid": {
-              "direction_reversals": 2,
+              "direction_reversals": 0,
               "end": [
                 0.5182036806428408,
                 0.5081578567769914
@@ -6080,7 +6080,7 @@
             "sample_count": 1025,
             "sample_duration_beats": 8.0,
             "spatial_centroid": {
-              "direction_reversals": 2,
+              "direction_reversals": 0,
               "end": [
                 0.5182036806428408,
                 0.5081578567769914
@@ -6128,7 +6128,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 2,
+              "direction_reversals": 0,
               "end": [
                 0.5182036806428408,
                 0.5081578567769914
@@ -6176,7 +6176,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 3,
+              "direction_reversals": 0,
               "end": [
                 0.5066896978397902,
                 0.5325519759805738
@@ -6224,7 +6224,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 8,
+              "direction_reversals": 0,
               "end": [
                 0.5119947043771614,
                 0.4961810977064354
@@ -6272,7 +6272,7 @@
             "sample_count": 1025,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 21,
+              "direction_reversals": 0,
               "end": [
                 0.5334456584365386,
                 0.580879529095459
@@ -6378,7 +6378,7 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 2,
+              "direction_reversals": 0,
               "end": [
                 0.4873511239081954,
                 0.4895621571373029

@@ -47,6 +47,8 @@ Validator 还会 fail closed 拒绝矛盾的 behavior kind、primary event 和 p
 
 `analyze_effect_temporal` 使用真实 Rust compile + `render_at`，在固定 Stage/Layout/TargetSet、seed、BPM、参数和 dense musical-time sampling 下输出：主要事件率、峰值与 phase、on-duty、intensity 分布、active fixture fraction、空间质心路径/反转、frame delta、颜色变化、逐 fixture strobe Hz、安全越限和 UI fps 混叠风险。不适用的 family metric 使用缺省值，而不是伪造数字。
 
+空间方向使用 compiled Effect instance 的真实 SpatialPhase offsets 作为进度基准。Wrapped 轨迹使用强度加权的圆周质心并跨周期解包；只有持续至少三个 sample 且累计位移达到轨迹范围 2% 的反向 run 才计为 reversal。由此不会把 one-way wrap reset、离散 fixture 抖动或环形传播误报为反向，同时仍能在 ping-pong 中测得真正的方向切换。
+
 Effect Lab 的 speed 选项显示例如 `1× · 1 traversal/beat · 2.13 events/s`。Lab Effect preview 以最高 60fps 请求真实 runtime frame；4×/8× 不足以可靠读取时显示 analyzer 的 caution/severe 提示，并提供 1×/4×/8×实测对比、轨迹距离和 phase scrubbing，避免把时间混叠误判为减速或反向。
 
 AI/自动化可用同一路径生成结构化报告和 runtime contact sheet：

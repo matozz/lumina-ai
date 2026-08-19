@@ -1848,13 +1848,31 @@ mod tests {
         let ping_pong = report_for("builtin.spatial.column-ping-pong");
         assert_eq!(ping_pong.behavior.events_per_graph_cycle, 2.0);
         assert_eq!(ping_pong.fingerprints[2].graph_cycles_per_beat, 0.5);
-        assert!(
+        assert_eq!(
             ping_pong.fingerprints[2]
                 .spatial_centroid
                 .as_ref()
-                .is_some_and(|centroid| centroid.direction_reversals >= 3),
-            "four beats must expose alternating one-way traversals"
+                .map(|centroid| centroid.direction_reversals),
+            Some(3),
+            "four beats must expose exactly three sustained direction changes"
         );
+        for effect_id in [
+            "builtin.intensity.chase",
+            "builtin.spatial.column-rain",
+            "builtin.intensity.wave",
+            "builtin.spatial.angular-orbit",
+            "builtin.transition.wipe",
+        ] {
+            let report = report_for(effect_id);
+            assert_eq!(
+                report.fingerprints[2]
+                    .spatial_centroid
+                    .as_ref()
+                    .map(|centroid| centroid.direction_reversals),
+                Some(0),
+                "{effect_id} must not mistake wrapped spatial progress for a direction reversal"
+            );
+        }
 
         let strobe = report_for("builtin.strobe.safe-pulse");
         assert!(strobe.fingerprints[2]
@@ -1874,6 +1892,41 @@ mod tests {
                 .expect("2× pulse safety metrics")
                 .exceeds_authored_safety_limit,
             "real 128 BPM Hz must trip the authored safety limit at 2×"
+        );
+    }
+
+    #[test]
+    fn temporal_analyzer_uses_compiled_spatial_handles_after_topological_reorder() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        let mut project = production_temporal_project(&catalog).expect("temporal project");
+        let wipe = project
+            .effects
+            .iter_mut()
+            .find(|effect| effect.id == "builtin.transition.wipe")
+            .expect("Spatial Wipe");
+        wipe.graph.nodes.reverse();
+        let request = TemporalAnalysisRequest {
+            effect_ref: AssetRef {
+                id: wipe.id.clone(),
+                revision: wipe.revision,
+            },
+            target_set_id: "zone-4x4-1".to_string(),
+            bpm: 128.0,
+            speeds: vec![1.0],
+            seed: "0000000000000001".to_string(),
+            parameter_overrides: BTreeMap::new(),
+            sampling: TemporalSamplingConfig::default(),
+        };
+
+        let report = analyze_project_temporal_behavior(&project, &request)
+            .expect("topologically reordered graph analyzes");
+        assert_eq!(
+            report.fingerprints[0]
+                .spatial_centroid
+                .as_ref()
+                .map(|centroid| centroid.direction_reversals),
+            Some(0),
+            "compiled SpatialPhase offsets, not authored node positions, define motion progress"
         );
     }
 
