@@ -21,6 +21,11 @@ export function formatDiagnostic(diagnostic: Diagnostic): string {
   return `[${diagnostic.code}] ${diagnostic.path}\n${diagnostic.message}${hint}`;
 }
 
+export function formatDiagnosticError(error: unknown): string {
+  const diagnostics = Array.isArray(error) ? error : [error];
+  return diagnostics.map((item) => formatDiagnostic(normalizeDiagnostic(item))).join("\n");
+}
+
 function isDiagnostic(value: unknown): value is Diagnostic {
   if (!value || typeof value !== "object") {
     return false;

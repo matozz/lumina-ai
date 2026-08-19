@@ -258,6 +258,22 @@ describe("Stage 7 Project state", () => {
     expect(JSON.stringify(migrated.bundle)).not.toContain('"value_type":"color"');
   });
 
+  it("resets caches created before the required tempo behavior contract", async () => {
+    const cachedBundle = structuredClone(useProjectStore.getState().bundle);
+    cachedBundle.manifest.name = "Pre-tempo recovery shadow";
+    const cachedEffect = cachedBundle.effects[0];
+    Reflect.deleteProperty(cachedEffect, "tempo");
+    const migrate = useProjectStore.persist.getOptions().migrate;
+    const migrated = (await Promise.resolve(
+      migrate?.({ bundle: cachedBundle, selectedEffectRef: toAssetRef(cachedEffect) }, 14),
+    )) as ReturnType<typeof useProjectStore.getState>;
+
+    expect(migrated.bundle.manifest.name).toBe("Lighting Project");
+    expect(migrated.selectedEffectRef).toBeNull();
+    expect(migrated.bundle.effects).toHaveLength(17);
+    expect(migrated.bundle.effects.every((effect) => effect.tempo)).toBe(true);
+  });
+
   it("does not interrupt the current preview when selecting another Effect", () => {
     const first = projectActions.createEffect("First")!;
     const second = projectActions.createEffect("Second")!;

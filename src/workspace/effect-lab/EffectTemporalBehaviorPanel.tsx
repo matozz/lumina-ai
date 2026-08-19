@@ -8,6 +8,7 @@ import type {
   TemporalFingerprintReport,
   TemporalSpeedFingerprint,
 } from "@/bridge/types";
+import { formatDiagnosticError } from "@/bridge/diagnostics";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -47,7 +48,7 @@ export function EffectTemporalBehaviorPanel({
         target_set_id: targetSetId,
         bpm,
         speeds,
-        seed: "effect-lab-preview-v1",
+        seed: "effec7ab00000001",
         sampling: {
           primary_event_window: 4,
           base_samples_per_beat: 64,
@@ -59,7 +60,7 @@ export function EffectTemporalBehaviorPanel({
         if (!cancelled) setReport(next);
       })
       .catch((reason) => {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : String(reason));
+        if (!cancelled) setError(formatDiagnosticError(reason));
       });
     return () => {
       cancelled = true;

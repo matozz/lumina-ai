@@ -206,6 +206,8 @@ describe("Effect Lab safe authoring", () => {
     render(<EffectLabHarness />);
 
     await waitFor(() => expect(bridge.analyzeEffectTemporal).toHaveBeenCalled());
+    const analysisCalls = bridge.analyzeEffectTemporal.mock.calls;
+    expect(analysisCalls[analysisCalls.length - 1]?.[1].seed).toBe("effec7ab00000001");
     expect(screen.getByText("Runtime analyzed")).toBeTruthy();
     expect(screen.getByLabelText("Measured speed comparison")).toBeTruthy();
 
@@ -218,6 +220,28 @@ describe("Effect Lab safe authoring", () => {
 
     await waitFor(() => expect(screen.getByText("High-speed readability is limited")).toBeTruthy());
     expect(screen.getByText(/At 60fps, 8× has 3\.52 frames/)).toBeTruthy();
+  });
+
+  it("renders structured runtime analyzer diagnostics instead of object coercion", async () => {
+    bridge.analyzeEffectTemporal.mockRejectedValueOnce([
+      {
+        code: "TEMPORAL_ANALYSIS_REQUEST_INVALID",
+        severity: "error",
+        path: "temporal.request.seed",
+        message: "Seed must be hexadecimal.",
+        hint: "Use a deterministic 16-digit seed.",
+      },
+    ]);
+    render(<EffectLabHarness />);
+
+    const alert = await screen.findByText(
+      (_, element) =>
+        element?.tagName === "P" &&
+        Boolean(element.textContent?.includes("TEMPORAL_ANALYSIS_REQUEST_INVALID")),
+    );
+    expect(alert.textContent).toContain("[TEMPORAL_ANALYSIS_REQUEST_INVALID]");
+    expect(alert.textContent).toContain("Seed must be hexadecimal.");
+    expect(alert.textContent).not.toContain("[object Object]");
   });
 });
 
