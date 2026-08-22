@@ -30,13 +30,8 @@ const VALID_DOCUMENT: &str = r##"{
     "revision": 1,
     "source": "project_local",
     "tempo": {
-      "kind": "one_way_travel",
       "primary_event": "one_way_traversal",
-      "events_per_graph_cycle": 1.0,
-      "one_x_events_per_beat": 1.0,
-      "phase_anchor": "traversal_start",
-      "topology_sensitivity": ["fixture_order"],
-      "recommended_speed": { "min": 0.25, "max": 8.0 }
+      "events_per_graph_cycle": 1.0
     },
     "parameters": [{
       "id": "speed",

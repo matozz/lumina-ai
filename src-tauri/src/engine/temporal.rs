@@ -3,8 +3,8 @@ use crate::compiler::Compiler;
 use crate::document::{
     layout_to_show_dsl, resolve_target_set, AssetRef, EffectDefinitionDSL,
     EffectDefinitionDocument, EffectInstanceDSL, EffectTempoBehaviorDSL, GroupDSL,
-    GroupFixturesDSL, LayoutDefinition, MetaDSL, ParameterValueDSL, ProjectBundle, ShowDocumentV1,
-    StageDocument, StrobeRiskDSL, TargetSetDefinition, TempoBehaviorKindDSL,
+    GroupFixturesDSL, LayoutDefinition, MetaDSL, ParameterValueDSL, PrimaryVisualEventDSL,
+    ProjectBundle, ShowDocumentV1, StageDocument, StrobeRiskDSL, TargetSetDefinition,
     CURRENT_SCHEMA_VERSION,
 };
 use crate::engine::attribute::{resolve_attribute, FixtureFrame};
@@ -238,9 +238,8 @@ pub fn render_temporal_contact_sheet_svg(
     let rows = frame_count.div_ceil(columns);
     let cell_width = 180.0;
     let cell_height = 150.0;
-    let graph_cycles_per_beat = speed * compiled_request.effect.tempo.one_x_events_per_beat
-        / compiled_request.effect.tempo.events_per_graph_cycle;
-    let duration_beats = 2.0 / (speed * compiled_request.effect.tempo.one_x_events_per_beat);
+    let graph_cycles_per_beat = speed / compiled_request.effect.tempo.events_per_graph_cycle;
+    let duration_beats = 2.0 / speed;
     let target: HashMap<_, _> = compiled_request
         .target_fixture_ids
         .iter()
@@ -461,7 +460,7 @@ fn analyze_speed(
     speed: f64,
 ) -> Result<TemporalSpeedFingerprint, Vec<Diagnostic>> {
     let (show, active) = compile_show(compiled_request, request, speed)?;
-    let events_per_beat = speed * compiled_request.effect.tempo.one_x_events_per_beat;
+    let events_per_beat = speed;
     let events_per_second = events_per_beat * request.bpm / 60.0;
     let duration_beats =
         (f64::from(request.sampling.primary_event_window) / events_per_beat).max(4.0);
@@ -613,8 +612,8 @@ fn analyze_speed(
     let peaks =
         primary_signal.and_then(|signal| peak_metric(&signal, events_per_beat, samples_per_beat));
     let is_pulse = matches!(
-        compiled_request.effect.tempo.kind,
-        TempoBehaviorKindDSL::Pulse
+        compiled_request.effect.tempo.primary_event,
+        PrimaryVisualEventDSL::PulseOnset
     );
     let on_duty_cycle = (is_pulse
         || compiled_request.effect.catalog.strobe_risk != StrobeRiskDSL::None)
@@ -631,11 +630,7 @@ fn analyze_speed(
             ),
         });
     let frames_per_primary_event = request.sampling.preview_fps / events_per_second;
-    let frames_per_on_window = compiled_request
-        .effect
-        .tempo
-        .duty_cycle
-        .map(|duty| frames_per_primary_event * duty);
+    let frames_per_on_window = on_duty_cycle.map(|duty| frames_per_primary_event * duty);
     let aliasing_risk = if frames_per_primary_event < 2.0
         || frames_per_on_window.is_some_and(|frames| frames < 1.0)
     {
@@ -650,8 +645,7 @@ fn analyze_speed(
 
     Ok(TemporalSpeedFingerprint {
         speed,
-        graph_cycles_per_beat: speed * compiled_request.effect.tempo.one_x_events_per_beat
-            / compiled_request.effect.tempo.events_per_graph_cycle,
+        graph_cycles_per_beat: speed / compiled_request.effect.tempo.events_per_graph_cycle,
         primary_events_per_beat: events_per_beat,
         primary_events_per_second: events_per_second,
         sample_duration_beats: duration_beats,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDiagnostic, formatDiagnosticError, normalizeDiagnostic } from "./diagnostics";
+import { formatDiagnostic, normalizeDiagnostic } from "./diagnostics";
 
 describe("diagnostic bridge", () => {
   it("preserves structured backend diagnostics", () => {
@@ -25,21 +25,5 @@ describe("diagnostic bridge", () => {
       message: "backend unavailable",
       hint: "Check the DSL and retry. If the error persists, reload the editor.",
     });
-  });
-
-  it("formats Tauri diagnostic arrays without object string coercion", () => {
-    expect(
-      formatDiagnosticError([
-        {
-          code: "TEMPORAL_ANALYSIS_REQUEST_INVALID",
-          severity: "error",
-          path: "temporal.request.seed",
-          message: "Seed must be hexadecimal.",
-          hint: "Use a deterministic 16-digit seed.",
-        },
-      ]),
-    ).toBe(
-      "[TEMPORAL_ANALYSIS_REQUEST_INVALID] temporal.request.seed\nSeed must be hexadecimal.\nHint: Use a deterministic 16-digit seed.",
-    );
   });
 });

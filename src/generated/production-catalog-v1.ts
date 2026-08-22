@@ -351,16 +351,9 @@ export interface EffectPortRefDSL {
 export type EffectSourceDSL = "built_in" | "project_local" | "user_library";
 
 export interface EffectTempoBehaviorDSL {
-  direction_reversals_per_graph_cycle?: number;
-  duty_cycle?: number | null;
   events_per_graph_cycle: number;
-  kind: TempoBehaviorKindDSL;
-  one_x_events_per_beat: number;
-  phase_anchor: TempoPhaseAnchorDSL;
   primary_event: PrimaryVisualEventDSL;
-  recommended_speed: TempoSpeedRangeDSL;
   safety?: TempoSafetyLimitDSL | null;
-  topology_sensitivity?: Array<TempoTopologySensitivityDSL>;
 }
 
 export interface FormulaDef {
@@ -855,25 +848,9 @@ export type TargetingTransition =
       type: "weighted";
     };
 
-export type TempoBehaviorKindDSL =
-  | "pulse"
-  | "one_way_travel"
-  | "ping_pong"
-  | "random_refresh"
-  | "continuous_cycle"
-  | "spatial_propagation";
-
 export interface TempoMapDSL {
   points: Array<TempoPointDSL>;
 }
-
-export type TempoPhaseAnchorDSL =
-  | "onset"
-  | "minimum"
-  | "maximum"
-  | "midpoint_rising"
-  | "traversal_start"
-  | "refresh";
 
 export interface TempoPointDSL {
   bpm: number;
@@ -883,13 +860,6 @@ export interface TempoPointDSL {
 export interface TempoSafetyLimitDSL {
   max_primary_events_per_second: number;
 }
-
-export interface TempoSpeedRangeDSL {
-  max: number;
-  min: number;
-}
-
-export type TempoTopologySensitivityDSL = "target_set" | "fixture_order" | "coordinates";
 
 export interface TimeSignaturePoint {
   denominator: number;

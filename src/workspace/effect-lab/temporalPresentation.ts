@@ -21,7 +21,7 @@ export function formatTemporalSpeedLabel(
   speed: number,
   bpm: number,
 ) {
-  const eventsPerBeat = speed * behavior.one_x_events_per_beat;
+  const eventsPerBeat = speed;
   const eventsPerSecond = (eventsPerBeat * bpm) / 60;
   return `${speedMultiplierLabel(speed)} · ${formatRate(eventsPerBeat)} ${primaryEventLabel(behavior.primary_event)}/beat · ${formatRate(eventsPerSecond)} events/s`;
 }

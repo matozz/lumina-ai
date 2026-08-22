@@ -172,7 +172,6 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
         parameters: common_parameters(1.0),
         tempo: EffectTempoBehavior {
             events_per_graph_cycle: 1.0,
-            one_x_events_per_beat: 1.0,
         },
         graph: CompiledEffectGraph {
             nodes: vec![

@@ -21,12 +21,8 @@ function documentFixture(): FullDSL {
         revision: 1,
         source: "project_local",
         tempo: {
-          kind: "continuous_cycle",
           primary_event: "rise_fall_cycle",
           events_per_graph_cycle: 1,
-          one_x_events_per_beat: 1,
-          phase_anchor: "minimum",
-          recommended_speed: { min: 0.25, max: 2 },
         },
         catalog: {
           energy: 0.5,

@@ -51,13 +51,8 @@
     }
   ],
   "tempo": {
-    "kind": "continuous_cycle",
     "primary_event": "movement_cycle",
-    "events_per_graph_cycle": 1,
-    "one_x_events_per_beat": 1,
-    "phase_anchor": "midpoint_rising",
-    "topology_sensitivity": ["target_set", "fixture_order", "coordinates"],
-    "recommended_speed": { "min": 0.25, "max": 2 }
+    "events_per_graph_cycle": 1
   },
   "graph": {
     "nodes": [

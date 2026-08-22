@@ -738,6 +738,36 @@ mod tests {
     }
 
     #[test]
+    fn tempo_contract_rejects_removed_duplicate_metadata() {
+        let minimal = json!({
+            "primary_event": "pulse_onset",
+            "events_per_graph_cycle": 1.0
+        });
+        serde_json::from_value::<EffectTempoBehaviorDSL>(minimal.clone())
+            .expect("minimal tempo contract parses");
+
+        for (field, value) in [
+            ("kind", json!("pulse")),
+            ("one_x_events_per_beat", json!(1.0)),
+            ("phase_anchor", json!("onset")),
+            ("duty_cycle", json!(0.2)),
+            ("direction_reversals_per_graph_cycle", json!(2)),
+            ("topology_sensitivity", json!(["target_set"])),
+            ("recommended_speed", json!({ "min": 0.25, "max": 1.0 })),
+        ] {
+            let mut obsolete = minimal.clone();
+            obsolete
+                .as_object_mut()
+                .expect("tempo fixture is an object")
+                .insert(field.to_string(), value);
+            assert!(
+                serde_json::from_value::<EffectTempoBehaviorDSL>(obsolete).is_err(),
+                "removed tempo field {field} must fail closed"
+            );
+        }
+    }
+
+    #[test]
     fn effect_document_has_no_stage_or_timeline_ownership() {
         let schema = schemars::schema_for!(EffectDefinitionDocument);
         let value = serde_json::to_value(schema).expect("effect schema serializes");

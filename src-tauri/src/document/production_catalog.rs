@@ -34,6 +34,8 @@ pub const PRODUCTION_CATALOG_GOLDEN_SCHEMA_VERSION: u32 = 1;
 pub const PRODUCTION_COMPATIBILITY_SCHEMA_VERSION: u32 = 1;
 const GOLDEN_PPQ: u32 = 960;
 const GOLDEN_TICKS: [u32; 6] = [0, 120, 480, 960, 1_440, 2_880];
+const RUNTIME_VALIDATION_BEATS: u32 = 2;
+const RUNTIME_VALIDATION_SAMPLES_PER_BEAT: u32 = 128;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(deny_unknown_fields)]
@@ -427,7 +429,6 @@ fn materialize_project_template(
 }
 
 pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<Diagnostic> {
-    const SAMPLE_BEATS: [f64; 8] = [0.0, 0.125, 0.25, 0.375, 0.5, 0.75, 1.0, 1.5];
     let mut diagnostics = Vec::new();
     let mut signatures = BTreeMap::<String, (String, u32)>::new();
     for effect in &catalog.effects {
@@ -448,12 +449,13 @@ pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<D
             }
         };
         let active = effect_sample_live(&show);
-        let samples: Vec<_> = SAMPLE_BEATS
-            .iter()
-            .map(|beat| {
+        let samples: Vec<_> = (0..=RUNTIME_VALIDATION_BEATS * RUNTIME_VALIDATION_SAMPLES_PER_BEAT)
+            .map(|sample| {
                 render_at(
                     &show,
-                    RenderTime { beat: *beat },
+                    RenderTime {
+                        beat: f64::from(sample) / f64::from(RUNTIME_VALIDATION_SAMPLES_PER_BEAT),
+                    },
                     RenderSource::Live(&active),
                 )
             })
@@ -479,8 +481,10 @@ pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<D
                 "Connect time or spatial phase to a visible writer.",
             ));
         }
-        if matches!(effect.tempo.kind, super::TempoBehaviorKindDSL::Pulse)
-            || !matches!(effect.catalog.strobe_risk, StrobeRiskDSL::None)
+        if matches!(
+            effect.tempo.primary_event,
+            super::PrimaryVisualEventDSL::PulseOnset
+        ) || !matches!(effect.catalog.strobe_risk, StrobeRiskDSL::None)
         {
             match sampled_maximum_strobe_risk(effect) {
                 Ok(observed) if strobe_rank(effect.catalog.strobe_risk) < strobe_rank(observed) => {
@@ -561,12 +565,15 @@ pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<D
                 continue;
             };
             let changed_active = effect_sample_live(&changed_show);
-            let changed_samples: Vec<_> = SAMPLE_BEATS
-                .iter()
-                .map(|beat| {
+            let changed_samples: Vec<_> = (0..=RUNTIME_VALIDATION_BEATS
+                * RUNTIME_VALIDATION_SAMPLES_PER_BEAT)
+                .map(|sample| {
                     render_at(
                         &changed_show,
-                        RenderTime { beat: *beat },
+                        RenderTime {
+                            beat: f64::from(sample)
+                                / f64::from(RUNTIME_VALIDATION_SAMPLES_PER_BEAT),
+                        },
                         RenderSource::Live(&changed_active),
                     )
                 })
@@ -1712,7 +1719,7 @@ mod tests {
     }
 
     #[test]
-    fn tempo_contract_rejects_contradictory_authored_intent() {
+    fn tempo_contract_rejects_primary_events_the_graph_cannot_produce() {
         let catalog = builtin_production_catalog().expect("catalog");
         let pulse = catalog
             .effects
@@ -1720,44 +1727,60 @@ mod tests {
             .find(|effect| effect.id == "builtin.color.pulse")
             .expect("Short Color Burst");
 
-        let mut wrong_event = pulse.clone();
-        wrong_event.tempo.primary_event = crate::document::PrimaryVisualEventDSL::ColorCycle;
-        let diagnostics = validate_effect_draft(wrong_event).expect_err("event mismatch fails");
+        let mut impossible_refresh = pulse.clone();
+        impossible_refresh.tempo.primary_event =
+            crate::document::PrimaryVisualEventDSL::RandomRefresh;
+        let diagnostics =
+            validate_effect_draft(impossible_refresh).expect_err("missing Random node fails");
         assert!(diagnostics.iter().any(|diagnostic| {
             diagnostic.code == CATALOG_METADATA_INVALID
                 && diagnostic.path == "effect.tempo.primary_event"
         }));
 
-        let mut wrong_anchor = pulse.clone();
-        wrong_anchor.tempo.phase_anchor = crate::document::TempoPhaseAnchorDSL::Refresh;
-        let diagnostics = validate_effect_draft(wrong_anchor).expect_err("anchor mismatch fails");
-        assert!(diagnostics.iter().any(|diagnostic| {
-            diagnostic.code == CATALOG_METADATA_INVALID
-                && diagnostic.path == "effect.tempo.phase_anchor"
-        }));
-
-        let mut unreadable_default = pulse.clone();
-        unreadable_default.tempo.recommended_speed.max = 0.5;
-        let diagnostics =
-            validate_effect_draft(unreadable_default).expect_err("default range mismatch fails");
-        assert!(diagnostics.iter().any(|diagnostic| {
-            diagnostic.code == CATALOG_METADATA_INVALID
-                && diagnostic.path == "effect.tempo.recommended_speed"
-        }));
-
-        let ping_pong = catalog
+        let breathe = catalog
             .effects
             .iter()
-            .find(|effect| effect.id == "builtin.spatial.column-ping-pong")
-            .expect("Column Ping-Pong");
-        let mut wrong_reversals = ping_pong.clone();
-        wrong_reversals.tempo.direction_reversals_per_graph_cycle = 1;
+            .find(|effect| effect.id == "builtin.intensity.breathe")
+            .expect("Breathe");
+        let mut impossible_pulse = breathe.clone();
+        impossible_pulse.tempo.primary_event = crate::document::PrimaryVisualEventDSL::PulseOnset;
         let diagnostics =
-            validate_effect_draft(wrong_reversals).expect_err("reversal mismatch fails");
+            validate_effect_draft(impossible_pulse).expect_err("missing pulse shape fails");
         assert!(diagnostics.iter().any(|diagnostic| {
             diagnostic.code == CATALOG_METADATA_INVALID
-                && diagnostic.path == "effect.tempo.direction_reversals_per_graph_cycle"
+                && diagnostic.path == "effect.tempo.primary_event"
         }));
+
+        let mut invalid_cycle_rate = pulse.clone();
+        invalid_cycle_rate.tempo.events_per_graph_cycle = 0.0;
+        let diagnostics = validate_effect_draft(invalid_cycle_rate).expect_err("zero rate fails");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == CATALOG_METADATA_INVALID
+                && diagnostic.path == "effect.tempo.events_per_graph_cycle"
+        }));
+    }
+
+    #[test]
+    fn runtime_validation_does_not_alias_a_legal_high_speed_effect_to_black() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        let mut breathe = catalog
+            .effects
+            .iter()
+            .find(|effect| effect.id == "builtin.intensity.breathe")
+            .expect("Breathe")
+            .clone();
+        let speed = breathe
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.id == "speed")
+            .expect("speed parameter");
+        let crate::document::ParameterSchemaDSL::Scalar { default, .. } = &mut speed.schema else {
+            panic!("speed is scalar");
+        };
+        *default = 8.0;
+
+        validate_effect_draft(breathe)
+            .expect("dense musical-domain validation must accept the legal 8× speed");
     }
 
     #[test]

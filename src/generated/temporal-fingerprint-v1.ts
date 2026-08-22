@@ -13,16 +13,9 @@ export interface ColorStopDSL {
 export type DirectionDSL = "forward" | "reverse";
 
 export interface EffectTempoBehaviorDSL {
-  direction_reversals_per_graph_cycle?: number;
-  duty_cycle?: number | null;
   events_per_graph_cycle: number;
-  kind: TempoBehaviorKindDSL;
-  one_x_events_per_beat: number;
-  phase_anchor: TempoPhaseAnchorDSL;
   primary_event: PrimaryVisualEventDSL;
-  recommended_speed: TempoSpeedRangeDSL;
   safety?: TempoSafetyLimitDSL | null;
-  topology_sensitivity?: Array<TempoTopologySensitivityDSL>;
 }
 
 export type ParameterValueDSL =
@@ -63,32 +56,9 @@ export type PrimaryVisualEventDSL =
 
 export type StrobeRiskDSL = "none" | "low" | "medium" | "high";
 
-export type TempoBehaviorKindDSL =
-  | "pulse"
-  | "one_way_travel"
-  | "ping_pong"
-  | "random_refresh"
-  | "continuous_cycle"
-  | "spatial_propagation";
-
-export type TempoPhaseAnchorDSL =
-  | "onset"
-  | "minimum"
-  | "maximum"
-  | "midpoint_rising"
-  | "traversal_start"
-  | "refresh";
-
 export interface TempoSafetyLimitDSL {
   max_primary_events_per_second: number;
 }
-
-export interface TempoSpeedRangeDSL {
-  max: number;
-  min: number;
-}
-
-export type TempoTopologySensitivityDSL = "target_set" | "fixture_order" | "coordinates";
 
 export interface TemporalAliasingMetric {
   frames_per_on_window?: number | null;

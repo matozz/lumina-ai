@@ -274,6 +274,25 @@ describe("Stage 7 Project state", () => {
     expect(migrated.bundle.effects.every((effect) => effect.tempo)).toBe(true);
   });
 
+  it("resets caches containing removed tempo metadata", async () => {
+    const cachedBundle = structuredClone(useProjectStore.getState().bundle);
+    cachedBundle.manifest.name = "Redundant tempo metadata shadow";
+    const obsoleteTempo = cachedBundle.effects[0].tempo as unknown as Record<string, unknown>;
+    obsoleteTempo.kind = "continuous_cycle";
+    obsoleteTempo.one_x_events_per_beat = 1;
+    obsoleteTempo.recommended_speed = { min: 0.25, max: 2 };
+
+    const migrate = useProjectStore.persist.getOptions().migrate;
+    const migrated = (await Promise.resolve(migrate?.({ bundle: cachedBundle }, 15))) as ReturnType<
+      typeof useProjectStore.getState
+    >;
+
+    expect(migrated.bundle.manifest.name).toBe("Lighting Project");
+    expect(migrated.bundle.effects).toHaveLength(17);
+    expect(JSON.stringify(migrated.bundle)).not.toContain("one_x_events_per_beat");
+    expect(JSON.stringify(migrated.bundle)).not.toContain("recommended_speed");
+  });
+
   it("does not interrupt the current preview when selecting another Effect", () => {
     const first = projectActions.createEffect("First")!;
     const second = projectActions.createEffect("Second")!;

@@ -62,13 +62,8 @@
     }
   ],
   "tempo": {
-    "kind": "one_way_travel",
     "primary_event": "one_way_traversal",
     "events_per_graph_cycle": 1,
-    "one_x_events_per_beat": 1,
-    "phase_anchor": "traversal_start",
-    "topology_sensitivity": ["target_set", "fixture_order", "coordinates"],
-    "recommended_speed": { "min": 0.25, "max": 2 },
     "safety": { "max_primary_events_per_second": 4 }
   },
   "graph": {

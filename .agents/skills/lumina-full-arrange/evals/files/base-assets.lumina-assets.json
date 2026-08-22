@@ -1370,19 +1370,8 @@
         }
       ],
       "tempo": {
-        "kind": "spatial_propagation",
         "primary_event": "spatial_propagation",
-        "events_per_graph_cycle": 1,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "traversal_start",
-        "topology_sensitivity": [
-          "target_set",
-          "coordinates"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 2
-        }
+        "events_per_graph_cycle": 1
       },
       "graph": {
         "nodes": [
@@ -1552,19 +1541,8 @@
         }
       ],
       "tempo": {
-        "kind": "pulse",
         "primary_event": "pulse_onset",
         "events_per_graph_cycle": 1,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "onset",
-        "duty_cycle": 0.2,
-        "topology_sensitivity": [
-          "target_set"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 1
-        },
         "safety": {
           "max_primary_events_per_second": 3
         }
@@ -1746,19 +1724,8 @@
         }
       ],
       "tempo": {
-        "kind": "spatial_propagation",
         "primary_event": "color_cycle",
-        "events_per_graph_cycle": 1,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "traversal_start",
-        "topology_sensitivity": [
-          "target_set",
-          "coordinates"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 2
-        }
+        "events_per_graph_cycle": 1
       },
       "graph": {
         "nodes": [
@@ -1950,18 +1917,8 @@
         }
       ],
       "tempo": {
-        "kind": "continuous_cycle",
         "primary_event": "rise_fall_cycle",
-        "events_per_graph_cycle": 1,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "minimum",
-        "topology_sensitivity": [
-          "target_set"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 1
-        }
+        "events_per_graph_cycle": 1
       },
       "graph": {
         "nodes": [
@@ -2075,20 +2032,8 @@
         }
       ],
       "tempo": {
-        "kind": "one_way_travel",
         "primary_event": "one_way_traversal",
         "events_per_graph_cycle": 1,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "traversal_start",
-        "topology_sensitivity": [
-          "target_set",
-          "fixture_order",
-          "coordinates"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 2
-        },
         "safety": {
           "max_primary_events_per_second": 4
         }
@@ -2226,19 +2171,8 @@
         }
       ],
       "tempo": {
-        "kind": "spatial_propagation",
         "primary_event": "spatial_propagation",
-        "events_per_graph_cycle": 1,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "midpoint_rising",
-        "topology_sensitivity": [
-          "target_set",
-          "coordinates"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 2
-        }
+        "events_per_graph_cycle": 1
       },
       "graph": {
         "nodes": [
@@ -2336,19 +2270,8 @@
         }
       ],
       "tempo": {
-        "kind": "ping_pong",
         "primary_event": "directional_traversal",
-        "events_per_graph_cycle": 2,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "traversal_start",
-        "direction_reversals_per_graph_cycle": 2,
-        "topology_sensitivity": [
-          "target_set"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 2
-        }
+        "events_per_graph_cycle": 2
       },
       "graph": {
         "nodes": [
@@ -2484,20 +2407,8 @@
         }
       ],
       "tempo": {
-        "kind": "continuous_cycle",
         "primary_event": "movement_cycle",
-        "events_per_graph_cycle": 1,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "midpoint_rising",
-        "topology_sensitivity": [
-          "target_set",
-          "fixture_order",
-          "coordinates"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 2
-        }
+        "events_per_graph_cycle": 1
       },
       "graph": {
         "nodes": [
@@ -2665,19 +2576,8 @@
         }
       ],
       "tempo": {
-        "kind": "spatial_propagation",
         "primary_event": "spatial_propagation",
-        "events_per_graph_cycle": 1,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "traversal_start",
-        "topology_sensitivity": [
-          "target_set",
-          "coordinates"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 2
-        }
+        "events_per_graph_cycle": 1
       },
       "graph": {
         "nodes": [
@@ -2793,20 +2693,8 @@
         }
       ],
       "tempo": {
-        "kind": "ping_pong",
         "primary_event": "directional_traversal",
-        "events_per_graph_cycle": 2,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "traversal_start",
-        "direction_reversals_per_graph_cycle": 2,
-        "topology_sensitivity": [
-          "target_set",
-          "coordinates"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 2
-        }
+        "events_per_graph_cycle": 2
       },
       "graph": {
         "nodes": [
@@ -2970,19 +2858,8 @@
         }
       ],
       "tempo": {
-        "kind": "one_way_travel",
         "primary_event": "one_way_traversal",
-        "events_per_graph_cycle": 1,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "traversal_start",
-        "topology_sensitivity": [
-          "target_set",
-          "coordinates"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 2
-        }
+        "events_per_graph_cycle": 1
       },
       "graph": {
         "nodes": [
@@ -3136,19 +3013,8 @@
         }
       ],
       "tempo": {
-        "kind": "spatial_propagation",
         "primary_event": "spatial_propagation",
-        "events_per_graph_cycle": 1,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "midpoint_rising",
-        "topology_sensitivity": [
-          "target_set",
-          "coordinates"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 2
-        }
+        "events_per_graph_cycle": 1
       },
       "graph": {
         "nodes": [
@@ -3286,19 +3152,8 @@
         }
       ],
       "tempo": {
-        "kind": "pulse",
         "primary_event": "pulse_onset",
         "events_per_graph_cycle": 1,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "onset",
-        "duty_cycle": 0.125,
-        "topology_sensitivity": [
-          "target_set"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 1
-        },
         "safety": {
           "max_primary_events_per_second": 3
         }
@@ -3447,18 +3302,8 @@
         }
       ],
       "tempo": {
-        "kind": "continuous_cycle",
         "primary_event": "rise_fall_cycle",
-        "events_per_graph_cycle": 1,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "minimum",
-        "topology_sensitivity": [
-          "target_set"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 0.5
-        }
+        "events_per_graph_cycle": 1
       },
       "graph": {
         "nodes": [
@@ -3578,18 +3423,8 @@
         }
       ],
       "tempo": {
-        "kind": "random_refresh",
         "primary_event": "random_refresh",
-        "events_per_graph_cycle": 1,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "refresh",
-        "topology_sensitivity": [
-          "target_set"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 2
-        }
+        "events_per_graph_cycle": 1
       },
       "graph": {
         "nodes": [
@@ -3699,18 +3534,8 @@
         }
       ],
       "tempo": {
-        "kind": "continuous_cycle",
         "primary_event": "rise_fall_cycle",
-        "events_per_graph_cycle": 1,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "minimum",
-        "topology_sensitivity": [
-          "target_set"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 1
-        }
+        "events_per_graph_cycle": 1
       },
       "graph": {
         "nodes": [
@@ -3846,19 +3671,8 @@
         }
       ],
       "tempo": {
-        "kind": "one_way_travel",
         "primary_event": "one_way_traversal",
-        "events_per_graph_cycle": 1,
-        "one_x_events_per_beat": 1,
-        "phase_anchor": "traversal_start",
-        "topology_sensitivity": [
-          "target_set",
-          "coordinates"
-        ],
-        "recommended_speed": {
-          "min": 0.25,
-          "max": 2
-        }
+        "events_per_graph_cycle": 1
       },
       "graph": {
         "nodes": [

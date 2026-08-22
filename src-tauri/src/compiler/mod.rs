@@ -1189,7 +1189,6 @@ fn compile_effect_models(
             parameters,
             tempo: EffectTempoBehavior {
                 events_per_graph_cycle: definition.tempo.events_per_graph_cycle,
-                one_x_events_per_beat: definition.tempo.one_x_events_per_beat,
             },
             graph: compile_effect_graph(definition, profiles, errors),
             catalog: compile_effect_catalog(&definition.catalog),
@@ -1782,13 +1781,8 @@ mod tests {
         "revision": 1,
         "source": "project_local",
         "tempo": {
-          "kind": "one_way_travel",
           "primary_event": "one_way_traversal",
-          "events_per_graph_cycle": 1.0,
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
-          "topology_sensitivity": ["fixture_order"],
-          "recommended_speed": { "min": 0.25, "max": 8.0 }
+          "events_per_graph_cycle": 1.0
         },
         "parameters": [{
           "id": "speed",

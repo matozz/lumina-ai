@@ -513,10 +513,8 @@ mod tests {
                 "effect_definitions": [{
                     "id": "project.pulse", "name": "Pulse", "revision": 1, "source": "project_local",
                     "tempo": {
-                        "kind": "pulse", "primary_event": "pulse_onset",
-                        "events_per_graph_cycle": 1.0, "one_x_events_per_beat": 1.0,
-                        "phase_anchor": "onset", "duty_cycle": 0.5,
-                        "recommended_speed": { "min": 0.25, "max": 8.0 }
+                        "primary_event": "pulse_onset",
+                        "events_per_graph_cycle": 1.0
                     },
                     "parameters": [{
                         "id": "speed", "name": "Speed",
@@ -718,10 +716,8 @@ mod tests {
                 "effect_definitions": [{
                     "id": "project.position", "name": "Position", "revision": 1, "source": "project_local",
                     "tempo": {
-                        "kind": "continuous_cycle", "primary_event": "movement_cycle",
-                        "events_per_graph_cycle": 1.0, "one_x_events_per_beat": 1.0,
-                        "phase_anchor": "minimum",
-                        "recommended_speed": { "min": 0.25, "max": 8.0 }
+                        "primary_event": "movement_cycle",
+                        "events_per_graph_cycle": 1.0
                     },
                     "parameters": [],
                     "graph": { "nodes": [
@@ -774,10 +770,8 @@ mod tests {
                     {
                         "id": "project.red", "name": "Red", "revision": 1, "source": "project_local", "parameters": [],
                         "tempo": {
-                            "kind": "continuous_cycle", "primary_event": "color_cycle",
-                            "events_per_graph_cycle": 1.0, "one_x_events_per_beat": 1.0,
-                            "phase_anchor": "minimum",
-                            "recommended_speed": { "min": 0.25, "max": 8.0 }
+                            "primary_event": "color_cycle",
+                            "events_per_graph_cycle": 1.0
                         },
                         "graph": { "nodes": [
                             { "type": "time", "id": "time" },
@@ -789,10 +783,8 @@ mod tests {
                     {
                         "id": "project.blue", "name": "Blue", "revision": 1, "source": "project_local", "parameters": [],
                         "tempo": {
-                            "kind": "continuous_cycle", "primary_event": "color_cycle",
-                            "events_per_graph_cycle": 1.0, "one_x_events_per_beat": 1.0,
-                            "phase_anchor": "minimum",
-                            "recommended_speed": { "min": 0.25, "max": 8.0 }
+                            "primary_event": "color_cycle",
+                            "events_per_graph_cycle": 1.0
                         },
                         "graph": { "nodes": [
                             { "type": "time", "id": "time" },

@@ -93,13 +93,8 @@
     }
   ],
   "tempo": {
-    "kind": "continuous_cycle",
     "primary_event": "rise_fall_cycle",
-    "events_per_graph_cycle": 1,
-    "one_x_events_per_beat": 1,
-    "phase_anchor": "minimum",
-    "topology_sensitivity": ["target_set"],
-    "recommended_speed": { "min": 0.25, "max": 1 }
+    "events_per_graph_cycle": 1
   },
   "graph": {
     "nodes": [

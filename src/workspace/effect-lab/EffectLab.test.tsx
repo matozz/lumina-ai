@@ -180,11 +180,11 @@ describe("Effect Lab safe authoring", () => {
 
     fireEvent.click(screen.getByLabelText("Speed"));
     expect(screen.queryByRole("option", { name: "0.375×" })).toBeNull();
-    const doubleSpeed = screen.getByRole("option", {
-      name: /2× · 2 onset\/beat · 4\.27 events\/s/,
+    const fastestSpeed = screen.getByRole("option", {
+      name: /8× · 8 onset\/beat · 17\.07 events\/s/,
     });
-    fireEvent.mouseMove(doubleSpeed);
-    fireEvent.click(doubleSpeed);
+    fireEvent.mouseMove(fastestSpeed);
+    fireEvent.click(fastestSpeed);
 
     const save = screen.getByRole("button", { name: "Save changes" });
     await waitFor(() => expect(save.hasAttribute("disabled")).toBe(false));
@@ -195,53 +195,47 @@ describe("Effect Lab safe authoring", () => {
     expect(next?.revision).toBe(2);
     expect(next?.parameters.find((parameter) => parameter.id === "speed")?.schema).toMatchObject({
       type: "scalar",
-      default: 2,
+      default: 8,
     });
     expect(exactAsset(state.bundle.effects, original)?.revision).toBe(1);
   });
 
-  it("shows runtime-measured multi-speed comparison and high-speed readability", async () => {
+  it("shows only the current analysis while keeping every beat-synced speed available", async () => {
     workspaceActions.setAdvancedMode(false);
     projectActions.createEffect("Pulse");
     render(<EffectLabHarness />);
 
     await waitFor(() => expect(bridge.analyzeEffectTemporal).toHaveBeenCalled());
-    const analysisCalls = bridge.analyzeEffectTemporal.mock.calls;
-    expect(analysisCalls[analysisCalls.length - 1]?.[1].seed).toBe("effec7ab00000001");
-    expect(screen.getByText("Runtime analyzed")).toBeTruthy();
-    expect(screen.getByLabelText("Measured speed comparison")).toBeTruthy();
+    let analysisCalls = bridge.analyzeEffectTemporal.mock.calls;
+    expect(analysisCalls[analysisCalls.length - 1]?.[1]).toMatchObject({
+      seed: "effec7ab00000001",
+      speeds: [1],
+    });
+    const currentAnalysis = screen.getByLabelText("Current temporal analysis");
+    expect(currentAnalysis.textContent).toContain("Current behavior");
+    expect(currentAnalysis.textContent).toContain("1 onset/beat · 2.13 events/s");
+    expect(screen.queryByText("Runtime analyzed")).toBeNull();
+    expect(screen.queryByLabelText("Measured speed comparison")).toBeNull();
 
     fireEvent.click(screen.getByLabelText("Speed"));
+    for (const speed of ["0.25×", "0.5×", "1×", "2×", "4×", "8×"]) {
+      expect(
+        screen.getByRole("option", { name: new RegExp(`^${speed.replace(".", "\\.")}`) }),
+      ).toBeTruthy();
+    }
     const eightSpeed = screen.getByRole("option", {
       name: /8× · 8 onset\/beat · 17\.07 events\/s/,
     });
     fireEvent.mouseMove(eightSpeed);
     fireEvent.click(eightSpeed);
 
-    await waitFor(() => expect(screen.getByText("High-speed readability is limited")).toBeTruthy());
-    expect(screen.getByText(/At 60fps, 8× has 3\.52 frames/)).toBeTruthy();
-  });
-
-  it("renders structured runtime analyzer diagnostics instead of object coercion", async () => {
-    bridge.analyzeEffectTemporal.mockRejectedValueOnce([
-      {
-        code: "TEMPORAL_ANALYSIS_REQUEST_INVALID",
-        severity: "error",
-        path: "temporal.request.seed",
-        message: "Seed must be hexadecimal.",
-        hint: "Use a deterministic 16-digit seed.",
-      },
-    ]);
-    render(<EffectLabHarness />);
-
-    const alert = await screen.findByText(
-      (_, element) =>
-        element?.tagName === "P" &&
-        Boolean(element.textContent?.includes("TEMPORAL_ANALYSIS_REQUEST_INVALID")),
-    );
-    expect(alert.textContent).toContain("[TEMPORAL_ANALYSIS_REQUEST_INVALID]");
-    expect(alert.textContent).toContain("Seed must be hexadecimal.");
-    expect(alert.textContent).not.toContain("[object Object]");
+    await waitFor(() => {
+      analysisCalls = bridge.analyzeEffectTemporal.mock.calls;
+      expect(analysisCalls[analysisCalls.length - 1]?.[1].speeds).toEqual([8]);
+      expect(currentAnalysis.textContent).toContain("8 onset/beat · 17.07 events/s");
+    });
+    expect(screen.queryByText("High-speed readability is limited")).toBeNull();
+    expect(screen.queryByText("High-speed preview is undersampled")).toBeNull();
   });
 });
 

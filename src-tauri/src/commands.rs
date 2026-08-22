@@ -1394,10 +1394,8 @@ mod tests {
           "effect_definitions": [{
             "id": "project.red-pulse", "name": "Red Pulse", "revision": 1, "source": "project_local",
             "tempo": {
-              "kind": "pulse", "primary_event": "pulse_onset",
-              "events_per_graph_cycle": 1.0, "one_x_events_per_beat": 1.0,
-              "phase_anchor": "onset", "duty_cycle": 0.5,
-              "recommended_speed": { "min": 0.25, "max": 8.0 }
+              "primary_event": "pulse_onset",
+              "events_per_graph_cycle": 1.0
             },
             "parameters": [
               { "id": "speed", "name": "Speed", "schema": { "type": "scalar", "default": 1.0, "range": { "min": 0.25, "max": 8.0, "step": 0.25 }, "unit": "multiplier" }, "scope": "arrangement", "section": "main", "help": "Beat-synced playback speed." },

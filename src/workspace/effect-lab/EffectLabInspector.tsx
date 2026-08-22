@@ -381,30 +381,26 @@ export function EffectLabInspector() {
               </Alert>
             )}
 
-            <div className="flex flex-wrap gap-1.5">
-              {effect.catalog.family && <Badge variant="secondary">{effect.catalog.family}</Badge>}
-              {effect.catalog.category && (
-                <Badge variant="outline">{effect.catalog.category}</Badge>
-              )}
-              {(effect.catalog.layout_capabilities ?? []).map((capability) => (
-                <Badge key={capability} variant="outline">
-                  {capability}
+            {(advancedMode || effect.catalog.strobe_risk === "high") && (
+              <div className="flex flex-wrap gap-1.5">
+                {advancedMode && effect.catalog.family && (
+                  <Badge variant="secondary">{effect.catalog.family}</Badge>
+                )}
+                {advancedMode && effect.catalog.category && (
+                  <Badge variant="outline">{effect.catalog.category}</Badge>
+                )}
+                {advancedMode &&
+                  (effect.catalog.layout_capabilities ?? []).map((capability) => (
+                    <Badge key={capability} variant="outline">
+                      {capability}
+                    </Badge>
+                  ))}
+                <Badge
+                  variant={effect.catalog.strobe_risk === "high" ? "destructive" : "secondary"}
+                >
+                  {effect.catalog.strobe_risk} strobe risk
                 </Badge>
-              ))}
-              <Badge variant={effect.catalog.strobe_risk === "high" ? "destructive" : "secondary"}>
-                {effect.catalog.strobe_risk} strobe risk
-              </Badge>
-            </div>
-
-            {temporalPreview?.effectRef && selectedTarget && (
-              <EffectTemporalBehaviorPanel
-                project={temporalPreview.bundle}
-                effectRef={temporalPreview.effectRef}
-                behavior={effect.tempo}
-                targetSetId={selectedTarget.id}
-                bpm={bpm}
-                selectedSpeed={selectedSpeed}
-              />
+              </div>
             )}
 
             <Separator />
@@ -419,6 +415,17 @@ export function EffectLabInspector() {
               showMetadata={advancedMode}
               speedLabel={speedLabel}
             />
+
+            {temporalPreview?.effectRef && selectedTarget && (
+              <EffectTemporalBehaviorPanel
+                project={temporalPreview.bundle}
+                effectRef={temporalPreview.effectRef}
+                behavior={effect.tempo}
+                targetSetId={selectedTarget.id}
+                bpm={bpm}
+                selectedSpeed={selectedSpeed}
+              />
+            )}
 
             {advancedParameters.length > 0 && (
               <div className="grid gap-2">

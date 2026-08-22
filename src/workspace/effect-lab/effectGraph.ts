@@ -66,25 +66,14 @@ export function buildEffectGraph(values: EffectFormValues): EffectNodeDSL[] {
 export function buildTempoBehavior(values: EffectFormValues): EffectTempoBehaviorDSL {
   if (values.waveform === "pulse") {
     return {
-      kind: "pulse",
       primary_event: "pulse_onset",
       events_per_graph_cycle: 1,
-      one_x_events_per_beat: 1,
-      phase_anchor: "onset",
-      duty_cycle: 0.5,
-      topology_sensitivity: ["target_set"],
-      recommended_speed: { min: 0.25, max: 1 },
       safety: { max_primary_events_per_second: 3 },
     };
   }
   return {
-    kind: "continuous_cycle",
     primary_event: "rise_fall_cycle",
     events_per_graph_cycle: 1,
-    one_x_events_per_beat: 1,
-    phase_anchor: values.waveform === "sine" ? "minimum" : "traversal_start",
-    topology_sensitivity: ["target_set"],
-    recommended_speed: { min: 0.25, max: 2 },
   };
 }
 

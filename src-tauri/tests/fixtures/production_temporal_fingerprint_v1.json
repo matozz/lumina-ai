@@ -5,17 +5,7 @@
       "all_legal_speeds": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "continuous_cycle",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "minimum",
-          "primary_event": "rise_fall_cycle",
-          "recommended_speed": {
-            "max": 1.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set"
-          ]
+          "primary_event": "rise_fall_cycle"
         },
         "cache_key": "temporal-v1-7707b96f0c7032e9",
         "fingerprints": [
@@ -282,17 +272,7 @@
       "topology_probe": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "continuous_cycle",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "minimum",
-          "primary_event": "rise_fall_cycle",
-          "recommended_speed": {
-            "max": 1.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set"
-          ]
+          "primary_event": "rise_fall_cycle"
         },
         "cache_key": "temporal-v1-b17533d40b6b5d27",
         "fingerprints": [
@@ -362,22 +342,10 @@
       "all_legal_speeds": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "one_way_travel",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
           "primary_event": "one_way_traversal",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
           "safety": {
             "max_primary_events_per_second": 4.0
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "fixture_order",
-            "coordinates"
-          ]
+          }
         },
         "cache_key": "temporal-v1-7ed91e44cbfb8246",
         "fingerprints": [
@@ -389,6 +357,7 @@
               "variance": 0.0007970988955080546
             },
             "aliasing": {
+              "frames_per_on_window": 22.52306002928258,
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
@@ -437,6 +406,7 @@
               "variance": 0.0007932558239143399
             },
             "aliasing": {
+              "frames_per_on_window": 11.281829268292682,
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
@@ -485,6 +455,7 @@
               "variance": 0.0007998024083383615
             },
             "aliasing": {
+              "frames_per_on_window": 5.643640350877193,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
@@ -533,6 +504,7 @@
               "variance": 0.0007998024083383631
             },
             "aliasing": {
+              "frames_per_on_window": 2.8218201754385963,
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
@@ -590,6 +562,7 @@
               "variance": 0.0007117677234020706
             },
             "aliasing": {
+              "frames_per_on_window": 1.428453947368421,
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "caution"
@@ -655,6 +628,7 @@
               "variance": 0.0007113540987507538
             },
             "aliasing": {
+              "frames_per_on_window": 0.7141692073170732,
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
@@ -756,22 +730,10 @@
       "topology_probe": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "one_way_travel",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
           "primary_event": "one_way_traversal",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
           "safety": {
             "max_primary_events_per_second": 4.0
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "fixture_order",
-            "coordinates"
-          ]
+          }
         },
         "cache_key": "temporal-v1-810cb0317fb879e8",
         "fingerprints": [
@@ -783,6 +745,7 @@
               "variance": 0.00004774878500127317
             },
             "aliasing": {
+              "frames_per_on_window": 5.626370614035087,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
@@ -863,20 +826,8 @@
     {
       "all_legal_speeds": {
         "behavior": {
-          "direction_reversals_per_graph_cycle": 2,
           "events_per_graph_cycle": 2.0,
-          "kind": "ping_pong",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
-          "primary_event": "directional_traversal",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "directional_traversal"
         },
         "cache_key": "temporal-v1-3135fae685ac6ea7",
         "fingerprints": [
@@ -1175,20 +1126,8 @@
       "name": "Column Ping-Pong",
       "topology_probe": {
         "behavior": {
-          "direction_reversals_per_graph_cycle": 2,
           "events_per_graph_cycle": 2.0,
-          "kind": "ping_pong",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
-          "primary_event": "directional_traversal",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "directional_traversal"
         },
         "cache_key": "temporal-v1-21def3cdf0b56e6d",
         "fingerprints": [
@@ -1270,18 +1209,7 @@
       "all_legal_speeds": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "one_way_travel",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
-          "primary_event": "one_way_traversal",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "one_way_traversal"
         },
         "cache_key": "temporal-v1-d03bd37213c65b16",
         "fingerprints": [
@@ -1632,18 +1560,7 @@
       "topology_probe": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "one_way_travel",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
-          "primary_event": "one_way_traversal",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "one_way_traversal"
         },
         "cache_key": "temporal-v1-ee44d8c4d716a278",
         "fingerprints": [
@@ -1742,18 +1659,7 @@
       "all_legal_speeds": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "spatial_propagation",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "midpoint_rising",
-          "primary_event": "spatial_propagation",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "spatial_propagation"
         },
         "cache_key": "temporal-v1-411f311d1b18915b",
         "fingerprints": [
@@ -2053,18 +1959,7 @@
       "topology_probe": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "spatial_propagation",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "midpoint_rising",
-          "primary_event": "spatial_propagation",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "spatial_propagation"
         },
         "cache_key": "temporal-v1-fb783d09a7b66741",
         "fingerprints": [
@@ -2146,18 +2041,7 @@
       "all_legal_speeds": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "spatial_propagation",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
-          "primary_event": "color_cycle",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "color_cycle"
         },
         "cache_key": "temporal-v1-24fb59374badc554",
         "fingerprints": [
@@ -2434,18 +2318,7 @@
       "topology_probe": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "spatial_propagation",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
-          "primary_event": "color_cycle",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "color_cycle"
         },
         "cache_key": "temporal-v1-d0517618858073fe",
         "fingerprints": [
@@ -2529,18 +2402,7 @@
       "all_legal_speeds": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "spatial_propagation",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
-          "primary_event": "spatial_propagation",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "spatial_propagation"
         },
         "cache_key": "temporal-v1-45ac85377a4fe267",
         "fingerprints": [
@@ -2834,18 +2696,7 @@
       "topology_probe": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "spatial_propagation",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
-          "primary_event": "spatial_propagation",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "spatial_propagation"
         },
         "cache_key": "temporal-v1-921caf2407d83d2d",
         "fingerprints": [
@@ -2932,22 +2783,11 @@
     {
       "all_legal_speeds": {
         "behavior": {
-          "duty_cycle": 0.2,
           "events_per_graph_cycle": 1.0,
-          "kind": "pulse",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "onset",
           "primary_event": "pulse_onset",
-          "recommended_speed": {
-            "max": 1.0,
-            "min": 0.25
-          },
           "safety": {
             "max_primary_events_per_second": 3.0
-          },
-          "topology_sensitivity": [
-            "target_set"
-          ]
+          }
         },
         "cache_key": "temporal-v1-b88ae743ef9b20bb",
         "fingerprints": [
@@ -2959,7 +2799,7 @@
               "variance": 0.16093460343592478
             },
             "aliasing": {
-              "frames_per_on_window": 11.25,
+              "frames_per_on_window": 11.337847730600293,
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
@@ -2997,7 +2837,7 @@
               "variance": 0.16232623438429658
             },
             "aliasing": {
-              "frames_per_on_window": 5.625,
+              "frames_per_on_window": 5.734756097560975,
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
@@ -3035,7 +2875,7 @@
               "variance": 0.16278513046749563
             },
             "aliasing": {
-              "frames_per_on_window": 2.8125,
+              "frames_per_on_window": 2.87828947368421,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
@@ -3073,7 +2913,7 @@
               "variance": 0.16278513046749543
             },
             "aliasing": {
-              "frames_per_on_window": 1.40625,
+              "frames_per_on_window": 1.439144736842105,
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "caution"
@@ -3111,7 +2951,7 @@
               "variance": 0.17175275203386545
             },
             "aliasing": {
-              "frames_per_on_window": 0.703125,
+              "frames_per_on_window": 0.7743969298245613,
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "severe"
@@ -3149,7 +2989,7 @@
               "variance": 0.17132659131469571
             },
             "aliasing": {
-              "frames_per_on_window": 0.3515625,
+              "frames_per_on_window": 0.3858612804878049,
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
@@ -3222,22 +3062,11 @@
       "name": "Short Color Burst",
       "topology_probe": {
         "behavior": {
-          "duty_cycle": 0.2,
           "events_per_graph_cycle": 1.0,
-          "kind": "pulse",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "onset",
           "primary_event": "pulse_onset",
-          "recommended_speed": {
-            "max": 1.0,
-            "min": 0.25
-          },
           "safety": {
             "max_primary_events_per_second": 3.0
-          },
-          "topology_sensitivity": [
-            "target_set"
-          ]
+          }
         },
         "cache_key": "temporal-v1-02c7f534be917d21",
         "fingerprints": [
@@ -3249,7 +3078,7 @@
               "variance": 0.16278513046749563
             },
             "aliasing": {
-              "frames_per_on_window": 2.8125,
+              "frames_per_on_window": 2.87828947368421,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
@@ -3315,18 +3144,7 @@
       "all_legal_speeds": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "spatial_propagation",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "midpoint_rising",
-          "primary_event": "spatial_propagation",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "spatial_propagation"
         },
         "cache_key": "temporal-v1-552990a408521f1c",
         "fingerprints": [
@@ -3554,18 +3372,7 @@
       "topology_probe": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "spatial_propagation",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "midpoint_rising",
-          "primary_event": "spatial_propagation",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "spatial_propagation"
         },
         "cache_key": "temporal-v1-6e7b0a54a7199356",
         "fingerprints": [
@@ -3635,18 +3442,7 @@
       "all_legal_speeds": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "spatial_propagation",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
-          "primary_event": "spatial_propagation",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "spatial_propagation"
         },
         "cache_key": "temporal-v1-9660b6412773bafa",
         "fingerprints": [
@@ -3658,6 +3454,7 @@
               "variance": 0.0016719736871251324
             },
             "aliasing": {
+              "frames_per_on_window": 49.99414348462665,
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
@@ -3706,6 +3503,7 @@
               "variance": 0.00169196963712078
             },
             "aliasing": {
+              "frames_per_on_window": 24.993658536585365,
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
@@ -3754,6 +3552,7 @@
               "variance": 0.0017131501050655568
             },
             "aliasing": {
+              "frames_per_on_window": 12.482456140350877,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
@@ -3802,6 +3601,7 @@
               "variance": 0.001689147277984874
             },
             "aliasing": {
+              "frames_per_on_window": 6.234649122807017,
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
@@ -3850,6 +3650,7 @@
               "variance": 0.0016554411803821787
             },
             "aliasing": {
+              "frames_per_on_window": 3.119517543859649,
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "caution"
@@ -3914,6 +3715,7 @@
               "variance": 0.0016496085663295816
             },
             "aliasing": {
+              "frames_per_on_window": 1.5599085365853658,
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
@@ -4015,18 +3817,7 @@
       "topology_probe": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "spatial_propagation",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
-          "primary_event": "spatial_propagation",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "spatial_propagation"
         },
         "cache_key": "temporal-v1-2f45f9e645861a1c",
         "fingerprints": [
@@ -4038,6 +3829,7 @@
               "variance": 0.0004206088103082056
             },
             "aliasing": {
+              "frames_per_on_window": 12.50438596491228,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
@@ -4113,19 +3905,8 @@
     {
       "all_legal_speeds": {
         "behavior": {
-          "direction_reversals_per_graph_cycle": 2,
           "events_per_graph_cycle": 2.0,
-          "kind": "ping_pong",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
-          "primary_event": "directional_traversal",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set"
-          ]
+          "primary_event": "directional_traversal"
         },
         "cache_key": "temporal-v1-573d862f7bc07162",
         "fingerprints": [
@@ -4383,19 +4164,8 @@
       "name": "Pan Sweep",
       "topology_probe": {
         "behavior": {
-          "direction_reversals_per_graph_cycle": 2,
           "events_per_graph_cycle": 2.0,
-          "kind": "ping_pong",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
-          "primary_event": "directional_traversal",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set"
-          ]
+          "primary_event": "directional_traversal"
         },
         "cache_key": "temporal-v1-b5824454e9f1b554",
         "fingerprints": [
@@ -4465,19 +4235,7 @@
       "all_legal_speeds": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "continuous_cycle",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "midpoint_rising",
-          "primary_event": "movement_cycle",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "fixture_order",
-            "coordinates"
-          ]
+          "primary_event": "movement_cycle"
         },
         "cache_key": "temporal-v1-11fa48909390ff5b",
         "fingerprints": [
@@ -4705,19 +4463,7 @@
       "topology_probe": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "continuous_cycle",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "midpoint_rising",
-          "primary_event": "movement_cycle",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "fixture_order",
-            "coordinates"
-          ]
+          "primary_event": "movement_cycle"
         },
         "cache_key": "temporal-v1-80c42f43389f8461",
         "fingerprints": [
@@ -4786,22 +4532,11 @@
     {
       "all_legal_speeds": {
         "behavior": {
-          "duty_cycle": 0.125,
           "events_per_graph_cycle": 1.0,
-          "kind": "pulse",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "onset",
           "primary_event": "pulse_onset",
-          "recommended_speed": {
-            "max": 1.0,
-            "min": 0.25
-          },
           "safety": {
             "max_primary_events_per_second": 3.0
-          },
-          "topology_sensitivity": [
-            "target_set"
-          ]
+          }
         },
         "cache_key": "temporal-v1-5e29d06891a7520f",
         "fingerprints": [
@@ -4813,7 +4548,7 @@
               "variance": 0.10969509582338424
             },
             "aliasing": {
-              "frames_per_on_window": 7.03125,
+              "frames_per_on_window": 7.055270863836018,
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
@@ -4850,7 +4585,7 @@
               "variance": 0.1100145151695435
             },
             "aliasing": {
-              "frames_per_on_window": 3.515625,
+              "frames_per_on_window": 3.5396341463414633,
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
@@ -4887,7 +4622,7 @@
               "variance": 0.1106513305138534
             },
             "aliasing": {
-              "frames_per_on_window": 1.7578125,
+              "frames_per_on_window": 1.7817982456140349,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "caution"
@@ -4924,7 +4659,7 @@
               "variance": 0.1106513305138533
             },
             "aliasing": {
-              "frames_per_on_window": 0.87890625,
+              "frames_per_on_window": 0.8908991228070174,
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "severe"
@@ -4961,7 +4696,7 @@
               "variance": 0.1106513305138531
             },
             "aliasing": {
-              "frames_per_on_window": 0.439453125,
+              "frames_per_on_window": 0.4454495614035087,
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "severe"
@@ -4998,7 +4733,7 @@
               "variance": 0.11001451516954354
             },
             "aliasing": {
-              "frames_per_on_window": 0.2197265625,
+              "frames_per_on_window": 0.22122713414634146,
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
@@ -5070,22 +4805,11 @@
       "name": "Safe Strobe Pulse",
       "topology_probe": {
         "behavior": {
-          "duty_cycle": 0.125,
           "events_per_graph_cycle": 1.0,
-          "kind": "pulse",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "onset",
           "primary_event": "pulse_onset",
-          "recommended_speed": {
-            "max": 1.0,
-            "min": 0.25
-          },
           "safety": {
             "max_primary_events_per_second": 3.0
-          },
-          "topology_sensitivity": [
-            "target_set"
-          ]
+          }
         },
         "cache_key": "temporal-v1-cf5f9c40d4357725",
         "fingerprints": [
@@ -5097,7 +4821,7 @@
               "variance": 0.1106513305138534
             },
             "aliasing": {
-              "frames_per_on_window": 1.7578125,
+              "frames_per_on_window": 1.7817982456140349,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "caution"
@@ -5162,17 +4886,7 @@
       "all_legal_speeds": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "continuous_cycle",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "minimum",
-          "primary_event": "rise_fall_cycle",
-          "recommended_speed": {
-            "max": 1.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set"
-          ]
+          "primary_event": "rise_fall_cycle"
         },
         "cache_key": "temporal-v1-dbb5666b7a913ddd",
         "fingerprints": [
@@ -5448,17 +5162,7 @@
       "topology_probe": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "continuous_cycle",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "minimum",
-          "primary_event": "rise_fall_cycle",
-          "recommended_speed": {
-            "max": 1.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set"
-          ]
+          "primary_event": "rise_fall_cycle"
         },
         "cache_key": "temporal-v1-45a88b5a41584f33",
         "fingerprints": [
@@ -5528,18 +5232,7 @@
       "all_legal_speeds": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "one_way_travel",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
-          "primary_event": "one_way_traversal",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "one_way_traversal"
         },
         "cache_key": "temporal-v1-3c12b1c1a05e810b",
         "fingerprints": [
@@ -5895,18 +5588,7 @@
       "topology_probe": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "one_way_travel",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "traversal_start",
-          "primary_event": "one_way_traversal",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set",
-            "coordinates"
-          ]
+          "primary_event": "one_way_traversal"
         },
         "cache_key": "temporal-v1-6eb60257a7fa5931",
         "fingerprints": [
@@ -5988,17 +5670,7 @@
       "all_legal_speeds": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "random_refresh",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "refresh",
-          "primary_event": "random_refresh",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set"
-          ]
+          "primary_event": "random_refresh"
         },
         "cache_key": "temporal-v1-f0a46fd664f39213",
         "fingerprints": [
@@ -6010,6 +5682,7 @@
               "variance": 0.0015992191312835643
             },
             "aliasing": {
+              "frames_per_on_window": 51.75,
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
@@ -6058,6 +5731,7 @@
               "variance": 0.001598439024390261
             },
             "aliasing": {
+              "frames_per_on_window": 25.875,
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
@@ -6106,6 +5780,7 @@
               "variance": 0.001596881091617924
             },
             "aliasing": {
+              "frames_per_on_window": 12.9375,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
@@ -6154,6 +5829,7 @@
               "variance": 0.0015968567726441874
             },
             "aliasing": {
+              "frames_per_on_window": 6.46984649122807,
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
@@ -6202,6 +5878,7 @@
               "variance": 0.002485386956670429
             },
             "aliasing": {
+              "frames_per_on_window": 3.243421052631579,
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "caution"
@@ -6250,6 +5927,7 @@
               "variance": 0.0023954137775134025
             },
             "aliasing": {
+              "frames_per_on_window": 1.6348170731707317,
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
@@ -6334,17 +6012,7 @@
       "topology_probe": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "random_refresh",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "refresh",
-          "primary_event": "random_refresh",
-          "recommended_speed": {
-            "max": 2.0,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set"
-          ]
+          "primary_event": "random_refresh"
         },
         "cache_key": "temporal-v1-68c6795bcfc1c469",
         "fingerprints": [
@@ -6356,6 +6024,7 @@
               "variance": 0.00024970722235521513
             },
             "aliasing": {
+              "frames_per_on_window": 13.359649122807017,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
@@ -6432,17 +6101,7 @@
       "all_legal_speeds": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "continuous_cycle",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "minimum",
-          "primary_event": "rise_fall_cycle",
-          "recommended_speed": {
-            "max": 0.5,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set"
-          ]
+          "primary_event": "rise_fall_cycle"
         },
         "cache_key": "temporal-v1-1a23019a671b8497",
         "fingerprints": [
@@ -6709,17 +6368,7 @@
       "topology_probe": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "kind": "continuous_cycle",
-          "one_x_events_per_beat": 1.0,
-          "phase_anchor": "minimum",
-          "primary_event": "rise_fall_cycle",
-          "recommended_speed": {
-            "max": 0.5,
-            "min": 0.25
-          },
-          "topology_sensitivity": [
-            "target_set"
-          ]
+          "primary_event": "rise_fall_cycle"
         },
         "cache_key": "temporal-v1-2cc4429dec523f95",
         "fingerprints": [

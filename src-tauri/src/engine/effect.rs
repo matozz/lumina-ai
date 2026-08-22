@@ -308,7 +308,6 @@ pub enum OscillatorWaveform {
 #[derive(Clone, Debug)]
 pub struct EffectTempoBehavior {
     pub events_per_graph_cycle: f64,
-    pub one_x_events_per_beat: f64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -462,7 +461,7 @@ impl EffectDefinition {
     }
 
     pub fn graph_phase(&self, primary_event_phase: f64) -> f64 {
-        primary_event_phase * self.tempo.one_x_events_per_beat / self.tempo.events_per_graph_cycle
+        primary_event_phase / self.tempo.events_per_graph_cycle
     }
 }
 
@@ -1012,7 +1011,6 @@ mod tests {
             parameters: common_parameters(default_speed),
             tempo: EffectTempoBehavior {
                 events_per_graph_cycle: 1.0,
-                one_x_events_per_beat: 1.0,
             },
             graph: CompiledEffectGraph::default(),
             catalog: EffectCatalog::default(),
@@ -1149,7 +1147,6 @@ mod tests {
             parameters: Vec::new(),
             tempo: EffectTempoBehavior {
                 events_per_graph_cycle: 1.0,
-                one_x_events_per_beat: 1.0,
             },
             graph: CompiledEffectGraph {
                 nodes: vec![
@@ -1291,7 +1288,6 @@ mod tests {
                 parameters: Vec::new(),
                 tempo: EffectTempoBehavior {
                     events_per_graph_cycle: 1.0,
-                    one_x_events_per_beat: 1.0,
                 },
                 graph: CompiledEffectGraph {
                     nodes: vec![
