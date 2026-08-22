@@ -71,7 +71,6 @@ export type {
   CueLayerOverride,
   CueMixOverride,
   CueQuantize,
-  CueRiskSummary,
   CueTrack,
   CueTriggerMode,
   CueTriggerPolicy,

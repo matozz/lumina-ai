@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "builtin.color.pulse",
-  "name": "Short Color Burst",
+  "name": "Color Accent",
   "revision": 1,
   "source": "built_in",
   "parameters": [
@@ -20,27 +20,65 @@
       },
       "scope": "arrangement",
       "section": "main",
-      "help": "Normalized burst rate; 1× produces one short onset per beat."
+      "help": "Normalized accent rate; 1× produces one smooth rise-fall accent per beat."
     },
     {
-      "id": "duty_cycle",
-      "name": "Duty cycle",
+      "id": "intensity",
+      "name": "Intensity",
       "schema": {
         "type": "scalar",
-        "default": 0.2,
+        "default": 0.85,
+        "range": {
+          "min": 0,
+          "max": 1,
+          "step": 0.05
+        },
+        "unit": "normalized"
+      },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Peak brightness of the color accent."
+    },
+    {
+      "id": "attack",
+      "name": "Attack",
+      "schema": {
+        "type": "scalar",
+        "default": 0.18,
         "range": {
           "min": 0.05,
-          "max": 0.5,
+          "max": 0.45,
           "step": 0.05
         },
         "unit": "normalized"
       },
       "scope": "effect",
       "section": "advanced",
-      "help": "Fraction of each event cycle that remains visibly on.",
+      "help": "Fraction of the cycle used to fade into the accent.",
       "graph_binding": {
-        "node_id": "oscillator",
-        "property": "duty_cycle"
+        "node_id": "accent-envelope",
+        "property": "attack"
+      }
+    },
+    {
+      "id": "release",
+      "name": "Release",
+      "schema": {
+        "type": "scalar",
+        "default": 0.55,
+        "range": {
+          "min": 0.25,
+          "max": 0.8,
+          "step": 0.05
+        },
+        "unit": "normalized"
+      },
+      "scope": "effect",
+      "section": "advanced",
+      "help": "Fraction of the cycle used to fade out of the accent.",
+      "graph_binding": {
+        "node_id": "accent-envelope",
+        "property": "release"
       }
     },
     {
@@ -61,7 +99,7 @@
       },
       "scope": "effect",
       "section": "advanced",
-      "help": "Dark-to-bright pulse colors.",
+      "help": "Dark-to-bright accent colors.",
       "graph_binding": {
         "node_id": "gradient",
         "property": "color_stops"
@@ -79,9 +117,8 @@
     }
   ],
   "tempo": {
-    "primary_event": "pulse_onset",
-    "events_per_graph_cycle": 1,
-    "safety": { "max_primary_events_per_second": 3 }
+    "primary_event": "rise_fall_cycle",
+    "events_per_graph_cycle": 1
   },
   "graph": {
     "nodes": [
@@ -90,20 +127,20 @@
         "id": "time"
       },
       {
-        "type": "oscillator",
-        "id": "oscillator",
-        "waveform": "pulse",
-        "duty_cycle": 0.2,
-        "phase": {
+        "type": "envelope",
+        "id": "accent-envelope",
+        "input": {
           "node_id": "time",
           "port": "scalar"
-        }
+        },
+        "attack": 0.18,
+        "release": 0.55
       },
       {
         "type": "color_gradient",
         "id": "gradient",
         "input": {
-          "node_id": "oscillator",
+          "node_id": "accent-envelope",
           "port": "scalar"
         },
         "stops": [
@@ -130,11 +167,11 @@
         "type": "map",
         "id": "visible-intensity",
         "input": {
-          "node_id": "oscillator",
+          "node_id": "accent-envelope",
           "port": "scalar"
         },
         "input_range": [0, 1],
-        "output_range": [0, 1]
+        "output_range": [0.12, 1]
       },
       {
         "type": "attribute_writer",
@@ -151,12 +188,11 @@
     "family": "color",
     "category": "Rhythm",
     "visibility": "standard",
-    "mood": ["neon", "club"],
-    "energy": 0.65,
-    "density": 0.6,
-    "motion": "pulse",
+    "mood": ["neon", "warm"],
+    "energy": 0.6,
+    "density": 0.75,
+    "motion": "organic",
     "colorfulness": 0.9,
-    "strobe_risk": "high",
     "required_attributes": ["color.rgb", "intensity"],
     "layout_capabilities": ["any"]
   }

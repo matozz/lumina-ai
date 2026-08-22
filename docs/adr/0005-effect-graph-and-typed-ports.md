@@ -15,8 +15,8 @@
 - Graph connections 使用结构化 node/port references。compiler 校验 ID、port type、topology、parameter、attribute capability 和 reachable output，再生成拓扑排序的 typed IR。
 - render path 只访问 node/parameter/attribute handles，不解析自由字符串。
 - 每个 node 是 tick 与 fixture context 的纯函数。Random 从 seed、node stable order、fixture 和 sample index 派生，不共享可变 RNG。
-- spatial index/x/y/distance/angle/grouped ordering 在 compile 阶段预计算。
-- Catalog 固定内置 Effect identity，并提供 mood、energy、density、motion、colorfulness、strobe risk 和 required attributes 查询。
+- spatial index/x/x-distance/y/distance/angle、fixed grouping 与 topology-relative partition 在 compile 阶段预计算。
+- Catalog 固定内置 Effect identity，并提供 mood、energy、density、motion、colorfulness 和 required attributes 查询；不持久化分级 strobe risk 标签。
 
 ## Consequences
 

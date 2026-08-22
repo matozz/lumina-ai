@@ -22,8 +22,6 @@ export interface EffectFormValues {
   waveform: OscillatorWaveformDSL;
   speed: number;
   phase: number;
-  width: number;
-  transition: number;
   color: string;
 }
 
@@ -32,9 +30,9 @@ export interface EffectPair {
   instance: EffectInstanceDSL;
 }
 
-export const effectWaveforms: OscillatorWaveformDSL[] = ["sine", "triangle", "saw", "pulse"];
+export const effectWaveforms: OscillatorWaveformDSL[] = ["sine", "triangle"];
 
-export function createEffectPair(document: FullDSL, name = "Red Pulse"): EffectPair {
+export function createEffectPair(document: FullDSL, name = "Smooth Accent"): EffectPair {
   const definitionId = uniqueId(
     `project.${slug(name)}`,
     document.effect_definitions.map(({ id }) => id),
@@ -47,11 +45,9 @@ export function createEffectPair(document: FullDSL, name = "Red Pulse"): EffectP
     name,
     targetGroupId: document.groups[0]?.id ?? "all-fixtures",
     attributeMode: "intensity_color",
-    waveform: "pulse",
+    waveform: "triangle",
     speed: 1,
     phase: 0,
-    width: 50,
-    transition: 12,
     color: "#ff2d55",
   };
   return buildEffectPair(definitionId, instanceId, 1, values);
@@ -96,8 +92,6 @@ export function effectFormValues(
     waveform: waveformFromDefinition(definition, effectWaveforms),
     speed: scalarValue(definition, instance, "speed", 1),
     phase: scalarValue(definition, instance, "phase", 0),
-    width: scalarValue(definition, instance, "width", 100),
-    transition: scalarValue(definition, instance, "transition", 100),
     color: colorValue(definition, instance),
   };
 }
@@ -141,10 +135,9 @@ function buildEffectPair(
     catalog: {
       mood: ["driving"],
       energy: 0.7,
-      density: values.waveform === "pulse" ? 0.55 : 0.7,
-      motion: values.waveform === "pulse" ? "pulse" : "organic",
+      density: 0.7,
+      motion: "organic",
       colorfulness: values.attributeMode === "intensity_color" ? 1 : 0,
-      strobe_risk: values.waveform === "pulse" ? "high" : "low",
       required_attributes:
         values.attributeMode === "intensity_color" ? ["intensity", "color.rgb"] : ["intensity"],
     },
@@ -152,8 +145,6 @@ function buildEffectPair(
   const parameter_overrides: Record<string, ParameterValueDSL> = {
     speed: scalar(values.speed),
     phase: scalar(values.phase),
-    width: scalar(values.width),
-    transition: scalar(values.transition),
     intensity: scalar(1),
     direction: { type: "direction", value: "forward" },
   };

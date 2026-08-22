@@ -41,7 +41,7 @@ Built-in Cue/recipe 的 opaque ID 生成一次后固定提交到声明式 Catalo
 
 当两个 Layer 或两个同时 active 的 CueClip 的 fixture membership 与属性写入相交时，validator 要求对应 attribute 的显式 MixPolicy。没有明确策略时 preview、Save 和 Go Live 都 fail closed。
 
-Cue 的 `risk_summary.strobe_risk` 是作者可读摘要，不要求与所有 pinned Effect 中的最高值完全相等。Catalog 中每个 Effect 的 `strobe_risk` 以及运行时 Effect 风险检查仍是安全判断的权威来源；移除摘要相等限制不会放宽 Effect 本身的风险声明或 Live 过滤。
+Cue 不持久化 `risk_summary`，Effect Catalog 也不持久化分级 strobe risk。适用于 pulse 的数值 Hz 与 authored safety limit 只由真实 runtime analyzer/validator 计算，不作为 Cue 标签或 UI 确认流程。
 
 ## TargetingScene
 

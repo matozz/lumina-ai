@@ -1,7 +1,7 @@
-use lumina_ai_lib::compiler::diagnostic::{CATALOG_METADATA_INVALID, PROJECT_REFERENCE_NOT_FOUND};
+use lumina_ai_lib::compiler::diagnostic::PROJECT_REFERENCE_NOT_FOUND;
 use lumina_ai_lib::document::{
     builtin_production_catalog, production_catalog_compatibility, production_catalog_golden,
-    validate_production_catalog, validate_production_catalog_runtime, StrobeRiskDSL,
+    validate_production_catalog,
 };
 
 #[test]
@@ -107,24 +107,4 @@ fn checked_in_layout_compatibility_matrix_covers_all_production_effects() {
         actual["effects"].as_array().map(Vec::len),
         Some(catalog.effects.len())
     );
-}
-
-#[test]
-fn runtime_validation_rejects_underdeclared_strobe_risk() {
-    let mut catalog = builtin_production_catalog().expect("catalog parses");
-    let strobe = catalog
-        .effects
-        .iter_mut()
-        .find(|effect| effect.id == "builtin.strobe.safe-pulse")
-        .expect("safe strobe is cataloged");
-    strobe.catalog.strobe_risk = StrobeRiskDSL::Low;
-    let diagnostics = validate_production_catalog_runtime(&catalog);
-    assert!(diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == CATALOG_METADATA_INVALID
-            && diagnostic.path == "catalog.strobe_risk"
-            && diagnostic
-                .asset
-                .as_ref()
-                .is_some_and(|asset| asset.id == "builtin.strobe.safe-pulse")
-    }));
 }

@@ -10,7 +10,7 @@ import {
 } from "./effectFactory";
 
 describe("Effect Lab models", () => {
-  it("creates a deterministic red pulse that validates against the current V1", () => {
+  it("creates a deterministic smooth accent that validates against the current V1", () => {
     const document = createStarterProject();
     const pair = createEffectPair(document);
     const next = {
@@ -20,9 +20,9 @@ describe("Effect Lab models", () => {
     };
 
     expect(validateShowDocument(next).success).toBe(true);
-    expect(pair.definition.name).toBe("Red Pulse");
+    expect(pair.definition.name).toBe("Smooth Accent");
     expect(pair.definition.graph.nodes).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: "shape-pulse" })]),
+      expect.arrayContaining([expect.objectContaining({ id: "shape-triangle" })]),
     );
     expect(pair.instance.seed).toMatch(/^[0-9a-f]{16}$/);
     expect(pair.instance.target_group_id).toBe("all-fixtures");
@@ -37,12 +37,10 @@ describe("Effect Lab models", () => {
     const values = effectFormValues(pair.definition, pair.instance);
     const revised = reviseEffectPair(pair.definition, pair.instance, {
       ...values,
-      name: "Blue Saw",
-      waveform: "saw",
+      name: "Blue Sine",
+      waveform: "sine",
       speed: 2,
       phase: 0.25,
-      width: 80,
-      transition: 40,
       color: "#0088ff",
     });
 
@@ -50,12 +48,10 @@ describe("Effect Lab models", () => {
     expect(revised.definition.revision).toBe(2);
     expect(revised.instance.definition_revision).toBe(2);
     expect(effectFormValues(revised.definition, revised.instance)).toMatchObject({
-      name: "Blue Saw",
-      waveform: "saw",
+      name: "Blue Sine",
+      waveform: "sine",
       speed: 2,
       phase: 0.25,
-      width: 80,
-      transition: 40,
       color: "#0088ff",
     });
   });
@@ -69,7 +65,7 @@ describe("Effect Lab models", () => {
 
     expect(duplicate.definition.id).not.toBe(pair.definition.id);
     expect(duplicate.instance.id).not.toBe(pair.instance.id);
-    expect(duplicate.definition.name).toBe("Red Pulse Copy");
+    expect(duplicate.definition.name).toBe("Smooth Accent Copy");
     expect(effectIsUsed(document, pair.definition.id)).toBe(false);
 
     document.timeline!.tracks[0].clips!.push({

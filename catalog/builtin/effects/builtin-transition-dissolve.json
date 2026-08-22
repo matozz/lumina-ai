@@ -90,7 +90,6 @@
     "density": 0.7,
     "motion": "organic",
     "colorfulness": 0,
-    "strobe_risk": "low",
     "required_attributes": ["intensity"],
     "layout_capabilities": ["any"]
   }

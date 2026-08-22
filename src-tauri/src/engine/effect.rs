@@ -130,17 +130,6 @@ pub enum MotionTag {
     Organic,
 }
 
-#[derive(
-    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum StrobeRisk {
-    None,
-    Low,
-    Medium,
-    High,
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum EffectFamily {
@@ -148,7 +137,6 @@ pub enum EffectFamily {
     Color,
     Movement,
     Spatial,
-    Strobe,
     Utility,
 }
 
@@ -181,7 +169,6 @@ pub struct EffectCatalog {
     pub density: f32,
     pub motion: MotionTag,
     pub colorfulness: f32,
-    pub strobe_risk: StrobeRisk,
     pub required_attributes: Vec<String>,
     pub layout_capabilities: Vec<LayoutCapability>,
 }
@@ -194,7 +181,6 @@ pub struct EffectCatalogQuery {
     pub density: Option<(f32, f32)>,
     pub motion: Option<MotionTag>,
     pub minimum_colorfulness: Option<f32>,
-    pub maximum_strobe_risk: Option<StrobeRisk>,
     pub source: Option<EffectSource>,
 }
 
@@ -256,9 +242,6 @@ fn catalog_matches(
         && query
             .minimum_colorfulness
             .is_none_or(|minimum| catalog.colorfulness >= minimum)
-        && query
-            .maximum_strobe_risk
-            .is_none_or(|maximum| catalog.strobe_risk <= maximum)
 }
 
 impl Default for EffectCatalog {
@@ -272,7 +255,6 @@ impl Default for EffectCatalog {
             density: 0.0,
             motion: MotionTag::Static,
             colorfulness: 0.0,
-            strobe_risk: StrobeRisk::None,
             required_attributes: Vec::new(),
             layout_capabilities: Vec::new(),
         }
@@ -314,6 +296,7 @@ pub struct EffectTempoBehavior {
 pub enum SpatialBasis {
     Index,
     X,
+    XDistance,
     RandomX,
     Y,
     Distance,
@@ -363,6 +346,7 @@ pub enum CompiledEffectNode {
         to: f64,
         wrap: bool,
         group_size: Option<usize>,
+        partition_count: Option<usize>,
         custom_order: Vec<u32>,
     },
     Math {
@@ -621,15 +605,20 @@ impl EffectValue {
 }
 
 pub fn deterministic_random(seed: u64, node: EffectNodeHandle, fixture_id: u32, phase: f64) -> f64 {
-    // Keep phase zero as the stopped preview, then enter the first seeded cycle as soon as
-    // transport advances. This avoids holding the stopped frame for an extra beat on playback.
-    let cycle = if phase > 0.0 {
-        phase.floor() + 1.0
-    } else if phase < 0.0 {
-        phase.ceil() - 1.0
-    } else {
-        0.0
-    };
+    let cycle = phase.floor();
+    let progress = phase.rem_euclid(1.0);
+    let eased = progress * progress * (3.0 - 2.0 * progress);
+    let from = deterministic_random_cycle(seed, node, fixture_id, cycle);
+    let to = deterministic_random_cycle(seed, node, fixture_id, cycle + 1.0);
+    from + (to - from) * eased
+}
+
+fn deterministic_random_cycle(
+    seed: u64,
+    node: EffectNodeHandle,
+    fixture_id: u32,
+    cycle: f64,
+) -> f64 {
     let mut value = seed
         ^ (u64::from(node.0).wrapping_mul(0x9e37_79b9_7f4a_7c15))
         ^ (u64::from(fixture_id).wrapping_mul(0xbf58_476d_1ce4_e5b9))
@@ -992,7 +981,7 @@ mod tests {
         CompiledTargetingScene, CompiledTargetingStep, Direction, EffectCatalog,
         EffectCatalogQuery, EffectDefinition, EffectDefinitionHandle, EffectInstance,
         EffectNodeHandle, EffectSource, EffectTempoBehavior, MathOperation, MotionTag,
-        OscillatorWaveform, ParameterValue, SpatialBasis, StrobeRisk, COLOR_PARAMETER_ID,
+        OscillatorWaveform, ParameterValue, SpatialBasis, COLOR_PARAMETER_ID,
         DIRECTION_PARAMETER_ID, SPEED_PARAMETER_ID,
     };
     use crate::engine::attribute::resolve_attribute;
@@ -1112,7 +1101,8 @@ mod tests {
         let node = EffectNodeHandle::from_index(7).expect("node handle");
         let value = deterministic_random(42, node, 9, 3.25);
 
-        assert_eq!(value, deterministic_random(42, node, 9, 3.99));
+        assert_eq!(value, deterministic_random(42, node, 9, 3.25));
+        assert_ne!(value, deterministic_random(42, node, 9, 3.99));
         assert_ne!(value, deterministic_random(43, node, 9, 3.25));
         assert_ne!(value, deterministic_random(42, node, 10, 3.25));
         assert_ne!(value, deterministic_random(42, node, 9, 4.0));
@@ -1120,18 +1110,17 @@ mod tests {
     }
 
     #[test]
-    fn random_node_leaves_the_stopped_preview_without_waiting_an_extra_beat() {
+    fn random_node_crossfades_continuously_between_seeded_targets() {
         let node = EffectNodeHandle::from_index(7).expect("node handle");
         let stopped = deterministic_random(42, node, 9, 0.0);
-        let first_forward = deterministic_random(42, node, 9, 0.01);
-        let first_reverse = deterministic_random(42, node, 9, -0.01);
+        let just_after = deterministic_random(42, node, 9, 0.0001);
+        let just_before = deterministic_random(42, node, 9, -0.0001);
+        let middle = deterministic_random(42, node, 9, 0.5);
 
-        assert_ne!(stopped, first_forward);
-        assert_eq!(first_forward, deterministic_random(42, node, 9, 0.99));
-        assert_ne!(first_forward, deterministic_random(42, node, 9, 1.0));
-        assert_ne!(stopped, first_reverse);
-        assert_eq!(first_reverse, deterministic_random(42, node, 9, -0.99));
-        assert_ne!(first_reverse, deterministic_random(42, node, 9, -1.0));
+        assert!((stopped - just_after).abs() < 1e-6);
+        assert!((stopped - just_before).abs() < 1e-6);
+        assert_ne!(stopped, middle);
+        assert_ne!(stopped, deterministic_random(42, node, 9, 1.0));
     }
 
     #[test]
@@ -1158,6 +1147,7 @@ mod tests {
                         to: 1.0,
                         wrap: true,
                         group_size: None,
+                        partition_count: None,
                         custom_order: Vec::new(),
                     },
                     CompiledEffectNode::Oscillator {
@@ -1344,7 +1334,6 @@ mod tests {
             density: 0.7,
             motion: MotionTag::Pulse,
             colorfulness: 0.8,
-            strobe_risk: StrobeRisk::Low,
             required_attributes: vec![INTENSITY_ATTRIBUTE.to_string()],
             ..EffectCatalog::default()
         };
@@ -1356,7 +1345,6 @@ mod tests {
             density: 0.5,
             motion: MotionTag::Sweep,
             colorfulness: 0.4,
-            strobe_risk: StrobeRisk::None,
             required_attributes: vec![PAN_ATTRIBUTE.to_string()],
             ..EffectCatalog::default()
         };
@@ -1366,7 +1354,6 @@ mod tests {
         let query = EffectCatalogQuery {
             moods: vec!["energetic".to_string()],
             energy: Some((0.75, 1.0)),
-            maximum_strobe_risk: Some(StrobeRisk::Low),
             ..EffectCatalogQuery::default()
         };
 

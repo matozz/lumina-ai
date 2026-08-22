@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "builtin.intensity.chase",
-  "name": "Alternating Grid Chase",
+  "name": "Column Half Relay",
   "revision": 1,
   "source": "built_in",
   "parameters": [
@@ -20,7 +20,7 @@
       },
       "scope": "arrangement",
       "section": "main",
-      "help": "Normalized chase rate; 1× completes one ordered traversal per beat."
+      "help": "Normalized relay rate; 1× crosses to the opposite column half each beat and returns on the next."
     },
     {
       "id": "intensity",
@@ -37,18 +37,7 @@
       },
       "scope": "arrangement",
       "section": "main",
-      "help": "Maximum chase output."
-    },
-    {
-      "id": "direction",
-      "name": "Direction",
-      "schema": {
-        "type": "direction",
-        "default": "forward"
-      },
-      "scope": "arrangement",
-      "section": "main",
-      "help": "Chase travel direction."
+      "help": "Maximum relay brightness."
     },
     {
       "id": "color",
@@ -62,9 +51,8 @@
     }
   ],
   "tempo": {
-    "primary_event": "one_way_traversal",
-    "events_per_graph_cycle": 1,
-    "safety": { "max_primary_events_per_second": 4 }
+    "primary_event": "directional_traversal",
+    "events_per_graph_cycle": 2
   },
   "graph": {
     "nodes": [
@@ -73,33 +61,64 @@
         "id": "time"
       },
       {
-        "type": "spatial_phase",
-        "id": "spatial",
-        "input": {
+        "type": "constant",
+        "id": "phase-quarter",
+        "value": {
+          "type": "scalar",
+          "value": 0.25
+        }
+      },
+      {
+        "type": "math",
+        "id": "phase-anchor",
+        "operation": "add",
+        "left": {
           "node_id": "time",
           "port": "scalar"
         },
-        "basis": "index",
+        "right": {
+          "node_id": "phase-quarter",
+          "port": "scalar"
+        }
+      },
+      {
+        "type": "spatial_phase",
+        "id": "column-halves",
+        "input": {
+          "node_id": "phase-anchor",
+          "port": "scalar"
+        },
+        "basis": "x",
         "from": 0,
         "to": 1,
         "wrap": true,
+        "partition_count": 2,
         "custom_order": []
       },
       {
         "type": "oscillator",
-        "id": "oscillator",
-        "waveform": "pulse",
-        "duty_cycle": 0.4,
+        "id": "relay-wave",
+        "waveform": "sine",
         "phase": {
-          "node_id": "spatial",
+          "node_id": "column-halves",
           "port": "scalar"
         }
+      },
+      {
+        "type": "map",
+        "id": "soft-relay",
+        "input": {
+          "node_id": "relay-wave",
+          "port": "scalar"
+        },
+        "input_range": [0, 1],
+        "output_range": [0.12, 1]
       },
       {
         "type": "attribute_writer",
         "id": "writer",
         "input": {
-          "node_id": "oscillator",
+          "node_id": "soft-relay",
           "port": "scalar"
         },
         "attribute_id": "intensity"
@@ -110,12 +129,11 @@
     "family": "spatial",
     "category": "Chases",
     "visibility": "standard",
-    "mood": ["driving", "kinetic"],
-    "energy": 0.8,
-    "density": 0.45,
-    "motion": "chase",
+    "mood": ["balanced", "kinetic"],
+    "energy": 0.62,
+    "density": 0.75,
+    "motion": "sweep",
     "colorfulness": 0,
-    "strobe_risk": "high",
     "required_attributes": ["intensity"],
     "layout_capabilities": ["linear", "matrix", "coordinates"]
   }

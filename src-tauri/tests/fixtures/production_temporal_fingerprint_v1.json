@@ -341,36 +341,31 @@
     {
       "all_legal_speeds": {
         "behavior": {
-          "events_per_graph_cycle": 1.0,
-          "primary_event": "one_way_traversal",
-          "safety": {
-            "max_primary_events_per_second": 4.0
-          }
+          "events_per_graph_cycle": 2.0,
+          "primary_event": "directional_traversal"
         },
         "cache_key": "temporal-v1-7ed91e44cbfb8246",
         "fingerprints": [
           {
             "active_fixture_fraction": {
-              "maximum": 0.44,
-              "mean": 0.40040995607613344,
-              "minimum": 0.36,
-              "variance": 0.0007970988955080546
+              "maximum": 1.0,
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
-              "frames_per_on_window": 22.52306002928258,
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0009765625000000007,
-            "graph_cycles_per_beat": 0.25,
+            "frame_delta_change_energy": 0.0004296875013096725,
+            "graph_cycles_per_beat": 0.125,
             "intensity": {
-              "maximum": 0.44,
-              "mean": 0.40040995607613344,
-              "minimum": 0.36,
-              "variance": 0.0007970988955080546
+              "maximum": 0.6479999989271163,
+              "mean": 0.5599570525156513,
+              "minimum": 0.4719999983906746,
+              "variance": 0.0038738878628476097
             },
-            "on_duty_cycle": 0.4004099560761347,
             "peaks": {
               "count": 0,
               "phases": []
@@ -380,46 +375,39 @@
             "sample_count": 2049,
             "sample_duration_beats": 16.0,
             "spatial_centroid": {
-              "direction_reversals": 0,
+              "direction_reversals": 3,
               "end": [
-                0.45454545454545453,
-                0.7954545454545454
+                0.22033898124492174,
+                0.5
               ],
-              "path_distance": 8.889662999653803,
+              "path_distance": 1.933458893667737,
               "start": [
-                0.45454545454545453,
-                0.7954545454545454
+                0.22033898124492174,
+                0.5
               ]
             },
-            "speed": 0.25,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 0.5333333333333333,
-              "observed_risk": "low"
-            }
+            "speed": 0.25
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.44,
-              "mean": 0.4011317073170716,
-              "minimum": 0.36,
-              "variance": 0.0007932558239143399
+              "maximum": 1.0,
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
-              "frames_per_on_window": 11.281829268292682,
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0019531250000000013,
-            "graph_cycles_per_beat": 0.5,
+            "frame_delta_change_energy": 0.0008593750026193453,
+            "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.44,
-              "mean": 0.4011317073170716,
-              "minimum": 0.36,
-              "variance": 0.0007932558239143399
+              "maximum": 0.6479999989271163,
+              "mean": 0.5599141469626888,
+              "minimum": 0.4719999983906746,
+              "variance": 0.0038757701932104582
             },
-            "on_duty_cycle": 0.40113170731707315,
             "peaks": {
               "count": 0,
               "phases": []
@@ -429,46 +417,39 @@
             "sample_count": 1025,
             "sample_duration_beats": 8.0,
             "spatial_centroid": {
-              "direction_reversals": 0,
+              "direction_reversals": 3,
               "end": [
-                0.45454545454545453,
-                0.7954545454545454
+                0.22033898124492174,
+                0.5
               ],
-              "path_distance": 8.889662999653803,
+              "path_distance": 1.9334588936677322,
               "start": [
-                0.45454545454545453,
-                0.7954545454545454
+                0.22033898124492174,
+                0.5
               ]
             },
-            "speed": 0.5,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 1.0666666666666667,
-              "observed_risk": "low"
-            }
+            "speed": 0.5
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.44,
-              "mean": 0.40132553606238097,
-              "minimum": 0.36,
-              "variance": 0.0007998024083383615
+              "maximum": 1.0,
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
-              "frames_per_on_window": 5.643640350877193,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.003906250000000003,
-            "graph_cycles_per_beat": 1.0,
+            "frame_delta_change_energy": 0.0017187500052386895,
+            "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.44,
-              "mean": 0.40132553606238097,
-              "minimum": 0.36,
-              "variance": 0.0007998024083383615
+              "maximum": 0.6479999989271163,
+              "mean": 0.5598284622120576,
+              "minimum": 0.4719999983906746,
+              "variance": 0.00387951836745479
             },
-            "on_duty_cycle": 0.40132553606237814,
             "peaks": {
               "count": 0,
               "phases": []
@@ -478,124 +459,84 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 0,
+              "direction_reversals": 3,
               "end": [
-                0.45454545454545453,
-                0.7954545454545454
+                0.22033898124492174,
+                0.5
               ],
-              "path_distance": 8.889662999653803,
+              "path_distance": 1.9334588936677315,
               "start": [
-                0.45454545454545453,
-                0.7954545454545454
+                0.22033898124492174,
+                0.5
               ]
             },
-            "speed": 1.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 2.1333333333333333,
-              "observed_risk": "low"
-            }
+            "speed": 1.0
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.44,
-              "mean": 0.40132553606238064,
-              "minimum": 0.36,
-              "variance": 0.0007998024083383631
+              "maximum": 1.0,
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
-              "frames_per_on_window": 2.8218201754385963,
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.007812499999999926,
-            "graph_cycles_per_beat": 2.0,
+            "frame_delta_change_energy": 0.003437500010477378,
+            "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.44,
-              "mean": 0.40132553606238064,
-              "minimum": 0.36,
-              "variance": 0.0007998024083383631
+              "maximum": 0.6479999989271163,
+              "mean": 0.5598284617763513,
+              "minimum": 0.4719999983906746,
+              "variance": 0.0038795183533870212
             },
-            "on_duty_cycle": 0.40132553606237814,
             "peaks": {
-              "count": 8,
-              "phases": [
-                0.984375,
-                0.984375,
-                0.984375,
-                0.984375,
-                0.984375,
-                0.984375,
-                0.984375,
-                0.984375
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 2.0,
             "primary_events_per_second": 4.266666666666667,
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 0,
+              "direction_reversals": 7,
               "end": [
-                0.45454545454545453,
-                0.7954545454545454
+                0.22033898124492174,
+                0.5
               ],
-              "path_distance": 17.779325999307588,
+              "path_distance": 3.866917787335465,
               "start": [
-                0.45454545454545453,
-                0.7954545454545454
+                0.22033898124492174,
+                0.5
               ]
             },
-            "speed": 2.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": true,
-              "maximum_fixture_flash_hz": 4.266666666666667,
-              "observed_risk": "medium"
-            }
+            "speed": 2.0
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.44,
-              "mean": 0.40631578947368635,
-              "minimum": 0.36,
-              "variance": 0.0007117677234020706
+              "maximum": 1.0,
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
-              "frames_per_on_window": 1.428453947368421,
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.015624999999999827,
-            "graph_cycles_per_beat": 4.0,
+            "frame_delta_change_energy": 0.006875000020954757,
+            "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.44,
-              "mean": 0.40631578947368635,
-              "minimum": 0.36,
-              "variance": 0.0007117677234020706
+              "maximum": 0.6479999989271163,
+              "mean": 0.5598284634610834,
+              "minimum": 0.4719999983906746,
+              "variance": 0.0038795184519775996
             },
-            "on_duty_cycle": 0.4063157894736842,
             "peaks": {
-              "count": 16,
-              "phases": [
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 4.0,
             "primary_events_per_second": 8.533333333333333,
@@ -604,64 +545,40 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.45454545454545453,
-                0.7954545454545454
+                0.22033898124492174,
+                0.5
               ],
-              "path_distance": 27.409811111593015,
+              "path_distance": 7.733835574670911,
               "start": [
-                0.45454545454545453,
-                0.7954545454545454
+                0.22033898124492174,
+                0.5
               ]
             },
-            "speed": 4.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": true,
-              "maximum_fixture_flash_hz": 8.533333333333333,
-              "observed_risk": "high"
-            }
+            "speed": 4.0
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.44,
-              "mean": 0.4062829268292657,
-              "minimum": 0.36,
-              "variance": 0.0007113540987507538
+              "maximum": 1.0,
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
-              "frames_per_on_window": 0.7141692073170732,
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.015624999999999747,
-            "graph_cycles_per_beat": 8.0,
+            "frame_delta_change_energy": 0.006875000020954758,
+            "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.44,
-              "mean": 0.4062829268292657,
-              "minimum": 0.36,
-              "variance": 0.0007113540987507538
+              "maximum": 0.6479999989271163,
+              "mean": 0.5599141497684688,
+              "minimum": 0.4719999983906746,
+              "variance": 0.0038757703090297885
             },
-            "on_duty_cycle": 0.4062829268292683,
             "peaks": {
-              "count": 32,
-              "phases": [
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875,
-                0.96875
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 8.0,
             "primary_events_per_second": 17.066666666666666,
@@ -670,21 +587,16 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.45454545454545453,
-                0.7954545454545454
+                0.22033898124492174,
+                0.5
               ],
-              "path_distance": 54.819622223185135,
+              "path_distance": 15.467671149341816,
               "start": [
-                0.45454545454545453,
-                0.7954545454545454
+                0.22033898124492174,
+                0.5
               ]
             },
-            "speed": 8.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": true,
-              "maximum_fixture_flash_hz": 17.066666666666666,
-              "observed_risk": "high"
-            }
+            "speed": 8.0
           }
         ],
         "identity": {
@@ -726,70 +638,55 @@
         "id": "builtin.intensity.chase",
         "revision": 1
       },
-      "name": "Alternating Grid Chase",
+      "name": "Column Half Relay",
       "topology_probe": {
         "behavior": {
-          "events_per_graph_cycle": 1.0,
-          "primary_event": "one_way_traversal",
-          "safety": {
-            "max_primary_events_per_second": 4.0
-          }
+          "events_per_graph_cycle": 2.0,
+          "primary_event": "directional_traversal"
         },
         "cache_key": "temporal-v1-810cb0317fb879e8",
         "fingerprints": [
           {
             "active_fixture_fraction": {
-              "maximum": 0.41,
-              "mean": 0.4000974658869395,
-              "minimum": 0.39,
-              "variance": 0.00004774878500127317
+              "maximum": 1.0,
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
-              "frames_per_on_window": 5.626370614035087,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0039062499999999553,
-            "graph_cycles_per_beat": 1.0,
+            "frame_delta_change_energy": 0.0017187500052386895,
+            "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.41,
-              "mean": 0.4000974658869395,
-              "minimum": 0.39,
-              "variance": 0.00004774878500127317
+              "maximum": 0.560000017285347,
+              "mean": 0.5600000021735944,
+              "minimum": 0.5599999874830246,
+              "variance": 9.250128884062104e-17
             },
-            "on_duty_cycle": 0.40009746588693956,
             "peaks": {
-              "count": 4,
-              "phases": [
-                0.9921875,
-                0.9921875,
-                0.9921875,
-                0.9921875
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 1.0,
             "primary_events_per_second": 2.1333333333333333,
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 0,
+              "direction_reversals": 3,
               "end": [
-                0.4878048780487806,
-                0.813008130081301
+                0.2817460305581202,
+                0.5
               ],
-              "path_distance": 6.581361634134188,
+              "path_distance": 1.746031755535035,
               "start": [
-                0.4878048780487806,
-                0.813008130081301
+                0.2817460305581202,
+                0.5
               ]
             },
-            "speed": 1.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 2.1333333333333333,
-              "observed_risk": "low"
-            }
+            "speed": 1.0
           }
         ],
         "identity": {
@@ -826,6 +723,1506 @@
     {
       "all_legal_speeds": {
         "behavior": {
+          "events_per_graph_cycle": 1.0,
+          "primary_event": "spatial_propagation"
+        },
+        "cache_key": "temporal-v1-b93adf7bdb5df13f",
+        "fingerprints": [
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.9748169838945804,
+              "minimum": 0.6,
+              "variance": 0.008501979682264921
+            },
+            "aliasing": {
+              "frames_per_primary_event": 56.25,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "frame_delta_change_energy": 0.0008078280166955657,
+            "graph_cycles_per_beat": 0.25,
+            "intensity": {
+              "maximum": 0.7421363592147827,
+              "mean": 0.5977334194354407,
+              "minimum": 0.4391113519668579,
+              "variance": 0.00504084499024531
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 0.25,
+            "primary_events_per_second": 0.5333333333333333,
+            "sample_count": 2049,
+            "sample_duration_beats": 16.0,
+            "spatial_centroid": {
+              "direction_reversals": 7,
+              "end": [
+                0.7466421168771974,
+                0.5
+              ],
+              "path_distance": 3.344501654703821,
+              "start": [
+                0.7466421168771974,
+                0.5
+              ]
+            },
+            "speed": 0.25
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.9746341463414637,
+              "minimum": 0.6,
+              "variance": 0.008566329565734667
+            },
+            "aliasing": {
+              "frames_per_primary_event": 28.125,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "frame_delta_change_energy": 0.0016133588855154824,
+            "graph_cycles_per_beat": 0.5,
+            "intensity": {
+              "maximum": 0.7421363592147827,
+              "mean": 0.597687049511002,
+              "minimum": 0.43993900120258334,
+              "variance": 0.005043283911542587
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 0.5,
+            "primary_events_per_second": 1.0666666666666667,
+            "sample_count": 1025,
+            "sample_duration_beats": 8.0,
+            "spatial_centroid": {
+              "direction_reversals": 7,
+              "end": [
+                0.7466421168771974,
+                0.5
+              ],
+              "path_distance": 3.3371945337793223,
+              "start": [
+                0.7466421168771974,
+                0.5
+              ]
+            },
+            "speed": 0.5
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.9727095516569207,
+              "minimum": 0.6,
+              "variance": 0.00923573825184574
+            },
+            "aliasing": {
+              "frames_per_primary_event": 14.0625,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "frame_delta_change_energy": 0.003222123492741953,
+            "graph_cycles_per_beat": 1.0,
+            "intensity": {
+              "maximum": 0.7421363592147827,
+              "mean": 0.5975927132960643,
+              "minimum": 0.4414636343717575,
+              "variance": 0.0050493076669095435
+            },
+            "peaks": {
+              "count": 3,
+              "phases": [
+                0.0,
+                0.0,
+                0.0
+              ]
+            },
+            "primary_events_per_beat": 1.0,
+            "primary_events_per_second": 2.1333333333333333,
+            "sample_count": 513,
+            "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 7,
+              "end": [
+                0.7466421168771974,
+                0.5
+              ],
+              "path_distance": 3.337194533779318,
+              "start": [
+                0.7466421168771974,
+                0.5
+              ]
+            },
+            "speed": 1.0
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.9711500974658877,
+              "minimum": 0.6,
+              "variance": 0.010083862461004144
+            },
+            "aliasing": {
+              "frames_per_primary_event": 7.03125,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "frame_delta_change_energy": 0.006407492735888823,
+            "graph_cycles_per_beat": 2.0,
+            "intensity": {
+              "maximum": 0.7356545329093933,
+              "mean": 0.5975572544231742,
+              "minimum": 0.4447742372751236,
+              "variance": 0.005044460713759387
+            },
+            "peaks": {
+              "count": 7,
+              "phases": [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            },
+            "primary_events_per_beat": 2.0,
+            "primary_events_per_second": 4.266666666666667,
+            "sample_count": 513,
+            "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 15,
+              "end": [
+                0.7466421168771974,
+                0.5
+              ],
+              "path_distance": 6.617456936024359,
+              "start": [
+                0.7466421168771974,
+                0.5
+              ]
+            },
+            "speed": 2.0
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.9742690058479538,
+              "minimum": 0.6,
+              "variance": 0.009630313600765932
+            },
+            "aliasing": {
+              "frames_per_primary_event": 3.515625,
+              "preview_fps": 30.0,
+              "risk": "caution"
+            },
+            "frame_delta_change_energy": 0.012741476949304359,
+            "graph_cycles_per_beat": 4.0,
+            "intensity": {
+              "maximum": 0.7356545329093933,
+              "mean": 0.5975069861198252,
+              "minimum": 0.4508727014064789,
+              "variance": 0.005060986406492917
+            },
+            "peaks": {
+              "count": 15,
+              "phases": [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            },
+            "primary_events_per_beat": 4.0,
+            "primary_events_per_second": 8.533333333333333,
+            "sample_count": 513,
+            "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 31,
+              "end": [
+                0.7466421168771974,
+                0.5
+              ],
+              "path_distance": 13.234913872048713,
+              "start": [
+                0.7466421168771974,
+                0.5
+              ]
+            },
+            "speed": 4.0
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.9746341463414644,
+              "minimum": 0.6,
+              "variance": 0.009502914931588323
+            },
+            "aliasing": {
+              "frames_per_primary_event": 1.7578125,
+              "preview_fps": 30.0,
+              "risk": "severe"
+            },
+            "frame_delta_change_energy": 0.01274147694930435,
+            "graph_cycles_per_beat": 8.0,
+            "intensity": {
+              "maximum": 0.7356545329093933,
+              "mean": 0.5975986381856395,
+              "minimum": 0.4508727014064789,
+              "variance": 0.005057305450408134
+            },
+            "peaks": {
+              "count": 31,
+              "phases": [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            },
+            "primary_events_per_beat": 8.0,
+            "primary_events_per_second": 17.066666666666666,
+            "sample_count": 1025,
+            "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 63,
+              "end": [
+                0.7466421168771974,
+                0.5
+              ],
+              "path_distance": 26.46982774409742,
+              "start": [
+                0.7466421168771974,
+                0.5
+              ]
+            },
+            "speed": 8.0
+          }
+        ],
+        "identity": {
+          "bpm": 128.0,
+          "effect_ref": {
+            "id": "builtin.spatial.column-thirds-triplet",
+            "revision": 1
+          },
+          "layout_ref": {
+            "id": "builtin.layout.matrix-main-20x20",
+            "revision": 1
+          },
+          "parameter_overrides": {},
+          "sampling": {
+            "base_samples_per_beat": 128,
+            "minimum_samples_per_event": 32,
+            "preview_fps": 30.0,
+            "primary_event_window": 4
+          },
+          "seed": "0000000000000001",
+          "speeds": [
+            0.25,
+            0.5,
+            1.0,
+            2.0,
+            4.0,
+            8.0
+          ],
+          "stage_ref": {
+            "id": "analysis.stage.matrix-20x20-moving-head",
+            "revision": 1
+          },
+          "target_fixture_count": 25,
+          "target_set_id": "zone-4x4-1"
+        },
+        "schema_version": 1
+      },
+      "effect_ref": {
+        "id": "builtin.spatial.column-thirds-triplet",
+        "revision": 1
+      },
+      "name": "Column Thirds Triplet",
+      "topology_probe": {
+        "behavior": {
+          "events_per_graph_cycle": 1.0,
+          "primary_event": "spatial_propagation"
+        },
+        "cache_key": "temporal-v1-0815e0593d1d0355",
+        "fingerprints": [
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.9729044834307992,
+              "minimum": 0.6,
+              "variance": 0.008642051305434861
+            },
+            "aliasing": {
+              "frames_per_primary_event": 14.0625,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "frame_delta_change_energy": 0.0032190606376388984,
+            "graph_cycles_per_beat": 1.0,
+            "intensity": {
+              "maximum": 0.6895151376724243,
+              "mean": 0.5976925036131064,
+              "minimum": 0.4736897677183151,
+              "variance": 0.0028351770556220707
+            },
+            "peaks": {
+              "count": 3,
+              "phases": [
+                0.0,
+                0.0,
+                0.0
+              ]
+            },
+            "primary_events_per_beat": 1.0,
+            "primary_events_per_second": 2.1333333333333333,
+            "sample_count": 513,
+            "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 0,
+              "end": [
+                0.6842658290050537,
+                0.5
+              ],
+              "path_distance": 2.694843123239222,
+              "start": [
+                0.6842658290050537,
+                0.5
+              ]
+            },
+            "speed": 1.0
+          }
+        ],
+        "identity": {
+          "bpm": 128.0,
+          "effect_ref": {
+            "id": "builtin.spatial.column-thirds-triplet",
+            "revision": 1
+          },
+          "layout_ref": {
+            "id": "builtin.layout.matrix-main-20x20",
+            "revision": 1
+          },
+          "parameter_overrides": {},
+          "sampling": {
+            "base_samples_per_beat": 128,
+            "minimum_samples_per_event": 32,
+            "preview_fps": 30.0,
+            "primary_event_window": 4
+          },
+          "seed": "0000000000000001",
+          "speeds": [
+            1.0
+          ],
+          "stage_ref": {
+            "id": "analysis.stage.matrix-20x20-moving-head",
+            "revision": 1
+          },
+          "target_fixture_count": 100,
+          "target_set_id": "zone-2x2-1"
+        },
+        "schema_version": 1
+      }
+    },
+    {
+      "all_legal_speeds": {
+        "behavior": {
+          "events_per_graph_cycle": 1.0,
+          "primary_event": "spatial_propagation"
+        },
+        "cache_key": "temporal-v1-f8118eeb745d76c5",
+        "fingerprints": [
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.9120546608101396,
+              "minimum": 0.6,
+              "variance": 0.016882503600775364
+            },
+            "aliasing": {
+              "frames_per_primary_event": 56.25,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "frame_delta_change_energy": 0.0007470703349099483,
+            "graph_cycles_per_beat": 0.25,
+            "intensity": {
+              "maximum": 0.5440000221133232,
+              "mean": 0.4675373470618878,
+              "minimum": 0.39100001752376556,
+              "variance": 0.0029275517996960885
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 0.25,
+            "primary_events_per_second": 0.5333333333333333,
+            "sample_count": 2049,
+            "sample_duration_beats": 16.0,
+            "spatial_centroid": {
+              "direction_reversals": 0,
+              "end": [
+                0.6406249950780288,
+                0.5
+              ],
+              "path_distance": 2.999679179607672,
+              "start": [
+                0.6406249950780288,
+                0.5
+              ]
+            },
+            "speed": 0.25
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.9100487804878019,
+              "minimum": 0.6,
+              "variance": 0.01707950981558603
+            },
+            "aliasing": {
+              "frames_per_primary_event": 28.125,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "frame_delta_change_energy": 0.001494140669819901,
+            "graph_cycles_per_beat": 0.5,
+            "intensity": {
+              "maximum": 0.5440000221133232,
+              "mean": 0.46757464591322767,
+              "minimum": 0.39100001752376556,
+              "variance": 0.002928974279087527
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 0.5,
+            "primary_events_per_second": 1.0666666666666667,
+            "sample_count": 1025,
+            "sample_duration_beats": 8.0,
+            "spatial_centroid": {
+              "direction_reversals": 0,
+              "end": [
+                0.6406249950780288,
+                0.5
+              ],
+              "path_distance": 2.9996791796076745,
+              "start": [
+                0.6406249950780288,
+                0.5
+              ]
+            },
+            "speed": 0.5
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.913840155945422,
+              "minimum": 0.6,
+              "variance": 0.01667004852395228
+            },
+            "aliasing": {
+              "frames_per_primary_event": 14.0625,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "frame_delta_change_energy": 0.0029882813396398,
+            "graph_cycles_per_beat": 1.0,
+            "intensity": {
+              "maximum": 0.5440000221133232,
+              "mean": 0.4676491330444928,
+              "minimum": 0.39100001752376556,
+              "variance": 0.0029318068241432987
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 1.0,
+            "primary_events_per_second": 2.1333333333333333,
+            "sample_count": 513,
+            "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 0,
+              "end": [
+                0.6406249950780288,
+                0.5
+              ],
+              "path_distance": 2.9996791796076705,
+              "start": [
+                0.6406249950780288,
+                0.5
+              ]
+            },
+            "speed": 1.0
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.9216374269005874,
+              "minimum": 0.6,
+              "variance": 0.01576963852125457
+            },
+            "aliasing": {
+              "frames_per_primary_event": 7.03125,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "frame_delta_change_energy": 0.005976562679279598,
+            "graph_cycles_per_beat": 2.0,
+            "intensity": {
+              "maximum": 0.5440000221133232,
+              "mean": 0.4676491334511525,
+              "minimum": 0.39100001752376556,
+              "variance": 0.0029318068131579263
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 2.0,
+            "primary_events_per_second": 4.266666666666667,
+            "sample_count": 513,
+            "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 0,
+              "end": [
+                0.6406249950780288,
+                0.5
+              ],
+              "path_distance": 5.9970008247371265,
+              "start": [
+                0.6406249950780288,
+                0.5
+              ]
+            },
+            "speed": 2.0
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.9060428849902563,
+              "minimum": 0.6,
+              "variance": 0.01744886365795369
+            },
+            "aliasing": {
+              "frames_per_primary_event": 3.515625,
+              "preview_fps": 30.0,
+              "risk": "caution"
+            },
+            "frame_delta_change_energy": 0.011953125358559167,
+            "graph_cycles_per_beat": 4.0,
+            "intensity": {
+              "maximum": 0.5440000221133232,
+              "mean": 0.4676491349616008,
+              "minimum": 0.39100001752376556,
+              "variance": 0.0029318068004984396
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 4.0,
+            "primary_events_per_second": 8.533333333333333,
+            "sample_count": 513,
+            "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 0,
+              "end": [
+                0.6406249950780288,
+                0.5
+              ],
+              "path_distance": 11.992610579156613,
+              "start": [
+                0.6406249950780288,
+                0.5
+              ]
+            },
+            "speed": 4.0
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.9061463414634114,
+              "minimum": 0.6,
+              "variance": 0.017454905413444532
+            },
+            "aliasing": {
+              "frames_per_primary_event": 1.7578125,
+              "preview_fps": 30.0,
+              "risk": "severe"
+            },
+            "frame_delta_change_energy": 0.011953125358559209,
+            "graph_cycles_per_beat": 8.0,
+            "intensity": {
+              "maximum": 0.5440000221133232,
+              "mean": 0.4675746462912075,
+              "minimum": 0.39100001752376556,
+              "variance": 0.002928974275186799
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 8.0,
+            "primary_events_per_second": 17.066666666666666,
+            "sample_count": 1025,
+            "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 0,
+              "end": [
+                0.6406249950780288,
+                0.5
+              ],
+              "path_distance": 23.98522115831334,
+              "start": [
+                0.6406249950780288,
+                0.5
+              ]
+            },
+            "speed": 8.0
+          }
+        ],
+        "identity": {
+          "bpm": 128.0,
+          "effect_ref": {
+            "id": "builtin.spatial.column-quarter-cascade",
+            "revision": 1
+          },
+          "layout_ref": {
+            "id": "builtin.layout.matrix-main-20x20",
+            "revision": 1
+          },
+          "parameter_overrides": {},
+          "sampling": {
+            "base_samples_per_beat": 128,
+            "minimum_samples_per_event": 32,
+            "preview_fps": 30.0,
+            "primary_event_window": 4
+          },
+          "seed": "0000000000000001",
+          "speeds": [
+            0.25,
+            0.5,
+            1.0,
+            2.0,
+            4.0,
+            8.0
+          ],
+          "stage_ref": {
+            "id": "analysis.stage.matrix-20x20-moving-head",
+            "revision": 1
+          },
+          "target_fixture_count": 25,
+          "target_set_id": "zone-4x4-1"
+        },
+        "schema_version": 1
+      },
+      "effect_ref": {
+        "id": "builtin.spatial.column-quarter-cascade",
+        "revision": 1
+      },
+      "name": "Column Quarter Cascade",
+      "topology_probe": {
+        "behavior": {
+          "events_per_graph_cycle": 1.0,
+          "primary_event": "spatial_propagation"
+        },
+        "cache_key": "temporal-v1-af69034df784a7b3",
+        "fingerprints": [
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.913840155945419,
+              "minimum": 0.7,
+              "variance": 0.014954648913815921
+            },
+            "aliasing": {
+              "frames_per_primary_event": 14.0625,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "frame_delta_change_energy": 0.0029882813396398004,
+            "graph_cycles_per_beat": 1.0,
+            "intensity": {
+              "maximum": 0.5215936601161957,
+              "mean": 0.4675745716423784,
+              "minimum": 0.4134063273668289,
+              "variance": 0.0014630569978968124
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 1.0,
+            "primary_events_per_second": 2.1333333333333333,
+            "sample_count": 513,
+            "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 0,
+              "end": [
+                0.6050420117379561,
+                0.5
+              ],
+              "path_distance": 2.5882706292588997,
+              "start": [
+                0.6050420117379561,
+                0.5
+              ]
+            },
+            "speed": 1.0
+          }
+        ],
+        "identity": {
+          "bpm": 128.0,
+          "effect_ref": {
+            "id": "builtin.spatial.column-quarter-cascade",
+            "revision": 1
+          },
+          "layout_ref": {
+            "id": "builtin.layout.matrix-main-20x20",
+            "revision": 1
+          },
+          "parameter_overrides": {},
+          "sampling": {
+            "base_samples_per_beat": 128,
+            "minimum_samples_per_event": 32,
+            "preview_fps": 30.0,
+            "primary_event_window": 4
+          },
+          "seed": "0000000000000001",
+          "speeds": [
+            1.0
+          ],
+          "stage_ref": {
+            "id": "analysis.stage.matrix-20x20-moving-head",
+            "revision": 1
+          },
+          "target_fixture_count": 100,
+          "target_set_id": "zone-2x2-1"
+        },
+        "schema_version": 1
+      }
+    },
+    {
+      "all_legal_speeds": {
+        "behavior": {
+          "events_per_graph_cycle": 1.0,
+          "primary_event": "spatial_propagation"
+        },
+        "cache_key": "temporal-v1-117ec4b45641a644",
+        "fingerprints": [
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.8824792581747095,
+              "minimum": 0.6,
+              "variance": 0.028433872800620777
+            },
+            "aliasing": {
+              "frames_per_primary_event": 56.25,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "frame_delta_change_energy": 0.0008085883222520343,
+            "graph_cycles_per_beat": 0.25,
+            "intensity": {
+              "maximum": 0.5687999665737152,
+              "mean": 0.48599998748203505,
+              "minimum": 0.40319998264312745,
+              "variance": 0.00342624689517392
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 0.25,
+            "primary_events_per_second": 0.5333333333333333,
+            "sample_count": 2049,
+            "sample_duration_beats": 16.0,
+            "speed": 0.25
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.8821463414634155,
+              "minimum": 0.6,
+              "variance": 0.02841295419393213
+            },
+            "aliasing": {
+              "frames_per_primary_event": 28.125,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "frame_delta_change_energy": 0.0016171442111954089,
+            "graph_cycles_per_beat": 0.5,
+            "intensity": {
+              "maximum": 0.5687999665737152,
+              "mean": 0.48599998874780637,
+              "minimum": 0.40319998264312745,
+              "variance": 0.0034245757094965037
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 0.5,
+            "primary_events_per_second": 1.0666666666666667,
+            "sample_count": 1025,
+            "sample_duration_beats": 8.0,
+            "speed": 0.5
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.8830409356725171,
+              "minimum": 0.6,
+              "variance": 0.028425840429533958
+            },
+            "aliasing": {
+              "frames_per_primary_event": 14.0625,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "frame_delta_change_energy": 0.0032340285135433063,
+            "graph_cycles_per_beat": 1.0,
+            "intensity": {
+              "maximum": 0.5687999665737152,
+              "mean": 0.48599998824312907,
+              "minimum": 0.40319998264312745,
+              "variance": 0.0034212380007486195
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 1.0,
+            "primary_events_per_second": 2.1333333333333333,
+            "sample_count": 513,
+            "sample_duration_beats": 4.0,
+            "speed": 1.0
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.8783625730994176,
+              "minimum": 0.6,
+              "variance": 0.029492835402345794
+            },
+            "aliasing": {
+              "frames_per_primary_event": 7.03125,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "frame_delta_change_energy": 0.006465979013591999,
+            "graph_cycles_per_beat": 2.0,
+            "intensity": {
+              "maximum": 0.5687999665737152,
+              "mean": 0.4859999881269407,
+              "minimum": 0.40319998264312745,
+              "variance": 0.0034212382005487387
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 2.0,
+            "primary_events_per_second": 4.266666666666667,
+            "sample_count": 513,
+            "sample_duration_beats": 4.0,
+            "speed": 2.0
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.881481481481484,
+              "minimum": 0.6,
+              "variance": 0.02961807811710332
+            },
+            "aliasing": {
+              "frames_per_primary_event": 3.515625,
+              "preview_fps": 30.0,
+              "risk": "caution"
+            },
+            "frame_delta_change_energy": 0.012915339041501292,
+            "graph_cycles_per_beat": 4.0,
+            "intensity": {
+              "maximum": 0.5687999665737152,
+              "mean": 0.4859999865932543,
+              "minimum": 0.40319998264312745,
+              "variance": 0.0034212376240345625
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 4.0,
+            "primary_events_per_second": 8.533333333333333,
+            "sample_count": 513,
+            "sample_duration_beats": 4.0,
+            "speed": 4.0
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.8813658536585389,
+              "minimum": 0.6,
+              "variance": 0.029633256395002312
+            },
+            "aliasing": {
+              "frames_per_primary_event": 1.7578125,
+              "preview_fps": 30.0,
+              "risk": "severe"
+            },
+            "frame_delta_change_energy": 0.012915339041501214,
+            "graph_cycles_per_beat": 8.0,
+            "intensity": {
+              "maximum": 0.5687999665737152,
+              "mean": 0.485999986607856,
+              "minimum": 0.40319998264312745,
+              "variance": 0.0034245754168385073
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 8.0,
+            "primary_events_per_second": 17.066666666666666,
+            "sample_count": 1025,
+            "sample_duration_beats": 4.0,
+            "speed": 8.0
+          }
+        ],
+        "identity": {
+          "bpm": 128.0,
+          "effect_ref": {
+            "id": "builtin.spatial.column-center-ripple",
+            "revision": 1
+          },
+          "layout_ref": {
+            "id": "builtin.layout.matrix-main-20x20",
+            "revision": 1
+          },
+          "parameter_overrides": {},
+          "sampling": {
+            "base_samples_per_beat": 128,
+            "minimum_samples_per_event": 32,
+            "preview_fps": 30.0,
+            "primary_event_window": 4
+          },
+          "seed": "0000000000000001",
+          "speeds": [
+            0.25,
+            0.5,
+            1.0,
+            2.0,
+            4.0,
+            8.0
+          ],
+          "stage_ref": {
+            "id": "analysis.stage.matrix-20x20-moving-head",
+            "revision": 1
+          },
+          "target_fixture_count": 25,
+          "target_set_id": "zone-4x4-1"
+        },
+        "schema_version": 1
+      },
+      "effect_ref": {
+        "id": "builtin.spatial.column-center-ripple",
+        "revision": 1
+      },
+      "name": "Column Center Ripple",
+      "topology_probe": {
+        "behavior": {
+          "events_per_graph_cycle": 1.0,
+          "primary_event": "spatial_propagation"
+        },
+        "cache_key": "temporal-v1-748505d8655a576e",
+        "fingerprints": [
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 0.8813658536585396,
+              "minimum": 0.6,
+              "variance": 0.028696671029148742
+            },
+            "aliasing": {
+              "frames_per_primary_event": 28.125,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "frame_delta_change_energy": 0.001617155023268425,
+            "graph_cycles_per_beat": 0.5,
+            "intensity": {
+              "maximum": 0.568797205388546,
+              "mean": 0.4860699471642325,
+              "minimum": 0.40320277214050293,
+              "variance": 0.003429587047252401
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 0.5,
+            "primary_events_per_second": 1.0666666666666667,
+            "sample_count": 1025,
+            "sample_duration_beats": 8.0,
+            "speed": 0.5
+          }
+        ],
+        "identity": {
+          "bpm": 128.0,
+          "effect_ref": {
+            "id": "builtin.spatial.column-center-ripple",
+            "revision": 1
+          },
+          "layout_ref": {
+            "id": "builtin.layout.matrix-main-20x20",
+            "revision": 1
+          },
+          "parameter_overrides": {},
+          "sampling": {
+            "base_samples_per_beat": 128,
+            "minimum_samples_per_event": 32,
+            "preview_fps": 30.0,
+            "primary_event_window": 4
+          },
+          "seed": "0000000000000001",
+          "speeds": [
+            0.5
+          ],
+          "stage_ref": {
+            "id": "analysis.stage.matrix-20x20-moving-head",
+            "revision": 1
+          },
+          "target_fixture_count": 100,
+          "target_set_id": "zone-2x2-1"
+        },
+        "schema_version": 1
+      }
+    },
+    {
+      "all_legal_speeds": {
+        "behavior": {
+          "events_per_graph_cycle": 1.0,
+          "primary_event": "spatial_propagation"
+        },
+        "cache_key": "temporal-v1-50578625059cd44a",
+        "fingerprints": [
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
+            },
+            "aliasing": {
+              "frames_per_primary_event": 56.25,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "color_change_energy": 0.002861346585692462,
+            "frame_delta_change_energy": 0.0012492988694361616,
+            "graph_cycles_per_beat": 0.25,
+            "intensity": {
+              "maximum": 0.6290000200271606,
+              "mean": 0.5737769796069863,
+              "minimum": 0.5185000181198121,
+              "variance": 0.0015270254765970513
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 0.25,
+            "primary_events_per_second": 0.5333333333333333,
+            "sample_count": 2049,
+            "sample_duration_beats": 16.0,
+            "spatial_centroid": {
+              "direction_reversals": 0,
+              "end": [
+                0.5878378365572844,
+                0.5
+              ],
+              "path_distance": 1.7371002078288538,
+              "start": [
+                0.5878378365572844,
+                0.5
+              ]
+            },
+            "speed": 0.25
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
+            },
+            "aliasing": {
+              "frames_per_primary_event": 28.125,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "color_change_energy": 0.005245698355178343,
+            "frame_delta_change_energy": 0.002390526169921039,
+            "graph_cycles_per_beat": 0.5,
+            "intensity": {
+              "maximum": 0.6290000200271606,
+              "mean": 0.57380391546575,
+              "minimum": 0.5185000181198121,
+              "variance": 0.0015277674493391034
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 0.5,
+            "primary_events_per_second": 1.0666666666666667,
+            "sample_count": 1025,
+            "sample_duration_beats": 8.0,
+            "spatial_centroid": {
+              "direction_reversals": 0,
+              "end": [
+                0.5878378365572844,
+                0.5
+              ],
+              "path_distance": 1.7370772589091863,
+              "start": [
+                0.5878378365572844,
+                0.5
+              ]
+            },
+            "speed": 0.5
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
+            },
+            "aliasing": {
+              "frames_per_primary_event": 14.0625,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "color_change_energy": 0.010154794431302596,
+            "frame_delta_change_energy": 0.0046969017700785485,
+            "graph_cycles_per_beat": 1.0,
+            "intensity": {
+              "maximum": 0.6290000200271606,
+              "mean": 0.573857709585342,
+              "minimum": 0.5185000181198121,
+              "variance": 0.0015292448737721518
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 1.0,
+            "primary_events_per_second": 2.1333333333333333,
+            "sample_count": 513,
+            "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 0,
+              "end": [
+                0.5878378365572844,
+                0.5
+              ],
+              "path_distance": 1.7367860776964914,
+              "start": [
+                0.5878378365572844,
+                0.5
+              ]
+            },
+            "speed": 1.0
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
+            },
+            "aliasing": {
+              "frames_per_primary_event": 7.03125,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "color_change_energy": 0.01990474369693966,
+            "frame_delta_change_energy": 0.009292592248740723,
+            "graph_cycles_per_beat": 2.0,
+            "intensity": {
+              "maximum": 0.6290000200271606,
+              "mean": 0.573857708655834,
+              "minimum": 0.5185000181198121,
+              "variance": 0.001529244869337753
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 2.0,
+            "primary_events_per_second": 4.266666666666667,
+            "sample_count": 513,
+            "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 0,
+              "end": [
+                0.5878378365572844,
+                0.5
+              ],
+              "path_distance": 3.4732330716544775,
+              "start": [
+                0.5878378365572844,
+                0.5
+              ]
+            },
+            "speed": 2.0
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
+            },
+            "aliasing": {
+              "frames_per_primary_event": 3.515625,
+              "preview_fps": 30.0,
+              "risk": "caution"
+            },
+            "color_change_energy": 0.039090261025106474,
+            "frame_delta_change_energy": 0.01840537790528825,
+            "graph_cycles_per_beat": 4.0,
+            "intensity": {
+              "maximum": 0.6290000200271606,
+              "mean": 0.5738577058673138,
+              "minimum": 0.5185000181198121,
+              "variance": 0.0015292449000953866
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 4.0,
+            "primary_events_per_second": 8.533333333333333,
+            "sample_count": 513,
+            "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 0,
+              "end": [
+                0.5878378365572844,
+                0.5
+              ],
+              "path_distance": 6.936879628453043,
+              "start": [
+                0.5878378365572844,
+                0.5
+              ]
+            },
+            "speed": 4.0
+          },
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
+            },
+            "aliasing": {
+              "frames_per_primary_event": 1.7578125,
+              "preview_fps": 30.0,
+              "risk": "severe"
+            },
+            "color_change_energy": 0.03909026102510638,
+            "frame_delta_change_energy": 0.018405377905288234,
+            "graph_cycles_per_beat": 8.0,
+            "intensity": {
+              "maximum": 0.6290000200271606,
+              "mean": 0.5738039084876422,
+              "minimum": 0.5185000181198121,
+              "variance": 0.0015277674401706933
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 8.0,
+            "primary_events_per_second": 17.066666666666666,
+            "sample_count": 1025,
+            "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 0,
+              "end": [
+                0.5878378365572844,
+                0.5
+              ],
+              "path_distance": 13.873759256906078,
+              "start": [
+                0.5878378365572844,
+                0.5
+              ]
+            },
+            "speed": 8.0
+          }
+        ],
+        "identity": {
+          "bpm": 128.0,
+          "effect_ref": {
+            "id": "builtin.color.column-prism",
+            "revision": 1
+          },
+          "layout_ref": {
+            "id": "builtin.layout.matrix-main-20x20",
+            "revision": 1
+          },
+          "parameter_overrides": {},
+          "sampling": {
+            "base_samples_per_beat": 128,
+            "minimum_samples_per_event": 32,
+            "preview_fps": 30.0,
+            "primary_event_window": 4
+          },
+          "seed": "0000000000000001",
+          "speeds": [
+            0.25,
+            0.5,
+            1.0,
+            2.0,
+            4.0,
+            8.0
+          ],
+          "stage_ref": {
+            "id": "analysis.stage.matrix-20x20-moving-head",
+            "revision": 1
+          },
+          "target_fixture_count": 25,
+          "target_set_id": "zone-4x4-1"
+        },
+        "schema_version": 1
+      },
+      "effect_ref": {
+        "id": "builtin.color.column-prism",
+        "revision": 1
+      },
+      "name": "Four-Column Prism",
+      "topology_probe": {
+        "behavior": {
+          "events_per_graph_cycle": 1.0,
+          "primary_event": "spatial_propagation"
+        },
+        "cache_key": "temporal-v1-d203f79e13a65dcc",
+        "fingerprints": [
+          {
+            "active_fixture_fraction": {
+              "maximum": 1.0,
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
+            },
+            "aliasing": {
+              "frames_per_primary_event": 28.125,
+              "preview_fps": 30.0,
+              "risk": "none"
+            },
+            "color_change_energy": 0.005245698355178366,
+            "frame_delta_change_energy": 0.002390526169921038,
+            "graph_cycles_per_beat": 0.5,
+            "intensity": {
+              "maximum": 0.6128176689147949,
+              "mean": 0.5737769642457727,
+              "minimum": 0.5346823692321777,
+              "variance": 0.0007631399235731413
+            },
+            "peaks": {
+              "count": 0,
+              "phases": []
+            },
+            "primary_events_per_beat": 0.5,
+            "primary_events_per_second": 1.0666666666666667,
+            "sample_count": 1025,
+            "sample_duration_beats": 8.0,
+            "spatial_centroid": {
+              "direction_reversals": 0,
+              "end": [
+                0.5638005486934244,
+                0.49999999999999994
+              ],
+              "path_distance": 1.5166474838456048,
+              "start": [
+                0.5638005486934244,
+                0.49999999999999994
+              ]
+            },
+            "speed": 0.5
+          }
+        ],
+        "identity": {
+          "bpm": 128.0,
+          "effect_ref": {
+            "id": "builtin.color.column-prism",
+            "revision": 1
+          },
+          "layout_ref": {
+            "id": "builtin.layout.matrix-main-20x20",
+            "revision": 1
+          },
+          "parameter_overrides": {},
+          "sampling": {
+            "base_samples_per_beat": 128,
+            "minimum_samples_per_event": 32,
+            "preview_fps": 30.0,
+            "primary_event_window": 4
+          },
+          "seed": "0000000000000001",
+          "speeds": [
+            0.5
+          ],
+          "stage_ref": {
+            "id": "analysis.stage.matrix-20x20-moving-head",
+            "revision": 1
+          },
+          "target_fixture_count": 100,
+          "target_set_id": "zone-2x2-1"
+        },
+        "schema_version": 1
+      }
+    },
+    {
+      "all_legal_speeds": {
+        "behavior": {
           "events_per_graph_cycle": 2.0,
           "primary_event": "directional_traversal"
         },
@@ -833,23 +2230,23 @@
         "fingerprints": [
           {
             "active_fixture_fraction": {
-              "maximum": 0.2,
-              "mean": 0.117618350414834,
-              "minimum": 0.0,
-              "variance": 0.009689593728660132
+              "maximum": 0.4,
+              "mean": 0.2710590531966756,
+              "minimum": 0.2,
+              "variance": 0.009162421598127288
             },
             "aliasing": {
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0007031249813735481,
+            "frame_delta_change_energy": 0.0007031188346445565,
             "graph_cycles_per_beat": 0.125,
             "intensity": {
-              "maximum": 0.1799999952316284,
-              "mean": 0.1058565125691149,
-              "minimum": 0.0,
-              "variance": 0.007848570504382351
+              "maximum": 0.1992841422557831,
+              "mean": 0.17965435980332478,
+              "minimum": 0.1597597599029541,
+              "variance": 0.00011141377277060688
             },
             "peaks": {
               "count": 0,
@@ -865,7 +2262,7 @@
                 0.0,
                 0.5
               ],
-              "path_distance": 4.0,
+              "path_distance": 4.000000000000007,
               "start": [
                 0.0,
                 0.5
@@ -875,23 +2272,23 @@
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.2,
-              "mean": 0.11804878048780602,
-              "minimum": 0.0,
-              "variance": 0.009674241522903
+              "maximum": 0.4,
+              "mean": 0.27024390243902174,
+              "minimum": 0.2,
+              "variance": 0.009114574657941703
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0014062499627470963,
+            "frame_delta_change_energy": 0.0014062376692891118,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.1799999952316284,
-              "mean": 0.10624389962452105,
-              "minimum": 0.0,
-              "variance": 0.007836135218377938
+              "maximum": 0.19927340149879455,
+              "mean": 0.17965318783972364,
+              "minimum": 0.15981013774871827,
+              "variance": 0.00011140873399605938
             },
             "peaks": {
               "count": 0,
@@ -907,7 +2304,7 @@
                 0.0,
                 0.5
               ],
-              "path_distance": 4.0,
+              "path_distance": 4.000000000000007,
               "start": [
                 0.0,
                 0.5
@@ -917,23 +2314,23 @@
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.2,
-              "mean": 0.11734892787524429,
-              "minimum": 0.0,
-              "variance": 0.009699014701579543
+              "maximum": 0.4,
+              "mean": 0.2717348927875258,
+              "minimum": 0.2,
+              "variance": 0.009201083714267259
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0028124999254941926,
+            "frame_delta_change_energy": 0.002811934892088177,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.1799999952316284,
-              "mean": 0.10561403228990232,
-              "minimum": 0.0,
-              "variance": 0.007856201492042993
+              "maximum": 0.19924954175949097,
+              "mean": 0.179661508672825,
+              "minimum": 0.16030345438048244,
+              "variance": 0.00011096674752688776
             },
             "peaks": {
               "count": 0,
@@ -949,7 +2346,7 @@
                 0.0,
                 0.5
               ],
-              "path_distance": 4.0,
+              "path_distance": 3.999999999999998,
               "start": [
                 0.0,
                 0.5
@@ -959,23 +2356,23 @@
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.2,
-              "mean": 0.11578947368421112,
-              "minimum": 0.0,
-              "variance": 0.009750692520775641
+              "maximum": 0.4,
+              "mean": 0.2686159844054596,
+              "minimum": 0.2,
+              "variance": 0.00901504356516156
             },
             "aliasing": {
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.005624999850988392,
+            "frame_delta_change_energy": 0.005623869784176339,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.1799999952316284,
-              "mean": 0.1042105235551528,
-              "minimum": 0.0,
-              "variance": 0.007898060523373938
+              "maximum": 0.19924954175949097,
+              "mean": 0.17970826535196993,
+              "minimum": 0.16225713416934012,
+              "variance": 0.00010902957907962411
             },
             "peaks": {
               "count": 0,
@@ -991,7 +2388,7 @@
                 0.0,
                 0.5
               ],
-              "path_distance": 8.0,
+              "path_distance": 7.999999999999991,
               "start": [
                 0.0,
                 0.5
@@ -1001,23 +2398,23 @@
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.2,
-              "mean": 0.10643274853801216,
-              "minimum": 0.0,
-              "variance": 0.009958619746246608
+              "maximum": 0.4,
+              "mean": 0.26237816764132726,
+              "minimum": 0.2,
+              "variance": 0.008584597729975798
             },
             "aliasing": {
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.011249999701976801,
+            "frame_delta_change_energy": 0.011247739568352712,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.1799999952316284,
-              "mean": 0.0957894711466557,
-              "minimum": 0.0,
-              "variance": 0.008066481567082234
+              "maximum": 0.1976785659790039,
+              "mean": 0.17955939402589483,
+              "minimum": 0.16225713416934012,
+              "variance": 0.00010955533826729391
             },
             "peaks": {
               "count": 0,
@@ -1033,7 +2430,7 @@
                 0.0,
                 0.5
               ],
-              "path_distance": 16.0,
+              "path_distance": 16.000000000000032,
               "start": [
                 0.0,
                 0.5
@@ -1043,23 +2440,23 @@
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.2,
-              "mean": 0.10634146341463513,
-              "minimum": 0.0,
-              "variance": 0.009959785841760752
+              "maximum": 0.4,
+              "mean": 0.26243902439024136,
+              "minimum": 0.2,
+              "variance": 0.008589173111243463
             },
             "aliasing": {
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.011249999701976742,
+            "frame_delta_change_energy": 0.011247739568352703,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.1799999952316284,
-              "mean": 0.09570731453779174,
-              "minimum": 0.0,
-              "variance": 0.008067426104398631
+              "maximum": 0.1976785659790039,
+              "mean": 0.17955896417106107,
+              "minimum": 0.16225713416934012,
+              "variance": 0.00010966203194480677
             },
             "peaks": {
               "count": 0,
@@ -1075,7 +2472,7 @@
                 0.0,
                 0.5
               ],
-              "path_distance": 32.0,
+              "path_distance": 32.00000000000015,
               "start": [
                 0.0,
                 0.5
@@ -1133,23 +2530,23 @@
         "fingerprints": [
           {
             "active_fixture_fraction": {
-              "maximum": 0.2,
-              "mean": 0.11559454191033236,
-              "minimum": 0.1,
-              "variance": 0.0013162644536400642
+              "maximum": 0.4,
+              "mean": 0.2904483430799224,
+              "minimum": 0.2,
+              "variance": 0.003203112828638635
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0031640624161809717,
+            "frame_delta_change_energy": 0.0029360144864767753,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.1799999952316284,
-              "mean": 0.1040350849633087,
-              "minimum": 0.0899999976158142,
-              "variance": 0.0010661741509605
+              "maximum": 0.20650301575660707,
+              "mean": 0.19040529022345457,
+              "minimum": 0.1482539653778076,
+              "variance": 0.00043936708803252915
             },
             "peaks": {
               "count": 0,
@@ -1162,12 +2559,12 @@
             "spatial_centroid": {
               "direction_reversals": 3,
               "end": [
-                0.0,
+                0.04365929146091384,
                 0.5
               ],
-              "path_distance": 3.9999999999999973,
+              "path_distance": 3.6507256683126843,
               "start": [
-                0.0,
+                0.04365929146091384,
                 0.5
               ]
             },
@@ -1215,23 +2612,23 @@
         "fingerprints": [
           {
             "active_fixture_fraction": {
-              "maximum": 0.32,
-              "mean": 0.1804978038067342,
-              "minimum": 0.04,
-              "variance": 0.007560318321189558
+              "maximum": 0.6,
+              "mean": 0.3967789165446604,
+              "minimum": 0.2,
+              "variance": 0.011541015543774782
             },
             "aliasing": {
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0008300781482830637,
+            "frame_delta_change_energy": 0.0008287010015919807,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.2720000076293945,
-              "mean": 0.1534231375391289,
-              "minimum": 0.034000000953674316,
-              "variance": 0.005462330293487832
+              "maximum": 0.2557446214556694,
+              "mean": 0.19123629480954932,
+              "minimum": 0.15111111104488373,
+              "variance": 0.000958145965026415
             },
             "peaks": {
               "count": 0,
@@ -1244,36 +2641,36 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.4166666666666667,
-                0.5
+                0.5069218571597423,
+                0.4115165305523463
               ],
-              "path_distance": 27.04210730403227,
+              "path_distance": 2.889869276332692,
               "start": [
-                0.4166666666666667,
-                0.5
+                0.5069218571597423,
+                0.4115165305523463
               ]
             },
             "speed": 0.25
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.32,
-              "mean": 0.18130731707317008,
-              "minimum": 0.04,
-              "variance": 0.007569412873289702
+              "maximum": 0.6,
+              "mean": 0.3959024390243902,
+              "minimum": 0.2,
+              "variance": 0.01166711243307559
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0016601562965661274,
+            "frame_delta_change_energy": 0.0016556296264752738,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.2720000076293945,
-              "mean": 0.1541112238348989,
-              "minimum": 0.034000000953674316,
-              "variance": 0.0054689011077488844
+              "maximum": 0.2557446214556694,
+              "mean": 0.19122622284783827,
+              "minimum": 0.15111111104488373,
+              "variance": 0.0009582093464460869
             },
             "peaks": {
               "count": 0,
@@ -1286,36 +2683,36 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.4166666666666667,
-                0.5
+                0.5069218571597423,
+                0.4115165305523463
               ],
-              "path_distance": 27.04210730403227,
+              "path_distance": 2.875976441981524,
               "start": [
-                0.4166666666666667,
-                0.5
+                0.5069218571597423,
+                0.4115165305523463
               ]
             },
             "speed": 0.5
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.32,
-              "mean": 0.18292397660818713,
-              "minimum": 0.04,
-              "variance": 0.0073341404192743005
+              "maximum": 0.6,
+              "mean": 0.39805068226120854,
+              "minimum": 0.2,
+              "variance": 0.01161413388355008
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.003320312593132255,
+            "frame_delta_change_energy": 0.0033087922725826497,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.2720000076293945,
-              "mean": 0.15548538447820645,
-              "minimum": 0.034000000953674316,
-              "variance": 0.0052989167501869
+              "maximum": 0.2557446214556694,
+              "mean": 0.1912115307916936,
+              "minimum": 0.15111111134290695,
+              "variance": 0.0009586859751218401
             },
             "peaks": {
               "count": 0,
@@ -1328,57 +2725,40 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.4166666666666667,
-                0.5
+                0.5069218571597423,
+                0.4115165305523463
               ],
-              "path_distance": 27.04210730403227,
+              "path_distance": 2.8559873653455736,
               "start": [
-                0.4166666666666667,
-                0.5
+                0.5069218571597423,
+                0.4115165305523463
               ]
             },
             "speed": 1.0
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.32,
-              "mean": 0.1782456140350877,
-              "minimum": 0.04,
-              "variance": 0.007539222324817887
+              "maximum": 0.6,
+              "mean": 0.3964912280701757,
+              "minimum": 0.2,
+              "variance": 0.011668000410382651
             },
             "aliasing": {
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.00664062518626453,
+            "frame_delta_change_energy": 0.006565368827432397,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.2720000076293945,
-              "mean": 0.1515087761795312,
-              "minimum": 0.034000000953674316,
-              "variance": 0.005447088435254318
+              "maximum": 0.2557446214556694,
+              "mean": 0.19127005670749764,
+              "minimum": 0.15111111134290695,
+              "variance": 0.000960590245574083
             },
             "peaks": {
-              "count": 32,
-              "phases": [
-                0.03125,
-                0.28125,
-                0.53125,
-                0.78125,
-                0.03125,
-                0.28125,
-                0.53125,
-                0.78125,
-                0.03125,
-                0.28125,
-                0.53125,
-                0.78125,
-                0.03125,
-                0.28125,
-                0.53125,
-                0.78125
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 2.0,
             "primary_events_per_second": 4.266666666666667,
@@ -1387,56 +2767,56 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.4166666666666667,
-                0.5
+                0.5069218571597423,
+                0.4115165305523463
               ],
-              "path_distance": 54.08421460806451,
+              "path_distance": 5.584081341400033,
               "start": [
-                0.4166666666666667,
-                0.5
+                0.5069218571597423,
+                0.4115165305523463
               ]
             },
             "speed": 2.0
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.32,
-              "mean": 0.18136452241715384,
-              "minimum": 0.04,
-              "variance": 0.006991510398261204
+              "maximum": 0.6,
+              "mean": 0.3996101364522415,
+              "minimum": 0.2,
+              "variance": 0.012952674517135375
             },
             "aliasing": {
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.013281250372529115,
+            "frame_delta_change_energy": 0.01290242467075586,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.2720000076293945,
-              "mean": 0.1541598483786482,
-              "minimum": 0.034000000953674316,
-              "variance": 0.0050513665461177255
+              "maximum": 0.2557446214556694,
+              "mean": 0.19134022366930875,
+              "minimum": 0.15111111134290695,
+              "variance": 0.0009646426032769044
             },
             "peaks": {
-              "count": 64,
+              "count": 32,
               "phases": [
-                0.03125,
-                0.28125,
+                0.25,
                 0.53125,
-                0.78125,
-                0.03125,
-                0.28125,
+                0.25,
                 0.53125,
-                0.78125,
-                0.03125,
-                0.28125,
+                0.25,
                 0.53125,
-                0.78125,
-                0.03125,
-                0.28125,
+                0.25,
                 0.53125,
-                0.78125
+                0.25,
+                0.53125,
+                0.25,
+                0.53125,
+                0.25,
+                0.53125,
+                0.25,
+                0.53125
               ]
             },
             "primary_events_per_beat": 4.0,
@@ -1446,56 +2826,56 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.4166666666666667,
-                0.5
+                0.5069218571597423,
+                0.4115165305523463
               ],
-              "path_distance": 103.89238234586212,
+              "path_distance": 10.331426391829881,
               "start": [
-                0.4166666666666667,
-                0.5
+                0.5069218571597423,
+                0.4115165305523463
               ]
             },
             "speed": 4.0
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.32,
-              "mean": 0.1813073170731702,
-              "minimum": 0.04,
-              "variance": 0.006994973848899435
+              "maximum": 0.6,
+              "mean": 0.3998048780487793,
+              "minimum": 0.2,
+              "variance": 0.012926400951814422
             },
             "aliasing": {
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.013281250372529202,
+            "frame_delta_change_energy": 0.012902424670755886,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.2720000076293945,
-              "mean": 0.15411122383489875,
-              "minimum": 0.034000000953674316,
-              "variance": 0.005053868889344257
+              "maximum": 0.2557446214556694,
+              "mean": 0.1913688709212521,
+              "minimum": 0.15111111134290695,
+              "variance": 0.0009647417156768102
             },
             "peaks": {
-              "count": 128,
+              "count": 64,
               "phases": [
-                0.03125,
-                0.28125,
+                0.25,
                 0.53125,
-                0.78125,
-                0.03125,
-                0.28125,
+                0.25,
                 0.53125,
-                0.78125,
-                0.03125,
-                0.28125,
+                0.25,
                 0.53125,
-                0.78125,
-                0.03125,
-                0.28125,
+                0.25,
                 0.53125,
-                0.78125
+                0.25,
+                0.53125,
+                0.25,
+                0.53125,
+                0.25,
+                0.53125,
+                0.25,
+                0.53125
               ]
             },
             "primary_events_per_beat": 8.0,
@@ -1505,13 +2885,13 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.4166666666666667,
-                0.5
+                0.5069218571597423,
+                0.4115165305523463
               ],
-              "path_distance": 207.78476469172395,
+              "path_distance": 20.66285278365979,
               "start": [
-                0.4166666666666667,
-                0.5
+                0.5069218571597423,
+                0.4115165305523463
               ]
             },
             "speed": 8.0
@@ -1566,44 +2946,27 @@
         "fingerprints": [
           {
             "active_fixture_fraction": {
-              "maximum": 0.23,
-              "mean": 0.18048732943469806,
-              "minimum": 0.14,
-              "variance": 0.00039527907922285664
+              "maximum": 0.45,
+              "mean": 0.3968226120857696,
+              "minimum": 0.35,
+              "variance": 0.0005904890013641429
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0033203125931322705,
+            "frame_delta_change_energy": 0.003291591948363932,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.1955000054836273,
-              "mean": 0.1534142343226463,
-              "minimum": 0.11900000333786011,
-              "variance": 0.0002855891507596354
+              "maximum": 0.21318452024017462,
+              "mean": 0.19122918301710715,
+              "minimum": 0.1781488873809576,
+              "variance": 0.00012061465500384647
             },
             "peaks": {
-              "count": 44,
-              "phases": [
-                0.1796875,
-                0.296875,
-                0.328125,
-                0.3515625,
-                0.390625,
-                0.4375,
-                0.4609375,
-                0.484375,
-                0.6171875,
-                0.7265625,
-                0.8359375,
-                0.1796875,
-                0.296875,
-                0.328125,
-                0.3515625,
-                0.390625
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 1.0,
             "primary_events_per_second": 2.1333333333333333,
@@ -1612,13 +2975,13 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.4927536231884059,
-                0.5652173913043478
+                0.506366056915982,
+                0.4764468636823849
               ],
-              "path_distance": 10.655660458590743,
+              "path_distance": 1.780121845389161,
               "start": [
-                0.4927536231884059,
-                0.5652173913043478
+                0.506366056915982,
+                0.4764468636823849
               ]
             },
             "speed": 1.0
@@ -2058,13 +3421,13 @@
               "risk": "none"
             },
             "color_change_energy": 0.0038393166558897064,
-            "frame_delta_change_energy": 0.0009598291639724266,
+            "frame_delta_change_energy": 0.0014969385506139496,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7249999996392886,
+              "minimum": 0.44999998807907104,
+              "variance": 0.03779404620083124
             },
             "peaks": {
               "count": 0,
@@ -2089,13 +3452,13 @@
               "risk": "none"
             },
             "color_change_energy": 0.0072399197104836685,
-            "frame_delta_change_energy": 0.0018099799276209171,
+            "frame_delta_change_energy": 0.002884198700903983,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7250000015119227,
+              "minimum": 0.44999998807907104,
+              "variance": 0.037775610255955175
             },
             "peaks": {
               "count": 0,
@@ -2120,13 +3483,13 @@
               "risk": "none"
             },
             "color_change_energy": 0.014204582704931992,
-            "frame_delta_change_energy": 0.003551145676232998,
+            "frame_delta_change_energy": 0.005699583222799128,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7250000006041797,
+              "minimum": 0.44999998807907104,
+              "variance": 0.037738791816766704
             },
             "peaks": {
               "count": 0,
@@ -2151,26 +3514,17 @@
               "risk": "none"
             },
             "color_change_energy": 0.02794695805301249,
-            "frame_delta_change_energy": 0.006986739513253123,
+            "frame_delta_change_energy": 0.011283614606385394,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7250000024631938,
+              "minimum": 0.44999998807907104,
+              "variance": 0.037738791508117125
             },
             "peaks": {
-              "count": 8,
-              "phases": [
-                0.234375,
-                0.234375,
-                0.234375,
-                0.234375,
-                0.234375,
-                0.234375,
-                0.234375,
-                0.234375
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 2.0,
             "primary_events_per_second": 4.266666666666667,
@@ -2191,34 +3545,17 @@
               "risk": "caution"
             },
             "color_change_energy": 0.05489334267334669,
-            "frame_delta_change_energy": 0.013723335668336672,
+            "frame_delta_change_energy": 0.02231708585460117,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7250000015336867,
+              "minimum": 0.44999998807907104,
+              "variance": 0.03773878905173482
             },
             "peaks": {
-              "count": 48,
-              "phases": [
-                0.21875,
-                0.59375,
-                0.84375,
-                0.21875,
-                0.59375,
-                0.84375,
-                0.21875,
-                0.59375,
-                0.84375,
-                0.21875,
-                0.59375,
-                0.84375,
-                0.21875,
-                0.59375,
-                0.84375,
-                0.21875
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 4.0,
             "primary_events_per_second": 8.533333333333333,
@@ -2239,34 +3576,17 @@
               "risk": "severe"
             },
             "color_change_energy": 0.05489334267334659,
-            "frame_delta_change_energy": 0.013723335668336648,
+            "frame_delta_change_energy": 0.02231708585460118,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7250000015119227,
+              "minimum": 0.44999998807907104,
+              "variance": 0.037775607382517
             },
             "peaks": {
-              "count": 96,
-              "phases": [
-                0.21875,
-                0.59375,
-                0.84375,
-                0.21875,
-                0.59375,
-                0.84375,
-                0.21875,
-                0.59375,
-                0.84375,
-                0.21875,
-                0.59375,
-                0.84375,
-                0.21875,
-                0.59375,
-                0.84375,
-                0.21875
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 8.0,
             "primary_events_per_second": 17.066666666666666,
@@ -2335,30 +3655,17 @@
               "risk": "none"
             },
             "color_change_energy": 0.007223334963219426,
-            "frame_delta_change_energy": 0.0018058337408048564,
+            "frame_delta_change_energy": 0.002880052514087927,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7250000015119227,
+              "minimum": 0.44999998807907104,
+              "variance": 0.037775610255955175
             },
             "peaks": {
-              "count": 12,
-              "phases": [
-                0.109375,
-                0.21875,
-                0.9375,
-                0.109375,
-                0.21875,
-                0.9375,
-                0.109375,
-                0.21875,
-                0.9375,
-                0.109375,
-                0.21875,
-                0.9375
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 0.5,
             "primary_events_per_second": 1.0666666666666667,
@@ -2419,13 +3726,13 @@
               "risk": "none"
             },
             "color_change_energy": 0.0030644365962219314,
-            "frame_delta_change_energy": 0.0007601239213284869,
+            "frame_delta_change_energy": 0.0011995770346869567,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7750000007097869,
+              "minimum": 0.550000011920929,
+              "variance": 0.025300146367029812
             },
             "peaks": {
               "count": 0,
@@ -2450,13 +3757,13 @@
               "risk": "none"
             },
             "color_change_energy": 0.005636296063012747,
-            "frame_delta_change_energy": 0.0014090740157531867,
+            "frame_delta_change_energy": 0.0022879802424701167,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7750000005815088,
+              "minimum": 0.550000011920929,
+              "variance": 0.02528780450322565
             },
             "peaks": {
               "count": 0,
@@ -2481,26 +3788,17 @@
               "risk": "none"
             },
             "color_change_energy": 0.010342232835446405,
-            "frame_delta_change_energy": 0.002585558208861601,
+            "frame_delta_change_energy": 0.004343370662295471,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.775000000790081,
+              "minimum": 0.550000011920929,
+              "variance": 0.025263157255471024
             },
             "peaks": {
-              "count": 8,
-              "phases": [
-                0.2421875,
-                0.4921875,
-                0.2421875,
-                0.4921875,
-                0.2421875,
-                0.4921875,
-                0.2421875,
-                0.4921875
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 1.0,
             "primary_events_per_second": 2.1333333333333333,
@@ -2521,34 +3819,17 @@
               "risk": "none"
             },
             "color_change_energy": 0.020085081676296503,
-            "frame_delta_change_energy": 0.005021270419074126,
+            "frame_delta_change_energy": 0.008536895325941873,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7750000012548346,
+              "minimum": 0.550000011920929,
+              "variance": 0.025263156913086712
             },
             "peaks": {
-              "count": 32,
-              "phases": [
-                0.234375,
-                0.484375,
-                0.734375,
-                0.984375,
-                0.234375,
-                0.484375,
-                0.734375,
-                0.984375,
-                0.234375,
-                0.484375,
-                0.734375,
-                0.984375,
-                0.234375,
-                0.484375,
-                0.734375,
-                0.984375
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 2.0,
             "primary_events_per_second": 4.266666666666667,
@@ -2569,34 +3850,17 @@
               "risk": "caution"
             },
             "color_change_energy": 0.038469384496204746,
-            "frame_delta_change_energy": 0.009617346124051187,
+            "frame_delta_change_energy": 0.016648595937786646,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.775000004043356,
+              "minimum": 0.550000011920929,
+              "variance": 0.025263157129469346
             },
             "peaks": {
-              "count": 64,
-              "phases": [
-                0.21875,
-                0.46875,
-                0.71875,
-                0.96875,
-                0.21875,
-                0.46875,
-                0.71875,
-                0.96875,
-                0.21875,
-                0.46875,
-                0.71875,
-                0.96875,
-                0.21875,
-                0.46875,
-                0.71875,
-                0.96875
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 4.0,
             "primary_events_per_second": 8.533333333333333,
@@ -2617,34 +3881,17 @@
               "risk": "severe"
             },
             "color_change_energy": 0.03846938449620472,
-            "frame_delta_change_energy": 0.00961734612405118,
+            "frame_delta_change_energy": 0.016648595937786725,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7750000040705611,
+              "minimum": 0.550000011920929,
+              "variance": 0.025287804112034684
             },
             "peaks": {
-              "count": 128,
-              "phases": [
-                0.21875,
-                0.46875,
-                0.71875,
-                0.96875,
-                0.21875,
-                0.46875,
-                0.71875,
-                0.96875,
-                0.21875,
-                0.46875,
-                0.71875,
-                0.96875,
-                0.21875,
-                0.46875,
-                0.71875,
-                0.96875
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 8.0,
             "primary_events_per_second": 17.066666666666666,
@@ -2713,34 +3960,17 @@
               "risk": "none"
             },
             "color_change_energy": 0.010427816335544144,
-            "frame_delta_change_energy": 0.002606954083886036,
+            "frame_delta_change_energy": 0.0043647665373199055,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.775000000790081,
+              "minimum": 0.550000011920929,
+              "variance": 0.025263157255471024
             },
             "peaks": {
-              "count": 36,
-              "phases": [
-                0.109375,
-                0.21875,
-                0.328125,
-                0.4375,
-                0.5546875,
-                0.6640625,
-                0.7734375,
-                0.8828125,
-                0.9921875,
-                0.109375,
-                0.21875,
-                0.328125,
-                0.4375,
-                0.5546875,
-                0.6640625,
-                0.7734375
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 1.0,
             "primary_events_per_second": 2.1333333333333333,
@@ -2784,36 +4014,31 @@
       "all_legal_speeds": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "primary_event": "pulse_onset",
-          "safety": {
-            "max_primary_events_per_second": 3.0
-          }
+          "primary_event": "rise_fall_cycle"
         },
         "cache_key": "temporal-v1-b88ae743ef9b20bb",
         "fingerprints": [
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.2015617374328941,
-              "minimum": 0.0,
-              "variance": 0.16093460343592478
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
-              "frames_per_on_window": 11.337847730600293,
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "color_change_energy": 0.6449082900306844,
-            "frame_delta_change_energy": 0.0016063557519830904,
+            "color_change_energy": 0.004011166690298591,
+            "frame_delta_change_energy": 0.0014257637824972788,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 1.0,
-              "mean": 0.2015617374328941,
-              "minimum": 0.0,
-              "variance": 0.16093460343592478
+              "maximum": 0.8500000238418579,
+              "mean": 0.5767465191477389,
+              "minimum": 0.10199999809265137,
+              "variance": 0.06168774003676245
             },
-            "on_duty_cycle": 0.2015617374328941,
             "peaks": {
               "count": 0,
               "phases": []
@@ -2822,36 +4047,29 @@
             "primary_events_per_second": 0.5333333333333333,
             "sample_count": 2049,
             "sample_duration_beats": 16.0,
-            "speed": 0.25,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 0.5333333333333333,
-              "observed_risk": "low"
-            }
+            "speed": 0.25
           },
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.20390243902439023,
-              "minimum": 0.0,
-              "variance": 0.16232623438429658
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
-              "frames_per_on_window": 5.734756097560975,
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "color_change_energy": 0.6449082900306844,
-            "frame_delta_change_energy": 0.003212711503966181,
+            "color_change_energy": 0.0070498976819193425,
+            "frame_delta_change_energy": 0.002755254702831297,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 1.0,
-              "mean": 0.20390243902439023,
-              "minimum": 0.0,
-              "variance": 0.16232623438429658
+              "maximum": 0.8500000238418579,
+              "mean": 0.5765126321083162,
+              "minimum": 0.10199999809265137,
+              "variance": 0.06177413277562527
             },
-            "on_duty_cycle": 0.20390243902439023,
             "peaks": {
               "count": 0,
               "phases": []
@@ -2860,36 +4078,29 @@
             "primary_events_per_second": 1.0666666666666667,
             "sample_count": 1025,
             "sample_duration_beats": 8.0,
-            "speed": 0.5,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 1.0666666666666667,
-              "observed_risk": "low"
-            }
+            "speed": 0.5
           },
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.2046783625730994,
-              "minimum": 0.0,
-              "variance": 0.16278513046749563
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
-              "frames_per_on_window": 2.87828947368421,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "color_change_energy": 0.6449082900306844,
-            "frame_delta_change_energy": 0.006425423007932362,
+            "color_change_energy": 0.013657824895551729,
+            "frame_delta_change_energy": 0.00545604182924966,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 1.0,
-              "mean": 0.2046783625730994,
-              "minimum": 0.0,
-              "variance": 0.16278513046749563
+              "maximum": 0.8500000238418579,
+              "mean": 0.5760393289097568,
+              "minimum": 0.10199999809265137,
+              "variance": 0.06195860876692113
             },
-            "on_duty_cycle": 0.2046783625730994,
             "peaks": {
               "count": 0,
               "phases": []
@@ -2898,36 +4109,29 @@
             "primary_events_per_second": 2.1333333333333333,
             "sample_count": 513,
             "sample_duration_beats": 4.0,
-            "speed": 1.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 2.1333333333333333,
-              "observed_risk": "low"
-            }
+            "speed": 1.0
           },
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.2046783625730994,
-              "minimum": 0.0,
-              "variance": 0.16278513046749543
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
-              "frames_per_on_window": 1.439144736842105,
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
-              "risk": "caution"
+              "risk": "none"
             },
-            "color_change_energy": 0.6449082900306846,
-            "frame_delta_change_energy": 0.012850846015864724,
+            "color_change_energy": 0.026924636032305976,
+            "frame_delta_change_energy": 0.01089211945722303,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 1.0,
-              "mean": 0.2046783625730994,
-              "minimum": 0.0,
-              "variance": 0.16278513046749543
+              "maximum": 0.8500000238418579,
+              "mean": 0.5759012526006494,
+              "minimum": 0.10199999809265137,
+              "variance": 0.06200864572043509
             },
-            "on_duty_cycle": 0.2046783625730994,
             "peaks": {
               "count": 0,
               "phases": []
@@ -2936,36 +4140,29 @@
             "primary_events_per_second": 4.266666666666667,
             "sample_count": 513,
             "sample_duration_beats": 4.0,
-            "speed": 2.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": true,
-              "maximum_fixture_flash_hz": 4.266666666666667,
-              "observed_risk": "medium"
-            }
+            "speed": 2.0
           },
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.2202729044834308,
-              "minimum": 0.0,
-              "variance": 0.17175275203386545
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
-              "frames_per_on_window": 0.7743969298245613,
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
-              "risk": "severe"
+              "risk": "caution"
             },
-            "color_change_energy": 0.6449082900306847,
-            "frame_delta_change_energy": 0.025701692031729447,
+            "color_change_energy": 0.05376822886353552,
+            "frame_delta_change_energy": 0.02176904331424431,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 1.0,
-              "mean": 0.2202729044834308,
-              "minimum": 0.0,
-              "variance": 0.17175275203386545
+              "maximum": 0.8500000238418579,
+              "mean": 0.5755256848958036,
+              "minimum": 0.10199999809265137,
+              "variance": 0.06231402387449816
             },
-            "on_duty_cycle": 0.2202729044834308,
             "peaks": {
               "count": 0,
               "phases": []
@@ -2974,36 +4171,29 @@
             "primary_events_per_second": 8.533333333333333,
             "sample_count": 513,
             "sample_duration_beats": 4.0,
-            "speed": 4.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": true,
-              "maximum_fixture_flash_hz": 8.533333333333333,
-              "observed_risk": "high"
-            }
+            "speed": 4.0
           },
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.21951219512195122,
-              "minimum": 0.0,
-              "variance": 0.17132659131469571
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
-              "frames_per_on_window": 0.3858612804878049,
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "color_change_energy": 0.6449082900306847,
-            "frame_delta_change_energy": 0.025701692031729447,
+            "color_change_energy": 0.05376822886353572,
+            "frame_delta_change_energy": 0.02176904331424426,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 1.0,
-              "mean": 0.21951219512195122,
-              "minimum": 0.0,
-              "variance": 0.17132659131469571
+              "maximum": 0.8500000238418579,
+              "mean": 0.5759876611756115,
+              "minimum": 0.10199999809265137,
+              "variance": 0.0621558469868662
             },
-            "on_duty_cycle": 0.21951219512195122,
             "peaks": {
               "count": 0,
               "phases": []
@@ -3012,12 +4202,7 @@
             "primary_events_per_second": 17.066666666666666,
             "sample_count": 1025,
             "sample_duration_beats": 4.0,
-            "speed": 8.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": true,
-              "maximum_fixture_flash_hz": 17.066666666666666,
-              "observed_risk": "high"
-            }
+            "speed": 8.0
           }
         ],
         "identity": {
@@ -3059,40 +4244,35 @@
         "id": "builtin.color.pulse",
         "revision": 1
       },
-      "name": "Short Color Burst",
+      "name": "Color Accent",
       "topology_probe": {
         "behavior": {
           "events_per_graph_cycle": 1.0,
-          "primary_event": "pulse_onset",
-          "safety": {
-            "max_primary_events_per_second": 3.0
-          }
+          "primary_event": "rise_fall_cycle"
         },
         "cache_key": "temporal-v1-02c7f534be917d21",
         "fingerprints": [
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.2046783625730994,
-              "minimum": 0.0,
-              "variance": 0.16278513046749563
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
-              "frames_per_on_window": 2.87828947368421,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "color_change_energy": 0.6449082900306847,
-            "frame_delta_change_energy": 0.006425423007932362,
+            "color_change_energy": 0.013657824895551727,
+            "frame_delta_change_energy": 0.005456041829249659,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 1.0,
-              "mean": 0.2046783625730994,
-              "minimum": 0.0,
-              "variance": 0.16278513046749563
+              "maximum": 0.8500000238418579,
+              "mean": 0.5760393289097568,
+              "minimum": 0.10199999809265137,
+              "variance": 0.06195860876692113
             },
-            "on_duty_cycle": 0.2046783625730994,
             "peaks": {
               "count": 0,
               "phases": []
@@ -3101,12 +4281,7 @@
             "primary_events_per_second": 2.1333333333333333,
             "sample_count": 513,
             "sample_duration_beats": 4.0,
-            "speed": 1.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 2.1333333333333333,
-              "observed_risk": "low"
-            }
+            "speed": 1.0
           }
         ],
         "identity": {
@@ -3448,26 +4623,24 @@
         "fingerprints": [
           {
             "active_fixture_fraction": {
-              "maximum": 0.96,
-              "mean": 0.8887847730600573,
-              "minimum": 0.8,
-              "variance": 0.0016719736871251324
+              "maximum": 0.84,
+              "mean": 0.7839921913128238,
+              "minimum": 0.68,
+              "variance": 0.002083232735510556
             },
             "aliasing": {
-              "frames_per_on_window": 49.99414348462665,
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.000877098168290191,
+            "frame_delta_change_energy": 0.00087890003443777,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.4692859572172165,
-              "mean": 0.44999057588373026,
-              "minimum": 0.4307140266895294,
-              "variance": 0.00008960862176971665
+              "maximum": 0.46571057048626247,
+              "mean": 0.4499973360920781,
+              "minimum": 0.4342894129574415,
+              "variance": 0.0001233661277413096
             },
-            "on_duty_cycle": 0.8887847730600292,
             "peaks": {
               "count": 0,
               "phases": []
@@ -3479,44 +4652,37 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.7022962836603017,
-                0.5499429575348131
+                0.446802466419602,
+                0.7181811238986648
               ],
-              "path_distance": 4.765038092593386,
+              "path_distance": 5.836237598648411,
               "start": [
-                0.7022962836603017,
-                0.5499429575348131
+                0.446802466419602,
+                0.7181811238986648
               ]
             },
-            "speed": 0.25,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 0.5333333333333333,
-              "observed_risk": "low"
-            }
+            "speed": 0.25
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.96,
-              "mean": 0.8886634146341454,
-              "minimum": 0.8,
-              "variance": 0.00169196963712078
+              "maximum": 0.84,
+              "mean": 0.7840780487804844,
+              "minimum": 0.68,
+              "variance": 0.002069223176680521
             },
             "aliasing": {
-              "frames_per_on_window": 24.993658536585365,
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0017512206743413102,
+            "frame_delta_change_energy": 0.0017577713771727871,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.4692859572172165,
-              "mean": 0.44998117268928717,
-              "minimum": 0.4307140266895294,
-              "variance": 0.00008978043181570511
+              "maximum": 0.46570988063700497,
+              "mean": 0.44999468629830497,
+              "minimum": 0.43429008671570046,
+              "variance": 0.00012332033848546975
             },
-            "on_duty_cycle": 0.8886634146341463,
             "peaks": {
               "count": 0,
               "phases": []
@@ -3528,44 +4694,37 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.7022962836603017,
-                0.5499429575348131
+                0.446802466419602,
+                0.7181811238986648
               ],
-              "path_distance": 4.763819437626155,
+              "path_distance": 5.836127530018875,
               "start": [
-                0.7022962836603017,
-                0.5499429575348131
+                0.446802466419602,
+                0.7181811238986648
               ]
             },
-            "speed": 0.5,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 1.0666666666666667,
-              "observed_risk": "low"
-            }
+            "speed": 0.5
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.96,
-              "mean": 0.8876413255360583,
-              "minimum": 0.8,
-              "variance": 0.0017131501050655568
+              "maximum": 0.84,
+              "mean": 0.7844054580896682,
+              "minimum": 0.68,
+              "variance": 0.0019774730306381166
             },
             "aliasing": {
-              "frames_per_on_window": 12.482456140350877,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0034914316367940083,
+            "frame_delta_change_energy": 0.0035153305562973004,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.4692859572172165,
-              "mean": 0.4499623936083577,
-              "minimum": 0.4307140266895294,
-              "variance": 0.00009016746687111312
+              "maximum": 0.46570988063700497,
+              "mean": 0.44998939401180976,
+              "minimum": 0.43429008671570046,
+              "variance": 0.0001232288452388291
             },
-            "on_duty_cycle": 0.8876413255360623,
             "peaks": {
               "count": 0,
               "phases": []
@@ -3577,44 +4736,37 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.7022962836603017,
-                0.5499429575348131
+                0.446802466419602,
+                0.7181811238986648
               ],
-              "path_distance": 4.761835878673747,
+              "path_distance": 5.835687260613713,
               "start": [
-                0.7022962836603017,
-                0.5499429575348131
+                0.446802466419602,
+                0.7181811238986648
               ]
             },
-            "speed": 1.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 2.1333333333333333,
-              "observed_risk": "low"
-            }
+            "speed": 1.0
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.96,
-              "mean": 0.8867056530214389,
-              "minimum": 0.8,
-              "variance": 0.001689147277984874
+              "maximum": 0.84,
+              "mean": 0.7837816764132549,
+              "minimum": 0.68,
+              "variance": 0.0019326774810103007
             },
             "aliasing": {
-              "frames_per_on_window": 6.234649122807017,
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.00692133976539481,
+            "frame_delta_change_energy": 0.007028289535675467,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.4692859572172165,
-              "mean": 0.44996239371263674,
-              "minimum": 0.4307140266895294,
-              "variance": 0.00009069678566716002
+              "maximum": 0.46569839533418417,
+              "mean": 0.4499893946733595,
+              "minimum": 0.4343015812570229,
+              "variance": 0.00012322885849611875
             },
-            "on_duty_cycle": 0.8867056530214424,
             "peaks": {
               "count": 0,
               "phases": []
@@ -3626,63 +4778,40 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.7022962836603017,
-                0.5499429575348131
+                0.446802466419602,
+                0.7181811238986648
               ],
-              "path_distance": 9.513374779407869,
+              "path_distance": 11.667852791545794,
               "start": [
-                0.7022962836603017,
-                0.5499429575348131
+                0.446802466419602,
+                0.7181811238986648
               ]
             },
-            "speed": 2.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 4.266666666666667,
-              "observed_risk": "medium"
-            }
+            "speed": 2.0
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.96,
-              "mean": 0.8873294346978523,
-              "minimum": 0.8,
-              "variance": 0.0016554411803821787
+              "maximum": 0.84,
+              "mean": 0.7825341130604286,
+              "minimum": 0.68,
+              "variance": 0.002090264430841031
             },
             "aliasing": {
-              "frames_per_on_window": 3.119517543859649,
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.013659941963851478,
+            "frame_delta_change_energy": 0.014042496782340088,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.4692859572172165,
-              "mean": 0.449962393582215,
-              "minimum": 0.4307140266895294,
-              "variance": 0.00009183611394832156
+              "maximum": 0.46569839533418417,
+              "mean": 0.4499893943073697,
+              "minimum": 0.4343015812570229,
+              "variance": 0.00012322887701731909
             },
-            "on_duty_cycle": 0.8873294346978557,
             "peaks": {
-              "count": 15,
-              "phases": [
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 4.0,
             "primary_events_per_second": 8.533333333333333,
@@ -3691,64 +4820,40 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.7022962836603017,
-                0.5499429575348131
+                0.446802466419602,
+                0.7181811238986648
               ],
-              "path_distance": 18.987992724327245,
+              "path_distance": 23.307544736760327,
               "start": [
-                0.7022962836603017,
-                0.5499429575348131
+                0.446802466419602,
+                0.7181811238986648
               ]
             },
-            "speed": 4.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 8.533333333333333,
-              "observed_risk": "high"
-            }
+            "speed": 4.0
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.96,
-              "mean": 0.887414634146339,
-              "minimum": 0.8,
-              "variance": 0.0016496085663295816
+              "maximum": 0.84,
+              "mean": 0.7825170731707282,
+              "minimum": 0.68,
+              "variance": 0.002092005806067812
             },
             "aliasing": {
-              "frames_per_on_window": 1.5599085365853658,
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.013659941963851398,
+            "frame_delta_change_energy": 0.014042496782340068,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.4692859572172165,
-              "mean": 0.449981172476745,
-              "minimum": 0.4307140266895294,
-              "variance": 0.00009156389445842969
+              "maximum": 0.46569839533418417,
+              "mean": 0.44999468648041924,
+              "minimum": 0.4343015812570229,
+              "variance": 0.00012332036503187368
             },
-            "on_duty_cycle": 0.8874146341463415,
             "peaks": {
-              "count": 31,
-              "phases": [
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 8.0,
             "primary_events_per_second": 17.066666666666666,
@@ -3757,21 +4862,16 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.7022962836603017,
-                0.5499429575348131
+                0.446802466419602,
+                0.7181811238986648
               ],
-              "path_distance": 37.975985448654434,
+              "path_distance": 46.615089473520904,
               "start": [
-                0.7022962836603017,
-                0.5499429575348131
+                0.446802466419602,
+                0.7181811238986648
               ]
             },
-            "speed": 8.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 17.066666666666666,
-              "observed_risk": "high"
-            }
+            "speed": 8.0
           }
         ],
         "identity": {
@@ -3823,26 +4923,24 @@
         "fingerprints": [
           {
             "active_fixture_fraction": {
-              "maximum": 0.92,
-              "mean": 0.8892007797270973,
-              "minimum": 0.86,
-              "variance": 0.0004206088103082056
+              "maximum": 0.82,
+              "mean": 0.7830409356725128,
+              "minimum": 0.75,
+              "variance": 0.0003774973496118476
             },
             "aliasing": {
-              "frames_per_on_window": 12.50438596491228,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0034871134717946025,
+            "frame_delta_change_energy": 0.0035152549032604623,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.4664291539788246,
-              "mean": 0.4499679625944734,
-              "minimum": 0.43357082176953554,
-              "variance": 0.00008960180093471642
+              "maximum": 0.4662504893401638,
+              "mean": 0.4499999888257807,
+              "minimum": 0.43374949195684165,
+              "variance": 0.00013178202298041138
             },
-            "on_duty_cycle": 0.8892007797270955,
             "peaks": {
               "count": 0,
               "phases": []
@@ -3854,21 +4952,16 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.6783682183876926,
-                0.49999999999999994
+                0.5000000014372262,
+                0.70693311500176
               ],
-              "path_distance": 4.322053258247493,
+              "path_distance": 5.316313652445218,
               "start": [
-                0.6783682183876926,
-                0.49999999999999994
+                0.5000000014372262,
+                0.70693311500176
               ]
             },
-            "speed": 1.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 2.1333333333333333,
-              "observed_risk": "low"
-            }
+            "speed": 1.0
           }
         ],
         "identity": {
@@ -3922,13 +5015,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.00048828125,
+            "frame_delta_change_energy": 0.0007080078066792339,
             "graph_cycles_per_beat": 0.125,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.77489019030766,
+              "minimum": 0.550000011920929,
+              "variance": 0.016891588066664236
             },
             "peaks": {
               "count": 0,
@@ -3952,13 +5045,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0009765625,
+            "frame_delta_change_energy": 0.0014160156133584678,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7747804878397686,
+              "minimum": 0.550000011920929,
+              "variance": 0.016908393151391744
             },
             "peaks": {
               "count": 0,
@@ -3982,13 +5075,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.001953125,
+            "frame_delta_change_energy": 0.0028320312267169356,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7745614036714357,
+              "minimum": 0.550000011920929,
+              "variance": 0.01694265303845465
             },
             "peaks": {
               "count": 0,
@@ -4012,13 +5105,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.00390625,
+            "frame_delta_change_energy": 0.005664062453433871,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7745614034390589,
+              "minimum": 0.550000011920929,
+              "variance": 0.016948820652397088
             },
             "peaks": {
               "count": 4,
@@ -4047,13 +5140,13 @@
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.0078125,
+            "frame_delta_change_energy": 0.011328124906867743,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7745614029743053,
+              "minimum": 0.550000011920929,
+              "variance": 0.016973491749063055
             },
             "peaks": {
               "count": 8,
@@ -4086,13 +5179,13 @@
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.0078125,
+            "frame_delta_change_energy": 0.011328124906867743,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7747804872582599,
+              "minimum": 0.550000011920929,
+              "variance": 0.016940805383722255
             },
             "peaks": {
               "count": 16,
@@ -4181,13 +5274,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0009765625,
+            "frame_delta_change_energy": 0.0014160156133584678,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
               "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "mean": 0.7747804878397686,
+              "minimum": 0.550000011920929,
+              "variance": 0.016908393151391744
             },
             "peaks": {
               "count": 0,
@@ -4251,13 +5344,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0006510381698608401,
+            "frame_delta_change_energy": 0.0010904889362864192,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "maximum": 0.9123134613037109,
+              "mean": 0.7749329851836099,
+              "minimum": 0.6376865363121033,
+              "variance": 0.009432090310332
             },
             "peaks": {
               "count": 0,
@@ -4267,6 +5360,18 @@
             "primary_events_per_second": 0.5333333333333333,
             "sample_count": 2049,
             "sample_duration_beats": 16.0,
+            "spatial_centroid": {
+              "direction_reversals": 8,
+              "end": [
+                0.5,
+                0.5
+              ],
+              "path_distance": 1.1938641026055317,
+              "start": [
+                0.5,
+                0.5
+              ]
+            },
             "speed": 0.25
           },
           {
@@ -4281,13 +5386,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.001302055464850536,
+            "frame_delta_change_energy": 0.002180942916104363,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "maximum": 0.9123134613037109,
+              "mean": 0.7748660362499508,
+              "minimum": 0.6376865363121033,
+              "variance": 0.009436673328142553
             },
             "peaks": {
               "count": 0,
@@ -4297,6 +5402,18 @@
             "primary_events_per_second": 1.0666666666666667,
             "sample_count": 1025,
             "sample_duration_beats": 8.0,
+            "spatial_centroid": {
+              "direction_reversals": 8,
+              "end": [
+                0.5,
+                0.5
+              ],
+              "path_distance": 1.1938614505764455,
+              "start": [
+                0.5,
+                0.5
+              ]
+            },
             "speed": 0.5
           },
           {
@@ -4311,13 +5428,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0026039436128404403,
+            "frame_delta_change_energy": 0.004361605564546258,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "maximum": 0.9123134613037109,
+              "mean": 0.7747323347532257,
+              "minimum": 0.6376865363121033,
+              "variance": 0.009445799295530891
             },
             "peaks": {
               "count": 0,
@@ -4327,6 +5444,18 @@
             "primary_events_per_second": 2.1333333333333333,
             "sample_count": 513,
             "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 8,
+              "end": [
+                0.5,
+                0.5
+              ],
+              "path_distance": 1.193680517835816,
+              "start": [
+                0.5,
+                0.5
+              ]
+            },
             "speed": 1.0
           },
           {
@@ -4341,13 +5470,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0052065486907959015,
+            "frame_delta_change_energy": 0.008720968987792711,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "maximum": 0.9123134613037109,
+              "mean": 0.7747323349205378,
+              "minimum": 0.6376865363121033,
+              "variance": 0.009445799186031747
             },
             "peaks": {
               "count": 0,
@@ -4357,6 +5486,18 @@
             "primary_events_per_second": 4.266666666666667,
             "sample_count": 513,
             "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 16,
+              "end": [
+                0.5,
+                0.5
+              ],
+              "path_distance": 2.387361035671151,
+              "start": [
+                0.5,
+                0.5
+              ]
+            },
             "speed": 2.0
           },
           {
@@ -4371,13 +5512,13 @@
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.010402392917209265,
+            "frame_delta_change_energy": 0.017424008236163246,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "maximum": 0.9123134613037109,
+              "mean": 0.7747323341397517,
+              "minimum": 0.6376865363121033,
+              "variance": 0.00944579966089985
             },
             "peaks": {
               "count": 0,
@@ -4387,6 +5528,18 @@
             "primary_events_per_second": 8.533333333333333,
             "sample_count": 513,
             "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 32,
+              "end": [
+                0.5,
+                0.5
+              ],
+              "path_distance": 4.7747220713415714,
+              "start": [
+                0.5,
+                0.5
+              ]
+            },
             "speed": 4.0
           },
           {
@@ -4401,13 +5554,13 @@
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.010402392917209277,
+            "frame_delta_change_energy": 0.017424008236163285,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "maximum": 0.9123134613037109,
+              "mean": 0.7748660373571438,
+              "minimum": 0.6376865363121033,
+              "variance": 0.009436673734553104
             },
             "peaks": {
               "count": 0,
@@ -4417,6 +5570,18 @@
             "primary_events_per_second": 17.066666666666666,
             "sample_count": 1025,
             "sample_duration_beats": 4.0,
+            "spatial_centroid": {
+              "direction_reversals": 64,
+              "end": [
+                0.5,
+                0.5
+              ],
+              "path_distance": 9.549444142683123,
+              "start": [
+                0.5,
+                0.5
+              ]
+            },
             "speed": 8.0
           }
         ],
@@ -4479,13 +5644,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0013020509779453294,
+            "frame_delta_change_energy": 0.002180935397744176,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 1.0,
-              "mean": 1.0,
-              "minimum": 1.0,
-              "variance": 0.0
+              "maximum": 0.9167951512336731,
+              "mean": 0.774861663381066,
+              "minimum": 0.6332048463821411,
+              "variance": 0.010062721461634826
             },
             "peaks": {
               "count": 0,
@@ -4495,6 +5660,18 @@
             "primary_events_per_second": 1.0666666666666667,
             "sample_count": 1025,
             "sample_duration_beats": 8.0,
+            "spatial_centroid": {
+              "direction_reversals": 8,
+              "end": [
+                0.5000000000000001,
+                0.5
+              ],
+              "path_distance": 1.0635444701133314,
+              "start": [
+                0.5000000000000001,
+                0.5
+              ]
+            },
             "speed": 0.5
           }
         ],
@@ -4518,359 +5695,6 @@
           "seed": "0000000000000001",
           "speeds": [
             0.5
-          ],
-          "stage_ref": {
-            "id": "analysis.stage.matrix-20x20-moving-head",
-            "revision": 1
-          },
-          "target_fixture_count": 100,
-          "target_set_id": "zone-2x2-1"
-        },
-        "schema_version": 1
-      }
-    },
-    {
-      "all_legal_speeds": {
-        "behavior": {
-          "events_per_graph_cycle": 1.0,
-          "primary_event": "pulse_onset",
-          "safety": {
-            "max_primary_events_per_second": 3.0
-          }
-        },
-        "cache_key": "temporal-v1-5e29d06891a7520f",
-        "fingerprints": [
-          {
-            "active_fixture_fraction": {
-              "maximum": 1.0,
-              "mean": 0.12542703757930698,
-              "minimum": 0.0,
-              "variance": 0.10969509582338424
-            },
-            "aliasing": {
-              "frames_per_on_window": 7.055270863836018,
-              "frames_per_primary_event": 56.25,
-              "preview_fps": 30.0,
-              "risk": "none"
-            },
-            "frame_delta_change_energy": 0.0006347656017169356,
-            "graph_cycles_per_beat": 0.25,
-            "intensity": {
-              "maximum": 0.6499999761581421,
-              "mean": 0.08152757143613593,
-              "minimum": 0.0,
-              "variance": 0.0463461745854447
-            },
-            "on_duty_cycle": 0.12542703757930698,
-            "peaks": {
-              "count": 0,
-              "phases": []
-            },
-            "primary_events_per_beat": 0.25,
-            "primary_events_per_second": 0.5333333333333333,
-            "sample_count": 2049,
-            "sample_duration_beats": 16.0,
-            "speed": 0.25,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 0.5333333333333333,
-              "observed_risk": "low"
-            }
-          },
-          {
-            "active_fixture_fraction": {
-              "maximum": 1.0,
-              "mean": 0.12585365853658537,
-              "minimum": 0.0,
-              "variance": 0.1100145151695435
-            },
-            "aliasing": {
-              "frames_per_on_window": 3.5396341463414633,
-              "frames_per_primary_event": 28.125,
-              "preview_fps": 30.0,
-              "risk": "none"
-            },
-            "frame_delta_change_energy": 0.0012695312034338713,
-            "graph_cycles_per_beat": 0.5,
-            "intensity": {
-              "maximum": 0.6499999761581421,
-              "mean": 0.08180487504819545,
-              "minimum": 0.0,
-              "variance": 0.04648112924929584
-            },
-            "on_duty_cycle": 0.12585365853658537,
-            "peaks": {
-              "count": 0,
-              "phases": []
-            },
-            "primary_events_per_beat": 0.5,
-            "primary_events_per_second": 1.0666666666666667,
-            "sample_count": 1025,
-            "sample_duration_beats": 8.0,
-            "speed": 0.5,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 1.0666666666666667,
-              "observed_risk": "low"
-            }
-          },
-          {
-            "active_fixture_fraction": {
-              "maximum": 1.0,
-              "mean": 0.1267056530214425,
-              "minimum": 0.0,
-              "variance": 0.1106513305138534
-            },
-            "aliasing": {
-              "frames_per_on_window": 1.7817982456140349,
-              "frames_per_primary_event": 14.0625,
-              "preview_fps": 30.0,
-              "risk": "caution"
-            },
-            "frame_delta_change_energy": 0.0025390624068677425,
-            "graph_cycles_per_beat": 1.0,
-            "intensity": {
-              "maximum": 0.6499999761581421,
-              "mean": 0.08235867144303945,
-              "minimum": 0.0,
-              "variance": 0.04675018371252986
-            },
-            "on_duty_cycle": 0.1267056530214425,
-            "peaks": {
-              "count": 0,
-              "phases": []
-            },
-            "primary_events_per_beat": 1.0,
-            "primary_events_per_second": 2.1333333333333333,
-            "sample_count": 513,
-            "sample_duration_beats": 4.0,
-            "speed": 1.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 2.1333333333333333,
-              "observed_risk": "low"
-            }
-          },
-          {
-            "active_fixture_fraction": {
-              "maximum": 1.0,
-              "mean": 0.1267056530214425,
-              "minimum": 0.0,
-              "variance": 0.1106513305138533
-            },
-            "aliasing": {
-              "frames_per_on_window": 0.8908991228070174,
-              "frames_per_primary_event": 7.03125,
-              "preview_fps": 30.0,
-              "risk": "severe"
-            },
-            "frame_delta_change_energy": 0.005078124813735485,
-            "graph_cycles_per_beat": 2.0,
-            "intensity": {
-              "maximum": 0.6499999761581421,
-              "mean": 0.08235867144303945,
-              "minimum": 0.0,
-              "variance": 0.04675018371252986
-            },
-            "on_duty_cycle": 0.1267056530214425,
-            "peaks": {
-              "count": 0,
-              "phases": []
-            },
-            "primary_events_per_beat": 2.0,
-            "primary_events_per_second": 4.266666666666667,
-            "sample_count": 513,
-            "sample_duration_beats": 4.0,
-            "speed": 2.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": true,
-              "maximum_fixture_flash_hz": 4.266666666666667,
-              "observed_risk": "medium"
-            }
-          },
-          {
-            "active_fixture_fraction": {
-              "maximum": 1.0,
-              "mean": 0.1267056530214425,
-              "minimum": 0.0,
-              "variance": 0.1106513305138531
-            },
-            "aliasing": {
-              "frames_per_on_window": 0.4454495614035087,
-              "frames_per_primary_event": 3.515625,
-              "preview_fps": 30.0,
-              "risk": "severe"
-            },
-            "frame_delta_change_energy": 0.01015624962747097,
-            "graph_cycles_per_beat": 4.0,
-            "intensity": {
-              "maximum": 0.6499999761581421,
-              "mean": 0.08235867144303945,
-              "minimum": 0.0,
-              "variance": 0.046750183712529814
-            },
-            "on_duty_cycle": 0.1267056530214425,
-            "peaks": {
-              "count": 0,
-              "phases": []
-            },
-            "primary_events_per_beat": 4.0,
-            "primary_events_per_second": 8.533333333333333,
-            "sample_count": 513,
-            "sample_duration_beats": 4.0,
-            "speed": 4.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": true,
-              "maximum_fixture_flash_hz": 8.533333333333333,
-              "observed_risk": "high"
-            }
-          },
-          {
-            "active_fixture_fraction": {
-              "maximum": 1.0,
-              "mean": 0.12585365853658537,
-              "minimum": 0.0,
-              "variance": 0.11001451516954354
-            },
-            "aliasing": {
-              "frames_per_on_window": 0.22122713414634146,
-              "frames_per_primary_event": 1.7578125,
-              "preview_fps": 30.0,
-              "risk": "severe"
-            },
-            "frame_delta_change_energy": 0.01015624962747097,
-            "graph_cycles_per_beat": 8.0,
-            "intensity": {
-              "maximum": 0.6499999761581421,
-              "mean": 0.08180487504819545,
-              "minimum": 0.0,
-              "variance": 0.04648112924929583
-            },
-            "on_duty_cycle": 0.12585365853658537,
-            "peaks": {
-              "count": 0,
-              "phases": []
-            },
-            "primary_events_per_beat": 8.0,
-            "primary_events_per_second": 17.066666666666666,
-            "sample_count": 1025,
-            "sample_duration_beats": 4.0,
-            "speed": 8.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": true,
-              "maximum_fixture_flash_hz": 17.066666666666666,
-              "observed_risk": "high"
-            }
-          }
-        ],
-        "identity": {
-          "bpm": 128.0,
-          "effect_ref": {
-            "id": "builtin.strobe.safe-pulse",
-            "revision": 1
-          },
-          "layout_ref": {
-            "id": "builtin.layout.matrix-main-20x20",
-            "revision": 1
-          },
-          "parameter_overrides": {},
-          "sampling": {
-            "base_samples_per_beat": 128,
-            "minimum_samples_per_event": 32,
-            "preview_fps": 30.0,
-            "primary_event_window": 4
-          },
-          "seed": "0000000000000001",
-          "speeds": [
-            0.25,
-            0.5,
-            1.0,
-            2.0,
-            4.0,
-            8.0
-          ],
-          "stage_ref": {
-            "id": "analysis.stage.matrix-20x20-moving-head",
-            "revision": 1
-          },
-          "target_fixture_count": 25,
-          "target_set_id": "zone-4x4-1"
-        },
-        "schema_version": 1
-      },
-      "effect_ref": {
-        "id": "builtin.strobe.safe-pulse",
-        "revision": 1
-      },
-      "name": "Safe Strobe Pulse",
-      "topology_probe": {
-        "behavior": {
-          "events_per_graph_cycle": 1.0,
-          "primary_event": "pulse_onset",
-          "safety": {
-            "max_primary_events_per_second": 3.0
-          }
-        },
-        "cache_key": "temporal-v1-cf5f9c40d4357725",
-        "fingerprints": [
-          {
-            "active_fixture_fraction": {
-              "maximum": 1.0,
-              "mean": 0.1267056530214425,
-              "minimum": 0.0,
-              "variance": 0.1106513305138534
-            },
-            "aliasing": {
-              "frames_per_on_window": 1.7817982456140349,
-              "frames_per_primary_event": 14.0625,
-              "preview_fps": 30.0,
-              "risk": "caution"
-            },
-            "frame_delta_change_energy": 0.0025390624068677425,
-            "graph_cycles_per_beat": 1.0,
-            "intensity": {
-              "maximum": 0.6499999761581421,
-              "mean": 0.08235867144303945,
-              "minimum": 0.0,
-              "variance": 0.04675018371252986
-            },
-            "on_duty_cycle": 0.1267056530214425,
-            "peaks": {
-              "count": 0,
-              "phases": []
-            },
-            "primary_events_per_beat": 1.0,
-            "primary_events_per_second": 2.1333333333333333,
-            "sample_count": 513,
-            "sample_duration_beats": 4.0,
-            "speed": 1.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 2.1333333333333333,
-              "observed_risk": "low"
-            }
-          }
-        ],
-        "identity": {
-          "bpm": 128.0,
-          "effect_ref": {
-            "id": "builtin.strobe.safe-pulse",
-            "revision": 1
-          },
-          "layout_ref": {
-            "id": "builtin.layout.matrix-main-20x20",
-            "revision": 1
-          },
-          "parameter_overrides": {},
-          "sampling": {
-            "base_samples_per_beat": 128,
-            "minimum_samples_per_event": 32,
-            "preview_fps": 30.0,
-            "primary_event_window": 4
-          },
-          "seed": "0000000000000001",
-          "speeds": [
-            1.0
           ],
           "stage_ref": {
             "id": "analysis.stage.matrix-20x20-moving-head",
@@ -5239,22 +6063,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8983894582723131,
-              "minimum": 0.8,
-              "variance": 0.00999740615534331
+              "mean": 0.7949243533430718,
+              "minimum": 0.6,
+              "variance": 0.011765355429364827
             },
             "aliasing": {
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0009746551513671875,
+            "frame_delta_change_energy": 0.0009765625000000024,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.648046875,
-              "mean": 0.49897510980966336,
-              "minimum": 0.35,
-              "variance": 0.00458556197198647
+              "maximum": 0.541421365737915,
+              "mean": 0.5000000015439791,
+              "minimum": 0.4585786461830139,
+              "variance": 0.000857445713021896
             },
             "peaks": {
               "count": 0,
@@ -5267,12 +6091,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.40625,
+                0.6292893185700259,
                 0.5
               ],
-              "path_distance": 3.232590069430807,
+              "path_distance": 2.0757551906875724,
               "start": [
-                0.40625,
+                0.6292893185700259,
                 0.5
               ]
             },
@@ -5281,22 +6105,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8983414634146258,
-              "minimum": 0.8,
-              "variance": 0.009997249256394902
+              "mean": 0.792975609756091,
+              "minimum": 0.6,
+              "variance": 0.011657975014872137
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0019454956054687493,
+            "frame_delta_change_energy": 0.0019531249999999963,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.64609375,
-              "mean": 0.4979512195121948,
-              "minimum": 0.35,
-              "variance": 0.0045869610350981515
+              "maximum": 0.541421365737915,
+              "mean": 0.5000000002873694,
+              "minimum": 0.4585786461830139,
+              "variance": 0.0008570274453222796
             },
             "peaks": {
               "count": 0,
@@ -5309,12 +6133,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.40625,
+                0.6292893185700259,
                 0.5
               ],
-              "path_distance": 3.2304417272073067,
+              "path_distance": 2.0756739140615132,
               "start": [
-                0.40625,
+                0.6292893185700259,
                 0.5
               ]
             },
@@ -5323,31 +6147,26 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8982456140350914,
-              "minimum": 0.8,
-              "variance": 0.009996922129886093
+              "mean": 0.7890838206627737,
+              "minimum": 0.6,
+              "variance": 0.011420798042322568
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0038757324218750017,
+            "frame_delta_change_energy": 0.003906250000000002,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.6421875,
-              "mean": 0.49590643274853796,
-              "minimum": 0.35,
-              "variance": 0.004587287541465745
+              "maximum": 0.541421365737915,
+              "mean": 0.49999999884610397,
+              "minimum": 0.4585786461830139,
+              "variance": 0.0008561921325814458
             },
             "peaks": {
-              "count": 4,
-              "phases": [
-                0.625,
-                0.625,
-                0.625,
-                0.625
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 1.0,
             "primary_events_per_second": 2.1333333333333333,
@@ -5356,12 +6175,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.40625,
+                0.6292893185700259,
                 0.5
               ],
-              "path_distance": 3.226102933964965,
+              "path_distance": 2.075521402417996,
               "start": [
-                0.40625,
+                0.6292893185700259,
                 0.5
               ]
             },
@@ -5370,43 +6189,26 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8904483430799263,
-              "minimum": 0.8,
-              "variance": 0.009908765850081132
+              "mean": 0.7968810916179397,
+              "minimum": 0.6,
+              "variance": 0.01184212426235614
             },
             "aliasing": {
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.007690429687499995,
+            "frame_delta_change_energy": 0.007812500000000002,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.634375,
-              "mean": 0.49200779727095517,
-              "minimum": 0.35,
-              "variance": 0.004570627619514454
+              "maximum": 0.541421365737915,
+              "mean": 0.49999999926365646,
+              "minimum": 0.4585786461830139,
+              "variance": 0.0008561921317601063
             },
             "peaks": {
-              "count": 16,
-              "phases": [
-                0.25,
-                0.625,
-                0.25,
-                0.625,
-                0.25,
-                0.625,
-                0.25,
-                0.625,
-                0.25,
-                0.625,
-                0.25,
-                0.625,
-                0.25,
-                0.625,
-                0.25,
-                0.625
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 2.0,
             "primary_events_per_second": 4.266666666666667,
@@ -5415,12 +6217,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.40625,
+                0.6292893185700259,
                 0.5
               ],
-              "path_distance": 6.434506016858965,
+              "path_distance": 4.151042804835997,
               "start": [
-                0.40625,
+                0.6292893185700259,
                 0.5
               ]
             },
@@ -5429,43 +6231,26 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8748538011695953,
-              "minimum": 0.8,
-              "variance": 0.009367668684381438
+              "mean": 0.7812865497076085,
+              "minimum": 0.6,
+              "variance": 0.010877876953592495
             },
             "aliasing": {
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.01513671875,
+            "frame_delta_change_energy": 0.015624999999999993,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.61875,
-              "mean": 0.4842105263157894,
-              "minimum": 0.35,
-              "variance": 0.004507027803426706
+              "maximum": 0.541421365737915,
+              "mean": 0.49999999954686586,
+              "minimum": 0.4585786461830139,
+              "variance": 0.0008561921265340178
             },
             "peaks": {
-              "count": 48,
-              "phases": [
-                0.25,
-                0.625,
-                0.96875,
-                0.25,
-                0.625,
-                0.96875,
-                0.25,
-                0.625,
-                0.96875,
-                0.25,
-                0.625,
-                0.96875,
-                0.25,
-                0.625,
-                0.96875,
-                0.25
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 4.0,
             "primary_events_per_second": 8.533333333333333,
@@ -5474,12 +6259,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.40625,
+                0.6292893185700259,
                 0.5
               ],
-              "path_distance": 12.795323905540648,
+              "path_distance": 8.274516388481647,
               "start": [
-                0.40625,
+                0.6292893185700259,
                 0.5
               ]
             },
@@ -5488,43 +6273,26 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8749268292682832,
-              "minimum": 0.8,
-              "variance": 0.009371336109458587
+              "mean": 0.7812682926829212,
+              "minimum": 0.6,
+              "variance": 0.010888147531231606
             },
             "aliasing": {
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.01513671875,
+            "frame_delta_change_energy": 0.015625000000000052,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.61875,
-              "mean": 0.4842926829268295,
-              "minimum": 0.35,
-              "variance": 0.004504499702558024
+              "maximum": 0.541421365737915,
+              "mean": 0.4999999995406039,
+              "minimum": 0.4585786461830139,
+              "variance": 0.0008570274359257575
             },
             "peaks": {
-              "count": 96,
-              "phases": [
-                0.25,
-                0.625,
-                0.96875,
-                0.25,
-                0.625,
-                0.96875,
-                0.25,
-                0.625,
-                0.96875,
-                0.25,
-                0.625,
-                0.96875,
-                0.25,
-                0.625,
-                0.96875,
-                0.25
-              ]
+              "count": 0,
+              "phases": []
             },
             "primary_events_per_beat": 8.0,
             "primary_events_per_second": 17.066666666666666,
@@ -5533,12 +6301,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.40625,
+                0.6292893185700259,
                 0.5
               ],
-              "path_distance": 25.59064781108119,
+              "path_distance": 16.549032776963383,
               "start": [
-                0.40625,
+                0.6292893185700259,
                 0.5
               ]
             },
@@ -5594,23 +6362,23 @@
         "fingerprints": [
           {
             "active_fixture_fraction": {
-              "maximum": 1.0,
-              "mean": 0.898440545808969,
-              "minimum": 0.8,
-              "variance": 0.007950784476895094
+              "maximum": 0.9,
+              "mean": 0.7937621832358689,
+              "minimum": 0.6,
+              "variance": 0.00791430601628608
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.003875732421602152,
+            "frame_delta_change_energy": 0.003905936249071828,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.6421875014901162,
-              "mean": 0.4984405458022492,
-              "minimum": 0.35000000298023226,
-              "variance": 0.00415814312104228
+              "maximum": 0.5866025492548943,
+              "mean": 0.5000000004528964,
+              "minimum": 0.4133974641561508,
+              "variance": 0.003742690065038301
             },
             "peaks": {
               "count": 0,
@@ -5623,12 +6391,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.4722222224291831,
+                0.5722222222222223,
                 0.5000000000000001
               ],
-              "path_distance": 1.112409923286228,
+              "path_distance": 1.172987858244942,
               "start": [
-                0.4722222224291831,
+                0.5722222222222223,
                 0.5000000000000001
               ]
             },
@@ -5676,26 +6444,24 @@
         "fingerprints": [
           {
             "active_fixture_fraction": {
-              "maximum": 0.96,
-              "mean": 0.9200000000000376,
+              "maximum": 1.0,
+              "mean": 0.9623621278672668,
               "minimum": 0.88,
-              "variance": 0.0015992191312835643
+              "variance": 0.0018302427043057257
             },
             "aliasing": {
-              "frames_per_on_window": 51.75,
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.00014741458489879732,
+            "frame_delta_change_energy": 0.00012071661021764188,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
               "maximum": 0.42797635912895204,
-              "mean": 0.37992136549023486,
+              "mean": 0.38404839917850103,
               "minimum": 0.33756580770015715,
-              "variance": 0.001055905570252642
+              "variance": 0.0005852653796459744
             },
-            "on_duty_cycle": 0.92,
             "peaks": {
               "count": 0,
               "phases": []
@@ -5705,46 +6471,39 @@
             "sample_count": 2049,
             "sample_duration_beats": 16.0,
             "spatial_centroid": {
-              "direction_reversals": 0,
+              "direction_reversals": 1,
               "end": [
-                0.5182036806428408,
-                0.5081578567769914
+                0.48067276056170405,
+                0.5199751921917874
               ],
-              "path_distance": 0.26672445762423935,
+              "path_distance": 0.22737703904501674,
               "start": [
                 0.5220712481371931,
                 0.5670649305215482
               ]
             },
-            "speed": 0.25,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 0.26666666666666666,
-              "observed_risk": "low"
-            }
+            "speed": 0.25
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.96,
-              "mean": 0.920000000000003,
+              "maximum": 1.0,
+              "mean": 0.9623804878048755,
               "minimum": 0.88,
-              "variance": 0.001598439024390261
+              "variance": 0.0018316015704937848
             },
             "aliasing": {
-              "frames_per_on_window": 25.875,
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.00029482916979759464,
+            "frame_delta_change_energy": 0.00024143322043528327,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
               "maximum": 0.42797635912895204,
-              "mean": 0.37993045782869256,
+              "mean": 0.38403382373059664,
               "minimum": 0.33756580770015715,
-              "variance": 0.0010555333940639386
+              "variance": 0.0005855496500065833
             },
-            "on_duty_cycle": 0.92,
             "peaks": {
               "count": 0,
               "phases": []
@@ -5754,46 +6513,39 @@
             "sample_count": 1025,
             "sample_duration_beats": 8.0,
             "spatial_centroid": {
-              "direction_reversals": 0,
+              "direction_reversals": 2,
               "end": [
-                0.5182036806428408,
-                0.5081578567769914
+                0.48067276056170405,
+                0.5199751921917874
               ],
-              "path_distance": 0.26672445762423935,
+              "path_distance": 0.22737703876216697,
               "start": [
                 0.5220712481371931,
                 0.5670649305215482
               ]
             },
-            "speed": 0.5,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 0.5333333333333333,
-              "observed_risk": "low"
-            }
+            "speed": 0.5
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.96,
-              "mean": 0.9199999999999949,
+              "maximum": 1.0,
+              "mean": 0.962417153996101,
               "minimum": 0.88,
-              "variance": 0.001596881091617924
+              "variance": 0.001818718770067911
             },
             "aliasing": {
-              "frames_per_on_window": 12.9375,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0005896583395951893,
+            "frame_delta_change_energy": 0.000482866440870567,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
               "maximum": 0.42797635912895204,
-              "mean": 0.37994861591977397,
+              "mean": 0.38400471536446285,
               "minimum": 0.33756580770015715,
-              "variance": 0.001054789635105172
+              "variance": 0.000586116081123939
             },
-            "on_duty_cycle": 0.92,
             "peaks": {
               "count": 0,
               "phases": []
@@ -5803,46 +6555,39 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 0,
+              "direction_reversals": 2,
               "end": [
-                0.5182036806428408,
-                0.5081578567769914
+                0.48067276056170405,
+                0.5199751921917874
               ],
-              "path_distance": 0.26672445762423935,
+              "path_distance": 0.22737703869455225,
               "start": [
                 0.5220712481371931,
                 0.5670649305215482
               ]
             },
-            "speed": 1.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 1.0666666666666667,
-              "observed_risk": "low"
-            }
+            "speed": 1.0
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.96,
-              "mean": 0.920155945419097,
+              "maximum": 1.0,
+              "mean": 0.967017543859646,
               "minimum": 0.88,
-              "variance": 0.0015968567726441874
+              "variance": 0.0015663486200882392
             },
             "aliasing": {
-              "frames_per_on_window": 6.46984649122807,
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0010412087413715198,
+            "frame_delta_change_energy": 0.0009299460552574593,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
               "maximum": 0.45920890510082246,
-              "mean": 0.39691965246351624,
+              "mean": 0.39446216874594353,
               "minimum": 0.33756580770015715,
-              "variance": 0.0011955227975841839
+              "variance": 0.0008874896920173124
             },
-            "on_duty_cycle": 0.9201559454191033,
             "peaks": {
               "count": 0,
               "phases": []
@@ -5852,46 +6597,39 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 0,
+              "direction_reversals": 3,
               "end": [
-                0.5066896978397902,
-                0.5325519759805738
+                0.45566075438070774,
+                0.48533157706484653
               ],
-              "path_distance": 0.4884506890878014,
+              "path_distance": 0.4189257357074634,
               "start": [
                 0.5220712481371931,
                 0.5670649305215482
               ]
             },
-            "speed": 2.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 1.6,
-              "observed_risk": "low"
-            }
+            "speed": 2.0
           },
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9225730994151973,
+              "mean": 0.9671734892787491,
               "minimum": 0.84,
-              "variance": 0.002485386956670429
+              "variance": 0.0016452272114116737
             },
             "aliasing": {
-              "frames_per_on_window": 3.243421052631579,
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.0019352204767346846,
+            "frame_delta_change_energy": 0.0018432593016768817,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
               "maximum": 0.4618344607949257,
-              "mean": 0.3862000960924943,
+              "mean": 0.3869448519392092,
               "minimum": 0.2945010802149773,
-              "variance": 0.0018910936208608557
+              "variance": 0.0013898825909014988
             },
-            "on_duty_cycle": 0.9225730994152047,
             "peaks": {
               "count": 0,
               "phases": []
@@ -5901,46 +6639,39 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 0,
+              "direction_reversals": 7,
               "end": [
-                0.5119947043771614,
-                0.4961810977064354
+                0.4905088429716201,
+                0.5363299948600864
               ],
-              "path_distance": 1.0248599085776342,
+              "path_distance": 0.9793233717906967,
               "start": [
                 0.5220712481371931,
                 0.5670649305215482
               ]
             },
-            "speed": 4.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 2.1333333333333333,
-              "observed_risk": "low"
-            }
+            "speed": 4.0
           },
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9300292682926846,
+              "mean": 0.9709658536585385,
               "minimum": 0.84,
-              "variance": 0.0023954137775134025
+              "variance": 0.0014641402974420045
             },
             "aliasing": {
-              "frames_per_on_window": 1.6348170731707317,
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.0018278016729891531,
+            "frame_delta_change_energy": 0.0017699131125846195,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
               "maximum": 0.4723772883415222,
-              "mean": 0.39382142534081355,
+              "mean": 0.39239686978648347,
               "minimum": 0.2945010802149773,
-              "variance": 0.00209375900681251
+              "variance": 0.0015946518610944072
             },
-            "on_duty_cycle": 0.930029268292683,
             "peaks": {
               "count": 0,
               "phases": []
@@ -5950,23 +6681,18 @@
             "sample_count": 1025,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 0,
+              "direction_reversals": 19,
               "end": [
-                0.5334456584365386,
-                0.580879529095459
+                0.5066757438854174,
+                0.5664135578647226
               ],
-              "path_distance": 2.111032812888334,
+              "path_distance": 2.0806043287301375,
               "start": [
                 0.5220712481371931,
                 0.5670649305215482
               ]
             },
-            "speed": 8.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 2.6666666666666665,
-              "observed_risk": "low"
-            }
+            "speed": 8.0
           }
         ],
         "identity": {
@@ -6018,26 +6744,24 @@
         "fingerprints": [
           {
             "active_fixture_fraction": {
-              "maximum": 0.97,
-              "mean": 0.9500194931773828,
+              "maximum": 1.0,
+              "mean": 0.9777972709551705,
               "minimum": 0.93,
-              "variance": 0.00024970722235521513
+              "variance": 0.00031152225376089305
             },
             "aliasing": {
-              "frames_per_on_window": 13.359649122807017,
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0005689229859854094,
+            "frame_delta_change_energy": 0.00045598196767969017,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
               "maximum": 0.4230519420653582,
-              "mean": 0.4045060863814959,
+              "mean": 0.4059265630499079,
               "minimum": 0.38640720024704933,
-              "variance": 0.00018335800803953605
+              "variance": 0.00011222213519794836
             },
-            "on_duty_cycle": 0.9500194931773879,
             "peaks": {
               "count": 0,
               "phases": []
@@ -6047,23 +6771,18 @@
             "sample_count": 513,
             "sample_duration_beats": 4.0,
             "spatial_centroid": {
-              "direction_reversals": 0,
+              "direction_reversals": 1,
               "end": [
-                0.4873511239081954,
-                0.4895621571373029
+                0.5001161302260223,
+                0.5166166246934988
               ],
-              "path_distance": 0.11077458606268945,
+              "path_distance": 0.08085988064508129,
               "start": [
                 0.48880347410314484,
                 0.5373217246296311
               ]
             },
-            "speed": 1.0,
-            "strobe": {
-              "exceeds_authored_safety_limit": false,
-              "maximum_fixture_flash_hz": 1.0666666666666667,
-              "observed_risk": "low"
-            }
+            "speed": 1.0
           }
         ],
         "identity": {

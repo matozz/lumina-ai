@@ -51,16 +51,11 @@ export function collectCueEffects(bundle: ProjectBundle, catalog: ProductionCata
 
 export function recomputeCueSummary(cue: CueDefinition, effects: EffectDefinitionDocument[]) {
   const required = new Set<string>();
-  let risk: CueDefinition["risk_summary"]["strobe_risk"] = "none";
   for (const layer of cue.layers) {
     const effect = effects.find((candidate) => assetKey(candidate) === assetKey(layer.effect_ref));
     for (const attribute of effect?.catalog.required_attributes ?? []) required.add(attribute);
-    if (riskRank(effect?.catalog.strobe_risk ?? "none") > riskRank(risk)) {
-      risk = effect?.catalog.strobe_risk ?? risk;
-    }
   }
   cue.capability_summary.required_attributes = [...required].sort();
-  cue.risk_summary.strobe_risk = risk;
 }
 
 export function appendCueLayer(
@@ -147,8 +142,4 @@ export function cueDiagnostic(path: string, message: string): Diagnostic {
     message,
     hint: "Keep editing; preview remains on the Last Known Good candidate.",
   };
-}
-
-function riskRank(risk: CueDefinition["risk_summary"]["strobe_risk"]) {
-  return { none: 0, low: 1, medium: 2, high: 3 }[risk];
 }

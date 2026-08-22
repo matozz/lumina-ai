@@ -85,12 +85,14 @@ export function EffectCatalogLibrary({ document }: { document: FullDSL }) {
             <Plus aria-hidden="true" />
           </EmptyMedia>
           <EmptyTitle>No effects yet</EmptyTitle>
-          <EmptyDescription>Create a reusable red pulse without opening Raw DSL.</EmptyDescription>
+          <EmptyDescription>
+            Create a reusable smooth accent without opening Raw DSL.
+          </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <Button size="sm" onClick={createEffect}>
             <Plus data-icon="inline-start" aria-hidden="true" />
-            Create red pulse
+            Create smooth accent
           </Button>
         </EmptyContent>
       </Empty>

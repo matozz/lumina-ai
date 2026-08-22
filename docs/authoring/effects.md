@@ -2,7 +2,7 @@
 
 ## 所有权
 
-`EffectDefinitionDocument` 只描述 target-agnostic 的视觉行为：typed parameter schema、EffectGraph、capability、Catalog metadata 和风险信息。它不引用 Stage、Layout、fixture、TargetSet、Cue 或 Arrangement。
+`EffectDefinitionDocument` 只描述 target-agnostic 的视觉行为：typed parameter schema、EffectGraph、capability 和 Catalog metadata。它不引用 Stage、Layout、fixture、TargetSet、Cue 或 Arrangement。
 
 目标绑定发生在 Cue Layer。这样同一个 Effect 可以在不同 Stage 区域复用，同时保持精确、可验证的依赖关系。
 
@@ -18,7 +18,7 @@ Graph 连接使用结构化 node/port 引用。Rust compiler 在 render 前完�
 
 render 中的每个 node 都是 tick 与 fixture context 的确定性函数。相同 snapshot、tick、seed 和参数必须得到相同输出；Random 不得依赖共享可变 RNG。
 
-Random 将 phase 0 保留为停止状态的静态预览；Transport 离开零点时立即进入第一个 seeded cycle，随后按整数 beat 周期稳定切换，避免播放开始后额外停留一拍。
+Random 为相邻 seeded cycle 生成确定性目标，并用 smoothstep 在整个 cycle 内连续交叉淡化。它不会在整数 beat 硬切，也不会依赖 UI frame rate；相同 seed、fixture、node 和 phase 必须重放一致。
 
 ## Authoring
 
@@ -27,7 +27,7 @@ Random 将 phase 0 保留为停止状态的静态预览；Transport 离开零点
 - 非法更改保留表单内容并显示局部 Diagnostic，Canvas 保持 last-known-good frame。
 - 参数 UI 只读取当前 Effect 的 parameter schema，不能按 Effect 名称写分支。
 - 默认 speed 以及 Cue override 只接受 0.25×、0.5×、1×、2×、4×、8×。
-- 普通 Lab 先展示参数控制；family/category/layout capability 等 Catalog tags 只在 Advanced 模式展示，高 strobe risk 仍始终可见。
+- 普通 Lab 先展示参数控制；family/category/layout capability 等 Catalog metadata 只在 Advanced 模式展示。Catalog 不保存或展示高/中/低 strobe risk 标签。
 
 ### Tempo behavior contract
 
@@ -45,7 +45,7 @@ Random 将 phase 0 保留为停止状态的静态预览；Transport 离开零点
 
 ### Temporal analysis 与高速预览
 
-`analyze_effect_temporal` 使用真实 Rust compile + `render_at`，在固定 Stage/Layout/TargetSet、seed、BPM、参数和 dense musical-time sampling 下输出：主要事件率、峰值与 phase、on-duty、intensity 分布、active fixture fraction、空间质心路径/反转、frame delta、颜色变化、逐 fixture strobe Hz、安全越限和 UI fps 混叠风险。不适用的 family metric 使用缺省值，而不是伪造数字。
+`analyze_effect_temporal` 使用真实 Rust compile + `render_at`，在固定 Stage/Layout/TargetSet、seed、BPM、参数和 dense musical-time sampling 下输出：主要事件率、峰值与 phase、on-duty、intensity 分布、active fixture fraction、空间质心路径/反转、frame delta、颜色变化、适用时的逐 fixture pulse Hz、安全越限和 UI fps 混叠风险。不适用的 family metric 使用缺省值，而不是伪造数字。Hz 是内部分析数值，不会再派生或持久化 high/medium/low 风险标签。
 
 空间方向使用 compiled Effect instance 的真实 SpatialPhase offsets 作为进度基准。Wrapped 轨迹使用强度加权的圆周质心并跨周期解包；只有持续至少三个 sample 且累计位移达到轨迹范围 2% 的反向 run 才计为 reversal。由此不会把 one-way wrap reset、离散 fixture 抖动或环形传播误报为反向，同时仍能在 ping-pong 中测得真正的方向切换。
 
@@ -91,7 +91,7 @@ cache identity 包含 exact Effect、Stage、Layout、TargetSet、resolved fixtu
 
 旧的 `value_type`、typed `default_value`、`required`、`safe_fallback`、`override_policy`、`automation`、`advanced`、`ui_hint`、平铺 `range/step/unit/enum_values` 都已删除。它们或与类型重复，或允许互相矛盾的组合。表单 last-known-good 属于编辑会话状态，不再伪装成资产内的 `safe_fallback`；控件形态从 `schema.type` 和 unit 推导。
 
-Effect Catalog 继续保留 `source/revision` 供 exact reference，保留 energy/density/motion/colorfulness/strobe risk 供发现和风险过滤，并保留 `required_attributes/layout_capabilities` 做 fail-closed 兼容性校验。后两项不能仅从 Graph 猜测：通用 attribute-set writer、Targeting Scene 和布局语义都可能使静态推断不完整。普通 UI 不展示 source、revision 或 raw capability token。
+Effect Catalog 继续保留 `source/revision` 供 exact reference，保留 energy/density/motion/colorfulness 供发现，并保留 `required_attributes/layout_capabilities` 做 fail-closed 兼容性校验。后两项不能仅从 Graph 猜测：通用 attribute-set writer、Targeting Scene 和布局语义都可能使静态推断不完整。Catalog 不保存 `strobe_risk`，Cue 也不保存 `risk_summary`；旧字段按 unknown-field 策略 fail closed。普通 UI 不展示 source、revision 或 raw capability token。
 
 ### Standard Color override
 
@@ -101,16 +101,22 @@ Color `schema.default` 是唯一的显式默认色开关：存在时 Effect 默�
 
 结构性 Palette 继续使用 `color_stops`，只在 Lab 中编辑。本版本不在 runtime 改变 stop 数量，也不做 stop-by-stop Arrangement automation。
 
-当前受源码管理的 Effect、Cue、Arrangement、starter Project 与测试 fixture 必须在同一变更中完整迁移到新参数结构。运行时不读取或补写旧字段：含旧参数结构、旧 `tempo.kind/one_x_events_per_beat/phase_anchor/duty_cycle/direction_reversals_per_graph_cycle/topology_sensitivity/recommended_speed`、缺少标准 Color 或含其他 unknown field 的 Project/User Asset Pack 都 fail closed；旧开发缓存只在 scoped storage boundary 重建 starter。Catalog 行为修复直接更新当前源文件，不机械增加 revision；只有确实需要新旧 identity 并存时才新增 revision，并同步重映射所有 exact refs。
+当前受源码管理的 Effect、Cue、Arrangement、starter Project 与测试 fixture 必须在同一变更中完整迁移到新参数结构。运行时不读取或补写旧字段：含旧参数结构、旧 `tempo.kind/one_x_events_per_beat/phase_anchor/duty_cycle/direction_reversals_per_graph_cycle/topology_sensitivity/recommended_speed`、旧 `catalog.strobe_risk`、旧 Cue `risk_summary`、缺少标准 Color 或含其他 unknown field 的 Project/User Asset Pack 都 fail closed；旧开发缓存只在 scoped storage boundary 重建 starter。Catalog 行为修复直接更新当前源文件，不机械增加 revision；只有确实需要新旧 identity 并存时才新增 revision，并同步重映射所有 exact refs。
 
 ## 内置效果取舍
 
-内置库按可观察的视觉意图区分，而不是按参数微调重复收录。V1 保留柔和、可塑形的 **Breathe**，删除与其图结构和输出过于接近的旧 **Pulse**；需要短促节拍时使用 **Short Color Burst** 或安全等级明确的 **Safe Strobe Pulse**。
+内置库按可观察的视觉意图区分，而不是按参数微调重复收录。**Short Color Burst** 与 **Safe Strobe Pulse** 合并为 **Color Accent**：每个 cycle 都有可调 attack/release，最低亮度保留在可读范围，不产生瞬时全黑闪烁。Effect Lab 新建效果只提供 sine/triangle 连续波形，生成参数只保留确实改变 Graph 的 Speed、Phase、Intensity、Color 与 Direction；不再生成无效的 Width/Transition 字段。
 
 矩阵空间效果包含：
 
-- **Column Ping-Pong**：窄列在左右边界之间往返，不会退化为整场同步亮度变化。
-- **Seeded Column Rain**：用 Cue Layer seed 对每个唯一 X 坐标生成稳定相位，同一列保持一致，并沿 Y 轴由上到下滚动。相同 seed、布局和 tick 必须重放一致。
+- **Column Half Relay**：替换意义不清的 Alternating Grid Chase，把目标按 X 坐标动态二等分并在左右半场之间连续交叉淡化；1× 每拍完成一个方向，两拍完成完整往返。
+- **Column Thirds Triplet**：按实际 TargetSet 宽度动态三等分，一拍完成一个三分区 triplet phrase。
+- **Column Quarter Cascade**：动态四等分并按列区连续级联。
+- **Column Center Ripple**：按距水平中心的距离动态分区，形成中心向外或反向的对称波纹。
+- **Four-Column Prism**：四列分区的颜色与亮度联合传播。
+- **Column Ping-Pong**、**Seeded Column Rain**：使用连续软边 profile，不再用 FixtureMask 硬切列头。
+
+`SpatialPhase.partition_count` 是 topology-relative 分区：compiler 先在当前 TargetSet 上归一化 X 或 `x_distance`，再量化为 2/3/4 等分。因此同一 Effect 可在 20 列全场、10 列 quadrant 或其他布局中保持分区语义，不保存具体列号。
 
 `random_x` 是 SpatialPhase 的确定性空间 basis，只随机化列相位，不使用共享可变 RNG，也不按 fixture 逐个制造噪点。
 
@@ -120,7 +126,7 @@ Intensity parameter override 缩放 EffectGraph 已写出的 intensity；当 Fix
 
 Effect 写入 typed fixture attributes。Profile 提供默认 HTP/LTP policy，但当多个 Cue Layer 或重叠 CueClip 在同一 fixture 上写同一属性时，作者必须在 Cue Layer 明确选择 MixPolicy；Add、Multiply 和 Mask 永不因重叠自动启用。
 
-高风险 strobe 继续要求显式确认和可信 Catalog metadata。Preview、Save 和 Go Live 都复用 Rust authority validation，不依赖 UI 曾经成功渲染。
+内置 Catalog 不包含硬边 pulse/strobe 效果。对于外部或未来 Effect，若 `tempo.safety` 声明了数值上限，Preview、Save 和 Go Live 仍通过真实 BPM 与逐 fixture Hz 执行 Rust authority validation；UI 不使用风险标签或阻断式“高风险”确认。
 
 ## 关键实现
 

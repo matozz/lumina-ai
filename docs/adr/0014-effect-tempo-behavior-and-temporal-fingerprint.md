@@ -6,7 +6,7 @@
 
 ## Context
 
-EffectGraph phase 的 cycle 不是统一的视觉事件：sine、triangle、saw、pulse、空间错相和 TargetSet topology 会让相同 multiplier 呈现不同的峰值、方向变化和全场事件率。仅凭 Effect 名称、motion tag、Graph wave 或 30fps UI sampling 无法可靠判断 arrangement tempo、strobe safety 或 4×/8× 行为。
+EffectGraph phase 的 cycle 不是统一的视觉事件：sine、triangle、saw、pulse、空间错相和 TargetSet topology 会让相同 multiplier 呈现不同的峰值、方向变化和全场事件率。仅凭 Effect 名称、motion metadata、Graph wave 或 30fps UI sampling 无法可靠判断 arrangement tempo、pulse safety 或 4×/8× 行为。
 
 ## Decision
 
@@ -18,9 +18,9 @@ compiler/runtime 把已积分的 normalized primary-event phase 除以 `events_p
 
 ### Derived runtime evidence
 
-Temporal analyzer 只能通过真实 `Compiler` + `render_at` 取样，不允许前端或 Skill 另写视觉近似。request identity 包含 exact Effect/Stage/Layout/TargetSet、resolved fixture count、seed、parameter overrides、BPM、speed 和 sampling。报告按 family 适用性输出 event rate、peaks、duty、分布、空间路径、change/color energy、逐 fixture strobe Hz 和 alias risk。
+Temporal analyzer 只能通过真实 `Compiler` + `render_at` 取样，不允许前端或 Skill 另写视觉近似。request identity 包含 exact Effect/Stage/Layout/TargetSet、resolved fixture count、seed、parameter overrides、BPM、speed 和 sampling。报告按行为适用性输出 event rate、peaks、duty、分布、空间路径、change/color energy、逐 fixture pulse Hz 和 alias risk。Catalog 与 Cue 不保存 high/medium/low 风险标签；数值结果也不反向写入 metadata。
 
-全部 built-in Effect 的六档合法 speed 与第二 TargetSet topology probe 进入 checked-in Golden。production validation 同时验证 normalized rate 单调性、已知 phase/duty/方向 landmark 和真实 BPM safety。
+全部 built-in Effect 的六档合法 speed 与第二 TargetSet topology probe 进入 checked-in Golden。production validation 同时验证 normalized rate 单调性、连续 profile、已知 phase/duty/方向 landmark 和适用的真实 BPM safety。
 
 ### Preview and AI consumers
 

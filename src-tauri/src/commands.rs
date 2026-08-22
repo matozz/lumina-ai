@@ -1223,9 +1223,6 @@ mod tests {
         bundle.effects = vec![traveler];
         bundle.manifest.effect_refs = vec![reference.clone()];
         bundle.cues[0].layers[0].effect_ref = reference;
-        bundle.cues[0].risk_summary =
-            serde_json::from_value(serde_json::json!({ "strobe_risk": "none" }))
-                .expect("traveler risk summary");
         bundle.cues[0].layers[0].parameter_overrides.insert(
             "speed".to_string(),
             serde_json::from_value(serde_json::json!({ "type": "scalar", "value": 2.0 }))
@@ -1412,7 +1409,7 @@ mod tests {
               ] },
               { "type": "attribute_writer", "id": "output", "input": { "node_id": "shape-pulse", "port": "attribute_set" } }
             ] },
-            "catalog": { "energy": 0.7, "density": 0.5, "motion": "pulse", "colorfulness": 1.0, "strobe_risk": "low", "required_attributes": ["intensity", "color.rgb"] }
+            "catalog": { "energy": 0.7, "density": 0.5, "motion": "pulse", "colorfulness": 1.0, "required_attributes": ["intensity", "color.rgb"] }
           }],
           "effect_instances": [{ "id": "red-pulse", "definition_id": "project.red-pulse", "definition_revision": 1, "target_group_id": "all", "seed": "0000000000000001" }],
           "timeline": { "ppq": 960, "tempo_map": { "points": [{ "time_tick": 0, "bpm": 120 }] }, "tracks": [] }

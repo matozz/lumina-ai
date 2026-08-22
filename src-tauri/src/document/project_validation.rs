@@ -2265,7 +2265,7 @@ pub(crate) mod tests {
                 ] },
                 "catalog": {
                     "energy": 0.5, "density": 0.5, "motion": "pulse",
-                    "colorfulness": 0.5, "strobe_risk": "low",
+                    "colorfulness": 0.5,
                     "required_attributes": ["intensity"]
                 }
             }],
@@ -2290,8 +2290,7 @@ pub(crate) mod tests {
                     "trigger_policy": { "mode": "timeline", "quantize": "beat" }
                 }],
                 "trigger_policy": { "mode": "timeline", "quantize": "beat" },
-                "capability_summary": { "required_attributes": ["intensity"] },
-                "risk_summary": { "strobe_risk": "low" }
+                "capability_summary": { "required_attributes": ["intensity"] }
             }],
             "arrangements": [{
                 "schema_version": 1,
@@ -2321,15 +2320,6 @@ pub(crate) mod tests {
             validated.into_bundle().manifest.active_arrangement_id,
             "arrangement-1"
         );
-    }
-
-    #[test]
-    fn cue_risk_summary_does_not_have_to_mirror_the_highest_effect_risk() {
-        let mut bundle = valid_bundle();
-        bundle.cues[0].risk_summary.strobe_risk = super::super::StrobeRiskDSL::None;
-
-        ValidatedProject::validate(bundle)
-            .expect("Effect metadata remains authoritative for runtime strobe safety");
     }
 
     #[test]

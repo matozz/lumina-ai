@@ -54,8 +54,6 @@ export type PrimaryVisualEventDSL =
   | "movement_cycle"
   | "spatial_propagation";
 
-export type StrobeRiskDSL = "none" | "low" | "medium" | "high";
-
 export interface TempoSafetyLimitDSL {
   max_primary_events_per_second: number;
 }
@@ -147,7 +145,6 @@ export interface TemporalSpeedFingerprint {
 export interface TemporalStrobeMetric {
   exceeds_authored_safety_limit: boolean;
   maximum_fixture_flash_hz: number;
-  observed_risk: StrobeRiskDSL;
 }
 
 export interface TemporalAnalyzerContract {

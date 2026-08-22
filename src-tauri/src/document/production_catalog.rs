@@ -2,14 +2,14 @@ use super::project_validation::resolve_target_set;
 use super::validation::{validate_effect_definition_document, validate_parameter_value_contract};
 use super::{
     builtin_generator_registry, layout_geometry_shape, ArrangementDocument, AssetRef,
-    CenterEdgesRegion, CueCapabilitySummary, CueDefinition, CueLayer, CueQuantize, CueRiskSummary,
-    CueTriggerMode, CueTriggerPolicy, DirectionDSL, EffectDefinitionDSL, EffectDefinitionDocument,
+    CenterEdgesRegion, CueCapabilitySummary, CueDefinition, CueLayer, CueQuantize, CueTriggerMode,
+    CueTriggerPolicy, DirectionDSL, EffectDefinitionDSL, EffectDefinitionDocument,
     EffectInstanceDSL, EffectNodeDSL, GeneratorDSL, GroupDSL, GroupFixturesDSL, GroupRangeDSL,
     LayoutCapabilityDSL, LayoutDSL, LayoutDefinition, LayoutGeometry, LayoutType, MetaDSL,
     OscillatorWaveformDSL, ParameterScopeDSL, ParameterValueDSL, PatchDSL, ProjectBundle,
-    ProjectManifest, ShowDocumentV1, StageDocument, StrobeRiskDSL, TargetSetDefinition,
-    TargetSetRef, TargetSetSelector, TargetingSceneDefinition, TargetingSceneRef,
-    TargetingTransition, ValidatedProject, CUE_DEFINITION_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION,
+    ProjectManifest, ShowDocumentV1, StageDocument, TargetSetDefinition, TargetSetRef,
+    TargetSetSelector, TargetingSceneDefinition, TargetingSceneRef, TargetingTransition,
+    ValidatedProject, CUE_DEFINITION_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION,
 };
 use crate::compiler::diagnostic::{
     Diagnostic, CATALOG_METADATA_INVALID, CATALOG_OUTPUT_INVALID, CATALOG_PARAMETER_INVALID,
@@ -480,44 +480,6 @@ pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<D
                 "Sampled Effect output is static across the preview loop.",
                 "Connect time or spatial phase to a visible writer.",
             ));
-        }
-        if matches!(
-            effect.tempo.primary_event,
-            super::PrimaryVisualEventDSL::PulseOnset
-        ) || !matches!(effect.catalog.strobe_risk, StrobeRiskDSL::None)
-        {
-            match sampled_maximum_strobe_risk(effect) {
-                Ok(observed) if strobe_rank(effect.catalog.strobe_risk) < strobe_rank(observed) => {
-                    diagnostics.push(
-                        Diagnostic::error(
-                            CATALOG_METADATA_INVALID,
-                            "catalog.strobe_risk",
-                            format!(
-                                "Declared strobe risk {:?} understates sampled maximum {:?}.",
-                                effect.catalog.strobe_risk, observed
-                            ),
-                            "Raise the declared risk or reduce the maximum flash rate.",
-                        )
-                        .with_asset(
-                            "effect",
-                            effect.id.clone(),
-                            effect.revision,
-                        ),
-                    );
-                }
-                Ok(_) => {}
-                Err(mut errors) => {
-                    for diagnostic in &mut errors {
-                        diagnostic.asset =
-                            Some(Box::new(crate::compiler::diagnostic::DiagnosticAsset {
-                                kind: "effect".to_string(),
-                                id: effect.id.clone(),
-                                revision: effect.revision,
-                            }));
-                    }
-                    diagnostics.extend(errors);
-                }
-            }
         }
         let signature = serde_json::to_string(
             &samples
@@ -1079,60 +1041,7 @@ fn alternate_parameter_value(
     }
 }
 
-fn sampled_maximum_strobe_risk(
-    effect: &EffectDefinitionDocument,
-) -> Result<StrobeRiskDSL, Vec<Diagnostic>> {
-    const SAMPLE_BPM: f64 = 128.0;
-    const SAMPLE_BEATS: u32 = 4;
-    const SAMPLES_PER_BEAT: u32 = 64;
-    let maximum_speed = effect
-        .parameters
-        .iter()
-        .find(|parameter| parameter.id == "speed")
-        .and_then(|parameter| parameter.range().map(|(_, maximum)| maximum));
-    let overrides = maximum_speed.map_or_else(BTreeMap::new, |maximum| {
-        BTreeMap::from([("speed".to_string(), ParameterValueDSL::Scalar(maximum))])
-    });
-    let show = Compiler::compile_document(effect_sample_document(effect, overrides))?;
-    let active = effect_sample_live(&show);
-    let states = (0..=SAMPLE_BEATS * SAMPLES_PER_BEAT)
-        .map(|sample| {
-            let frames = render_at(
-                &show,
-                RenderTime {
-                    beat: f64::from(sample) / f64::from(SAMPLES_PER_BEAT),
-                },
-                RenderSource::Live(&active),
-            );
-            frames
-                .iter()
-                .map(|frame| frame_intensity(frame).is_some_and(|value| value > 0.1))
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-    let fixture_count = states.first().map_or(0, Vec::len);
-    let maximum_onsets = (0..fixture_count)
-        .map(|fixture| {
-            states
-                .windows(2)
-                .filter(|pair| !pair[0][fixture] && pair[1][fixture])
-                .count()
-        })
-        .max()
-        .unwrap_or(0);
-    let duration_seconds = f64::from(SAMPLE_BEATS) * 60.0 / SAMPLE_BPM;
-    let flashes_per_second = maximum_onsets as f64 / duration_seconds;
-    Ok(if flashes_per_second <= f64::EPSILON {
-        StrobeRiskDSL::None
-    } else if flashes_per_second < 3.0 {
-        StrobeRiskDSL::Low
-    } else if flashes_per_second < 8.0 {
-        StrobeRiskDSL::Medium
-    } else {
-        StrobeRiskDSL::High
-    })
-}
-
+#[cfg(test)]
 fn frame_intensity(frame: &crate::engine::attribute::FixtureFrame) -> Option<f64> {
     frame
         .to_payload()
@@ -1439,7 +1348,6 @@ pub fn resolve_cue_recipe(
     let mut diagnostics = Vec::new();
     let mut layers = Vec::with_capacity(recipe.layers.len());
     let mut required_attributes = BTreeSet::new();
-    let mut strobe_risk = StrobeRiskDSL::None;
     for (index, recipe_layer) in recipe.layers.iter().enumerate() {
         let path = format!("layers[{index}]");
         let Some(effect) = catalog.effects.iter().find(|effect| {
@@ -1515,9 +1423,6 @@ pub fn resolve_cue_recipe(
             continue;
         }
         required_attributes.extend(effect.catalog.required_attributes.iter().cloned());
-        if strobe_rank(effect.catalog.strobe_risk) > strobe_rank(strobe_risk) {
-            strobe_risk = effect.catalog.strobe_risk;
-        }
         layers.push(CueLayer {
             id: recipe_layer.id.clone(),
             effect_ref: recipe_layer.effect_ref.clone(),
@@ -1558,7 +1463,6 @@ pub fn resolve_cue_recipe(
         capability_summary: CueCapabilitySummary {
             required_attributes: required_attributes.into_iter().collect(),
         },
-        risk_summary: CueRiskSummary { strobe_risk },
     })
 }
 
@@ -1671,15 +1575,6 @@ fn layout_has_capability(layout: &LayoutDefinition, capability: LayoutCapability
     }
 }
 
-fn strobe_rank(risk: StrobeRiskDSL) -> u8 {
-    match risk {
-        StrobeRiskDSL::None => 0,
-        StrobeRiskDSL::Low => 1,
-        StrobeRiskDSL::Medium => 2,
-        StrobeRiskDSL::High => 3,
-    }
-}
-
 fn unresolved_recipe(
     recipe_ref: &CueRecipeRef,
     path: &str,
@@ -1719,13 +1614,59 @@ mod tests {
     }
 
     #[test]
+    fn built_in_effects_use_continuous_profiles_and_declared_column_partitions() {
+        let catalog = builtin_production_catalog().expect("checked-in catalog parses");
+        for effect in &catalog.effects {
+            for node in &effect.graph.nodes {
+                assert!(
+                    !matches!(
+                        node,
+                        EffectNodeDSL::Oscillator {
+                            waveform: OscillatorWaveformDSL::Pulse | OscillatorWaveformDSL::Saw,
+                            ..
+                        } | EffectNodeDSL::FixtureMask { .. }
+                            | EffectNodeDSL::StepSequence { .. }
+                    ),
+                    "{} contains a hard-edged temporal primitive",
+                    effect.id
+                );
+            }
+        }
+
+        let partition_count = |effect_id: &str| {
+            catalog
+                .effects
+                .iter()
+                .find(|effect| effect.id == effect_id)
+                .and_then(|effect| {
+                    effect.graph.nodes.iter().find_map(|node| match node {
+                        EffectNodeDSL::SpatialPhase {
+                            partition_count, ..
+                        } => *partition_count,
+                        _ => None,
+                    })
+                })
+        };
+        assert_eq!(partition_count("builtin.intensity.chase"), Some(2));
+        assert_eq!(
+            partition_count("builtin.spatial.column-thirds-triplet"),
+            Some(3)
+        );
+        assert_eq!(
+            partition_count("builtin.spatial.column-quarter-cascade"),
+            Some(4)
+        );
+        assert_eq!(partition_count("builtin.color.column-prism"), Some(4));
+    }
+
+    #[test]
     fn tempo_contract_rejects_primary_events_the_graph_cannot_produce() {
         let catalog = builtin_production_catalog().expect("catalog");
         let pulse = catalog
             .effects
             .iter()
             .find(|effect| effect.id == "builtin.color.pulse")
-            .expect("Short Color Burst");
+            .expect("Color Accent");
 
         let mut impossible_refresh = pulse.clone();
         impossible_refresh.tempo.primary_event =
@@ -1792,7 +1733,7 @@ mod tests {
         let entries = golden["effects"]
             .as_array()
             .expect("temporal Golden has Effect entries");
-        assert_eq!(entries.len(), 17, "every built-in Effect is fingerprinted");
+        assert_eq!(entries.len(), 20, "every built-in Effect is fingerprinted");
 
         let report_for = |effect_id: &str| {
             let value = entries
@@ -1855,18 +1796,17 @@ mod tests {
             );
         }
 
-        let burst = report_for("builtin.color.pulse");
-        let burst_one_x = &burst.fingerprints[2];
-        assert_eq!(
-            burst_one_x.intensity.as_ref().map(|metric| metric.minimum),
-            Some(0.0)
-        );
-        assert!(
-            burst_one_x
-                .on_duty_cycle
-                .is_some_and(|duty| (0.15..=0.25).contains(&duty)),
-            "Short Color Burst must be a short, fully-off pulse"
-        );
+        let accent = report_for("builtin.color.pulse");
+        let accent_one_x = &accent.fingerprints[2];
+        let accent_intensity = accent_one_x
+            .intensity
+            .as_ref()
+            .expect("Color Accent writes intensity");
+        assert!(accent_intensity.minimum >= 0.1);
+        assert!(accent_intensity.maximum > 0.8);
+        assert!(accent_intensity.variance > 0.01);
+        assert_eq!(accent_one_x.on_duty_cycle, None);
+        assert!(accent_one_x.strobe.is_none());
 
         let ping_pong = report_for("builtin.spatial.column-ping-pong");
         assert_eq!(ping_pong.behavior.events_per_graph_cycle, 2.0);
@@ -1879,8 +1819,18 @@ mod tests {
             Some(3),
             "four beats must expose exactly three sustained direction changes"
         );
+        let half_relay = report_for("builtin.intensity.chase");
+        assert_eq!(half_relay.behavior.events_per_graph_cycle, 2.0);
+        assert_eq!(half_relay.fingerprints[2].graph_cycles_per_beat, 0.5);
+        assert_eq!(
+            half_relay.fingerprints[2]
+                .spatial_centroid
+                .as_ref()
+                .map(|centroid| centroid.direction_reversals),
+            Some(3),
+            "four beats must expose exactly three sustained half-relay direction changes"
+        );
         for effect_id in [
-            "builtin.intensity.chase",
             "builtin.spatial.column-rain",
             "builtin.intensity.wave",
             "builtin.spatial.angular-orbit",
@@ -1896,26 +1846,6 @@ mod tests {
                 "{effect_id} must not mistake wrapped spatial progress for a direction reversal"
             );
         }
-
-        let strobe = report_for("builtin.strobe.safe-pulse");
-        assert!(strobe.fingerprints[2]
-            .on_duty_cycle
-            .is_some_and(|duty| (0.1..=0.16).contains(&duty)));
-        assert!(
-            !strobe.fingerprints[2]
-                .strobe
-                .as_ref()
-                .expect("pulse safety metrics")
-                .exceeds_authored_safety_limit
-        );
-        assert!(
-            strobe.fingerprints[3]
-                .strobe
-                .as_ref()
-                .expect("2× pulse safety metrics")
-                .exceeds_authored_safety_limit,
-            "real 128 BPM Hz must trip the authored safety limit at 2×"
-        );
     }
 
     #[test]
@@ -2108,28 +2038,28 @@ mod tests {
             .effects
             .iter()
             .find(|effect| effect.id == "builtin.color.pulse")
-            .expect("Short Color Burst");
+            .expect("Color Accent");
         let show = Compiler::compile_document(effect_sample_document(burst, BTreeMap::new()))
-            .expect("Short Color Burst compiles");
+            .expect("Color Accent compiles");
         let active = effect_sample_live(&show);
         let colors = [0.0, 0.25].map(|beat| {
             render_at(&show, RenderTime { beat }, RenderSource::Live(&active))
                 .first()
                 .and_then(frame_color)
-                .expect("Short Color Burst writes color")
+                .expect("Color Accent writes color")
         });
 
         assert_ne!(colors[0], colors[1], "graph color must remain animated");
     }
 
     #[test]
-    fn short_color_burst_keeps_its_pulse_with_a_cue_color_override() {
+    fn color_accent_keeps_its_smooth_intensity_with_a_cue_color_override() {
         let catalog = builtin_production_catalog().expect("catalog");
         let burst = catalog
             .effects
             .iter()
             .find(|effect| effect.id == "builtin.color.pulse" && effect.revision == 1)
-            .expect("Short Color Burst current source");
+            .expect("Color Accent current source");
         let document = effect_sample_document(
             burst,
             BTreeMap::from([(
@@ -2137,20 +2067,23 @@ mod tests {
                 ParameterValueDSL::Color("#FF4FD8".to_string()),
             )]),
         );
-        let show = Compiler::compile_document(document).expect("Short Color Burst compiles");
+        let show = Compiler::compile_document(document).expect("Color Accent compiles");
         let active = effect_sample_live(&show);
         let intensities = [0.0, 0.25, 0.5, 0.75].map(|beat| {
             render_at(&show, RenderTime { beat }, RenderSource::Live(&active))
                 .first()
                 .and_then(frame_intensity)
-                .expect("Short Color Burst writes intensity")
+                .expect("Color Accent writes intensity")
         });
 
         let minimum = intensities.into_iter().fold(f64::INFINITY, f64::min);
         let maximum = intensities.into_iter().fold(f64::NEG_INFINITY, f64::max);
 
-        assert!(minimum <= f64::EPSILON, "burst must turn fully off");
-        assert!(maximum > 0.9, "Cue Color must not flatten the burst pulse");
+        assert!(minimum >= 0.1, "Color Accent must remain visibly alive");
+        assert!(
+            maximum > 0.8,
+            "Cue Color must not flatten the accent envelope"
+        );
     }
 
     #[test]
@@ -2208,8 +2141,7 @@ mod tests {
                     "trigger_policy": { "mode": "timeline", "quantize": "beat" }
                 }],
                 "trigger_policy": { "mode": "timeline", "quantize": "beat" },
-                "capability_summary": { "required_attributes": ["intensity"] },
-                "risk_summary": { "strobe_risk": "none" }
+                "capability_summary": { "required_attributes": ["intensity"] }
             },
             {
                 "schema_version": 1,
@@ -2237,8 +2169,7 @@ mod tests {
                     "trigger_policy": { "mode": "timeline", "quantize": "beat" }
                 }],
                 "trigger_policy": { "mode": "timeline", "quantize": "beat" },
-                "capability_summary": { "required_attributes": ["intensity"] },
-                "risk_summary": { "strobe_risk": "none" }
+                "capability_summary": { "required_attributes": ["intensity"] }
             }
         ]))
         .expect("test Cues parse");

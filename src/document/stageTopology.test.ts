@@ -58,7 +58,6 @@ describe("Stage topology impact", () => {
       automation_lanes: [],
       trigger_policy: { mode: "timeline", quantize: "beat" },
       capability_summary: { required_attributes: [] },
-      risk_summary: { strobe_risk: "none" },
     });
     bundle.manifest.cue_refs.push({ id: "cue", revision: 1 });
     bundle.arrangements.find(

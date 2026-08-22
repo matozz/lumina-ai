@@ -20,15 +20,6 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectGroup,
@@ -75,7 +66,6 @@ export function EffectLabInspector() {
   const comparison = useAuthoringDraftStore(authoringDraftSelectors.comparison);
   const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
   const [advancedVisible, setAdvancedVisible] = useState(false);
-  const [confirmHighRiskUse, setConfirmHighRiskUse] = useState(false);
   const [targetEditorOpen, setTargetEditorOpen] = useState(false);
   const selectedEffect =
     exactAsset(bundle.effects, reference) ?? exactAsset(catalog?.effects ?? [], reference);
@@ -243,14 +233,6 @@ export function EffectLabInspector() {
     workspaceActions.setPublishStatus("idle", `${saved.name} is ready in a new Cue.`);
   };
 
-  const requestUseEffectInCue = () => {
-    if (effect.catalog.strobe_risk === "high") {
-      setConfirmHighRiskUse(true);
-      return;
-    }
-    useEffectInCue();
-  };
-
   const saveAsNewDraft = () => {
     if (!canSave) return;
     const fork = structuredClone(session.lastKnownGood);
@@ -381,25 +363,19 @@ export function EffectLabInspector() {
               </Alert>
             )}
 
-            {(advancedMode || effect.catalog.strobe_risk === "high") && (
+            {advancedMode && (
               <div className="flex flex-wrap gap-1.5">
-                {advancedMode && effect.catalog.family && (
+                {effect.catalog.family && (
                   <Badge variant="secondary">{effect.catalog.family}</Badge>
                 )}
-                {advancedMode && effect.catalog.category && (
+                {effect.catalog.category && (
                   <Badge variant="outline">{effect.catalog.category}</Badge>
                 )}
-                {advancedMode &&
-                  (effect.catalog.layout_capabilities ?? []).map((capability) => (
-                    <Badge key={capability} variant="outline">
-                      {capability}
-                    </Badge>
-                  ))}
-                <Badge
-                  variant={effect.catalog.strobe_risk === "high" ? "destructive" : "secondary"}
-                >
-                  {effect.catalog.strobe_risk} strobe risk
-                </Badge>
+                {(effect.catalog.layout_capabilities ?? []).map((capability) => (
+                  <Badge key={capability} variant="outline">
+                    {capability}
+                  </Badge>
+                ))}
               </div>
             )}
 
@@ -522,7 +498,7 @@ export function EffectLabInspector() {
                 !compatibility?.compatible ||
                 (!readOnly && session.status !== "valid" && session.status !== "pristine")
               }
-              onClick={requestUseEffectInCue}
+              onClick={useEffectInCue}
             >
               <Layers2 data-icon="inline-start" aria-hidden="true" />
               {!readOnly && session.status !== "pristine" ? "Save & use in Cue" : "Use in Cue"}
@@ -541,29 +517,6 @@ export function EffectLabInspector() {
           </div>
         </ScrollArea>
       </aside>
-      <Dialog open={confirmHighRiskUse} onOpenChange={setConfirmHighRiskUse}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm high strobe risk</DialogTitle>
-            <DialogDescription>
-              This Effect can produce high-frequency intensity changes. Verify audience safety and
-              the selected fixtures before using it in a Cue.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                useEffectInCue();
-                setConfirmHighRiskUse(false);
-              }}
-            >
-              Use high-risk Effect
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       <StageCollectionEditorDialog
         kind="targets"
         open={targetEditorOpen}

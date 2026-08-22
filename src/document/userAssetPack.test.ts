@@ -39,7 +39,7 @@ describe("UserAssetPack V1", () => {
     expect(pack.stages).toEqual([template.stage]);
     expect(pack.layouts).toEqual(builtinLayouts);
     expect(pack.effects).toEqual(builtinEffects);
-    expect(pack.effects).toHaveLength(17);
+    expect(pack.effects).toHaveLength(20);
     expect(pack.cues).toEqual(template.cues);
     expect(pack.cues).toEqual([]);
     expect(pack.arrangements).toEqual(builtinArrangements);

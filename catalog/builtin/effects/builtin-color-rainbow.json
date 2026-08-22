@@ -141,12 +141,23 @@
         "attribute_id": "color.rgb"
       },
       {
-        "type": "constant",
-        "id": "visible-intensity",
-        "value": {
-          "type": "scalar",
-          "value": 1
+        "type": "oscillator",
+        "id": "intensity-fade",
+        "waveform": "sine",
+        "phase": {
+          "node_id": "time",
+          "port": "scalar"
         }
+      },
+      {
+        "type": "map",
+        "id": "visible-intensity",
+        "input": {
+          "node_id": "intensity-fade",
+          "port": "scalar"
+        },
+        "input_range": [0, 1],
+        "output_range": [0.45, 1]
       },
       {
         "type": "attribute_writer",
@@ -168,7 +179,6 @@
     "density": 0.85,
     "motion": "sweep",
     "colorfulness": 1,
-    "strobe_risk": "none",
     "required_attributes": ["color.rgb", "intensity"],
     "layout_capabilities": ["coordinates"]
   }

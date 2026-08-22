@@ -6,12 +6,11 @@ use crate::document::{
     layout_fixture_size_for_fixture, layout_to_show_dsl, resolve_target_set,
     ArrangementAutomationTarget, ArrangementDocument, ArrangementMarker, AssetRef,
     AutomationLaneDSL, AutomationTargetDSL, ClipPlaybackDSL, CueAutomationLane,
-    CueCapabilitySummary, CueDefinition, CueLayer, CueMixOverride, CueRiskSummary,
-    CueTriggerPolicy, EffectClipDSL, EffectDefinitionDSL, EffectInstanceDSL, GroupDSL,
-    GroupFixturesDSL, LayoutDefinition, MetaDSL, MixPolicy as CueMixPolicy, OverlapPolicyDSL,
-    ProjectBundle, ShowDocumentV1, StageDocument, TargetingDuration, TargetingDurationUnit,
-    TargetingSceneDefinition, TargetingTransition, TimeSignaturePoint, TimelineTrackDSL,
-    TimelineV1DSL, ValidatedProject,
+    CueCapabilitySummary, CueDefinition, CueLayer, CueMixOverride, CueTriggerPolicy, EffectClipDSL,
+    EffectDefinitionDSL, EffectInstanceDSL, GroupDSL, GroupFixturesDSL, LayoutDefinition, MetaDSL,
+    MixPolicy as CueMixPolicy, OverlapPolicyDSL, ProjectBundle, ShowDocumentV1, StageDocument,
+    TargetingDuration, TargetingDurationUnit, TargetingSceneDefinition, TargetingTransition,
+    TimeSignaturePoint, TimelineTrackDSL, TimelineV1DSL, ValidatedProject,
 };
 use crate::engine::effect::{CompiledTargetingScene, CompiledTargetingStep, EffectInstance};
 use crate::engine::profile::{profile_by_handle, profile_by_id, MixPolicy};
@@ -34,7 +33,6 @@ pub struct CompiledCue {
     pub layers: Vec<CompiledCueLayer>,
     pub trigger_policy: CueTriggerPolicy,
     pub capability_summary: CueCapabilitySummary,
-    pub risk_summary: CueRiskSummary,
 }
 
 #[derive(Clone)]
@@ -265,7 +263,6 @@ impl Compiler {
                     layers: compiled_layers,
                     trigger_policy: cue.trigger_policy,
                     capability_summary: cue.capability_summary.clone(),
-                    risk_summary: cue.risk_summary.clone(),
                 },
             );
         }

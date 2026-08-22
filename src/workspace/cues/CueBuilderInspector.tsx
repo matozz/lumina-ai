@@ -59,8 +59,6 @@ export function CueBuilderInspector() {
   const session = useAuthoringDraftStore(authoringDraftSelectors.cue);
   const comparison = useAuthoringDraftStore(authoringDraftSelectors.comparison);
   const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
-  const [pendingHighRiskEffect, setPendingHighRiskEffect] =
-    useState<EffectDefinitionDocument | null>(null);
   const persistedCue = exactAsset(bundle.cues, reference);
   const sessionMatches = Boolean(
     reference && session && assetKey(session.pinned) === assetKey(reference),
@@ -112,10 +110,6 @@ export function CueBuilderInspector() {
       (candidate) => selectedEffectRef && assetKey(candidate) === assetKey(selectedEffectRef),
     );
     if (!effect) return;
-    if (effect.catalog.strobe_risk === "high") {
-      setPendingHighRiskEffect(effect);
-      return;
-    }
     appendEffect(effect);
   };
   const removeSelected = () => {
@@ -285,32 +279,6 @@ export function CueBuilderInspector() {
           </div>
         </ScrollArea>
       </aside>
-      <Dialog
-        open={Boolean(pendingHighRiskEffect)}
-        onOpenChange={(open) => !open && setPendingHighRiskEffect(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm high strobe risk</DialogTitle>
-            <DialogDescription>
-              {pendingHighRiskEffect?.name} can produce high-frequency intensity changes. Verify the
-              target, audience safety policy, and safe defaults before adding this layer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (pendingHighRiskEffect) appendEffect(pendingHighRiskEffect);
-                setPendingHighRiskEffect(null);
-              }}
-            >
-              Add high-risk layer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
@@ -401,15 +369,12 @@ function CueSummary({ cue, advanced }: { cue: CueDefinition; advanced: boolean }
   return (
     <>
       <Separator />
-      <div className="flex flex-wrap gap-1.5" aria-label="Cue capability and risk summary">
+      <div className="flex flex-wrap gap-1.5" aria-label="Cue capability summary">
         {(cue.capability_summary.required_attributes ?? []).map((attribute) => (
           <Badge key={attribute} variant="outline">
             {attribute}
           </Badge>
         ))}
-        <Badge variant={cue.risk_summary.strobe_risk === "high" ? "destructive" : "secondary"}>
-          {cue.risk_summary.strobe_risk} strobe risk
-        </Badge>
         {advanced && (
           <Badge variant="outline">{cue.automation_lanes?.length ?? 0} automation lanes</Badge>
         )}

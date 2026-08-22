@@ -458,7 +458,6 @@ pub struct CueDefinition {
     pub automation_lanes: Vec<CueAutomationLane>,
     pub trigger_policy: CueTriggerPolicy,
     pub capability_summary: CueCapabilitySummary,
-    pub risk_summary: CueRiskSummary,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
@@ -545,12 +544,6 @@ pub struct CueAutomationTarget {
 pub struct CueCapabilitySummary {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required_attributes: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct CueRiskSummary {
-    pub strobe_risk: super::StrobeRiskDSL,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]

@@ -91,7 +91,6 @@ export interface CueDefinition {
   name: string;
   nominal_length_ticks: number;
   revision: number;
-  risk_summary: CueRiskSummary;
   schema_version: 1;
   trigger_policy: CueTriggerPolicy;
 }
@@ -178,10 +177,6 @@ export type CueRecipeTargetDSL =
       type: "edges";
     };
 
-export interface CueRiskSummary {
-  strobe_risk: StrobeRiskDSL;
-}
-
 export interface CueTrack {
   automation_lanes?: Array<ArrangementAutomationLane>;
   clips?: Array<CueClip>;
@@ -216,7 +211,6 @@ export interface EffectCatalogDSL {
   mood?: Array<string>;
   motion: MotionTagDSL;
   required_attributes?: Array<string>;
-  strobe_risk: StrobeRiskDSL;
   visibility?: CatalogVisibilityDSL;
 }
 
@@ -232,7 +226,7 @@ export interface EffectDefinitionDocument {
   tempo: EffectTempoBehaviorDSL;
 }
 
-export type EffectFamilyDSL = "intensity" | "color" | "movement" | "spatial" | "strobe" | "utility";
+export type EffectFamilyDSL = "intensity" | "color" | "movement" | "spatial" | "utility";
 
 export interface EffectGraphDSL {
   nodes: Array<EffectNodeDSL>;
@@ -279,6 +273,7 @@ export type EffectNodeDSL =
       group_size?: number | null;
       id: string;
       input: EffectPortRefDSL;
+      partition_count?: number | null;
       to: number;
       type: "spatial_phase";
       wrap: boolean;
@@ -727,7 +722,15 @@ export type SortByDSL =
   | "x+y"
   | "-(x+y)";
 
-export type SpatialBasisDSL = "index" | "x" | "random_x" | "y" | "distance" | "angle" | "custom";
+export type SpatialBasisDSL =
+  | "index"
+  | "x"
+  | "x_distance"
+  | "random_x"
+  | "y"
+  | "distance"
+  | "angle"
+  | "custom";
 
 export interface StageDocument {
   groups: Array<GroupDSL>;
@@ -747,8 +750,6 @@ export interface StepValuesDSL {
   pan?: number | null;
   tilt?: number | null;
 }
-
-export type StrobeRiskDSL = "none" | "low" | "medium" | "high";
 
 export interface SvgPathDef {
   d: string;

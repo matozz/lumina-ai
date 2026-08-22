@@ -62,8 +62,6 @@ describe("DocumentCommand transactions", () => {
       waveform: "triangle",
       speed: 2,
       phase: 0.5,
-      width: 75,
-      transition: 25,
       color: "#ff0000",
     });
     const revised = applyDocumentTransaction(

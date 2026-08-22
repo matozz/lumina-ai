@@ -1,6 +1,6 @@
 use lumina_ai_lib::document::{
-    AssetRef, ProjectBundle, ProjectManifest, UserAssetPack, PROJECT_BUNDLE_SCHEMA_VERSION,
-    PROJECT_MANIFEST_SCHEMA_VERSION,
+    load_project_bundle, AssetRef, ProjectBundle, ProjectManifest, UserAssetPack,
+    PROJECT_BUNDLE_SCHEMA_VERSION, PROJECT_MANIFEST_SCHEMA_VERSION,
 };
 use lumina_ai_lib::engine::temporal::{
     analyze_project_temporal_behavior, render_temporal_contact_sheet_svg, TemporalAnalysisRequest,
@@ -32,8 +32,9 @@ fn run() -> Result<(), String> {
     let source = fs::read_to_string(source_path)
         .map_err(|error| format!("Cannot read {}: {error}", source_path.display()))?;
     let mut project = if project_path.is_some() {
-        serde_json::from_str::<ProjectBundle>(&source)
-            .map_err(|error| format!("ProjectBundle parse failed: {error}"))?
+        load_project_bundle(&source)
+            .map_err(|diagnostics| serde_json::to_string_pretty(&diagnostics).unwrap_or_default())?
+            .into_bundle()
     } else {
         let pack = serde_json::from_str::<UserAssetPack>(&source)
             .map_err(|error| format!("UserAssetPack parse failed: {error}"))?;

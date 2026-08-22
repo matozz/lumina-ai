@@ -93,7 +93,7 @@
       {
         "type": "oscillator",
         "id": "oscillator",
-        "waveform": "triangle",
+        "waveform": "sine",
         "phase": {
           "node_id": "spatial",
           "port": "scalar"
@@ -119,7 +119,6 @@
     "density": 0.65,
     "motion": "sweep",
     "colorfulness": 0,
-    "strobe_risk": "high",
     "required_attributes": ["intensity"],
     "layout_capabilities": ["coordinates", "radial"]
   }

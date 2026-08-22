@@ -114,7 +114,6 @@ describe("Effect Lab safe authoring", () => {
       expect(screen.getAllByText("2×2 · Top left · 100 of 400").length).toBeGreaterThan(0),
     );
     fireEvent.click(useInCue);
-    fireEvent.click(await screen.findByRole("button", { name: "Use high-risk Effect" }));
 
     expect(useWorkspaceStore.getState().activeWorkspace).toBe("cues");
     expect(useProjectStore.getState().selectedCueRef).toBeTruthy();
@@ -181,7 +180,7 @@ describe("Effect Lab safe authoring", () => {
     fireEvent.click(screen.getByLabelText("Speed"));
     expect(screen.queryByRole("option", { name: "0.375×" })).toBeNull();
     const fastestSpeed = screen.getByRole("option", {
-      name: /8× · 8 onset\/beat · 17\.07 events\/s/,
+      name: /8× · 8 rise-fall cycle\/beat · 17\.07 events\/s/,
     });
     fireEvent.mouseMove(fastestSpeed);
     fireEvent.click(fastestSpeed);
@@ -213,7 +212,7 @@ describe("Effect Lab safe authoring", () => {
     });
     const currentAnalysis = screen.getByLabelText("Current temporal analysis");
     expect(currentAnalysis.textContent).toContain("Current behavior");
-    expect(currentAnalysis.textContent).toContain("1 onset/beat · 2.13 events/s");
+    expect(currentAnalysis.textContent).toContain("1 rise-fall cycle/beat · 2.13 events/s");
     expect(screen.queryByText("Runtime analyzed")).toBeNull();
     expect(screen.queryByLabelText("Measured speed comparison")).toBeNull();
 
@@ -224,7 +223,7 @@ describe("Effect Lab safe authoring", () => {
       ).toBeTruthy();
     }
     const eightSpeed = screen.getByRole("option", {
-      name: /8× · 8 onset\/beat · 17\.07 events\/s/,
+      name: /8× · 8 rise-fall cycle\/beat · 17\.07 events\/s/,
     });
     fireEvent.mouseMove(eightSpeed);
     fireEvent.click(eightSpeed);
@@ -232,7 +231,7 @@ describe("Effect Lab safe authoring", () => {
     await waitFor(() => {
       analysisCalls = bridge.analyzeEffectTemporal.mock.calls;
       expect(analysisCalls[analysisCalls.length - 1]?.[1].speeds).toEqual([8]);
-      expect(currentAnalysis.textContent).toContain("8 onset/beat · 17.07 events/s");
+      expect(currentAnalysis.textContent).toContain("8 rise-fall cycle/beat · 17.07 events/s");
     });
     expect(screen.queryByText("High-speed readability is limited")).toBeNull();
     expect(screen.queryByText("High-speed preview is undersampled")).toBeNull();

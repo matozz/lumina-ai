@@ -1,6 +1,10 @@
 [
   "builtin.intensity.breathe",
   "builtin.intensity.chase",
+  "builtin.spatial.column-thirds-triplet",
+  "builtin.spatial.column-quarter-cascade",
+  "builtin.spatial.column-center-ripple",
+  "builtin.color.column-prism",
   "builtin.spatial.column-ping-pong",
   "builtin.spatial.column-rain",
   "builtin.intensity.wave",
@@ -11,7 +15,6 @@
   "builtin.spatial.angular-orbit",
   "builtin.movement.pan-sweep",
   "builtin.movement.tilt-wave",
-  "builtin.strobe.safe-pulse",
   "builtin.transition.fade-crossfade",
   "builtin.transition.wipe",
   "builtin.transition.dissolve",

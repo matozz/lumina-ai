@@ -218,16 +218,13 @@
             "type": "string"
           }
         },
-        "strobe_risk": {
-          "$ref": "#/$defs/StrobeRiskDSL"
-        },
         "visibility": {
           "$ref": "#/$defs/CatalogVisibilityDSL",
           "default": "standard"
         }
       },
       "additionalProperties": false,
-      "required": ["energy", "density", "motion", "colorfulness", "strobe_risk"]
+      "required": ["energy", "density", "motion", "colorfulness"]
     },
     "EffectClipDSL": {
       "type": "object",
@@ -305,7 +302,7 @@
     },
     "EffectFamilyDSL": {
       "type": "string",
-      "enum": ["intensity", "color", "movement", "spatial", "strobe", "utility"]
+      "enum": ["intensity", "color", "movement", "spatial", "utility"]
     },
     "EffectGraphDSL": {
       "type": "object",
@@ -503,6 +500,11 @@
             },
             "input": {
               "$ref": "#/$defs/EffectPortRefDSL"
+            },
+            "partition_count": {
+              "type": ["integer", "null"],
+              "format": "uint32",
+              "minimum": 0
             },
             "to": {
               "type": "number",
@@ -1463,7 +1465,7 @@
     },
     "SpatialBasisDSL": {
       "type": "string",
-      "enum": ["index", "x", "random_x", "y", "distance", "angle", "custom"]
+      "enum": ["index", "x", "x_distance", "random_x", "y", "distance", "angle", "custom"]
     },
     "StepValuesDSL": {
       "type": "object",
@@ -1487,10 +1489,6 @@
         }
       },
       "additionalProperties": false
-    },
-    "StrobeRiskDSL": {
-      "type": "string",
-      "enum": ["none", "low", "medium", "high"]
     },
     "SvgPathDef": {
       "type": "object",

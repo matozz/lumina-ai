@@ -321,7 +321,6 @@ pub struct EffectCatalogDSL {
     pub motion: MotionTagDSL,
     #[schemars(range(min = 0.0, max = 1.0))]
     pub colorfulness: f32,
-    pub strobe_risk: StrobeRiskDSL,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required_attributes: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -335,7 +334,6 @@ pub enum EffectFamilyDSL {
     Color,
     Movement,
     Spatial,
-    Strobe,
     Utility,
 }
 
@@ -367,15 +365,6 @@ pub enum MotionTagDSL {
     Chase,
     Sweep,
     Organic,
-}
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum StrobeRiskDSL {
-    None,
-    Low,
-    Medium,
-    High,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
@@ -427,6 +416,8 @@ pub enum EffectNodeDSL {
         wrap: bool,
         #[serde(skip_serializing_if = "Option::is_none")]
         group_size: Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        partition_count: Option<u32>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         custom_order: Vec<u32>,
     },
@@ -549,6 +540,7 @@ pub enum OscillatorWaveformDSL {
 pub enum SpatialBasisDSL {
     Index,
     X,
+    XDistance,
     RandomX,
     Y,
     Distance,

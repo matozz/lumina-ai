@@ -210,11 +210,17 @@ describe("Stage 7 Project state", () => {
       expect.arrayContaining([
         "builtin.color.dual-sweep",
         "builtin.intensity.breathe",
+        "builtin.spatial.column-thirds-triplet",
+        "builtin.spatial.column-quarter-cascade",
+        "builtin.color.column-prism",
         "builtin.spatial.column-ping-pong",
         "builtin.spatial.column-rain",
       ]),
     );
-    expect(migrated.bundle.effects).toHaveLength(17);
+    expect(migrated.bundle.effects).toHaveLength(20);
+    expect(migrated.bundle.effects.some((candidate) => candidate.id.includes("strobe"))).toBe(
+      false,
+    );
     expect(migrated.bundle.cues).toHaveLength(0);
     expect(migrated.bundle.arrangements.map((arrangement) => arrangement.id)).toEqual([
       "builtin.arrangement.house-128",
@@ -270,7 +276,7 @@ describe("Stage 7 Project state", () => {
 
     expect(migrated.bundle.manifest.name).toBe("Lighting Project");
     expect(migrated.selectedEffectRef).toBeNull();
-    expect(migrated.bundle.effects).toHaveLength(17);
+    expect(migrated.bundle.effects).toHaveLength(20);
     expect(migrated.bundle.effects.every((effect) => effect.tempo)).toBe(true);
   });
 
@@ -288,9 +294,25 @@ describe("Stage 7 Project state", () => {
     >;
 
     expect(migrated.bundle.manifest.name).toBe("Lighting Project");
-    expect(migrated.bundle.effects).toHaveLength(17);
+    expect(migrated.bundle.effects).toHaveLength(20);
     expect(JSON.stringify(migrated.bundle)).not.toContain("one_x_events_per_beat");
     expect(JSON.stringify(migrated.bundle)).not.toContain("recommended_speed");
+  });
+
+  it("resets caches containing removed strobe risk metadata", async () => {
+    const cachedBundle = structuredClone(useProjectStore.getState().bundle);
+    cachedBundle.manifest.name = "Strobe risk metadata shadow";
+    const obsoleteCatalog = cachedBundle.effects[0].catalog as unknown as Record<string, unknown>;
+    obsoleteCatalog.strobe_risk = "high";
+
+    const migrate = useProjectStore.persist.getOptions().migrate;
+    const migrated = (await Promise.resolve(migrate?.({ bundle: cachedBundle }, 16))) as ReturnType<
+      typeof useProjectStore.getState
+    >;
+
+    expect(migrated.bundle.manifest.name).toBe("Lighting Project");
+    expect(migrated.bundle.effects).toHaveLength(20);
+    expect(JSON.stringify(migrated.bundle)).not.toContain("strobe_risk");
   });
 
   it("does not interrupt the current preview when selecting another Effect", () => {
@@ -402,7 +424,7 @@ describe("Stage 7 Project state", () => {
 
     expect(pack).toEqual(baseline);
     expect(pack.name).toBe("Base Assets");
-    expect(pack.effects).toHaveLength(17);
+    expect(pack.effects).toHaveLength(20);
     expect(pack.effects.some((effect) => effect.id === customEffect.id)).toBe(false);
     expect(pack.arrangements).toEqual([
       expect.objectContaining({ id: "builtin.arrangement.house-128", name: "House 128" }),

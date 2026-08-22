@@ -4,8 +4,7 @@ use crate::document::{
     layout_to_show_dsl, resolve_target_set, AssetRef, EffectDefinitionDSL,
     EffectDefinitionDocument, EffectInstanceDSL, EffectTempoBehaviorDSL, GroupDSL,
     GroupFixturesDSL, LayoutDefinition, MetaDSL, ParameterValueDSL, PrimaryVisualEventDSL,
-    ProjectBundle, ShowDocumentV1, StageDocument, StrobeRiskDSL, TargetSetDefinition,
-    CURRENT_SCHEMA_VERSION,
+    ProjectBundle, ShowDocumentV1, StageDocument, TargetSetDefinition, CURRENT_SCHEMA_VERSION,
 };
 use crate::engine::attribute::{resolve_attribute, FixtureFrame};
 use crate::engine::effect::{is_beat_sync_speed_multiplier, CompiledEffectNode, EffectNodeHandle};
@@ -148,7 +147,6 @@ pub struct TemporalCentroidMetric {
 #[serde(deny_unknown_fields)]
 pub struct TemporalStrobeMetric {
     pub maximum_fixture_flash_hz: f64,
-    pub observed_risk: StrobeRiskDSL,
     pub exceeds_authored_safety_limit: bool,
 }
 
@@ -615,16 +613,14 @@ fn analyze_speed(
         compiled_request.effect.tempo.primary_event,
         PrimaryVisualEventDSL::PulseOnset
     );
-    let on_duty_cycle = (is_pulse
-        || compiled_request.effect.catalog.strobe_risk != StrobeRiskDSL::None)
+    let on_duty_cycle = is_pulse
         .then_some(on_samples as f64 / (u64::from(sample_count) * target_count as u64) as f64);
     let maximum_fixture_flash_hz = flash_onsets.iter().copied().max().map_or(0.0, |onsets| {
         f64::from(onsets) / (duration_beats * 60.0 / request.bpm)
     });
-    let strobe = (is_pulse || compiled_request.effect.catalog.strobe_risk != StrobeRiskDSL::None)
-        .then(|| TemporalStrobeMetric {
+    let strobe =
+        is_pulse.then(|| TemporalStrobeMetric {
             maximum_fixture_flash_hz,
-            observed_risk: strobe_risk(maximum_fixture_flash_hz),
             exceeds_authored_safety_limit: compiled_request.effect.tempo.safety.is_some_and(
                 |limit| maximum_fixture_flash_hz > limit.max_primary_events_per_second,
             ),
@@ -1002,18 +998,6 @@ fn direction_reversals(values: &[f64]) -> u32 {
     reversals
 }
 
-fn strobe_risk(hz: f64) -> StrobeRiskDSL {
-    if hz <= f64::EPSILON {
-        StrobeRiskDSL::None
-    } else if hz < 3.0 {
-        StrobeRiskDSL::Low
-    } else if hz < 8.0 {
-        StrobeRiskDSL::Medium
-    } else {
-        StrobeRiskDSL::High
-    }
-}
-
 fn stable_cache_key(identity: &TemporalAnalysisIdentity) -> String {
     let bytes = serde_json::to_vec(identity).expect("temporal identity serializes");
     let hash = bytes
@@ -1058,14 +1042,6 @@ mod tests {
             risk(128.0 / 60.0 * 4.0, Some(0.125)),
             TemporalAliasingRisk::Severe
         );
-    }
-
-    #[test]
-    fn strobe_risk_uses_real_hz_thresholds() {
-        assert_eq!(strobe_risk(0.0), StrobeRiskDSL::None);
-        assert_eq!(strobe_risk(2.99), StrobeRiskDSL::Low);
-        assert_eq!(strobe_risk(3.0), StrobeRiskDSL::Medium);
-        assert_eq!(strobe_risk(8.0), StrobeRiskDSL::High);
     }
 
     #[test]

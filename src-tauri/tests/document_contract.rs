@@ -74,7 +74,6 @@ const VALID_DOCUMENT: &str = r##"{
       "density": 0.5,
       "motion": "pulse",
       "colorfulness": 0.5,
-      "strobe_risk": "none",
       "required_attributes": ["intensity", "color.rgb"]
     }
   }],

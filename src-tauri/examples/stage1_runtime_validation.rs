@@ -183,6 +183,7 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
                     to: 1.0,
                     wrap: false,
                     group_size: None,
+                    partition_count: None,
                     custom_order: Vec::new(),
                 },
                 CompiledEffectNode::StepSequence {

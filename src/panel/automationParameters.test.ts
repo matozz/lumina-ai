@@ -24,7 +24,6 @@ function documentFixture(): FullDSL {
           density: 0.5,
           colorfulness: 0.5,
           motion: "pulse",
-          strobe_risk: "none",
         },
         parameters: [
           {

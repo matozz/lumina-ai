@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "id": "builtin.spatial.column-thirds-triplet",
+  "name": "Column Thirds Triplet",
+  "revision": 1,
+  "source": "built_in",
+  "parameters": [
+    {
+      "id": "speed",
+      "name": "Speed",
+      "schema": {
+        "type": "scalar",
+        "default": 1,
+        "range": { "min": 0.25, "max": 8, "step": 0.25 },
+        "unit": "multiplier"
+      },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "One left-center-right triplet phrase per beat at 1×."
+    },
+    {
+      "id": "intensity",
+      "name": "Intensity",
+      "schema": {
+        "type": "scalar",
+        "default": 0.9,
+        "range": { "min": 0, "max": 1, "step": 0.05 },
+        "unit": "normalized"
+      },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Peak brightness of each column third."
+    },
+    {
+      "id": "direction",
+      "name": "Direction",
+      "schema": { "type": "direction", "default": "forward" },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Triplet travel direction."
+    },
+    {
+      "id": "attack",
+      "name": "Attack",
+      "schema": {
+        "type": "scalar",
+        "default": 0.18,
+        "range": { "min": 0.05, "max": 0.4, "step": 0.05 },
+        "unit": "normalized"
+      },
+      "scope": "effect",
+      "section": "advanced",
+      "help": "Fade-in length for each triplet accent.",
+      "graph_binding": { "node_id": "triplet-envelope", "property": "attack" }
+    },
+    {
+      "id": "release",
+      "name": "Release",
+      "schema": {
+        "type": "scalar",
+        "default": 0.55,
+        "range": { "min": 0.3, "max": 0.8, "step": 0.05 },
+        "unit": "normalized"
+      },
+      "scope": "effect",
+      "section": "advanced",
+      "help": "Fade-out length for each triplet accent.",
+      "graph_binding": { "node_id": "triplet-envelope", "property": "release" }
+    },
+    {
+      "id": "color",
+      "name": "Color",
+      "schema": { "type": "color", "default": "#A78BFA" },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Color of the three-part relay."
+    }
+  ],
+  "tempo": {
+    "primary_event": "spatial_propagation",
+    "events_per_graph_cycle": 1
+  },
+  "graph": {
+    "nodes": [
+      { "type": "time", "id": "time" },
+      {
+        "type": "spatial_phase",
+        "id": "column-thirds",
+        "input": { "node_id": "time", "port": "scalar" },
+        "basis": "x",
+        "from": 0,
+        "to": 1,
+        "wrap": true,
+        "partition_count": 3
+      },
+      {
+        "type": "envelope",
+        "id": "triplet-envelope",
+        "input": { "node_id": "column-thirds", "port": "scalar" },
+        "attack": 0.18,
+        "release": 0.55
+      },
+      {
+        "type": "map",
+        "id": "soft-triplet",
+        "input": { "node_id": "triplet-envelope", "port": "scalar" },
+        "input_range": [0, 1],
+        "output_range": [0.08, 1]
+      },
+      {
+        "type": "attribute_writer",
+        "id": "writer",
+        "input": { "node_id": "soft-triplet", "port": "scalar" },
+        "attribute_id": "intensity"
+      }
+    ]
+  },
+  "catalog": {
+    "family": "spatial",
+    "category": "Column Phrases",
+    "visibility": "standard",
+    "mood": ["syncopated", "playful"],
+    "energy": 0.68,
+    "density": 0.72,
+    "motion": "chase",
+    "colorfulness": 0.75,
+    "required_attributes": ["intensity", "color.rgb"],
+    "layout_capabilities": ["matrix", "coordinates"]
+  }
+}

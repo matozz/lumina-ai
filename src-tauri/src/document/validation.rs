@@ -1317,6 +1317,7 @@ fn validate_effect_node_values(
             from,
             to,
             group_size,
+            partition_count,
             custom_order,
             ..
         } => {
@@ -1330,6 +1331,20 @@ fn validate_effect_node_values(
                 diagnostics.push(invalid_number(
                     format!("{path}.group_size"),
                     "SpatialPhase group_size must be greater than zero.",
+                ));
+            }
+            if partition_count.is_some_and(|count| count == 0) {
+                diagnostics.push(invalid_number(
+                    format!("{path}.partition_count"),
+                    "SpatialPhase partition_count must be greater than zero.",
+                ));
+            }
+            if group_size.is_some() && partition_count.is_some() {
+                diagnostics.push(Diagnostic::error(
+                    DOC_EFFECT_GRAPH_INVALID,
+                    path.clone(),
+                    "SpatialPhase cannot use group_size and partition_count together.",
+                    "Choose either fixed fixture groups or topology-relative partitions.",
                 ));
             }
             if matches!(basis, super::SpatialBasisDSL::Custom) && custom_order.is_empty() {

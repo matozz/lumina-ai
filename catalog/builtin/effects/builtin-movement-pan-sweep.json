@@ -72,12 +72,14 @@
         "attribute_id": "position.pan"
       },
       {
-        "type": "constant",
+        "type": "map",
         "id": "visible-intensity",
-        "value": {
-          "type": "scalar",
-          "value": 1
-        }
+        "input": {
+          "node_id": "oscillator",
+          "port": "scalar"
+        },
+        "input_range": [0, 1],
+        "output_range": [0.55, 1]
       },
       {
         "type": "attribute_writer",
@@ -99,7 +101,6 @@
     "density": 0.7,
     "motion": "sweep",
     "colorfulness": 0,
-    "strobe_risk": "none",
     "required_attributes": ["position.pan", "intensity"],
     "layout_capabilities": ["any"]
   }

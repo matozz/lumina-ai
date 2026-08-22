@@ -257,23 +257,6 @@ describe("Cue Builder safe authoring", () => {
     expect(project.historyCursor).toBe(1);
   });
 
-  it("requires confirmation before adding a high-risk strobe layer", async () => {
-    render(<Harness />);
-    fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
-    await waitFor(() => expect(screen.getByLabelText("Cue name")).toBeTruthy());
-
-    const strobe = catalog.effects.find((effect) => effect.catalog.strobe_risk === "high")!;
-    act(() => projectActions.setSelectedEffectRef({ id: strobe.id, revision: strobe.revision }));
-    const add = screen.getByRole("button", { name: "Add selected Effect" });
-    await waitFor(() => expect(add.hasAttribute("disabled")).toBe(false));
-    fireEvent.click(add);
-
-    expect(screen.getByRole("dialog", { name: "Confirm high strobe risk" })).toBeTruthy();
-    expect(useAuthoringDraftStore.getState().cue?.working.layers).toHaveLength(2);
-    fireEvent.click(screen.getByRole("button", { name: "Add high-risk layer" }));
-    expect(useAuthoringDraftStore.getState().cue?.working.layers).toHaveLength(3);
-  });
-
   it("duplicates automation with unique IDs and keeps layer ordering deterministic", async () => {
     render(<Harness />);
     fireEvent.click(screen.getByRole("button", { name: /Four on Floor.*1 effect/ }));
@@ -363,13 +346,6 @@ function cueFixture() {
     help: parameter.name,
   }));
   scratch.effects.push(effect);
-  const strobe = structuredClone(effect);
-  strobe.id = "builtin.strobe.safe-pulse";
-  strobe.name = "Safe Strobe Pulse";
-  strobe.catalog.family = "strobe";
-  strobe.catalog.category = "Strobe";
-  strobe.catalog.strobe_risk = "high";
-  scratch.effects.push(strobe);
   const reference = { id: effect.id, revision: effect.revision };
   const cue = createCueAsset(scratch, [reference, reference], "Four on Floor");
   cue.id = "cue-four-on-floor";
@@ -381,7 +357,7 @@ function cueFixture() {
     layouts: [],
     arrangements: [],
     project_templates: [],
-    effects: [effect satisfies EffectDefinitionDocument, strobe satisfies EffectDefinitionDocument],
+    effects: [effect satisfies EffectDefinitionDocument],
     cue_recipes: [
       {
         schema_version: 1,

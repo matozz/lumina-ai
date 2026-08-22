@@ -58,7 +58,127 @@
           "supported": true
         }
       },
-      "name": "Alternating Grid Chase"
+      "name": "Column Half Relay"
+    },
+    {
+      "declared_capabilities": ["matrix", "coordinates"],
+      "effect_ref": {
+        "id": "builtin.spatial.column-thirds-triplet",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        }
+      },
+      "name": "Column Thirds Triplet"
+    },
+    {
+      "declared_capabilities": ["matrix", "coordinates"],
+      "effect_ref": {
+        "id": "builtin.spatial.column-quarter-cascade",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        }
+      },
+      "name": "Column Quarter Cascade"
+    },
+    {
+      "declared_capabilities": ["matrix", "coordinates"],
+      "effect_ref": {
+        "id": "builtin.spatial.column-center-ripple",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        }
+      },
+      "name": "Column Center Ripple"
+    },
+    {
+      "declared_capabilities": ["matrix", "coordinates"],
+      "effect_ref": {
+        "id": "builtin.color.column-prism",
+        "revision": 1
+      },
+      "layouts": {
+        "circle": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        },
+        "frame": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "matrix": {
+          "matched_capability": "matrix",
+          "status": "native",
+          "supported": true
+        },
+        "strip_bar": {
+          "matched_capability": "coordinates",
+          "status": "coordinate_fallback",
+          "supported": true
+        }
+      },
+      "name": "Four-Column Prism"
     },
     {
       "declared_capabilities": ["matrix", "coordinates"],
@@ -238,7 +358,7 @@
           "supported": true
         }
       },
-      "name": "Short Color Burst"
+      "name": "Color Accent"
     },
     {
       "declared_capabilities": ["coordinates", "radial"],
@@ -359,36 +479,6 @@
         }
       },
       "name": "Tilt Wave"
-    },
-    {
-      "declared_capabilities": ["any"],
-      "effect_ref": {
-        "id": "builtin.strobe.safe-pulse",
-        "revision": 1
-      },
-      "layouts": {
-        "circle": {
-          "matched_capability": "any",
-          "status": "universal",
-          "supported": true
-        },
-        "frame": {
-          "matched_capability": "any",
-          "status": "universal",
-          "supported": true
-        },
-        "matrix": {
-          "matched_capability": "any",
-          "status": "universal",
-          "supported": true
-        },
-        "strip_bar": {
-          "matched_capability": "any",
-          "status": "universal",
-          "supported": true
-        }
-      },
-      "name": "Safe Strobe Pulse"
     },
     {
       "declared_capabilities": ["any"],
