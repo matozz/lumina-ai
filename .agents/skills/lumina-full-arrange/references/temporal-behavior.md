@@ -8,7 +8,7 @@ For each affected Effect, complete this loop:
 
 ```text
 desired temporal intent
-  -> choose or author EffectGraph + typed tempo contract
+  -> choose or author parameters + EffectGraph + minimal tempo contract
   -> validate pack and exact references
   -> compile + render_at temporal analysis
   -> compare measured behavior with intent
@@ -37,7 +37,7 @@ The command uses the real Rust `Compiler` and `render_at`; do not replace it wit
 
 ## Normalized 1× meaning
 
-At 1×, every Effect declares one primary visual event per beat, while Graph cycles may differ:
+At 1×, Lumina defines one primary visual event per beat, while Graph cycles may differ. The Effect declares the event meaning and Graph-cycle normalization, not another per-Effect copy of the fixed 1× constant:
 
 - pulse: one onset per beat;
 - one-way wipe/chase: one complete traversal per beat;
@@ -62,13 +62,15 @@ Absence of a non-applicable optional metric is correct. Never invent a number to
 
 ## TargetSet and topology
 
-Analyze the exact TargetSet used by each proposed Cue. For behavior declaring `target_set`, `fixture_order`, or `coordinates` sensitivity, compare at least one materially different representative TargetSet. Confirm distinct identity/resolved fixture count and inspect trajectory, active fraction, reversals, or change energy. A readable full-stage wipe may collapse on a tiny or one-dimensional zone.
+Analyze the exact TargetSet used by each proposed Cue. For spatial Graphs or behavior whose measured result changes with fixture selection, order, or coordinates, compare at least one materially different representative TargetSet. Confirm distinct identity/resolved fixture count and inspect trajectory, active fraction, reversals, or change energy. Do not rely on authored topology tags; a readable full-stage wipe may collapse on a tiny or one-dimensional zone.
 
 ## BPM, strobe, and duty
 
 Compute rate from the report at the Arrangement's real BPM. Catalog risk labels and legal ratios do not waive measured safety. Inspect the maximum flash Hz across all relevant fixtures and `exceeds_authored_safety_limit`.
 
-Pulse duty is part of production behavior. Short Color Burst must have a genuinely short on-window and fully turn off; Safe Strobe Pulse must keep its authored low duty. If a generated pulse changes duty, update both the Graph/bound parameter and authored tempo intent, validate their static match, then remeasure.
+Pulse duty is part of production behavior. Short Color Burst must have a genuinely short on-window and fully turn off; Safe Strobe Pulse must keep its authored low duty. If a generated pulse changes duty, update its typed duty parameter and bound Graph node, validate, then remeasure. Do not duplicate that value in `tempo`.
+
+The authored `tempo` object intentionally has no display name or tag collection. Keep only `primary_event`, `events_per_graph_cycle`, and an applicable `safety` limit. Behavior family, 1× constant, phase landmarks, reversals, topology sensitivity, duty, recommended speed, readability, and aliasing are either product invariants, parameter/Graph facts, or derived analyzer evidence.
 
 ## High-speed readability
 

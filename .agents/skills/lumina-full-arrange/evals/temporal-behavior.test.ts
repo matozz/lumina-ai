@@ -93,12 +93,11 @@ describe.sequential("lumina-full-arrange real runtime temporal evals", () => {
     generated.id = "project.eval.generated-quarter-duty-pulse";
     generated.name = "Generated Quarter Duty Pulse";
     generated.source = "project_local";
-    generated.tempo.duty_cycle = 0.25;
     const duty = generated.parameters.find((parameter) => parameter.id === "duty_cycle")!;
     if (duty.schema.type !== "scalar") throw new Error("Pulse duty parameter must be scalar");
-      duty.schema.default = 0.25;
-      const oscillator = generated.graph.nodes.find(
-        (node) => node.type === "oscillator" && node.id === duty.graph_binding?.node_id,
+    duty.schema.default = 0.25;
+    const oscillator = generated.graph.nodes.find(
+      (node) => node.type === "oscillator" && node.id === duty.graph_binding?.node_id,
     );
     if (!oscillator || oscillator.type !== "oscillator") {
       throw new Error("Pulse oscillator is missing");
@@ -118,11 +117,15 @@ describe.sequential("lumina-full-arrange real runtime temporal evals", () => {
       contactSheet,
       contactSpeed: 1,
     });
-    expect(report.behavior.duty_cycle).toBe(0.25);
+    expect(report.behavior).toEqual({
+      primary_event: "pulse_onset",
+      events_per_graph_cycle: 1,
+      safety: { max_primary_events_per_second: 3 },
+    });
     expect(report.fingerprints[0].primary_events_per_beat).toBe(1);
     expect(report.fingerprints[0].on_duty_cycle).toBeGreaterThan(0.24);
     expect(report.fingerprints[0].on_duty_cycle).toBeLessThan(0.27);
-      expect(readFileSync(contactSheet, "utf8")).toContain("<svg");
+    expect(readFileSync(contactSheet, "utf8")).toContain("<svg");
   }, 120_000);
 });
 

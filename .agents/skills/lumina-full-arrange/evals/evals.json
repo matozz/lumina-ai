@@ -70,12 +70,12 @@
     },
     {
       "id": 6,
-      "prompt": "Use the attached Base Pack to create a confirmed 16-bar Arrangement that needs a project-local short accent pulse with a 25% duty cycle. Follow the full temporal loop: audit candidates before selection; copy rather than mutate a built-in; keep authored tempo intent and the Pulse graph/binding consistent; validate; run the real runtime analyzer on the generated Effect and actual TargetSet/BPM at every used speed; compare the measured duty, event rate, strobe safety, and aliasing to the brief; revise if needed; then hand off a new validated Project Pack plus report and contact sheet paths.",
-      "expected_output": "A validated import-safe Arrangement pack with an unchanged built-in source, a project-local 25%-duty pulse whose real runtime fingerprint matches the authored contract, and a documented temporal before/after audit.",
+      "prompt": "Use the attached Base Pack to create a confirmed 16-bar Arrangement that needs a project-local short accent pulse with a 25% duty cycle. Follow the full temporal loop: audit candidates before selection; copy rather than mutate a built-in; keep the typed duty parameter and Pulse graph binding consistent without duplicating duty into tempo metadata; validate; run the real runtime analyzer on the generated Effect and actual TargetSet/BPM at every used speed; compare the measured duty, event rate, strobe safety, and aliasing to the brief; revise if needed; then hand off a new validated Project Pack plus report and contact sheet paths.",
+      "expected_output": "A validated import-safe Arrangement pack with an unchanged built-in source, a project-local 25%-duty pulse whose real runtime fingerprint matches its parameter/Graph behavior, and a documented temporal before/after audit.",
       "files": ["evals/files/base-assets.lumina-assets.json"],
       "expectations": [
         "The built-in source Effect is deeply unchanged and the generated Effect is project_local with a non-built-in exact identity and complete typed tempo contract.",
-        "The generated Pulse Graph or typed duty binding and authored tempo duty both equal 0.25 and pass semantic validation.",
+        "The generated Pulse typed duty parameter and bound Graph node both equal 0.25, while tempo contains no duplicated duty/name/tags, and semantic validation passes.",
         "The final written Pack is re-opened and analyzed through the real runtime path; measured 1× primary rate is one event/beat and measured on-duty is close to 25%.",
         "The transcript records actual BPM/TargetSet/seed/overrides, measured events/s, per-fixture strobe safety, alias risk, report cache key, and report/contact-sheet paths.",
         "Any speed used by the Arrangement was analyzed after generation, and the handoff distinguishes runtime metrics from subjective Arrange/Live acceptance."
