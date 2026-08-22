@@ -1295,6 +1295,217 @@
   "effects": [
     {
       "schema_version": 1,
+      "id": "builtin.color.column-prism",
+      "name": "Four-Column Prism",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "schema": {
+            "type": "scalar",
+            "default": 0.5,
+            "range": {
+              "min": 0.25,
+              "max": 8,
+              "step": 0.25
+            },
+            "unit": "multiplier"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "One four-zone color phrase per beat at 1×."
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "schema": {
+            "type": "scalar",
+            "default": 0.85,
+            "range": {
+              "min": 0,
+              "max": 1,
+              "step": 0.05
+            },
+            "unit": "normalized"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Maximum prism brightness."
+        },
+        {
+          "id": "direction",
+          "name": "Direction",
+          "schema": {
+            "type": "direction",
+            "default": "forward"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Color flow direction."
+        },
+        {
+          "id": "palette",
+          "name": "Palette",
+          "schema": {
+            "type": "color_stops",
+            "default": [
+              {
+                "position": 0,
+                "color": "#F472B6"
+              },
+              {
+                "position": 0.33,
+                "color": "#A78BFA"
+              },
+              {
+                "position": 0.66,
+                "color": "#22D3EE"
+              },
+              {
+                "position": 1,
+                "color": "#34D399"
+              }
+            ]
+          },
+          "scope": "effect",
+          "section": "advanced",
+          "help": "Four-zone prism palette.",
+          "graph_binding": {
+            "node_id": "prism-gradient",
+            "property": "color_stops"
+          }
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "schema": {
+            "type": "color"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Optional solid-color override; clear it to use the prism palette."
+        }
+      ],
+      "tempo": {
+        "primary_event": "spatial_propagation",
+        "events_per_graph_cycle": 1
+      },
+      "graph": {
+        "nodes": [
+          {
+            "type": "time",
+            "id": "time"
+          },
+          {
+            "type": "spatial_phase",
+            "id": "prism-columns",
+            "input": {
+              "node_id": "time",
+              "port": "scalar"
+            },
+            "basis": "x",
+            "from": 0,
+            "to": 1,
+            "wrap": true,
+            "partition_count": 4
+          },
+          {
+            "type": "color_gradient",
+            "id": "prism-gradient",
+            "input": {
+              "node_id": "prism-columns",
+              "port": "scalar"
+            },
+            "stops": [
+              {
+                "position": 0,
+                "color": "#F472B6"
+              },
+              {
+                "position": 0.33,
+                "color": "#A78BFA"
+              },
+              {
+                "position": 0.66,
+                "color": "#22D3EE"
+              },
+              {
+                "position": 1,
+                "color": "#34D399"
+              }
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "color-writer",
+            "input": {
+              "node_id": "prism-gradient",
+              "port": "color"
+            },
+            "attribute_id": "color.rgb"
+          },
+          {
+            "type": "oscillator",
+            "id": "prism-fade",
+            "waveform": "sine",
+            "phase": {
+              "node_id": "prism-columns",
+              "port": "scalar"
+            }
+          },
+          {
+            "type": "map",
+            "id": "visible-prism",
+            "input": {
+              "node_id": "prism-fade",
+              "port": "scalar"
+            },
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              0.35,
+              1
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "intensity-writer",
+            "input": {
+              "node_id": "visible-prism",
+              "port": "scalar"
+            },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "color",
+        "category": "Column Phrases",
+        "visibility": "standard",
+        "mood": [
+          "prismatic",
+          "modern"
+        ],
+        "energy": 0.6,
+        "density": 0.85,
+        "motion": "sweep",
+        "colorfulness": 1,
+        "required_attributes": [
+          "intensity",
+          "color.rgb"
+        ],
+        "layout_capabilities": [
+          "matrix",
+          "coordinates"
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
       "id": "builtin.color.dual-sweep",
       "name": "Gradient Drift",
       "revision": 1,
@@ -1420,12 +1631,29 @@
             "attribute_id": "color.rgb"
           },
           {
-            "type": "constant",
-            "id": "visible-intensity",
-            "value": {
-              "type": "scalar",
-              "value": 1
+            "type": "oscillator",
+            "id": "intensity-fade",
+            "waveform": "sine",
+            "phase": {
+              "node_id": "time",
+              "port": "scalar"
             }
+          },
+          {
+            "type": "map",
+            "id": "visible-intensity",
+            "input": {
+              "node_id": "intensity-fade",
+              "port": "scalar"
+            },
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              0.55,
+              1
+            ]
           },
           {
             "type": "attribute_writer",
@@ -1450,7 +1678,6 @@
         "density": 0.75,
         "motion": "sweep",
         "colorfulness": 0.9,
-        "strobe_risk": "none",
         "required_attributes": [
           "color.rgb",
           "intensity"
@@ -1463,7 +1690,7 @@
     {
       "schema_version": 1,
       "id": "builtin.color.pulse",
-      "name": "Short Color Burst",
+      "name": "Color Accent",
       "revision": 1,
       "source": "built_in",
       "parameters": [
@@ -1482,27 +1709,65 @@
           },
           "scope": "arrangement",
           "section": "main",
-          "help": "Normalized burst rate; 1× produces one short onset per beat."
+          "help": "Normalized accent rate; 1× produces one smooth rise-fall accent per beat."
         },
         {
-          "id": "duty_cycle",
-          "name": "Duty cycle",
+          "id": "intensity",
+          "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.2,
+            "default": 0.85,
+            "range": {
+              "min": 0,
+              "max": 1,
+              "step": 0.05
+            },
+            "unit": "normalized"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Peak brightness of the color accent."
+        },
+        {
+          "id": "attack",
+          "name": "Attack",
+          "schema": {
+            "type": "scalar",
+            "default": 0.18,
             "range": {
               "min": 0.05,
-              "max": 0.5,
+              "max": 0.45,
               "step": 0.05
             },
             "unit": "normalized"
           },
           "scope": "effect",
           "section": "advanced",
-          "help": "Fraction of each event cycle that remains visibly on.",
+          "help": "Fraction of the cycle used to fade into the accent.",
           "graph_binding": {
-            "node_id": "oscillator",
-            "property": "duty_cycle"
+            "node_id": "accent-envelope",
+            "property": "attack"
+          }
+        },
+        {
+          "id": "release",
+          "name": "Release",
+          "schema": {
+            "type": "scalar",
+            "default": 0.55,
+            "range": {
+              "min": 0.25,
+              "max": 0.8,
+              "step": 0.05
+            },
+            "unit": "normalized"
+          },
+          "scope": "effect",
+          "section": "advanced",
+          "help": "Fraction of the cycle used to fade out of the accent.",
+          "graph_binding": {
+            "node_id": "accent-envelope",
+            "property": "release"
           }
         },
         {
@@ -1523,7 +1788,7 @@
           },
           "scope": "effect",
           "section": "advanced",
-          "help": "Dark-to-bright pulse colors.",
+          "help": "Dark-to-bright accent colors.",
           "graph_binding": {
             "node_id": "gradient",
             "property": "color_stops"
@@ -1541,11 +1806,8 @@
         }
       ],
       "tempo": {
-        "primary_event": "pulse_onset",
-        "events_per_graph_cycle": 1,
-        "safety": {
-          "max_primary_events_per_second": 3
-        }
+        "primary_event": "rise_fall_cycle",
+        "events_per_graph_cycle": 1
       },
       "graph": {
         "nodes": [
@@ -1554,20 +1816,20 @@
             "id": "time"
           },
           {
-            "type": "oscillator",
-            "id": "oscillator",
-            "waveform": "pulse",
-            "duty_cycle": 0.2,
-            "phase": {
+            "type": "envelope",
+            "id": "accent-envelope",
+            "input": {
               "node_id": "time",
               "port": "scalar"
-            }
+            },
+            "attack": 0.18,
+            "release": 0.55
           },
           {
             "type": "color_gradient",
             "id": "gradient",
             "input": {
-              "node_id": "oscillator",
+              "node_id": "accent-envelope",
               "port": "scalar"
             },
             "stops": [
@@ -1594,7 +1856,7 @@
             "type": "map",
             "id": "visible-intensity",
             "input": {
-              "node_id": "oscillator",
+              "node_id": "accent-envelope",
               "port": "scalar"
             },
             "input_range": [
@@ -1602,7 +1864,7 @@
               1
             ],
             "output_range": [
-              0,
+              0.12,
               1
             ]
           },
@@ -1623,13 +1885,12 @@
         "visibility": "standard",
         "mood": [
           "neon",
-          "club"
+          "warm"
         ],
-        "energy": 0.65,
-        "density": 0.6,
-        "motion": "pulse",
+        "energy": 0.6,
+        "density": 0.75,
+        "motion": "organic",
         "colorfulness": 0.9,
-        "strobe_risk": "high",
         "required_attributes": [
           "color.rgb",
           "intensity"
@@ -1782,12 +2043,29 @@
             "attribute_id": "color.rgb"
           },
           {
-            "type": "constant",
-            "id": "visible-intensity",
-            "value": {
-              "type": "scalar",
-              "value": 1
+            "type": "oscillator",
+            "id": "intensity-fade",
+            "waveform": "sine",
+            "phase": {
+              "node_id": "time",
+              "port": "scalar"
             }
+          },
+          {
+            "type": "map",
+            "id": "visible-intensity",
+            "input": {
+              "node_id": "intensity-fade",
+              "port": "scalar"
+            },
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              0.45,
+              1
+            ]
           },
           {
             "type": "attribute_writer",
@@ -1812,7 +2090,6 @@
         "density": 0.85,
         "motion": "sweep",
         "colorfulness": 1,
-        "strobe_risk": "none",
         "required_attributes": [
           "color.rgb",
           "intensity"
@@ -1959,7 +2236,6 @@
         "density": 0.35,
         "motion": "organic",
         "colorfulness": 0,
-        "strobe_risk": "none",
         "required_attributes": [
           "intensity"
         ],
@@ -1971,7 +2247,7 @@
     {
       "schema_version": 1,
       "id": "builtin.intensity.chase",
-      "name": "Alternating Grid Chase",
+      "name": "Column Half Relay",
       "revision": 1,
       "source": "built_in",
       "parameters": [
@@ -1990,7 +2266,7 @@
           },
           "scope": "arrangement",
           "section": "main",
-          "help": "Normalized chase rate; 1× completes one ordered traversal per beat."
+          "help": "Normalized relay rate; 1× crosses to the opposite column half each beat and returns on the next."
         },
         {
           "id": "intensity",
@@ -2007,18 +2283,7 @@
           },
           "scope": "arrangement",
           "section": "main",
-          "help": "Maximum chase output."
-        },
-        {
-          "id": "direction",
-          "name": "Direction",
-          "schema": {
-            "type": "direction",
-            "default": "forward"
-          },
-          "scope": "arrangement",
-          "section": "main",
-          "help": "Chase travel direction."
+          "help": "Maximum relay brightness."
         },
         {
           "id": "color",
@@ -2032,11 +2297,8 @@
         }
       ],
       "tempo": {
-        "primary_event": "one_way_traversal",
-        "events_per_graph_cycle": 1,
-        "safety": {
-          "max_primary_events_per_second": 4
-        }
+        "primary_event": "directional_traversal",
+        "events_per_graph_cycle": 2
       },
       "graph": {
         "nodes": [
@@ -2045,33 +2307,70 @@
             "id": "time"
           },
           {
-            "type": "spatial_phase",
-            "id": "spatial",
-            "input": {
+            "type": "constant",
+            "id": "phase-quarter",
+            "value": {
+              "type": "scalar",
+              "value": 0.25
+            }
+          },
+          {
+            "type": "math",
+            "id": "phase-anchor",
+            "operation": "add",
+            "left": {
               "node_id": "time",
               "port": "scalar"
             },
-            "basis": "index",
+            "right": {
+              "node_id": "phase-quarter",
+              "port": "scalar"
+            }
+          },
+          {
+            "type": "spatial_phase",
+            "id": "column-halves",
+            "input": {
+              "node_id": "phase-anchor",
+              "port": "scalar"
+            },
+            "basis": "x",
             "from": 0,
             "to": 1,
             "wrap": true,
+            "partition_count": 2,
             "custom_order": []
           },
           {
             "type": "oscillator",
-            "id": "oscillator",
-            "waveform": "pulse",
-            "duty_cycle": 0.4,
+            "id": "relay-wave",
+            "waveform": "sine",
             "phase": {
-              "node_id": "spatial",
+              "node_id": "column-halves",
               "port": "scalar"
             }
+          },
+          {
+            "type": "map",
+            "id": "soft-relay",
+            "input": {
+              "node_id": "relay-wave",
+              "port": "scalar"
+            },
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              0.12,
+              1
+            ]
           },
           {
             "type": "attribute_writer",
             "id": "writer",
             "input": {
-              "node_id": "oscillator",
+              "node_id": "soft-relay",
               "port": "scalar"
             },
             "attribute_id": "intensity"
@@ -2083,14 +2382,13 @@
         "category": "Chases",
         "visibility": "standard",
         "mood": [
-          "driving",
+          "balanced",
           "kinetic"
         ],
-        "energy": 0.8,
-        "density": 0.45,
-        "motion": "chase",
+        "energy": 0.62,
+        "density": 0.75,
+        "motion": "sweep",
         "colorfulness": 0,
-        "strobe_risk": "high",
         "required_attributes": [
           "intensity"
         ],
@@ -2225,7 +2523,6 @@
         "density": 0.7,
         "motion": "sweep",
         "colorfulness": 0,
-        "strobe_risk": "none",
         "required_attributes": [
           "intensity"
         ],
@@ -2314,12 +2611,20 @@
             "attribute_id": "position.pan"
           },
           {
-            "type": "constant",
+            "type": "map",
             "id": "visible-intensity",
-            "value": {
-              "type": "scalar",
-              "value": 1
-            }
+            "input": {
+              "node_id": "oscillator",
+              "port": "scalar"
+            },
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              0.55,
+              1
+            ]
           },
           {
             "type": "attribute_writer",
@@ -2344,7 +2649,6 @@
         "density": 0.7,
         "motion": "sweep",
         "colorfulness": 0,
-        "strobe_risk": "none",
         "required_attributes": [
           "position.pan",
           "intensity"
@@ -2464,12 +2768,20 @@
             "attribute_id": "position.tilt"
           },
           {
-            "type": "constant",
+            "type": "map",
             "id": "visible-intensity",
-            "value": {
-              "type": "scalar",
-              "value": 1
-            }
+            "input": {
+              "node_id": "oscillator",
+              "port": "scalar"
+            },
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              0.55,
+              1
+            ]
           },
           {
             "type": "attribute_writer",
@@ -2494,7 +2806,6 @@
         "density": 0.75,
         "motion": "organic",
         "colorfulness": 0,
-        "strobe_risk": "none",
         "required_attributes": [
           "position.tilt",
           "intensity"
@@ -2601,7 +2912,7 @@
           {
             "type": "oscillator",
             "id": "oscillator",
-            "waveform": "triangle",
+            "waveform": "sine",
             "phase": {
               "node_id": "spatial",
               "port": "scalar"
@@ -2630,13 +2941,157 @@
         "density": 0.65,
         "motion": "sweep",
         "colorfulness": 0,
-        "strobe_risk": "high",
         "required_attributes": [
           "intensity"
         ],
         "layout_capabilities": [
           "coordinates",
           "radial"
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.spatial.column-center-ripple",
+      "name": "Column Center Ripple",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "schema": {
+            "type": "scalar",
+            "default": 0.5,
+            "range": {
+              "min": 0.25,
+              "max": 8,
+              "step": 0.25
+            },
+            "unit": "multiplier"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "One center-to-outer-column ripple per beat at 1×."
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "schema": {
+            "type": "scalar",
+            "default": 0.9,
+            "range": {
+              "min": 0,
+              "max": 1,
+              "step": 0.05
+            },
+            "unit": "normalized"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Maximum ripple brightness."
+        },
+        {
+          "id": "direction",
+          "name": "Direction",
+          "schema": {
+            "type": "direction",
+            "default": "forward"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Center-out or outer-in ripple direction."
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "schema": {
+            "type": "color",
+            "default": "#67E8F9"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Color of the center ripple."
+        }
+      ],
+      "tempo": {
+        "primary_event": "spatial_propagation",
+        "events_per_graph_cycle": 1
+      },
+      "graph": {
+        "nodes": [
+          {
+            "type": "time",
+            "id": "time"
+          },
+          {
+            "type": "spatial_phase",
+            "id": "center-bands",
+            "input": {
+              "node_id": "time",
+              "port": "scalar"
+            },
+            "basis": "x_distance",
+            "from": 0,
+            "to": 1,
+            "wrap": true,
+            "partition_count": 3
+          },
+          {
+            "type": "oscillator",
+            "id": "ripple-wave",
+            "waveform": "sine",
+            "phase": {
+              "node_id": "center-bands",
+              "port": "scalar"
+            }
+          },
+          {
+            "type": "map",
+            "id": "soft-ripple",
+            "input": {
+              "node_id": "ripple-wave",
+              "port": "scalar"
+            },
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              0.08,
+              1
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": {
+              "node_id": "soft-ripple",
+              "port": "scalar"
+            },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "spatial",
+        "category": "Column Phrases",
+        "visibility": "standard",
+        "mood": [
+          "expansive",
+          "architectural"
+        ],
+        "energy": 0.58,
+        "density": 0.8,
+        "motion": "organic",
+        "colorfulness": 0.75,
+        "required_attributes": [
+          "intensity",
+          "color.rgb"
+        ],
+        "layout_capabilities": [
+          "matrix",
+          "coordinates"
         ]
       }
     },
@@ -2751,33 +3206,50 @@
             "custom_order": []
           },
           {
-            "type": "fixture_mask",
-            "id": "traveling-column",
-            "input": {
+            "type": "math",
+            "id": "distance-squared",
+            "operation": "multiply",
+            "left": {
               "node_id": "column-distance",
               "port": "scalar"
             },
-            "min": -0.065,
-            "max": 0.065
+            "right": {
+              "node_id": "column-distance",
+              "port": "scalar"
+            }
           },
           {
-            "type": "constant",
-            "id": "level",
-            "value": {
-              "type": "scalar",
-              "value": 1
-            }
+            "type": "map",
+            "id": "soft-column",
+            "input": {
+              "node_id": "distance-squared",
+              "port": "scalar"
+            },
+            "input_range": [
+              0,
+              0.035
+            ],
+            "output_range": [
+              1,
+              0
+            ]
+          },
+          {
+            "type": "clamp",
+            "id": "visible-column",
+            "input": {
+              "node_id": "soft-column",
+              "port": "scalar"
+            },
+            "min": 0,
+            "max": 1
           },
           {
             "type": "attribute_writer",
             "id": "writer",
             "input": {
-              "node_id": "level",
+              "node_id": "visible-column",
               "port": "scalar"
-            },
-            "mask": {
-              "node_id": "traveling-column",
-              "port": "mask"
             },
             "attribute_id": "intensity"
           }
@@ -2795,9 +3267,153 @@
         "density": 0.3,
         "motion": "chase",
         "colorfulness": 0,
-        "strobe_risk": "none",
         "required_attributes": [
           "intensity"
+        ],
+        "layout_capabilities": [
+          "matrix",
+          "coordinates"
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.spatial.column-quarter-cascade",
+      "name": "Column Quarter Cascade",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "schema": {
+            "type": "scalar",
+            "default": 1,
+            "range": {
+              "min": 0.25,
+              "max": 8,
+              "step": 0.25
+            },
+            "unit": "multiplier"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "One four-zone cascade phrase per beat at 1×."
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "schema": {
+            "type": "scalar",
+            "default": 0.85,
+            "range": {
+              "min": 0,
+              "max": 1,
+              "step": 0.05
+            },
+            "unit": "normalized"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Maximum cascade brightness."
+        },
+        {
+          "id": "direction",
+          "name": "Direction",
+          "schema": {
+            "type": "direction",
+            "default": "forward"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Cascade travel direction."
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "schema": {
+            "type": "color",
+            "default": "#5EEAD4"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Color of the four-zone cascade."
+        }
+      ],
+      "tempo": {
+        "primary_event": "spatial_propagation",
+        "events_per_graph_cycle": 1
+      },
+      "graph": {
+        "nodes": [
+          {
+            "type": "time",
+            "id": "time"
+          },
+          {
+            "type": "spatial_phase",
+            "id": "column-quarters",
+            "input": {
+              "node_id": "time",
+              "port": "scalar"
+            },
+            "basis": "x",
+            "from": 0,
+            "to": 1,
+            "wrap": true,
+            "partition_count": 4
+          },
+          {
+            "type": "oscillator",
+            "id": "quarter-wave",
+            "waveform": "sine",
+            "phase": {
+              "node_id": "column-quarters",
+              "port": "scalar"
+            }
+          },
+          {
+            "type": "map",
+            "id": "soft-cascade",
+            "input": {
+              "node_id": "quarter-wave",
+              "port": "scalar"
+            },
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              0.1,
+              1
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": {
+              "node_id": "soft-cascade",
+              "port": "scalar"
+            },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "spatial",
+        "category": "Column Phrases",
+        "visibility": "standard",
+        "mood": [
+          "rolling",
+          "precise"
+        ],
+        "energy": 0.62,
+        "density": 0.78,
+        "motion": "sweep",
+        "colorfulness": 0.7,
+        "required_attributes": [
+          "intensity",
+          "color.rgb"
         ],
         "layout_capabilities": [
           "matrix",
@@ -2894,33 +3510,46 @@
             "custom_order": []
           },
           {
-            "type": "fixture_mask",
-            "id": "rain-head",
-            "input": {
+            "type": "oscillator",
+            "id": "rain-profile",
+            "waveform": "triangle",
+            "phase": {
               "node_id": "falling-row-phase",
+              "port": "scalar"
+            }
+          },
+          {
+            "type": "map",
+            "id": "soft-rain-head",
+            "input": {
+              "node_id": "rain-profile",
+              "port": "scalar"
+            },
+            "input_range": [
+              0.55,
+              1
+            ],
+            "output_range": [
+              0,
+              1
+            ]
+          },
+          {
+            "type": "clamp",
+            "id": "visible-rain-head",
+            "input": {
+              "node_id": "soft-rain-head",
               "port": "scalar"
             },
             "min": 0,
-            "max": 0.18
-          },
-          {
-            "type": "constant",
-            "id": "level",
-            "value": {
-              "type": "scalar",
-              "value": 1
-            }
+            "max": 1
           },
           {
             "type": "attribute_writer",
             "id": "writer",
             "input": {
-              "node_id": "level",
+              "node_id": "visible-rain-head",
               "port": "scalar"
-            },
-            "mask": {
-              "node_id": "rain-head",
-              "port": "mask"
             },
             "attribute_id": "intensity"
           }
@@ -2938,9 +3567,196 @@
         "density": 0.35,
         "motion": "chase",
         "colorfulness": 0,
-        "strobe_risk": "none",
         "required_attributes": [
           "intensity"
+        ],
+        "layout_capabilities": [
+          "matrix",
+          "coordinates"
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "builtin.spatial.column-thirds-triplet",
+      "name": "Column Thirds Triplet",
+      "revision": 1,
+      "source": "built_in",
+      "parameters": [
+        {
+          "id": "speed",
+          "name": "Speed",
+          "schema": {
+            "type": "scalar",
+            "default": 1,
+            "range": {
+              "min": 0.25,
+              "max": 8,
+              "step": 0.25
+            },
+            "unit": "multiplier"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "One left-center-right triplet phrase per beat at 1×."
+        },
+        {
+          "id": "intensity",
+          "name": "Intensity",
+          "schema": {
+            "type": "scalar",
+            "default": 0.9,
+            "range": {
+              "min": 0,
+              "max": 1,
+              "step": 0.05
+            },
+            "unit": "normalized"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Peak brightness of each column third."
+        },
+        {
+          "id": "direction",
+          "name": "Direction",
+          "schema": {
+            "type": "direction",
+            "default": "forward"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Triplet travel direction."
+        },
+        {
+          "id": "attack",
+          "name": "Attack",
+          "schema": {
+            "type": "scalar",
+            "default": 0.18,
+            "range": {
+              "min": 0.05,
+              "max": 0.4,
+              "step": 0.05
+            },
+            "unit": "normalized"
+          },
+          "scope": "effect",
+          "section": "advanced",
+          "help": "Fade-in length for each triplet accent.",
+          "graph_binding": {
+            "node_id": "triplet-envelope",
+            "property": "attack"
+          }
+        },
+        {
+          "id": "release",
+          "name": "Release",
+          "schema": {
+            "type": "scalar",
+            "default": 0.55,
+            "range": {
+              "min": 0.3,
+              "max": 0.8,
+              "step": 0.05
+            },
+            "unit": "normalized"
+          },
+          "scope": "effect",
+          "section": "advanced",
+          "help": "Fade-out length for each triplet accent.",
+          "graph_binding": {
+            "node_id": "triplet-envelope",
+            "property": "release"
+          }
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "schema": {
+            "type": "color",
+            "default": "#A78BFA"
+          },
+          "scope": "arrangement",
+          "section": "main",
+          "help": "Color of the three-part relay."
+        }
+      ],
+      "tempo": {
+        "primary_event": "spatial_propagation",
+        "events_per_graph_cycle": 1
+      },
+      "graph": {
+        "nodes": [
+          {
+            "type": "time",
+            "id": "time"
+          },
+          {
+            "type": "spatial_phase",
+            "id": "column-thirds",
+            "input": {
+              "node_id": "time",
+              "port": "scalar"
+            },
+            "basis": "x",
+            "from": 0,
+            "to": 1,
+            "wrap": true,
+            "partition_count": 3
+          },
+          {
+            "type": "envelope",
+            "id": "triplet-envelope",
+            "input": {
+              "node_id": "column-thirds",
+              "port": "scalar"
+            },
+            "attack": 0.18,
+            "release": 0.55
+          },
+          {
+            "type": "map",
+            "id": "soft-triplet",
+            "input": {
+              "node_id": "triplet-envelope",
+              "port": "scalar"
+            },
+            "input_range": [
+              0,
+              1
+            ],
+            "output_range": [
+              0.08,
+              1
+            ]
+          },
+          {
+            "type": "attribute_writer",
+            "id": "writer",
+            "input": {
+              "node_id": "soft-triplet",
+              "port": "scalar"
+            },
+            "attribute_id": "intensity"
+          }
+        ]
+      },
+      "catalog": {
+        "family": "spatial",
+        "category": "Column Phrases",
+        "visibility": "standard",
+        "mood": [
+          "syncopated",
+          "playful"
+        ],
+        "energy": 0.68,
+        "density": 0.72,
+        "motion": "chase",
+        "colorfulness": 0.75,
+        "required_attributes": [
+          "intensity",
+          "color.rgb"
         ],
         "layout_capabilities": [
           "matrix",
@@ -3067,7 +3883,6 @@
         "density": 0.8,
         "motion": "organic",
         "colorfulness": 0.75,
-        "strobe_risk": "none",
         "required_attributes": [
           "intensity",
           "color.rgb"
@@ -3075,134 +3890,6 @@
         "layout_capabilities": [
           "coordinates",
           "radial"
-        ]
-      }
-    },
-    {
-      "schema_version": 1,
-      "id": "builtin.strobe.safe-pulse",
-      "name": "Safe Strobe Pulse",
-      "revision": 1,
-      "source": "built_in",
-      "parameters": [
-        {
-          "id": "speed",
-          "name": "Speed",
-          "schema": {
-            "type": "scalar",
-            "default": 1,
-            "range": {
-              "min": 0.25,
-              "max": 8,
-              "step": 0.25
-            },
-            "unit": "multiplier"
-          },
-          "scope": "arrangement",
-          "section": "main",
-          "help": "Normalized flash rate; 1× is one short onset per beat. Review measured Hz before use."
-        },
-        {
-          "id": "duty_cycle",
-          "name": "Duty cycle",
-          "schema": {
-            "type": "scalar",
-            "default": 0.125,
-            "range": {
-              "min": 0.05,
-              "max": 0.25,
-              "step": 0.025
-            },
-            "unit": "normalized"
-          },
-          "scope": "effect",
-          "section": "advanced",
-          "help": "Fraction of each flash cycle that remains on.",
-          "graph_binding": {
-            "node_id": "oscillator",
-            "property": "duty_cycle"
-          }
-        },
-        {
-          "id": "intensity",
-          "name": "Intensity",
-          "schema": {
-            "type": "scalar",
-            "default": 0.65,
-            "range": {
-              "min": 0,
-              "max": 1,
-              "step": 0.05
-            },
-            "unit": "normalized"
-          },
-          "scope": "arrangement",
-          "section": "main",
-          "help": "Maximum flash intensity."
-        },
-        {
-          "id": "color",
-          "name": "Color",
-          "schema": {
-            "type": "color"
-          },
-          "scope": "arrangement",
-          "section": "main",
-          "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
-        }
-      ],
-      "tempo": {
-        "primary_event": "pulse_onset",
-        "events_per_graph_cycle": 1,
-        "safety": {
-          "max_primary_events_per_second": 3
-        }
-      },
-      "graph": {
-        "nodes": [
-          {
-            "type": "time",
-            "id": "time"
-          },
-          {
-            "type": "oscillator",
-            "id": "oscillator",
-            "waveform": "pulse",
-            "duty_cycle": 0.125,
-            "phase": {
-              "node_id": "time",
-              "port": "scalar"
-            }
-          },
-          {
-            "type": "attribute_writer",
-            "id": "writer",
-            "input": {
-              "node_id": "oscillator",
-              "port": "scalar"
-            },
-            "attribute_id": "intensity"
-          }
-        ]
-      },
-      "catalog": {
-        "family": "strobe",
-        "category": "Risk",
-        "visibility": "standard",
-        "mood": [
-          "impact",
-          "peak"
-        ],
-        "energy": 0.9,
-        "density": 0.4,
-        "motion": "pulse",
-        "colorfulness": 0,
-        "strobe_risk": "high",
-        "required_attributes": [
-          "intensity"
-        ],
-        "layout_capabilities": [
-          "any"
         ]
       }
     },
@@ -3360,7 +4047,6 @@
         "density": 1,
         "motion": "organic",
         "colorfulness": 0.75,
-        "strobe_risk": "none",
         "required_attributes": [
           "intensity",
           "color.rgb"
@@ -3471,7 +4157,6 @@
         "density": 0.7,
         "motion": "organic",
         "colorfulness": 0,
-        "strobe_risk": "low",
         "required_attributes": [
           "intensity"
         ],
@@ -3591,7 +4276,6 @@
         "density": 1,
         "motion": "organic",
         "colorfulness": 0.75,
-        "strobe_risk": "none",
         "required_attributes": [
           "intensity",
           "color.rgb"
@@ -3696,7 +4380,7 @@
           {
             "type": "oscillator",
             "id": "wipe-edge",
-            "waveform": "saw",
+            "waveform": "sine",
             "phase": {
               "node_id": "wipe-position",
               "port": "scalar"
@@ -3725,7 +4409,6 @@
         "density": 0.55,
         "motion": "sweep",
         "colorfulness": 0,
-        "strobe_risk": "none",
         "required_attributes": [
           "intensity"
         ],

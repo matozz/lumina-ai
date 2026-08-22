@@ -52,7 +52,7 @@ Check `primary_events_per_beat`, `primary_events_per_second`, and `graph_cycles_
 
 Use metrics only when they apply:
 
-- pulse/strobe: measured `on_duty_cycle`, per-fixture flash Hz, authored safety exceedance, phase/onset landmarks;
+- externally supplied pulse behavior: measured `on_duty_cycle`, per-fixture flash Hz, authored numeric safety exceedance, phase/onset landmarks;
 - breathe/continuous: peak count/phases, intensity mean/variance, color or movement change;
 - wipe/chase/ping-pong/propagation: centroid path distance, start/end, direction reversals, active fixture fraction, TargetSet topology sensitivity;
 - random/dissolve: seeded determinism, refresh/change energy, active fixture fraction, color change when present;
@@ -64,11 +64,11 @@ Absence of a non-applicable optional metric is correct. Never invent a number to
 
 Analyze the exact TargetSet used by each proposed Cue. For spatial Graphs or behavior whose measured result changes with fixture selection, order, or coordinates, compare at least one materially different representative TargetSet. Confirm distinct identity/resolved fixture count and inspect trajectory, active fraction, reversals, or change energy. Do not rely on authored topology tags; a readable full-stage wipe may collapse on a tiny or one-dimensional zone.
 
-## BPM, strobe, and duty
+## BPM, pulse safety, and continuity
 
-Compute rate from the report at the Arrangement's real BPM. Catalog risk labels and legal ratios do not waive measured safety. Inspect the maximum flash Hz across all relevant fixtures and `exceeds_authored_safety_limit`.
+Compute rate from the report at the Arrangement's real BPM. Catalog and Cue assets do not carry high/medium/low risk labels. When an externally supplied Effect declares pulse behavior and a numeric safety limit, inspect the maximum flash Hz across all relevant fixtures and `exceeds_authored_safety_limit`.
 
-Pulse duty is part of production behavior. Short Color Burst must have a genuinely short on-window and fully turn off; Safe Strobe Pulse must keep its authored low duty. If a generated pulse changes duty, update its typed duty parameter and bound Graph node, validate, then remeasure. Do not duplicate that value in `tempo`.
+Do not generate a hard pulse, saw reset, hard on/off StepSequence, or FixtureMask flash. Create accents with Envelope, sine, triangle, or smoothly interpolated Random behavior so every change has a fade-in/fade-out profile. Measure intensity minimum/maximum/variance, peaks, and frame-delta energy to confirm the result remains alive at slow speeds instead of producing a long dark gap. If the input pack already contains a legacy pulse, treat its duty and Hz as analyzer evidence rather than copying it into new assets.
 
 The authored `tempo` object intentionally has no display name or tag collection. Keep only `primary_event`, `events_per_graph_cycle`, and an applicable `safety` limit. Behavior family, 1× constant, phase landmarks, reversals, topology sensitivity, duty, recommended speed, readability, and aliasing are either product invariants, parameter/Graph facts, or derived analyzer evidence.
 
@@ -91,7 +91,7 @@ For each used Effect/TargetSet/BPM combination, keep a compact record in the tra
 - used speed ratios;
 - measured events/beat and events/s;
 - applicable duty, peaks, trajectory/reversals, refresh/change energy, or color change;
-- strobe Hz and safety result;
+- applicable per-fixture pulse Hz and numeric safety result;
 - alias risk and the resulting arrangement decision;
 - report/contact-sheet path and cache key.
 

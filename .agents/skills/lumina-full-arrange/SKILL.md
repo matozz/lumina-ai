@@ -53,7 +53,7 @@ Present a compact inventory before creative work:
 
 - Pack type, pack name, and intended use.
 - Stage and Layout names, fixture capacity, TargetSets, and TargetingScenes.
-- Effects by visual role, authoring parameters, layout requirements, and risk.
+- Effects by visual role, authoring parameters, and layout requirements.
 - Authored tempo behavior plus runtime-measured default/1× event rate, duty or trajectory where applicable, using the actual Stage, TargetSet, seed, overrides, and BPM.
 - Cues by readable Layer number, Effect, TargetSet, overrides, and MixPolicy.
 - Arrangements by name, actual BPM, meter, PPQ, total bars/ticks, Clip count, automation count, occupied range, and empty regions.
@@ -72,7 +72,7 @@ Use [effect-and-cue-review.md](references/effect-and-cue-review.md) to determine
 - standard Color authored/default/fallback behavior;
 - Effect-only `color_stops` limitations;
 - shared-attribute writers that need explicit MixPolicy;
-- strobe and density risks.
+- density, temporal readability, and any applicable numeric safety constraints.
 
 Use [temporal-behavior.md](references/temporal-behavior.md) to run or consume the real runtime analyzer before choosing candidate Effects. Do not infer final event rate from Effect names, motion tags, legal speed ratios, oscillator waveform, or raw Graph cycles. For topology-sensitive candidates, analyze the TargetSets actually proposed in the brief.
 
@@ -88,7 +88,7 @@ Gather only information not already provided. Ask one to three high-information 
 - primary colors and section color changes;
 - buildup, drop, breakdown, fill, recovery, and outro intent;
 - simultaneous zones, chase, call-response, or overlap;
-- strobe permission plus venue or safety constraints;
+- accent persistence, hard-flash restrictions, and venue constraints;
 - assets/sections that must remain unchanged;
 - how much creative autonomy the user wants.
 
@@ -116,7 +116,7 @@ Before writing an output pack, show this complete proposal:
 - Create project-local: [...]
 - Copy before editing: [...]
 - MixPolicy decisions: [...]
-- Measured temporal plan: [Effect/TargetSet/BPM, primary event rate, readable ratios, pulse duty/trajectory, safety and aliasing decisions]
+- Measured temporal plan: [Effect/TargetSet/BPM, primary event rate, readable ratios, continuity/trajectory, applicable numeric safety, and aliasing decisions]
 - Intentional silence/blackout: [...]
 ```
 
@@ -157,8 +157,8 @@ Create a dependency-closed UserAssetPack V1 variant without changing the input f
 - Treat CueClip intervals as half-open. Use intentional overlap only with compatible explicit MixPolicy.
 - Automation target and value types must match the resolved Effect parameter. Continuous values may interpolate; direction/boolean/enum use `hold`.
 - Beat-synchronized `speed` is discrete even when represented as a scalar: Cue overrides, CueClip Layer overrides, and every speed keyframe must be exactly `0.25`, `0.5`, `1`, `2`, `4`, or `8`. Do not use intermediate values such as `0.75`, `1.25`, or `1.5`; change at legal ratios instead of authoring unsupported values.
-- A legal ratio is not automatically readable or safe. Before selecting a ratio, use the actual Arrangement BPM and TargetSet to compare measured `primary_events_per_second`, spatial path/reversals, on-duty, strobe Hz, and preview aliasing. Buildup/drop speed changes must follow this evidence, not a larger multiplier by itself.
-- Every new or copied Effect must retain the minimal authored `tempo` contract: `primary_event`, `events_per_graph_cycle`, and an applicable safety limit. Keep duty in its typed parameter/Graph binding; do not duplicate duty, behavior kind, phase landmarks, topology tags, recommended ranges, or runtime fingerprints into `tempo`.
+- A legal ratio is not automatically readable or safe. Before selecting a ratio, use the actual Arrangement BPM and TargetSet to compare measured `primary_events_per_second`, spatial path/reversals, intensity persistence/change energy, applicable pulse Hz, and preview aliasing. Buildup/drop speed changes must follow this evidence, not a larger multiplier by itself.
+- Every new or copied Effect must retain the minimal authored `tempo` contract: `primary_event`, `events_per_graph_cycle`, and `safety` only when a real numeric limit applies. New Effects must use continuous Envelope, sine, triangle, or smoothly interpolated Random behavior; do not generate Pulse/Saw oscillators, hard on/off StepSequences, or FixtureMask flashes. Keep fade-shape parameters in typed parameters and their Graph bindings; do not duplicate duty, behavior kind, phase landmarks, topology tags, recommended ranges, or runtime fingerprints into `tempo`.
 - Standard `color` may be overridden or automated as typed `#RRGGBB`. Never automate `color_stops`.
 - Generate opaque Cue Layer IDs on creation, preserve them on edit, and regenerate them on copy. Do not derive them from names.
 - Give every Cue Layer a stable lowercase 16-character hexadecimal `seed`. Friendly labels, UUIDs, and arbitrary strings pass JSON shape checks but fail the Rust preview compiler.
@@ -184,7 +184,7 @@ Handoff must include:
 - created/reused project-local Effects and Cues;
 - color, targeting, automation, and MixPolicy summary;
 - validation results and input-integrity result;
-- runtime temporal audit summary and artifact paths, including measured rates, relevant duty/trajectory/topology, real-BPM strobe result, and high-speed alias/readability decisions;
+- runtime temporal audit summary and artifact paths, including measured rates, relevant continuity/trajectory/topology, applicable real-BPM pulse Hz, and high-speed alias/readability decisions;
 - deliberate silence/empty regions;
 - current limitation: import through Assets, then use Arrange/Live for visual and runtime acceptance.
 
@@ -211,7 +211,7 @@ Stop and ask for the smallest missing input when:
 - automation target/type cannot be resolved;
 - exact synchronization to a real track is requested but no usable section/bar anchors are supplied;
 - a requested start/end window has no exact phrase-aligned fit and the user has not authorized an asymmetric section;
-- a required MixPolicy or strobe decision is unconfirmed;
+- a required MixPolicy or temporal safety decision is unconfirmed;
 - the runtime temporal analyzer cannot compile the exact Effect/Stage/Layout/TargetSet identity, or measured behavior contradicts the brief and cannot be revised safely;
 - the requested edit crosses an unconfirmed preservation boundary.
 

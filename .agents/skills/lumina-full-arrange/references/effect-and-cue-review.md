@@ -6,20 +6,19 @@ Read this after the pack validates and before proposing the Arrangement.
 
 For each Effect, report readable facts from its document:
 
-| Field                              | Review question                                                                                                |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Family/category                    | Is this primarily intensity, color, movement, spatial, strobe, or utility?                                     |
-| Graph/output                       | What visible attribute and motion does it actually produce?                                                    |
-| Authored tempo behavior            | What is the declared primary event, 1× anchor, events/Graph cycle, duty/reversal/topology intent?              |
-| Runtime temporal fingerprint       | On the actual TargetSet/BPM, what are measured events/s, duty/trajectory/change energy, safety and alias risk? |
-| Energy/density/motion/colorfulness | Which section role fits it?                                                                                    |
-| Required attributes                | Does the Stage profile provide them?                                                                           |
-| Layout capabilities                | Does it require coordinates, matrix topology, radial order, or a sufficiently large TargetSet?                 |
-| Parameters                         | Which are Effect-only, Cue-overridable, or Arrangement-automatable?                                            |
-| Standard Color                     | Does it have a default, preserve authored Palette, or act as an explicit override only?                        |
-| Strobe risk                        | Is explicit user confirmation or a venue limitation required?                                                  |
+| Field                              | Review question                                                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Family/category                    | Is this primarily intensity, color, movement, spatial, or utility?                                           |
+| Graph/output                       | What visible attribute and motion does it actually produce?                                                  |
+| Authored tempo behavior            | What is the declared primary event and events/Graph cycle?                                                   |
+| Runtime temporal fingerprint       | On the actual TargetSet/BPM, what are measured events/s, continuity/trajectory/change energy and alias risk? |
+| Energy/density/motion/colorfulness | Which section role fits it?                                                                                  |
+| Required attributes                | Does the Stage profile provide them?                                                                         |
+| Layout capabilities                | Does it require coordinates, matrix topology, radial order, or a sufficiently large TargetSet?               |
+| Parameters                         | Which are Effect-only, Cue-overridable, or Arrangement-automatable?                                          |
+| Standard Color                     | Does it have a default, preserve authored Palette, or act as an explicit override only?                      |
 
-Do not infer behavior only from the Effect name, motion tag, legal speed, oscillator waveform, or raw Graph cycle. Inspect the authored tempo contract, graph, Catalog metadata, parameter help, capabilities, and risk, then use the real runtime analyzer as required by [temporal-behavior.md](temporal-behavior.md).
+Do not infer behavior only from the Effect name, motion metadata, legal speed, oscillator waveform, or raw Graph cycle. Inspect the authored tempo contract, graph, parameter help, and capabilities, then use the real runtime analyzer as required by [temporal-behavior.md](temporal-behavior.md).
 
 ## Visual role map
 
@@ -28,7 +27,7 @@ Assign useful roles rather than ranking Effects globally:
 - **Foundation**: stable, low-density, long-hold behavior that leaves headroom.
 - **Lift/buildup**: parameters that can increase speed, intensity, density, or spatial reach over time.
 - **Drop body**: legible full-stage or zoned motion with enough persistence to read.
-- **Accent/fill**: short bursts, flashes, or directional changes used sparingly.
+- **Accent/fill**: brief but smoothly faded brightness/color accents or directional changes used sparingly.
 - **Breakdown/recovery**: lower motion/density with controlled color and breathing space.
 - **Outro**: simplifying or dimming behavior that creates a deliberate finish.
 

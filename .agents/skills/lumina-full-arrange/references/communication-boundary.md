@@ -13,7 +13,7 @@ Before mutation, the user must be able to see:
 - what will remain untouched;
 - the complete proposed section/energy/color/targeting plan;
 - every new or copied project-local asset;
-- unresolved MixPolicy or strobe choices.
+- unresolved MixPolicy or temporal safety choices.
 
 An explicit confirmation in the initial prompt satisfies this boundary. An ambiguous “make it better” does not.
 

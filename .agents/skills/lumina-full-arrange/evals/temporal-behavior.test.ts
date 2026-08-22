@@ -42,28 +42,33 @@ describe.sequential("lumina-full-arrange real runtime temporal evals", () => {
     expect(readFileSync(contactSheet, "utf8")).toContain("<svg");
   }, 120_000);
 
-  it("measures pulse duty and real-BPM strobe safety", () => {
-    const burst = analyze({
+  it("keeps Color Accent alive and declares topology-relative column partitions", () => {
+    const accent = analyze({
       effectId: "builtin.color.pulse",
       targetSetId: "zone-4x4-1",
-      speeds: "1,4",
+      speeds: "0.25,1",
       previewFps: 60,
     });
-    expect(burst.fingerprints[0].intensity?.minimum).toBe(0);
-    expect(burst.fingerprints[0].on_duty_cycle).toBeGreaterThan(0.15);
-    expect(burst.fingerprints[0].on_duty_cycle).toBeLessThan(0.25);
+    for (const fingerprint of accent.fingerprints) {
+      expect(fingerprint.intensity?.minimum).toBeGreaterThanOrEqual(0.1);
+      expect(fingerprint.intensity?.maximum).toBeGreaterThan(0.8);
+      expect(fingerprint.intensity?.variance).toBeGreaterThan(0.01);
+      expect(fingerprint.on_duty_cycle).toBeUndefined();
+      expect(fingerprint.strobe).toBeUndefined();
+    }
 
-    const strobe = analyze({
-      effectId: "builtin.strobe.safe-pulse",
-      targetSetId: "zone-4x4-1",
-      speeds: "1,2",
-      previewFps: 60,
-    });
-    expect(strobe.fingerprints[0].on_duty_cycle).toBeGreaterThan(0.1);
-    expect(strobe.fingerprints[0].on_duty_cycle).toBeLessThan(0.16);
-    expect(strobe.fingerprints[0].strobe?.maximum_fixture_flash_hz).toBeCloseTo(128 / 60, 6);
-    expect(strobe.fingerprints[0].strobe?.exceeds_authored_safety_limit).toBe(false);
-    expect(strobe.fingerprints[1].strobe?.exceeds_authored_safety_limit).toBe(true);
+    const pack = JSON.parse(readFileSync(basePackPath, "utf8")) as UserAssetPack;
+    expect(pack.effects.some((effect) => effect.id === "builtin.strobe.safe-pulse")).toBe(false);
+    for (const [effectId, expectedCount] of [
+      ["builtin.intensity.chase", 2],
+      ["builtin.spatial.column-thirds-triplet", 3],
+      ["builtin.spatial.column-quarter-cascade", 4],
+      ["builtin.color.column-prism", 4],
+    ] as const) {
+      const effect = pack.effects.find((candidate) => candidate.id === effectId)!;
+      const spatial = effect.graph.nodes.find((node) => node.type === "spatial_phase");
+      expect(spatial).toMatchObject({ type: "spatial_phase", partition_count: expectedCount });
+    }
   }, 120_000);
 
   it("includes exact TargetSet topology in the fingerprint identity", () => {
@@ -86,26 +91,33 @@ describe.sequential("lumina-full-arrange real runtime temporal evals", () => {
     expect(zone100.fingerprints[0].spatial_centroid?.path_distance).toBeGreaterThan(0);
   }, 120_000);
 
-  it("audits a generated project-local Pulse through compile and render_at", () => {
+  it("audits a generated project-local smooth accent through compile and render_at", () => {
     const pack = JSON.parse(readFileSync(basePackPath, "utf8")) as UserAssetPack;
     const source = pack.effects.find((effect) => effect.id === "builtin.color.pulse")!;
     const generated = structuredClone(source);
-    generated.id = "project.eval.generated-quarter-duty-pulse";
-    generated.name = "Generated Quarter Duty Pulse";
+    generated.id = "project.eval.generated-smooth-accent";
+    generated.name = "Generated Smooth Accent";
     generated.source = "project_local";
-    const duty = generated.parameters.find((parameter) => parameter.id === "duty_cycle")!;
-    if (duty.schema.type !== "scalar") throw new Error("Pulse duty parameter must be scalar");
-    duty.schema.default = 0.25;
-    const oscillator = generated.graph.nodes.find(
-      (node) => node.type === "oscillator" && node.id === duty.graph_binding?.node_id,
-    );
-    if (!oscillator || oscillator.type !== "oscillator") {
-      throw new Error("Pulse oscillator is missing");
+    for (const [parameterId, value] of [
+      ["attack", 0.25],
+      ["release", 0.45],
+    ] as const) {
+      const parameter = generated.parameters.find((candidate) => candidate.id === parameterId)!;
+      if (parameter.schema.type !== "scalar") {
+        throw new Error(`${parameterId} parameter must be scalar`);
+      }
+      parameter.schema.default = value;
+      const envelope = generated.graph.nodes.find(
+        (node) => node.type === "envelope" && node.id === parameter.graph_binding?.node_id,
+      );
+      if (!envelope || envelope.type !== "envelope") {
+        throw new Error("Accent envelope is missing");
+      }
+      envelope[parameterId] = value;
     }
-    oscillator.duty_cycle = 0.25;
     pack.effects.push(generated);
-    const generatedPackPath = resolve(outputDirectory, "generated-pulse-pack.json");
-    const contactSheet = resolve(outputDirectory, "generated-pulse.svg");
+    const generatedPackPath = resolve(outputDirectory, "generated-accent-pack.json");
+    const contactSheet = resolve(outputDirectory, "generated-accent.svg");
     writeFileSync(generatedPackPath, `${JSON.stringify(pack, null, 2)}\n`);
 
     const report = analyze({
@@ -118,13 +130,15 @@ describe.sequential("lumina-full-arrange real runtime temporal evals", () => {
       contactSpeed: 1,
     });
     expect(report.behavior).toEqual({
-      primary_event: "pulse_onset",
+      primary_event: "rise_fall_cycle",
       events_per_graph_cycle: 1,
-      safety: { max_primary_events_per_second: 3 },
     });
     expect(report.fingerprints[0].primary_events_per_beat).toBe(1);
-    expect(report.fingerprints[0].on_duty_cycle).toBeGreaterThan(0.24);
-    expect(report.fingerprints[0].on_duty_cycle).toBeLessThan(0.27);
+    expect(report.fingerprints[0].intensity?.minimum).toBeGreaterThanOrEqual(0.1);
+    expect(report.fingerprints[0].intensity?.maximum).toBeGreaterThan(0.8);
+    expect(report.fingerprints[0].intensity?.variance).toBeGreaterThan(0.01);
+    expect(report.fingerprints[0].on_duty_cycle).toBeUndefined();
+    expect(report.fingerprints[0].strobe).toBeUndefined();
     expect(readFileSync(contactSheet, "utf8")).toContain("<svg");
   }, 120_000);
 });
