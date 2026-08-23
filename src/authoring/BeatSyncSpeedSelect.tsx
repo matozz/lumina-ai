@@ -16,12 +16,14 @@ export function BeatSyncSpeedSelect({
   id,
   value,
   defaultLabel,
+  labelForValue = speedMultiplierLabel,
   disabled = false,
   onChange,
 }: {
   id?: string;
   value: number | null;
   defaultLabel?: string;
+  labelForValue?: (value: number) => string;
   disabled?: boolean;
   onChange: (value: number | null) => void;
 }) {
@@ -40,7 +42,7 @@ export function BeatSyncSpeedSelect({
       : []),
     ...BEAT_SYNC_SPEED_MULTIPLIERS.map((multiplier) => ({
       value: String(multiplier),
-      label: speedMultiplierLabel(multiplier),
+      label: labelForValue(multiplier),
       disabled: false,
     })),
   ];

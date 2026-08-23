@@ -4,6 +4,7 @@ use lumina_ai_lib::document::{
     UserAssetPack,
 };
 use lumina_ai_lib::engine::profile::builtin_profiles;
+use lumina_ai_lib::engine::temporal::TemporalAnalyzerContract;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeSet;
 use std::fs;
@@ -28,6 +29,8 @@ fn main() {
     let production_catalog_v1_path =
         repository_root.join("schemas/production-catalog-v1.schema.json");
     let user_asset_pack_v1_path = repository_root.join("schemas/user-asset-pack-v1.schema.json");
+    let temporal_fingerprint_v1_path =
+        repository_root.join("schemas/temporal-fingerprint-v1.schema.json");
     let capabilities_v1_path = repository_root.join("schemas/show-capabilities-v1.json");
     let project_capabilities_v1_path = repository_root.join("schemas/project-capabilities-v1.json");
     let profiles_path = repository_root.join("schemas/fixture-profiles-v1.json");
@@ -37,6 +40,8 @@ fn main() {
         repository_root.join("src/generated/production-catalog-v1.ts");
     let user_asset_pack_typescript_v1_path =
         repository_root.join("src/generated/user-asset-pack-v1.ts");
+    let temporal_typescript_v1_path =
+        repository_root.join("src/generated/temporal-fingerprint-v1.ts");
 
     let schema_v1 = schemars::schema_for!(ShowDocumentV1);
     let project_manifest_v1 = schemars::schema_for!(ProjectManifest);
@@ -48,6 +53,7 @@ fn main() {
     let project_bundle_v1 = schemars::schema_for!(ProjectBundle);
     let production_catalog_v1 = schemars::schema_for!(ProductionCatalog);
     let user_asset_pack_v1 = schemars::schema_for!(UserAssetPack);
+    let temporal_fingerprint_v1 = schemars::schema_for!(TemporalAnalyzerContract);
     let schema_v1_value = serde_json::to_value(&schema_v1).expect("V1 schema converts to JSON");
     let project_manifest_v1_value = serde_json::to_value(&project_manifest_v1)
         .expect("project manifest schema converts to JSON");
@@ -67,6 +73,8 @@ fn main() {
         .expect("production catalog schema converts to JSON");
     let user_asset_pack_v1_value =
         serde_json::to_value(&user_asset_pack_v1).expect("user asset pack schema converts to JSON");
+    let temporal_fingerprint_v1_value = serde_json::to_value(&temporal_fingerprint_v1)
+        .expect("temporal fingerprint schema converts to JSON");
     let capabilities_v1_value = json!({
         "metadata_version": 1,
         "document_schema_version": 1,
@@ -140,6 +148,10 @@ fn main() {
         (&project_bundle_v1_path, &project_bundle_v1_value),
         (&production_catalog_v1_path, &production_catalog_v1_value),
         (&user_asset_pack_v1_path, &user_asset_pack_v1_value),
+        (
+            &temporal_fingerprint_v1_path,
+            &temporal_fingerprint_v1_value,
+        ),
         (&capabilities_v1_path, &capabilities_v1_value),
         (
             &project_capabilities_v1_path,
@@ -153,6 +165,8 @@ fn main() {
         render_typescript(&production_catalog_v1_value, "ProductionCatalog");
     let user_asset_pack_typescript_v1 =
         render_typescript(&user_asset_pack_v1_value, "UserAssetPack");
+    let temporal_typescript_v1 =
+        render_typescript(&temporal_fingerprint_v1_value, "TemporalAnalyzerContract");
     let text_artifacts = [
         (&typescript_v1_path, typescript_v1.as_str()),
         (&project_typescript_v1_path, project_typescript_v1.as_str()),
@@ -163,6 +177,10 @@ fn main() {
         (
             &user_asset_pack_typescript_v1_path,
             user_asset_pack_typescript_v1.as_str(),
+        ),
+        (
+            &temporal_typescript_v1_path,
+            temporal_typescript_v1.as_str(),
         ),
     ];
 
@@ -196,12 +214,13 @@ fn main() {
         (&project_bundle_v1_path, &project_bundle_v1),
         (&production_catalog_v1_path, &production_catalog_v1),
         (&user_asset_pack_v1_path, &user_asset_pack_v1),
+        (&temporal_fingerprint_v1_path, &temporal_fingerprint_v1),
     ] {
         let mut contents = serde_json::to_string_pretty(schema).expect("schema serializes");
         contents.push('\n');
         fs::write(path, contents).expect("schema artifact is writable");
     }
-    for (path, value) in json_artifacts.into_iter().skip(10) {
+    for (path, value) in json_artifacts.into_iter().skip(11) {
         let mut contents = serde_json::to_string_pretty(value).expect("JSON artifact serializes");
         contents.push('\n');
         fs::write(path, contents).expect("JSON artifact is writable");

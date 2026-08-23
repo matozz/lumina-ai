@@ -25,11 +25,13 @@ export function EffectParameterInput({
   parameter,
   value,
   readOnly,
+  speedLabel,
   onChange,
 }: {
   parameter: ParameterDefinitionDSL;
   value: ParameterValueDSL;
   readOnly: boolean;
+  speedLabel?: (value: number) => string;
   onChange: (value: ParameterValueDSL) => void;
 }) {
   if (value.type === "scalar") {
@@ -39,6 +41,7 @@ export function EffectParameterInput({
           id={`effect-parameter-${parameter.id}`}
           value={value.value}
           disabled={readOnly}
+          labelForValue={speedLabel}
           onChange={(next) => next !== null && onChange({ type: "scalar", value: next })}
         />
       );

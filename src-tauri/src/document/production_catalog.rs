@@ -2,14 +2,14 @@ use super::project_validation::resolve_target_set;
 use super::validation::{validate_effect_definition_document, validate_parameter_value_contract};
 use super::{
     builtin_generator_registry, layout_geometry_shape, ArrangementDocument, AssetRef,
-    CenterEdgesRegion, CueCapabilitySummary, CueDefinition, CueLayer, CueQuantize, CueRiskSummary,
-    CueTriggerMode, CueTriggerPolicy, DirectionDSL, EffectDefinitionDSL, EffectDefinitionDocument,
-    EffectFamilyDSL, EffectInstanceDSL, EffectNodeDSL, GeneratorDSL, GroupDSL, GroupFixturesDSL,
-    GroupRangeDSL, LayoutCapabilityDSL, LayoutDSL, LayoutDefinition, LayoutGeometry, LayoutType,
-    MetaDSL, OscillatorWaveformDSL, ParameterScopeDSL, ParameterValueDSL, PatchDSL, ProjectBundle,
-    ProjectManifest, ShowDocumentV1, StageDocument, StrobeRiskDSL, TargetSetDefinition,
-    TargetSetRef, TargetSetSelector, TargetingSceneDefinition, TargetingSceneRef,
-    TargetingTransition, ValidatedProject, CUE_DEFINITION_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION,
+    CenterEdgesRegion, CueCapabilitySummary, CueDefinition, CueLayer, CueQuantize, CueTriggerMode,
+    CueTriggerPolicy, DirectionDSL, EffectDefinitionDSL, EffectDefinitionDocument,
+    EffectInstanceDSL, EffectNodeDSL, GeneratorDSL, GroupDSL, GroupFixturesDSL, GroupRangeDSL,
+    LayoutCapabilityDSL, LayoutDSL, LayoutDefinition, LayoutGeometry, LayoutType, MetaDSL,
+    OscillatorWaveformDSL, ParameterScopeDSL, ParameterValueDSL, PatchDSL, ProjectBundle,
+    ProjectManifest, ShowDocumentV1, StageDocument, TargetSetDefinition, TargetSetRef,
+    TargetSetSelector, TargetingSceneDefinition, TargetingSceneRef, TargetingTransition,
+    ValidatedProject, CUE_DEFINITION_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION,
 };
 use crate::compiler::diagnostic::{
     Diagnostic, CATALOG_METADATA_INVALID, CATALOG_OUTPUT_INVALID, CATALOG_PARAMETER_INVALID,
@@ -20,6 +20,10 @@ use crate::engine::effect::COLOR_PARAMETER_ID;
 use crate::engine::profile::profile_by_id;
 use crate::engine::profile::{AttributeValue, COLOR_RGB_ATTRIBUTE};
 use crate::engine::render::{render_at, LivePhaser, RenderSource, RenderTime};
+use crate::engine::temporal::{
+    analyze_project_temporal_behavior, TemporalAnalysisRequest, TemporalSamplingConfig,
+    LEGAL_TEMPORAL_SPEEDS,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -30,6 +34,8 @@ pub const PRODUCTION_CATALOG_GOLDEN_SCHEMA_VERSION: u32 = 1;
 pub const PRODUCTION_COMPATIBILITY_SCHEMA_VERSION: u32 = 1;
 const GOLDEN_PPQ: u32 = 960;
 const GOLDEN_TICKS: [u32; 6] = [0, 120, 480, 960, 1_440, 2_880];
+const RUNTIME_VALIDATION_BEATS: u32 = 2;
+const RUNTIME_VALIDATION_SAMPLES_PER_BEAT: u32 = 128;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(deny_unknown_fields)]
@@ -423,7 +429,6 @@ fn materialize_project_template(
 }
 
 pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<Diagnostic> {
-    const SAMPLE_BEATS: [f64; 8] = [0.0, 0.125, 0.25, 0.375, 0.5, 0.75, 1.0, 1.5];
     let mut diagnostics = Vec::new();
     let mut signatures = BTreeMap::<String, (String, u32)>::new();
     for effect in &catalog.effects {
@@ -444,12 +449,13 @@ pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<D
             }
         };
         let active = effect_sample_live(&show);
-        let samples: Vec<_> = SAMPLE_BEATS
-            .iter()
-            .map(|beat| {
+        let samples: Vec<_> = (0..=RUNTIME_VALIDATION_BEATS * RUNTIME_VALIDATION_SAMPLES_PER_BEAT)
+            .map(|sample| {
                 render_at(
                     &show,
-                    RenderTime { beat: *beat },
+                    RenderTime {
+                        beat: f64::from(sample) / f64::from(RUNTIME_VALIDATION_SAMPLES_PER_BEAT),
+                    },
                     RenderSource::Live(&active),
                 )
             })
@@ -474,40 +480,6 @@ pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<D
                 "Sampled Effect output is static across the preview loop.",
                 "Connect time or spatial phase to a visible writer.",
             ));
-        }
-        if matches!(effect.catalog.family, Some(EffectFamilyDSL::Strobe)) {
-            match sampled_maximum_strobe_risk(effect) {
-                Ok(observed) if strobe_rank(effect.catalog.strobe_risk) < strobe_rank(observed) => {
-                    diagnostics.push(
-                        Diagnostic::error(
-                            CATALOG_METADATA_INVALID,
-                            "catalog.strobe_risk",
-                            format!(
-                                "Declared strobe risk {:?} understates sampled maximum {:?}.",
-                                effect.catalog.strobe_risk, observed
-                            ),
-                            "Raise the declared risk or reduce the maximum flash rate.",
-                        )
-                        .with_asset(
-                            "effect",
-                            effect.id.clone(),
-                            effect.revision,
-                        ),
-                    );
-                }
-                Ok(_) => {}
-                Err(mut errors) => {
-                    for diagnostic in &mut errors {
-                        diagnostic.asset =
-                            Some(Box::new(crate::compiler::diagnostic::DiagnosticAsset {
-                                kind: "effect".to_string(),
-                                id: effect.id.clone(),
-                                revision: effect.revision,
-                            }));
-                    }
-                    diagnostics.extend(errors);
-                }
-            }
         }
         let signature = serde_json::to_string(
             &samples
@@ -555,12 +527,15 @@ pub fn validate_production_catalog_runtime(catalog: &ProductionCatalog) -> Vec<D
                 continue;
             };
             let changed_active = effect_sample_live(&changed_show);
-            let changed_samples: Vec<_> = SAMPLE_BEATS
-                .iter()
-                .map(|beat| {
+            let changed_samples: Vec<_> = (0..=RUNTIME_VALIDATION_BEATS
+                * RUNTIME_VALIDATION_SAMPLES_PER_BEAT)
+                .map(|sample| {
                     render_at(
                         &changed_show,
-                        RenderTime { beat: *beat },
+                        RenderTime {
+                            beat: f64::from(sample)
+                                / f64::from(RUNTIME_VALIDATION_SAMPLES_PER_BEAT),
+                        },
                         RenderSource::Live(&changed_active),
                     )
                 })
@@ -657,6 +632,123 @@ pub fn production_catalog_golden(
                     right.path.as_str(),
                 ))
         });
+        Err(diagnostics)
+    }
+}
+
+pub fn production_temporal_project(
+    catalog: &ProductionCatalog,
+) -> Result<ProjectBundle, Diagnostic> {
+    let template = catalog
+        .project_templates
+        .iter()
+        .find(|template| template.id == "builtin.project-template.authoring-starter")
+        .ok_or_else(|| {
+            Diagnostic::error(
+                CATALOG_METADATA_INVALID,
+                "project_templates",
+                "Temporal analysis requires the Authoring Starter Project Template.",
+                "Restore the built-in starter Stage and its representative TargetSets.",
+            )
+        })?;
+    let mut project = materialize_project_template(catalog, template);
+    project.stages[0].id = "analysis.stage.matrix-20x20-moving-head".to_string();
+    project.stages[0].name = "Temporal Matrix · 20×20 Moving Head".to_string();
+    project.stages[0].patch = vec![PatchDSL {
+        profile_id: "generic-moving-head".to_string(),
+        id_range: (1, 400),
+    }];
+    project.manifest.stage_ref = AssetRef {
+        id: project.stages[0].id.clone(),
+        revision: project.stages[0].revision,
+    };
+    project.effects = catalog.effects.clone();
+    project.manifest.effect_refs = catalog
+        .effects
+        .iter()
+        .map(|effect| AssetRef {
+            id: effect.id.clone(),
+            revision: effect.revision,
+        })
+        .collect();
+    Ok(project)
+}
+
+pub fn production_catalog_temporal_golden(
+    catalog: &ProductionCatalog,
+) -> Result<serde_json::Value, Vec<Diagnostic>> {
+    const BPM: f64 = 128.0;
+    const PRIMARY_TARGET: &str = "zone-4x4-1";
+    const TOPOLOGY_TARGET: &str = "zone-2x2-1";
+    let project = production_temporal_project(catalog).map_err(|diagnostic| vec![diagnostic])?;
+    let mut effects = Vec::with_capacity(catalog.effects.len());
+    let mut diagnostics = Vec::new();
+    for effect in &catalog.effects {
+        let request = TemporalAnalysisRequest {
+            effect_ref: AssetRef {
+                id: effect.id.clone(),
+                revision: effect.revision,
+            },
+            target_set_id: PRIMARY_TARGET.to_string(),
+            bpm: BPM,
+            speeds: LEGAL_TEMPORAL_SPEEDS.to_vec(),
+            seed: "0000000000000001".to_string(),
+            parameter_overrides: BTreeMap::new(),
+            sampling: TemporalSamplingConfig::default(),
+        };
+        let report = match analyze_project_temporal_behavior(&project, &request) {
+            Ok(report) => report,
+            Err(mut errors) => {
+                for diagnostic in &mut errors {
+                    diagnostic.asset =
+                        Some(Box::new(crate::compiler::diagnostic::DiagnosticAsset {
+                            kind: "effect".to_string(),
+                            id: effect.id.clone(),
+                            revision: effect.revision,
+                        }));
+                }
+                diagnostics.extend(errors);
+                continue;
+            }
+        };
+        let default_speed = effect
+            .parameters
+            .iter()
+            .find(|parameter| parameter.id == "speed")
+            .and_then(|parameter| parameter.default_value())
+            .and_then(|value| match value {
+                ParameterValueDSL::Scalar(value) => Some(value),
+                _ => None,
+            })
+            .unwrap_or(1.0);
+        let topology_request = TemporalAnalysisRequest {
+            target_set_id: TOPOLOGY_TARGET.to_string(),
+            speeds: vec![default_speed],
+            ..request
+        };
+        let topology_probe = match analyze_project_temporal_behavior(&project, &topology_request) {
+            Ok(report) => report,
+            Err(mut errors) => {
+                diagnostics.append(&mut errors);
+                continue;
+            }
+        };
+        effects.push(serde_json::json!({
+            "effect_ref": { "id": effect.id, "revision": effect.revision },
+            "name": effect.name,
+            "all_legal_speeds": report,
+            "topology_probe": topology_probe,
+        }));
+    }
+    if diagnostics.is_empty() {
+        Ok(serde_json::json!({
+            "schema_version": crate::engine::temporal::TEMPORAL_FINGERPRINT_SCHEMA_VERSION,
+            "bpm": BPM,
+            "primary_target_set_id": PRIMARY_TARGET,
+            "topology_target_set_id": TOPOLOGY_TARGET,
+            "effects": effects,
+        }))
+    } else {
         Err(diagnostics)
     }
 }
@@ -778,6 +870,14 @@ pub fn materialize_effect_graph_bindings(effect: &mut EffectDefinitionDocument) 
                 .map(|value| *waveform = value)
                 .is_some(),
             (
+                super::EffectNodePropertyDSL::DutyCycle,
+                super::EffectNodeDSL::Oscillator { duty_cycle, .. },
+                Some(ParameterValueDSL::Scalar(value)),
+            ) => {
+                *duty_cycle = Some(*value);
+                true
+            }
+            (
                 super::EffectNodePropertyDSL::Attack,
                 super::EffectNodeDSL::Envelope { attack, .. },
                 Some(ParameterValueDSL::Scalar(value)),
@@ -887,6 +987,7 @@ fn effect_sample_document(
             revision: effect.revision,
             source: effect.source,
             parameters: effect.parameters.clone(),
+            tempo: effect.tempo.clone(),
             graph: effect.graph.clone(),
             catalog: effect.catalog.clone(),
         }],
@@ -940,49 +1041,7 @@ fn alternate_parameter_value(
     }
 }
 
-fn sampled_maximum_strobe_risk(
-    effect: &EffectDefinitionDocument,
-) -> Result<StrobeRiskDSL, Vec<Diagnostic>> {
-    const SAMPLE_BEATS: u32 = 4;
-    const SAMPLES_PER_BEAT: u32 = 64;
-    let maximum_speed = effect
-        .parameters
-        .iter()
-        .find(|parameter| parameter.id == "speed")
-        .and_then(|parameter| parameter.range().map(|(_, maximum)| maximum));
-    let overrides = maximum_speed.map_or_else(BTreeMap::new, |maximum| {
-        BTreeMap::from([("speed".to_string(), ParameterValueDSL::Scalar(maximum))])
-    });
-    let show = Compiler::compile_document(effect_sample_document(effect, overrides))?;
-    let active = effect_sample_live(&show);
-    let states = (0..=SAMPLE_BEATS * SAMPLES_PER_BEAT)
-        .map(|sample| {
-            let frames = render_at(
-                &show,
-                RenderTime {
-                    beat: f64::from(sample) / f64::from(SAMPLES_PER_BEAT),
-                },
-                RenderSource::Live(&active),
-            );
-            frames
-                .first()
-                .and_then(frame_intensity)
-                .is_some_and(|value| value > 0.1)
-        })
-        .collect::<Vec<_>>();
-    let crossings = states.windows(2).filter(|pair| pair[0] != pair[1]).count();
-    let flashes_per_second = crossings as f64 / 2.0 / f64::from(SAMPLE_BEATS) * 2.0;
-    Ok(if flashes_per_second <= f64::EPSILON {
-        StrobeRiskDSL::None
-    } else if flashes_per_second < 3.0 {
-        StrobeRiskDSL::Low
-    } else if flashes_per_second < 8.0 {
-        StrobeRiskDSL::Medium
-    } else {
-        StrobeRiskDSL::High
-    })
-}
-
+#[cfg(test)]
 fn frame_intensity(frame: &crate::engine::attribute::FixtureFrame) -> Option<f64> {
     frame
         .to_payload()
@@ -1289,7 +1348,6 @@ pub fn resolve_cue_recipe(
     let mut diagnostics = Vec::new();
     let mut layers = Vec::with_capacity(recipe.layers.len());
     let mut required_attributes = BTreeSet::new();
-    let mut strobe_risk = StrobeRiskDSL::None;
     for (index, recipe_layer) in recipe.layers.iter().enumerate() {
         let path = format!("layers[{index}]");
         let Some(effect) = catalog.effects.iter().find(|effect| {
@@ -1365,9 +1423,6 @@ pub fn resolve_cue_recipe(
             continue;
         }
         required_attributes.extend(effect.catalog.required_attributes.iter().cloned());
-        if strobe_rank(effect.catalog.strobe_risk) > strobe_rank(strobe_risk) {
-            strobe_risk = effect.catalog.strobe_risk;
-        }
         layers.push(CueLayer {
             id: recipe_layer.id.clone(),
             effect_ref: recipe_layer.effect_ref.clone(),
@@ -1408,7 +1463,6 @@ pub fn resolve_cue_recipe(
         capability_summary: CueCapabilitySummary {
             required_attributes: required_attributes.into_iter().collect(),
         },
-        risk_summary: CueRiskSummary { strobe_risk },
     })
 }
 
@@ -1521,15 +1575,6 @@ fn layout_has_capability(layout: &LayoutDefinition, capability: LayoutCapability
     }
 }
 
-fn strobe_rank(risk: StrobeRiskDSL) -> u8 {
-    match risk {
-        StrobeRiskDSL::None => 0,
-        StrobeRiskDSL::Low => 1,
-        StrobeRiskDSL::Medium => 2,
-        StrobeRiskDSL::High => 3,
-    }
-}
-
 fn unresolved_recipe(
     recipe_ref: &CueRecipeRef,
     path: &str,
@@ -1566,6 +1611,276 @@ mod tests {
         assert!(diagnostics.is_empty(), "{diagnostics:#?}");
         let runtime_diagnostics = validate_production_catalog_runtime(&catalog);
         assert!(runtime_diagnostics.is_empty(), "{runtime_diagnostics:#?}");
+    }
+
+    #[test]
+    fn built_in_effects_use_continuous_profiles_and_declared_column_partitions() {
+        let catalog = builtin_production_catalog().expect("checked-in catalog parses");
+        for effect in &catalog.effects {
+            for node in &effect.graph.nodes {
+                assert!(
+                    !matches!(
+                        node,
+                        EffectNodeDSL::Oscillator {
+                            waveform: OscillatorWaveformDSL::Pulse | OscillatorWaveformDSL::Saw,
+                            ..
+                        } | EffectNodeDSL::FixtureMask { .. }
+                            | EffectNodeDSL::StepSequence { .. }
+                    ),
+                    "{} contains a hard-edged temporal primitive",
+                    effect.id
+                );
+            }
+        }
+
+        let partition_count = |effect_id: &str| {
+            catalog
+                .effects
+                .iter()
+                .find(|effect| effect.id == effect_id)
+                .and_then(|effect| {
+                    effect.graph.nodes.iter().find_map(|node| match node {
+                        EffectNodeDSL::SpatialPhase {
+                            partition_count, ..
+                        } => *partition_count,
+                        _ => None,
+                    })
+                })
+        };
+        assert_eq!(partition_count("builtin.intensity.chase"), Some(2));
+        assert_eq!(
+            partition_count("builtin.spatial.column-thirds-triplet"),
+            Some(3)
+        );
+        assert_eq!(
+            partition_count("builtin.spatial.column-quarter-cascade"),
+            Some(4)
+        );
+        assert_eq!(partition_count("builtin.color.column-prism"), Some(4));
+    }
+
+    #[test]
+    fn tempo_contract_rejects_primary_events_the_graph_cannot_produce() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        let pulse = catalog
+            .effects
+            .iter()
+            .find(|effect| effect.id == "builtin.color.pulse")
+            .expect("Color Accent");
+
+        let mut impossible_refresh = pulse.clone();
+        impossible_refresh.tempo.primary_event =
+            crate::document::PrimaryVisualEventDSL::RandomRefresh;
+        let diagnostics =
+            validate_effect_draft(impossible_refresh).expect_err("missing Random node fails");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == CATALOG_METADATA_INVALID
+                && diagnostic.path == "effect.tempo.primary_event"
+        }));
+
+        let breathe = catalog
+            .effects
+            .iter()
+            .find(|effect| effect.id == "builtin.intensity.breathe")
+            .expect("Breathe");
+        let mut impossible_pulse = breathe.clone();
+        impossible_pulse.tempo.primary_event = crate::document::PrimaryVisualEventDSL::PulseOnset;
+        let diagnostics =
+            validate_effect_draft(impossible_pulse).expect_err("missing pulse shape fails");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == CATALOG_METADATA_INVALID
+                && diagnostic.path == "effect.tempo.primary_event"
+        }));
+
+        let mut invalid_cycle_rate = pulse.clone();
+        invalid_cycle_rate.tempo.events_per_graph_cycle = 0.0;
+        let diagnostics = validate_effect_draft(invalid_cycle_rate).expect_err("zero rate fails");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == CATALOG_METADATA_INVALID
+                && diagnostic.path == "effect.tempo.events_per_graph_cycle"
+        }));
+    }
+
+    #[test]
+    fn runtime_validation_does_not_alias_a_legal_high_speed_effect_to_black() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        let mut breathe = catalog
+            .effects
+            .iter()
+            .find(|effect| effect.id == "builtin.intensity.breathe")
+            .expect("Breathe")
+            .clone();
+        let speed = breathe
+            .parameters
+            .iter_mut()
+            .find(|parameter| parameter.id == "speed")
+            .expect("speed parameter");
+        let crate::document::ParameterSchemaDSL::Scalar { default, .. } = &mut speed.schema else {
+            panic!("speed is scalar");
+        };
+        *default = 8.0;
+
+        validate_effect_draft(breathe)
+            .expect("dense musical-domain validation must accept the legal 8× speed");
+    }
+
+    #[test]
+    fn checked_in_temporal_golden_enforces_normalized_event_semantics() {
+        let golden: serde_json::Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/production_temporal_fingerprint_v1.json"
+        ))
+        .expect("checked-in temporal Golden parses");
+        let entries = golden["effects"]
+            .as_array()
+            .expect("temporal Golden has Effect entries");
+        assert_eq!(entries.len(), 20, "every built-in Effect is fingerprinted");
+
+        let report_for = |effect_id: &str| {
+            let value = entries
+                .iter()
+                .find(|entry| entry["effect_ref"]["id"] == effect_id)
+                .unwrap_or_else(|| panic!("missing temporal Golden for {effect_id}"))
+                ["all_legal_speeds"]
+                .clone();
+            serde_json::from_value::<crate::engine::temporal::TemporalFingerprintReport>(value)
+                .unwrap_or_else(|error| panic!("invalid temporal report for {effect_id}: {error}"))
+        };
+
+        for entry in entries {
+            let report: crate::engine::temporal::TemporalFingerprintReport =
+                serde_json::from_value(entry["all_legal_speeds"].clone())
+                    .expect("temporal report matches generated contract");
+            assert_eq!(
+                report.identity.speeds,
+                crate::engine::temporal::LEGAL_TEMPORAL_SPEEDS,
+                "all legal speed ratios are sampled"
+            );
+            let mut previous_rate = 0.0;
+            for (fingerprint, speed) in report
+                .fingerprints
+                .iter()
+                .zip(crate::engine::temporal::LEGAL_TEMPORAL_SPEEDS)
+            {
+                assert!((fingerprint.speed - speed).abs() < f64::EPSILON);
+                assert!(
+                    (fingerprint.primary_events_per_beat - speed).abs() < f64::EPSILON,
+                    "1× normalization must map speed to primary events/beat"
+                );
+                assert!(
+                    (fingerprint.primary_events_per_second - speed * 128.0 / 60.0).abs() < 1e-10,
+                    "events/s must use the real Golden BPM"
+                );
+                assert!(
+                    fingerprint.primary_events_per_beat > previous_rate,
+                    "primary event rate must increase monotonically"
+                );
+                previous_rate = fingerprint.primary_events_per_beat;
+            }
+            assert_ne!(
+                entry["all_legal_speeds"]["identity"]["target_fixture_count"],
+                entry["topology_probe"]["identity"]["target_fixture_count"],
+                "the topology probe must resolve a distinct TargetSet"
+            );
+        }
+
+        for effect_id in [
+            "builtin.intensity.breathe",
+            "builtin.transition.blackout-safe",
+        ] {
+            let report = report_for(effect_id);
+            let one_x = &report.fingerprints[2];
+            assert_eq!(
+                one_x.peaks.as_ref().map(|peaks| peaks.count),
+                Some(4),
+                "{effect_id} must have one rise-fall peak per beat, not two"
+            );
+        }
+
+        let accent = report_for("builtin.color.pulse");
+        let accent_one_x = &accent.fingerprints[2];
+        let accent_intensity = accent_one_x
+            .intensity
+            .as_ref()
+            .expect("Color Accent writes intensity");
+        assert!(accent_intensity.minimum >= 0.1);
+        assert!(accent_intensity.maximum > 0.8);
+        assert!(accent_intensity.variance > 0.01);
+        assert_eq!(accent_one_x.on_duty_cycle, None);
+        assert!(accent_one_x.strobe.is_none());
+
+        let ping_pong = report_for("builtin.spatial.column-ping-pong");
+        assert_eq!(ping_pong.behavior.events_per_graph_cycle, 2.0);
+        assert_eq!(ping_pong.fingerprints[2].graph_cycles_per_beat, 0.5);
+        assert_eq!(
+            ping_pong.fingerprints[2]
+                .spatial_centroid
+                .as_ref()
+                .map(|centroid| centroid.direction_reversals),
+            Some(3),
+            "four beats must expose exactly three sustained direction changes"
+        );
+        let half_relay = report_for("builtin.intensity.chase");
+        assert_eq!(half_relay.behavior.events_per_graph_cycle, 2.0);
+        assert_eq!(half_relay.fingerprints[2].graph_cycles_per_beat, 0.5);
+        assert_eq!(
+            half_relay.fingerprints[2]
+                .spatial_centroid
+                .as_ref()
+                .map(|centroid| centroid.direction_reversals),
+            Some(3),
+            "four beats must expose exactly three sustained half-relay direction changes"
+        );
+        for effect_id in [
+            "builtin.spatial.column-rain",
+            "builtin.intensity.wave",
+            "builtin.spatial.angular-orbit",
+            "builtin.transition.wipe",
+        ] {
+            let report = report_for(effect_id);
+            assert_eq!(
+                report.fingerprints[2]
+                    .spatial_centroid
+                    .as_ref()
+                    .map(|centroid| centroid.direction_reversals),
+                Some(0),
+                "{effect_id} must not mistake wrapped spatial progress for a direction reversal"
+            );
+        }
+    }
+
+    #[test]
+    fn temporal_analyzer_uses_compiled_spatial_handles_after_topological_reorder() {
+        let catalog = builtin_production_catalog().expect("catalog");
+        let mut project = production_temporal_project(&catalog).expect("temporal project");
+        let wipe = project
+            .effects
+            .iter_mut()
+            .find(|effect| effect.id == "builtin.transition.wipe")
+            .expect("Spatial Wipe");
+        wipe.graph.nodes.reverse();
+        let request = TemporalAnalysisRequest {
+            effect_ref: AssetRef {
+                id: wipe.id.clone(),
+                revision: wipe.revision,
+            },
+            target_set_id: "zone-4x4-1".to_string(),
+            bpm: 128.0,
+            speeds: vec![1.0],
+            seed: "0000000000000001".to_string(),
+            parameter_overrides: BTreeMap::new(),
+            sampling: TemporalSamplingConfig::default(),
+        };
+
+        let report = analyze_project_temporal_behavior(&project, &request)
+            .expect("topologically reordered graph analyzes");
+        assert_eq!(
+            report.fingerprints[0]
+                .spatial_centroid
+                .as_ref()
+                .map(|centroid| centroid.direction_reversals),
+            Some(0),
+            "compiled SpatialPhase offsets, not authored node positions, define motion progress"
+        );
     }
 
     #[test]
@@ -1723,28 +2038,28 @@ mod tests {
             .effects
             .iter()
             .find(|effect| effect.id == "builtin.color.pulse")
-            .expect("Short Color Burst");
+            .expect("Color Accent");
         let show = Compiler::compile_document(effect_sample_document(burst, BTreeMap::new()))
-            .expect("Short Color Burst compiles");
+            .expect("Color Accent compiles");
         let active = effect_sample_live(&show);
         let colors = [0.0, 0.25].map(|beat| {
             render_at(&show, RenderTime { beat }, RenderSource::Live(&active))
                 .first()
                 .and_then(frame_color)
-                .expect("Short Color Burst writes color")
+                .expect("Color Accent writes color")
         });
 
         assert_ne!(colors[0], colors[1], "graph color must remain animated");
     }
 
     #[test]
-    fn short_color_burst_keeps_its_pulse_with_a_cue_color_override() {
+    fn color_accent_keeps_its_smooth_intensity_with_a_cue_color_override() {
         let catalog = builtin_production_catalog().expect("catalog");
         let burst = catalog
             .effects
             .iter()
             .find(|effect| effect.id == "builtin.color.pulse" && effect.revision == 1)
-            .expect("Short Color Burst current source");
+            .expect("Color Accent current source");
         let document = effect_sample_document(
             burst,
             BTreeMap::from([(
@@ -1752,25 +2067,22 @@ mod tests {
                 ParameterValueDSL::Color("#FF4FD8".to_string()),
             )]),
         );
-        let show = Compiler::compile_document(document).expect("Short Color Burst compiles");
+        let show = Compiler::compile_document(document).expect("Color Accent compiles");
         let active = effect_sample_live(&show);
         let intensities = [0.0, 0.25, 0.5, 0.75].map(|beat| {
             render_at(&show, RenderTime { beat }, RenderSource::Live(&active))
                 .first()
                 .and_then(frame_intensity)
-                .expect("Short Color Burst writes intensity")
+                .expect("Color Accent writes intensity")
         });
 
         let minimum = intensities.into_iter().fold(f64::INFINITY, f64::min);
         let maximum = intensities.into_iter().fold(f64::NEG_INFINITY, f64::max);
 
+        assert!(minimum >= 0.1, "Color Accent must remain visibly alive");
         assert!(
-            minimum >= 0.25 - f64::EPSILON,
-            "burst keeps a safe visible floor"
-        );
-        assert!(
-            maximum > minimum + 0.5,
-            "Cue Color must not flatten the burst pulse"
+            maximum > 0.8,
+            "Cue Color must not flatten the accent envelope"
         );
     }
 
@@ -1829,8 +2141,7 @@ mod tests {
                     "trigger_policy": { "mode": "timeline", "quantize": "beat" }
                 }],
                 "trigger_policy": { "mode": "timeline", "quantize": "beat" },
-                "capability_summary": { "required_attributes": ["intensity"] },
-                "risk_summary": { "strobe_risk": "none" }
+                "capability_summary": { "required_attributes": ["intensity"] }
             },
             {
                 "schema_version": 1,
@@ -1858,8 +2169,7 @@ mod tests {
                     "trigger_policy": { "mode": "timeline", "quantize": "beat" }
                 }],
                 "trigger_policy": { "mode": "timeline", "quantize": "beat" },
-                "capability_summary": { "required_attributes": ["intensity"] },
-                "risk_summary": { "strobe_risk": "none" }
+                "capability_summary": { "required_attributes": ["intensity"] }
             }
         ]))
         .expect("test Cues parse");
@@ -1949,7 +2259,7 @@ mod tests {
             "Ping-Pong must dwell on the leftmost column across nearby render samples"
         );
         assert!(
-            top_left_rightmost.is_subset(&visible_target(0.45, &top_left)),
+            top_left_rightmost.is_subset(&visible_target(0.95, &top_left)),
             "Ping-Pong must dwell on the rightmost column across nearby render samples"
         );
 

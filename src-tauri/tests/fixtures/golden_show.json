@@ -35,6 +35,10 @@
       "name": "Chase",
       "revision": 1,
       "source": "project_local",
+      "tempo": {
+        "primary_event": "one_way_traversal",
+        "events_per_graph_cycle": 1
+      },
       "parameters": [
         {
           "id": "speed",
@@ -236,7 +240,6 @@
         "density": 0.5,
         "motion": "pulse",
         "colorfulness": 0.5,
-        "strobe_risk": "none",
         "required_attributes": ["intensity", "color.rgb"]
       }
     }

@@ -28,15 +28,16 @@ Cue recipe 与 Project Template 中的 Layer ID 也是持久化引用。新声�
 
 1. JSON/Rust contract 解析；
 2. identity、exact reference 和 Generator Registry 校验；
-3. Effect parameter/graph/capability/risk 校验；
+3. Effect parameter/graph/capability 校验；
 4. Cue recipe 解析和共享属性 writer 检查；
 5. 将 Project Template、starter Cue、Effect 依赖和所有内置 Arrangement 组装成完整 ProjectBundle，再执行 exact-ref、TargetSet、MixPolicy 和 automation 语义校验；
-6. runtime sampled output 与 determinism 检查；
-7. Production render、compatibility 和 Generator coordinate Golden 比对。
+6. runtime sampled output、连续性与 determinism 检查；适用的 pulse safety 使用真实 BPM 并检查相关 TargetSet 的全部 fixture，而不是只看第一个 fixture；
+7. 使用真实 compile + `render_at` 生成全部内置 Effect × 0.25×/0.5×/1×/2×/4×/8× 的 temporal fingerprint，并对另一个 TargetSet 做 topology probe；
+8. Production render、temporal fingerprint、compatibility 和 Generator coordinate Golden 比对。
 
-修改经过审查后运行 `pnpm catalog:golden:update`，并提交 `catalog/production-compatibility-v1.json`、Generator Golden 和 Rust production Golden 的有意差异。新增或调整 standard Color 参数时还要验证 typed schema、scope、Cue/Arrangement exact target、Lab midpoint/endpoints、清除后的 fallback 与实际 `color.rgb` 输出；兼容修改直接更新现有源文件，不为此机械新增 revision。
+修改经过审查后运行 `pnpm catalog:golden:update`，并提交 `catalog/production-compatibility-v1.json`、Generator Golden、Rust production render Golden 和 `production_temporal_fingerprint_v1.json` 的有意差异。Temporal Golden 覆盖主要事件率与单调性、适用的 duty、phase landmark、空间路径/反转、连续 random refresh、TargetSet topology、适用的真实 BPM/Hz safety 和 preview aliasing。新增或调整 standard Color 参数时还要验证 typed schema、scope、Cue/Arrangement exact target、Lab midpoint/endpoints、清除后的 fallback 与实际 `color.rgb` 输出；兼容修改直接更新现有源文件，不为此机械新增 revision。
 
-Effect parameter 不再在 Catalog metadata 中维护 `parameter_summary`，也不维护与 parameter schema 重复的 type/default/policy 字段。Catalog discovery 只保留作者可理解的 family/category/visibility/mood/energy/density/motion/colorfulness/strobe risk；`required_attributes` 和 `layout_capabilities` 是显式兼容性承诺，由完整 Project validation 与 Golden 交叉验证。
+Effect parameter 不再在 Catalog metadata 中维护 `parameter_summary`，也不维护与 parameter schema 重复的 type/default/policy 字段。Catalog discovery 只保留作者可理解的 family/category/visibility/mood/energy/density/motion/colorfulness；`required_attributes` 和 `layout_capabilities` 是显式兼容性承诺，由完整 Project validation 与 Golden 交叉验证。`strobe_risk` 与 Cue `risk_summary` 已从当前 V1 删除，不由 analyzer 数值反向补写。
 
 ## 用户资产包
 

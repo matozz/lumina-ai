@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "recipe.row-chase",
   "revision": 1,
-  "name": "Matrix Spatial Chase",
-  "description": "A directional chase resolved to a row-capable TargetSet.",
+  "name": "Matrix Half Relay",
+  "description": "A smooth two-half relay resolved to a matrix row TargetSet.",
   "nominal_length_ticks": 15360,
   "layers": [
     {
@@ -19,10 +19,6 @@
         "speed": {
           "type": "scalar",
           "value": 1
-        },
-        "direction": {
-          "type": "direction",
-          "value": "forward"
         }
       },
       "phase": 0,

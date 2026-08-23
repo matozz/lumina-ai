@@ -13,7 +13,7 @@ Before mutation, the user must be able to see:
 - what will remain untouched;
 - the complete proposed section/energy/color/targeting plan;
 - every new or copied project-local asset;
-- unresolved MixPolicy or strobe choices.
+- unresolved MixPolicy or temporal safety choices.
 
 An explicit confirmation in the initial prompt satisfies this boundary. An ambiguous “make it better” does not.
 
@@ -53,10 +53,11 @@ Report validation as separate claims:
 - UserAssetPack V1 Schema: pass/fail;
 - dependency and exact refs: pass/fail;
 - ProjectBundle semantic import check: pass/fail;
+- runtime temporal analyzer: pass/fail, with exact report/contact-sheet paths and the BPM/TargetSet/speed identity;
 - task-specific provenance/preservation/tick assertions: pass/fail;
 - input hash unchanged: pass/fail.
 
-Do not claim Preview compile, visual quality, Go Live, autosave, or real fixture safety from pack validation. Those require importing into Lumina and using the real Arrange/Live path, which is outside this first version.
+Pack validation alone does not prove preview behavior. You may claim the objective metrics actually produced by Lumina's real compile + `render_at` temporal analyzer and show its contact sheet; do not elevate them into a claim of subjective visual quality, Go Live acceptance, autosave, or real-fixture safety. Those still require importing into Lumina and using the real Arrange/Live path.
 
 ## Missing context response
 

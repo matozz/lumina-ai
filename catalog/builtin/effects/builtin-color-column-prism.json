@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "id": "builtin.color.column-prism",
+  "name": "Four-Column Prism",
+  "revision": 1,
+  "source": "built_in",
+  "parameters": [
+    {
+      "id": "speed",
+      "name": "Speed",
+      "schema": {
+        "type": "scalar",
+        "default": 0.5,
+        "range": { "min": 0.25, "max": 8, "step": 0.25 },
+        "unit": "multiplier"
+      },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "One four-zone color phrase per beat at 1×."
+    },
+    {
+      "id": "intensity",
+      "name": "Intensity",
+      "schema": {
+        "type": "scalar",
+        "default": 0.85,
+        "range": { "min": 0, "max": 1, "step": 0.05 },
+        "unit": "normalized"
+      },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Maximum prism brightness."
+    },
+    {
+      "id": "direction",
+      "name": "Direction",
+      "schema": { "type": "direction", "default": "forward" },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Color flow direction."
+    },
+    {
+      "id": "palette",
+      "name": "Palette",
+      "schema": {
+        "type": "color_stops",
+        "default": [
+          { "position": 0, "color": "#F472B6" },
+          { "position": 0.33, "color": "#A78BFA" },
+          { "position": 0.66, "color": "#22D3EE" },
+          { "position": 1, "color": "#34D399" }
+        ]
+      },
+      "scope": "effect",
+      "section": "advanced",
+      "help": "Four-zone prism palette.",
+      "graph_binding": { "node_id": "prism-gradient", "property": "color_stops" }
+    },
+    {
+      "id": "color",
+      "name": "Color",
+      "schema": { "type": "color" },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Optional solid-color override; clear it to use the prism palette."
+    }
+  ],
+  "tempo": {
+    "primary_event": "spatial_propagation",
+    "events_per_graph_cycle": 1
+  },
+  "graph": {
+    "nodes": [
+      { "type": "time", "id": "time" },
+      {
+        "type": "spatial_phase",
+        "id": "prism-columns",
+        "input": { "node_id": "time", "port": "scalar" },
+        "basis": "x",
+        "from": 0,
+        "to": 1,
+        "wrap": true,
+        "partition_count": 4
+      },
+      {
+        "type": "color_gradient",
+        "id": "prism-gradient",
+        "input": { "node_id": "prism-columns", "port": "scalar" },
+        "stops": [
+          { "position": 0, "color": "#F472B6" },
+          { "position": 0.33, "color": "#A78BFA" },
+          { "position": 0.66, "color": "#22D3EE" },
+          { "position": 1, "color": "#34D399" }
+        ]
+      },
+      {
+        "type": "attribute_writer",
+        "id": "color-writer",
+        "input": { "node_id": "prism-gradient", "port": "color" },
+        "attribute_id": "color.rgb"
+      },
+      {
+        "type": "oscillator",
+        "id": "prism-fade",
+        "waveform": "sine",
+        "phase": { "node_id": "prism-columns", "port": "scalar" }
+      },
+      {
+        "type": "map",
+        "id": "visible-prism",
+        "input": { "node_id": "prism-fade", "port": "scalar" },
+        "input_range": [0, 1],
+        "output_range": [0.35, 1]
+      },
+      {
+        "type": "attribute_writer",
+        "id": "intensity-writer",
+        "input": { "node_id": "visible-prism", "port": "scalar" },
+        "attribute_id": "intensity"
+      }
+    ]
+  },
+  "catalog": {
+    "family": "color",
+    "category": "Column Phrases",
+    "visibility": "standard",
+    "mood": ["prismatic", "modern"],
+    "energy": 0.6,
+    "density": 0.85,
+    "motion": "sweep",
+    "colorfulness": 1,
+    "required_attributes": ["intensity", "color.rgb"],
+    "layout_capabilities": ["matrix", "coordinates"]
+  }
+}

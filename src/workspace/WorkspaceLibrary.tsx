@@ -14,15 +14,6 @@ import { authoringSessionKey, authoringTransportActions } from "@/authoring/tran
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { engine } from "@/bridge/commands";
 import type {
   AssetRef,
@@ -88,7 +79,6 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   const productionCatalogStatus = useProductionCatalogStore(productionCatalogSelectors.status);
   const productionCatalogError = useProductionCatalogStore(productionCatalogSelectors.error);
   const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
-  const [confirmHighRiskCreate, setConfirmHighRiskCreate] = useState(false);
   const [resolvingRecipeId, setResolvingRecipeId] = useState<string | null>(null);
   const [recipeError, setRecipeError] = useState<string | null>(null);
   const [targetEditorOpen, setTargetEditorOpen] = useState(false);
@@ -151,13 +141,6 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
   };
   const startCueDraft = () => {
     if (!selectedEffectRef) return;
-    const effect =
-      exactAsset(productionCatalog?.effects ?? [], selectedEffectRef) ??
-      exactAsset(bundle.effects, selectedEffectRef);
-    if (effect?.catalog.strobe_risk === "high") {
-      setConfirmHighRiskCreate(true);
-      return;
-    }
     createCueDraft();
   };
 
@@ -235,7 +218,7 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
             variant="ghost"
             className="ml-auto"
             aria-label="Create Effect"
-            onClick={() => projectActions.createEffect("Pulse")}
+            onClick={() => projectActions.createEffect("Smooth Accent")}
           >
             <Plus aria-hidden="true" />
           </Button>
@@ -525,29 +508,6 @@ export function WorkspaceLibrary({ workspace }: { workspace: WorkspaceId }) {
           )}
         </div>
       </ScrollArea>
-      <Dialog open={confirmHighRiskCreate} onOpenChange={setConfirmHighRiskCreate}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm high strobe risk</DialogTitle>
-            <DialogDescription>
-              The selected Effect can produce high-frequency intensity changes. Verify the target,
-              audience safety policy, and safe defaults before creating this Cue layer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                createCueDraft();
-                setConfirmHighRiskCreate(false);
-              }}
-            >
-              Create with high-risk layer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       <StageCollectionEditorDialog
         kind="targets"
         open={targetEditorOpen}

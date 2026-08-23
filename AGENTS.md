@@ -17,6 +17,7 @@ Relevant accepted decisions:
 - [`ADR-0011`](docs/adr/0011-authoring-preview-clock-transport-timeline.md): authoring transport and timeline performance.
 - [`ADR-0012`](docs/adr/0012-layout-preset-stage-upgrade-targeting.md): Layout generators, Stage application and targeting.
 - [`ADR-0013`](docs/adr/0013-production-catalog-safe-authoring-validation.md): built-in Catalog and validation.
+- [`ADR-0014`](docs/adr/0014-effect-tempo-behavior-and-temporal-fingerprint.md): normalized Effect tempo semantics and runtime temporal fingerprints.
 
 The Authoring V1 guide and the current user request take precedence if an older ADR contains historical wording.
 

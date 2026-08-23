@@ -25,7 +25,7 @@ describe("TimelineResourcePanel", () => {
     );
 
     const effect = screen.getByRole("button", {
-      name: "Red Pulse. Select or drag to timeline",
+      name: "Smooth Accent. Select or drag to timeline",
     });
     fireEvent.click(effect);
     fireEvent.dragStart(effect, { dataTransfer });

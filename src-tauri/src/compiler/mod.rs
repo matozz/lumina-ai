@@ -12,9 +12,9 @@ use crate::engine::effect::{
     deterministic_random, CatalogVisibility, CompiledColorStop, CompiledEffectGraph,
     CompiledEffectNode, CompiledEffectStep, CompiledProfileSequence, Direction, EffectCatalog,
     EffectCatalogMatch, EffectCatalogQuery, EffectDefinition, EffectDefinitionHandle, EffectFamily,
-    EffectInstance, EffectNodeHandle, EffectSource, LayoutCapability, MathOperation, MotionTag,
-    OscillatorWaveform, ParameterDefinition, ParameterHandle, ParameterValue, ParameterValueType,
-    SpatialBasis, StrobeRisk,
+    EffectInstance, EffectNodeHandle, EffectSource, EffectTempoBehavior, LayoutCapability,
+    MathOperation, MotionTag, OscillatorWaveform, ParameterDefinition, ParameterHandle,
+    ParameterValue, ParameterValueType, SpatialBasis,
 };
 use crate::engine::musical_time::{MusicalTime, TempoMap, TempoPoint};
 use crate::engine::profile::{
@@ -1187,6 +1187,9 @@ fn compile_effect_models(
                 EffectSourceDSL::UserLibrary => EffectSource::UserLibrary,
             },
             parameters,
+            tempo: EffectTempoBehavior {
+                events_per_graph_cycle: definition.tempo.events_per_graph_cycle,
+            },
             graph: compile_effect_graph(definition, profiles, errors),
             catalog: compile_effect_catalog(&definition.catalog),
         });
@@ -1262,7 +1265,6 @@ fn compile_effect_catalog(catalog: &EffectCatalogDSL) -> EffectCatalog {
             EffectFamilyDSL::Color => EffectFamily::Color,
             EffectFamilyDSL::Movement => EffectFamily::Movement,
             EffectFamilyDSL::Spatial => EffectFamily::Spatial,
-            EffectFamilyDSL::Strobe => EffectFamily::Strobe,
             EffectFamilyDSL::Utility => EffectFamily::Utility,
         }),
         category: catalog.category.clone(),
@@ -1282,12 +1284,6 @@ fn compile_effect_catalog(catalog: &EffectCatalogDSL) -> EffectCatalog {
             MotionTagDSL::Organic => MotionTag::Organic,
         },
         colorfulness: catalog.colorfulness,
-        strobe_risk: match catalog.strobe_risk {
-            StrobeRiskDSL::None => StrobeRisk::None,
-            StrobeRiskDSL::Low => StrobeRisk::Low,
-            StrobeRiskDSL::Medium => StrobeRisk::Medium,
-            StrobeRiskDSL::High => StrobeRisk::High,
-        },
         required_attributes: catalog.required_attributes.clone(),
         layout_capabilities: catalog
             .layout_capabilities
@@ -1401,7 +1397,10 @@ fn compile_effect_node(
                 .collect(),
         },
         EffectNodeDSL::Oscillator {
-            waveform, phase, ..
+            waveform,
+            duty_cycle,
+            phase,
+            ..
         } => CompiledEffectNode::Oscillator {
             waveform: match waveform {
                 OscillatorWaveformDSL::Sine => OscillatorWaveform::Sine,
@@ -1409,6 +1408,7 @@ fn compile_effect_node(
                 OscillatorWaveformDSL::Saw => OscillatorWaveform::Saw,
                 OscillatorWaveformDSL::Pulse => OscillatorWaveform::Pulse,
             },
+            duty_cycle: duty_cycle.unwrap_or(0.5),
             phase: input(&phase.node_id),
         },
         EffectNodeDSL::Envelope {
@@ -1428,6 +1428,7 @@ fn compile_effect_node(
             to,
             wrap,
             group_size,
+            partition_count,
             custom_order,
             ..
         } => CompiledEffectNode::SpatialPhase {
@@ -1435,6 +1436,7 @@ fn compile_effect_node(
             basis: match basis {
                 SpatialBasisDSL::Index => SpatialBasis::Index,
                 SpatialBasisDSL::X => SpatialBasis::X,
+                SpatialBasisDSL::XDistance => SpatialBasis::XDistance,
                 SpatialBasisDSL::RandomX => SpatialBasis::RandomX,
                 SpatialBasisDSL::Y => SpatialBasis::Y,
                 SpatialBasisDSL::Distance => SpatialBasis::Distance,
@@ -1445,6 +1447,7 @@ fn compile_effect_node(
             to: *to,
             wrap: *wrap,
             group_size: group_size.map(|size| size as usize),
+            partition_count: partition_count.map(|count| count as usize),
             custom_order: custom_order.clone(),
         },
         EffectNodeDSL::Math {
@@ -1591,6 +1594,7 @@ fn compile_spatial_offsets(
             from,
             to,
             group_size,
+            partition_count,
             custom_order,
             ..
         } = node
@@ -1611,6 +1615,7 @@ fn compile_spatial_offsets(
                     .position(|id| id == fixture_id)
                     .unwrap_or(group_index) as f64,
                 SpatialBasis::X
+                | SpatialBasis::XDistance
                 | SpatialBasis::RandomX
                 | SpatialBasis::Y
                 | SpatialBasis::Distance
@@ -1626,6 +1631,7 @@ fn compile_spatial_offsets(
                     };
                     match basis {
                         SpatialBasis::X => coord.x,
+                        SpatialBasis::XDistance => (coord.x - center.0).abs(),
                         SpatialBasis::RandomX => {
                             let bits = coord.x.to_bits();
                             let coordinate_key = (bits ^ (bits >> 32)) as u32;
@@ -1660,6 +1666,16 @@ fn compile_spatial_offsets(
             } else {
                 (raw[group_index] - min) / (max - min)
             };
+            let normalized = partition_count.map_or(normalized, |count| {
+                if count <= 1 {
+                    0.0
+                } else {
+                    let partition = (normalized.clamp(0.0, 1.0) * count as f64)
+                        .floor()
+                        .min((count - 1) as f64);
+                    partition / count as f64
+                }
+            });
             if let Some(fixture_index) = fixture_indices.get(fixture_id) {
                 offsets[*fixture_index] = from + (to - from) * normalized;
             }
@@ -1773,6 +1789,10 @@ mod tests {
         "name": "Pulse",
         "revision": 1,
         "source": "project_local",
+        "tempo": {
+          "primary_event": "one_way_traversal",
+          "events_per_graph_cycle": 1.0
+        },
         "parameters": [{
           "id": "speed",
           "name": "Speed",
@@ -1818,7 +1838,6 @@ mod tests {
           "density": 0.5,
           "motion": "pulse",
           "colorfulness": 0.5,
-          "strobe_risk": "none",
           "required_attributes": ["intensity", "color.rgb"]
         }
       }],
@@ -1938,6 +1957,44 @@ mod tests {
         assert_eq!(offsets[0], offsets[2]);
         assert_eq!(offsets[1], offsets[3]);
         assert_ne!(offsets[0], offsets[1]);
+    }
+
+    #[test]
+    fn topology_relative_partitions_split_columns_into_equal_thirds_and_quarters() {
+        for (partition_count, fixtures_per_partition) in [(3, 4), (4, 3)] {
+            let source = VALID_SHOW
+                .replace("\"id_range\": [1, 2]", "\"id_range\": [1, 12]")
+                .replace(
+                    "\"rows\": 1,\n          \"columns\": 2",
+                    "\"rows\": 1,\n          \"columns\": 12",
+                )
+                .replace("\"range\": [1, 2]", "\"range\": [1, 12]")
+                .replace("\"basis\": \"index\"", "\"basis\": \"x\"")
+                .replace(
+                    "\"wrap\": true",
+                    &format!("\"wrap\": true,\n            \"partition_count\": {partition_count}"),
+                );
+            let document = crate::document::load_document(&source)
+                .expect("partitioned column document")
+                .document;
+            let show = Compiler::compile_document(document).expect("partitioned effect compiles");
+            let instance = show.effect_instances.get("pulse").expect("effect instance");
+            let offsets = instance
+                .spatial_offsets
+                .values()
+                .next()
+                .expect("partition offsets");
+
+            assert_eq!(offsets.len(), 12);
+            for partition in 0..partition_count {
+                let expected = partition as f64 / partition_count as f64;
+                let start = partition * fixtures_per_partition;
+                let end = start + fixtures_per_partition;
+                assert!(offsets[start..end]
+                    .iter()
+                    .all(|offset| (*offset - expected).abs() < f64::EPSILON));
+            }
+        }
     }
 
     #[test]

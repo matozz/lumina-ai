@@ -13,6 +13,7 @@ export function EffectParameterControls({
   parameterIndices,
   showMetadata = false,
   values,
+  speedLabel,
   onChange,
   onOptionalEnabledChange,
   onRestoreLastValid,
@@ -23,6 +24,7 @@ export function EffectParameterControls({
   parameterIndices?: Record<string, number>;
   showMetadata?: boolean;
   values?: Record<string, ParameterValueDSL | undefined>;
+  speedLabel?: (value: number) => string;
   onChange: (parameterId: string, value: ParameterValueDSL) => void;
   onOptionalEnabledChange?: (parameterId: string, enabled: boolean) => void;
   onRestoreLastValid: (parameterId: string) => void;
@@ -83,6 +85,7 @@ export function EffectParameterControls({
                     parameter={parameter}
                     value={value}
                     readOnly={readOnly}
+                    speedLabel={speedLabel}
                     onChange={(value) => onChange(parameter.id, value)}
                   />
                 </div>

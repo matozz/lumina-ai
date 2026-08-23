@@ -20,12 +20,15 @@ function documentFixture(): FullDSL {
         name: "Pulse",
         revision: 1,
         source: "project_local",
+        tempo: {
+          primary_event: "rise_fall_cycle",
+          events_per_graph_cycle: 1,
+        },
         catalog: {
           energy: 0.5,
           density: 0.5,
           colorfulness: 0.5,
           motion: "pulse",
-          strobe_risk: "none",
         },
         parameters: [
           {

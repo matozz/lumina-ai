@@ -20,7 +20,7 @@
       },
       "scope": "arrangement",
       "section": "main",
-      "help": "Slow beat-synced transition speed."
+      "help": "Normalized transition rate; 1× produces one fade-in/fade-out cycle per beat."
     },
     {
       "id": "color",
@@ -93,6 +93,10 @@
       }
     }
   ],
+  "tempo": {
+    "primary_event": "rise_fall_cycle",
+    "events_per_graph_cycle": 1
+  },
   "graph": {
     "nodes": [
       {
@@ -100,19 +104,10 @@
         "id": "time"
       },
       {
-        "type": "oscillator",
-        "id": "safe-cycle",
-        "waveform": "sine",
-        "phase": {
-          "node_id": "time",
-          "port": "scalar"
-        }
-      },
-      {
         "type": "envelope",
         "id": "safe-envelope",
         "input": {
-          "node_id": "safe-cycle",
+          "node_id": "time",
           "port": "scalar"
         },
         "attack": 0.35,
@@ -148,7 +143,6 @@
     "density": 1,
     "motion": "organic",
     "colorfulness": 0.75,
-    "strobe_risk": "none",
     "required_attributes": ["intensity", "color.rgb"],
     "layout_capabilities": ["any"]
   }

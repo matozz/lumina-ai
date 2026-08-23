@@ -74,6 +74,10 @@
       "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
     }
   ],
+  "tempo": {
+    "primary_event": "spatial_propagation",
+    "events_per_graph_cycle": 1
+  },
   "graph": {
     "nodes": [
       {
@@ -121,12 +125,23 @@
         "attribute_id": "color.rgb"
       },
       {
-        "type": "constant",
-        "id": "visible-intensity",
-        "value": {
-          "type": "scalar",
-          "value": 1
+        "type": "oscillator",
+        "id": "intensity-fade",
+        "waveform": "sine",
+        "phase": {
+          "node_id": "time",
+          "port": "scalar"
         }
+      },
+      {
+        "type": "map",
+        "id": "visible-intensity",
+        "input": {
+          "node_id": "intensity-fade",
+          "port": "scalar"
+        },
+        "input_range": [0, 1],
+        "output_range": [0.55, 1]
       },
       {
         "type": "attribute_writer",
@@ -148,7 +163,6 @@
     "density": 0.75,
     "motion": "sweep",
     "colorfulness": 0.9,
-    "strobe_risk": "none",
     "required_attributes": ["color.rgb", "intensity"],
     "layout_capabilities": ["coordinates"]
   }

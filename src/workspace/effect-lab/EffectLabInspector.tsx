@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -19,15 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -55,14 +46,18 @@ import {
 import { projectActions, projectSelectors, useProjectStore } from "@/stores/project";
 import { useWorkspaceStore, workspaceActions, workspaceSelectors } from "@/stores/workspace";
 import { AuthoringSignalSpine } from "../AuthoringSignalSpine";
+import { materializeAuthoringPreview } from "../authoringPreviewBundle";
 import { createCueDraftFromEffect } from "../cues/cueAuthoring";
 import { StageCollectionEditorDialog } from "../stage/StageCollectionEditorDialog";
 import { WorkspacePanelHeader } from "../WorkspacePanelHeader";
 import { EffectParameterControls } from "./EffectParameterControls";
+import { EffectTemporalBehaviorPanel } from "./EffectTemporalBehaviorPanel";
+import { formatTemporalSpeedLabel } from "./temporalPresentation";
 
 export function EffectLabInspector() {
   const bundle = useProjectStore(projectSelectors.bundle);
   const reference = useProjectStore(projectSelectors.selectedEffectRef);
+  const arrangementRef = useProjectStore(projectSelectors.selectedArrangementRef);
   const targetSetId = useProjectStore(projectSelectors.selectedTargetSetId);
   const catalog = useProductionCatalogStore(productionCatalogSelectors.catalog);
   const catalogStatus = useProductionCatalogStore(productionCatalogSelectors.status);
@@ -71,10 +66,22 @@ export function EffectLabInspector() {
   const comparison = useAuthoringDraftStore(authoringDraftSelectors.comparison);
   const advancedMode = useWorkspaceStore(workspaceSelectors.advancedMode);
   const [advancedVisible, setAdvancedVisible] = useState(false);
-  const [confirmHighRiskUse, setConfirmHighRiskUse] = useState(false);
   const [targetEditorOpen, setTargetEditorOpen] = useState(false);
   const selectedEffect =
     exactAsset(bundle.effects, reference) ?? exactAsset(catalog?.effects ?? [], reference);
+  const arrangement = exactAsset(bundle.arrangements, arrangementRef);
+  const bpm = arrangement?.tempo_map.points[0]?.bpm ?? 128;
+  const temporalPreview = useMemo(() => {
+    if (!reference || !session) return null;
+    return materializeAuthoringPreview(
+      bundle,
+      reference,
+      null,
+      { effect: session, cue: null, comparison },
+      catalog,
+      { scope: "effect", arrangementRef },
+    );
+  }, [arrangementRef, bundle, catalog, comparison, reference, session]);
   const stage = activeStage(bundle);
   const layout = activeLayout(bundle);
   const fixtureCount = fixtureIdsForStage(stage).length;
@@ -157,6 +164,10 @@ export function EffectLabInspector() {
     (diagnostic) => !diagnostic.path.includes("parameters["),
   );
   const canSave = !readOnly && session.status === "valid";
+  const speedParameter = effect.parameters.find((parameter) => parameter.id === "speed");
+  const selectedSpeed =
+    speedParameter?.schema.type === "scalar" ? speedParameter.schema.default : 1;
+  const speedLabel = (speed: number) => formatTemporalSpeedLabel(effect.tempo, speed, bpm);
 
   const updateParameter = (parameterId: string, value: ParameterValueDSL) => {
     authoringDraftActions.updateEffect((draft) => {
@@ -220,14 +231,6 @@ export function EffectLabInspector() {
     projectActions.setSelectedCueRef({ id: cue.id, revision: cue.revision });
     workspaceActions.setActiveWorkspace("cues");
     workspaceActions.setPublishStatus("idle", `${saved.name} is ready in a new Cue.`);
-  };
-
-  const requestUseEffectInCue = () => {
-    if (effect.catalog.strobe_risk === "high") {
-      setConfirmHighRiskUse(true);
-      return;
-    }
-    useEffectInCue();
   };
 
   const saveAsNewDraft = () => {
@@ -360,20 +363,21 @@ export function EffectLabInspector() {
               </Alert>
             )}
 
-            <div className="flex flex-wrap gap-1.5">
-              {effect.catalog.family && <Badge variant="secondary">{effect.catalog.family}</Badge>}
-              {effect.catalog.category && (
-                <Badge variant="outline">{effect.catalog.category}</Badge>
-              )}
-              {(effect.catalog.layout_capabilities ?? []).map((capability) => (
-                <Badge key={capability} variant="outline">
-                  {capability}
-                </Badge>
-              ))}
-              <Badge variant={effect.catalog.strobe_risk === "high" ? "destructive" : "secondary"}>
-                {effect.catalog.strobe_risk} strobe risk
-              </Badge>
-            </div>
+            {advancedMode && (
+              <div className="flex flex-wrap gap-1.5">
+                {effect.catalog.family && (
+                  <Badge variant="secondary">{effect.catalog.family}</Badge>
+                )}
+                {effect.catalog.category && (
+                  <Badge variant="outline">{effect.catalog.category}</Badge>
+                )}
+                {(effect.catalog.layout_capabilities ?? []).map((capability) => (
+                  <Badge key={capability} variant="outline">
+                    {capability}
+                  </Badge>
+                ))}
+              </div>
+            )}
 
             <Separator />
             <EffectParameterControls
@@ -385,7 +389,19 @@ export function EffectLabInspector() {
               onOptionalEnabledChange={updateOptionalParameter}
               onRestoreLastValid={authoringDraftActions.restoreEffectLastValid}
               showMetadata={advancedMode}
+              speedLabel={speedLabel}
             />
+
+            {temporalPreview?.effectRef && selectedTarget && (
+              <EffectTemporalBehaviorPanel
+                project={temporalPreview.bundle}
+                effectRef={temporalPreview.effectRef}
+                behavior={effect.tempo}
+                targetSetId={selectedTarget.id}
+                bpm={bpm}
+                selectedSpeed={selectedSpeed}
+              />
+            )}
 
             {advancedParameters.length > 0 && (
               <div className="grid gap-2">
@@ -413,6 +429,7 @@ export function EffectLabInspector() {
                     onOptionalEnabledChange={updateOptionalParameter}
                     onRestoreLastValid={authoringDraftActions.restoreEffectLastValid}
                     showMetadata={advancedMode}
+                    speedLabel={speedLabel}
                   />
                 )}
               </div>
@@ -481,7 +498,7 @@ export function EffectLabInspector() {
                 !compatibility?.compatible ||
                 (!readOnly && session.status !== "valid" && session.status !== "pristine")
               }
-              onClick={requestUseEffectInCue}
+              onClick={useEffectInCue}
             >
               <Layers2 data-icon="inline-start" aria-hidden="true" />
               {!readOnly && session.status !== "pristine" ? "Save & use in Cue" : "Use in Cue"}
@@ -500,29 +517,6 @@ export function EffectLabInspector() {
           </div>
         </ScrollArea>
       </aside>
-      <Dialog open={confirmHighRiskUse} onOpenChange={setConfirmHighRiskUse}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm high strobe risk</DialogTitle>
-            <DialogDescription>
-              This Effect can produce high-frequency intensity changes. Verify audience safety and
-              the selected fixtures before using it in a Cue.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                useEffectInCue();
-                setConfirmHighRiskUse(false);
-              }}
-            >
-              Use high-risk Effect
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       <StageCollectionEditorDialog
         kind="targets"
         open={targetEditorOpen}

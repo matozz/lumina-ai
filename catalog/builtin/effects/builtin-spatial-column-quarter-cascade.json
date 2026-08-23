@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "id": "builtin.spatial.column-quarter-cascade",
+  "name": "Column Quarter Cascade",
+  "revision": 1,
+  "source": "built_in",
+  "parameters": [
+    {
+      "id": "speed",
+      "name": "Speed",
+      "schema": {
+        "type": "scalar",
+        "default": 1,
+        "range": { "min": 0.25, "max": 8, "step": 0.25 },
+        "unit": "multiplier"
+      },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "One four-zone cascade phrase per beat at 1×."
+    },
+    {
+      "id": "intensity",
+      "name": "Intensity",
+      "schema": {
+        "type": "scalar",
+        "default": 0.85,
+        "range": { "min": 0, "max": 1, "step": 0.05 },
+        "unit": "normalized"
+      },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Maximum cascade brightness."
+    },
+    {
+      "id": "direction",
+      "name": "Direction",
+      "schema": { "type": "direction", "default": "forward" },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Cascade travel direction."
+    },
+    {
+      "id": "color",
+      "name": "Color",
+      "schema": { "type": "color", "default": "#5EEAD4" },
+      "scope": "arrangement",
+      "section": "main",
+      "help": "Color of the four-zone cascade."
+    }
+  ],
+  "tempo": {
+    "primary_event": "spatial_propagation",
+    "events_per_graph_cycle": 1
+  },
+  "graph": {
+    "nodes": [
+      { "type": "time", "id": "time" },
+      {
+        "type": "spatial_phase",
+        "id": "column-quarters",
+        "input": { "node_id": "time", "port": "scalar" },
+        "basis": "x",
+        "from": 0,
+        "to": 1,
+        "wrap": true,
+        "partition_count": 4
+      },
+      {
+        "type": "oscillator",
+        "id": "quarter-wave",
+        "waveform": "sine",
+        "phase": { "node_id": "column-quarters", "port": "scalar" }
+      },
+      {
+        "type": "map",
+        "id": "soft-cascade",
+        "input": { "node_id": "quarter-wave", "port": "scalar" },
+        "input_range": [0, 1],
+        "output_range": [0.1, 1]
+      },
+      {
+        "type": "attribute_writer",
+        "id": "writer",
+        "input": { "node_id": "soft-cascade", "port": "scalar" },
+        "attribute_id": "intensity"
+      }
+    ]
+  },
+  "catalog": {
+    "family": "spatial",
+    "category": "Column Phrases",
+    "visibility": "standard",
+    "mood": ["rolling", "precise"],
+    "energy": 0.62,
+    "density": 0.78,
+    "motion": "sweep",
+    "colorfulness": 0.7,
+    "required_attributes": ["intensity", "color.rgb"],
+    "layout_capabilities": ["matrix", "coordinates"]
+  }
+}

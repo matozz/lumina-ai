@@ -39,7 +39,7 @@ Stage、Lab、Cues 和 Arrange 使用隔离的 Authoring PreviewSession。编辑
 - 用户选择的 Project 文件夹是当前项目的权威持久化边界。`lumina-project.json` 保存最新、可解析且属于当前 V1 contract 的 authoring draft；引用、能力、重叠和 MixPolicy 等语义诊断不会阻止编辑中间状态保存或重开，只在 authoring preview/runtime compile 与 Go Live 边界呈现或 fail closed。每次有内容变化的替换会先把上一版写入 `history/lumina-project-<timestamp>-<sequence>.json`，只保留最近 50 版。最新文件和历史文件都使用临时文件 + rename 原子提交；无法解析、contract 不兼容的 latest 仍不能被覆盖。
 - App 首次打开时保存路径为空，必须在阻塞弹窗中选择文件夹后才能继续。路径只在成功加载已有 latest 或成功初始化空文件夹后原子写入 app config cache；缓存路径失效时清除该偏好并重新进入选择弹窗。已有 latest 始终优先于浏览器 recovery cache；空文件夹才使用当前 recovery cache/starter 初始化。
 - ProjectBundle transaction 后使用 trailing 2 秒合并保存；连续编辑只提交最后状态，进行中的写入串行完成。自动保存失败在 Assets 中提供非阻塞提示和重试，不把已打开的编辑器重新切回选目录弹窗。workspace 选择、播放头、Zoom/Snap 和 transport session 不属于 ProjectBundle，不触发项目版本。
-- `lumina-project-v1` 的 `localStorage` 仍保留工作区 recovery shadow 和资产选择，用于首次升级选择空文件夹时避免丢失当前编辑，但不是重开项目或记忆文件夹的权威来源。storage version 只负责一次性拒绝旧 contract 缓存并恢复当前 starter bundle；不会扫描或宽泛删除浏览器存储。
+- `lumina-project-v1` 的 `localStorage` 仍保留工作区 recovery shadow 和资产选择，用于首次升级选择空文件夹时避免丢失当前编辑，但不是重开项目或记忆文件夹的权威来源。storage version 只负责一次性拒绝旧 contract 缓存并恢复当前 starter bundle；例如 `tempo` 成为 Effect 必填契约时，pre-tempo recovery shadow 必须在空文件夹初始化前被拒绝，不能发送给 Rust 后端。该迁移不会扫描或宽泛删除浏览器存储，磁盘上的旧 Project 仍按 V1 fail-closed 策略处理。
 - 用户显式下载的资产包位于浏览器下载位置，不受 Reset defaults 影响。
 - Reset defaults 作为普通 ProjectBundle transaction 恢复内置 starter template，并在 2 秒后保存为 latest；被替换的用户项目进入历史。它不删除项目文件夹、历史或下载的资产包。
 

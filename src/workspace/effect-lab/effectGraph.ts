@@ -1,6 +1,7 @@
 import type {
   EffectDefinitionDSL,
   EffectNodeDSL,
+  EffectTempoBehaviorDSL,
   OscillatorWaveformDSL,
   ParameterDefinitionDSL,
   SequenceStepDSL,
@@ -11,8 +12,6 @@ export function buildCommonParameters(values: EffectFormValues): ParameterDefini
   return [
     scalarParameter("speed", "Speed", values.speed, [0.25, 8], "multiplier"),
     scalarParameter("phase", "Phase", values.phase, [-1, 1], "cycles"),
-    scalarParameter("width", "Width", values.width, [1, 100], "percent"),
-    scalarParameter("transition", "Transition", values.transition, [0, 100], "percent"),
     scalarParameter("intensity", "Intensity", 1, [0, 1], "normalized"),
     {
       id: "color",
@@ -62,6 +61,13 @@ export function buildEffectGraph(values: EffectFormValues): EffectNodeDSL[] {
   ];
 }
 
+export function buildTempoBehavior(_values: EffectFormValues): EffectTempoBehaviorDSL {
+  return {
+    primary_event: "rise_fall_cycle",
+    events_per_graph_cycle: 1,
+  };
+}
+
 export function waveformFromDefinition(
   definition: EffectDefinitionDSL,
   waveforms: OscillatorWaveformDSL[],
@@ -70,11 +76,11 @@ export function waveformFromDefinition(
     (candidate) => candidate.type === "step_sequence" && candidate.id.startsWith("shape-"),
   );
   const waveform = node?.id.slice("shape-".length) as OscillatorWaveformDSL | undefined;
-  return waveform && waveforms.includes(waveform) ? waveform : "pulse";
+  return waveform && waveforms.includes(waveform) ? waveform : "triangle";
 }
 
 function waveformSteps(values: EffectFormValues): SequenceStepDSL[] {
-  const sampleCount = values.waveform === "pulse" ? 8 : 16;
+  const sampleCount = 16;
   return Array.from({ length: sampleCount }, (_, index) => {
     const phase = index / sampleCount;
     const dimmer = waveformValue(values.waveform, phase);

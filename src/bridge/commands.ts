@@ -21,6 +21,8 @@ import type {
   RenderContext,
   ShowSnapshotState,
   StageDocument,
+  TemporalAnalysisRequest,
+  TemporalFingerprintReport,
 } from "./types";
 
 export interface ProjectStorageLoadResult {
@@ -84,6 +86,12 @@ export const engine = {
 
   validateEffectWorkingDraft: (effect: EffectDefinitionDocument) =>
     invoke<EffectDefinitionDocument>("validate_effect_working_draft", { effect }),
+
+  analyzeEffectTemporal: (project: ProjectBundle, request: TemporalAnalysisRequest) =>
+    invoke<TemporalFingerprintReport>("analyze_effect_temporal", {
+      projectJson: JSON.stringify(project),
+      request,
+    }),
 
   validateProjectWorkingDraft: (project: ProjectBundle) =>
     invoke<ProjectBundle>("validate_project_working_draft", {

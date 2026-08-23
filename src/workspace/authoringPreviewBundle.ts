@@ -200,16 +200,11 @@ function recomputePreviewCueSummary(
   catalog: ProductionCatalog | null,
 ) {
   const required = new Set<string>();
-  let risk: CueDefinition["risk_summary"]["strobe_risk"] = "none";
-  const rank = { none: 0, low: 1, medium: 2, high: 3 } as const;
   for (const layer of cue.layers) {
     const effect =
       exactAsset(bundle.effects, layer.effect_ref) ??
       exactAsset(catalog?.effects ?? [], layer.effect_ref);
     for (const attribute of effect?.catalog.required_attributes ?? []) required.add(attribute);
-    const effectRisk = effect?.catalog.strobe_risk ?? "none";
-    if (rank[effectRisk] > rank[risk]) risk = effectRisk;
   }
   cue.capability_summary.required_attributes = [...required].sort();
-  cue.risk_summary.strobe_risk = risk;
 }

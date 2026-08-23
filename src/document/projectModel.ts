@@ -8,7 +8,11 @@ import type {
   ProjectBundle,
   StageDocument,
 } from "@/bridge/types";
-import { buildCommonParameters, buildEffectGraph } from "@/workspace/effect-lab/effectGraph";
+import {
+  buildCommonParameters,
+  buildEffectGraph,
+  buildTempoBehavior,
+} from "@/workspace/effect-lab/effectGraph";
 import type { EffectFormValues } from "@/workspace/effect-lab/effectFactory";
 import { createOpaqueCueLayerId } from "@/document/cueLayerIdentity";
 
@@ -57,7 +61,7 @@ export function activeLayout(bundle: ProjectBundle): LayoutDefinition {
   return layout;
 }
 
-export function createEffectAsset(bundle: ProjectBundle, requestedName = "Pulse") {
+export function createEffectAsset(bundle: ProjectBundle, requestedName = "Smooth Accent") {
   const name = uniqueName(
     requestedName,
     bundle.effects.map((effect) => effect.name),
@@ -71,11 +75,9 @@ export function createEffectAsset(bundle: ProjectBundle, requestedName = "Pulse"
     name,
     targetGroupId: "all",
     attributeMode: "intensity_color",
-    waveform: gradient ? "sine" : "pulse",
+    waveform: gradient ? "sine" : "triangle",
     speed: gradient ? 0.5 : 1,
     phase: 0,
-    width: gradient ? 100 : 50,
-    transition: gradient ? 100 : 12,
     color: gradient ? "#6e8bff" : "#ff2d55",
   };
   const graph = buildEffectGraph(values);
@@ -88,14 +90,14 @@ export function createEffectAsset(bundle: ProjectBundle, requestedName = "Pulse"
     name,
     source: "project_local",
     parameters: buildCommonParameters(values),
+    tempo: buildTempoBehavior(values),
     graph: { nodes: graph },
     catalog: {
       mood: gradient ? ["expansive"] : ["driving"],
       energy: gradient ? 0.45 : 0.7,
       density: gradient ? 0.7 : 0.55,
-      motion: gradient ? "sweep" : "pulse",
+      motion: gradient ? "sweep" : "organic",
       colorfulness: 1,
-      strobe_risk: "low",
       required_attributes: ["intensity", "color.rgb"],
     },
   };
@@ -140,17 +142,10 @@ export function createCueAsset(
     };
   });
   const requiredAttributes = new Set<string>();
-  let strobeRisk: CueDefinition["risk_summary"]["strobe_risk"] = "none";
   for (const reference of effectRefs) {
     const effect = exactAsset(bundle.effects, reference);
     for (const attribute of effect?.catalog.required_attributes ?? []) {
       requiredAttributes.add(attribute);
-    }
-    if (effect?.catalog.strobe_risk === "high") strobeRisk = "high";
-    else if (effect?.catalog.strobe_risk === "medium" && strobeRisk !== "high") {
-      strobeRisk = "medium";
-    } else if (effect?.catalog.strobe_risk === "low" && strobeRisk === "none") {
-      strobeRisk = "low";
     }
   }
   const cue: CueDefinition = {
@@ -164,7 +159,6 @@ export function createCueAsset(
     automation_lanes: [],
     trigger_policy: { mode: "timeline", quantize: "beat" },
     capability_summary: { required_attributes: [...requiredAttributes] },
-    risk_summary: { strobe_risk: strobeRisk },
   };
   return cue;
 }

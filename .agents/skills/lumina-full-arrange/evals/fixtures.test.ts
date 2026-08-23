@@ -204,7 +204,6 @@ function projectCue(
     ],
     trigger_policy: { mode: "timeline", quantize: "beat" },
     capability_summary: { required_attributes: ["intensity"] },
-    risk_summary: { strobe_risk: "none" },
   };
 }
 

@@ -352,6 +352,7 @@ pub(super) fn validate_effect_definition_document(
         revision: document.revision,
         source: document.source,
         parameters: document.parameters.clone(),
+        tempo: document.tempo.clone(),
         graph: document.graph.clone(),
         catalog: document.catalog.clone(),
     };
@@ -364,9 +365,105 @@ fn validate_effect_definition_contract(
     diagnostics: &mut Vec<Diagnostic>,
 ) -> HashMap<String, ParameterContract> {
     let parameters = validate_parameter_schema(path, definition, diagnostics);
+    validate_tempo_behavior(path, definition, diagnostics);
     validate_effect_graph(path, definition, diagnostics);
     validate_catalog_metadata(path, definition, diagnostics);
     parameters
+}
+
+fn validate_tempo_behavior(
+    definition_path: &str,
+    definition: &EffectDefinitionDSL,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let path = format!("{definition_path}.tempo");
+    let tempo = &definition.tempo;
+    if !tempo.events_per_graph_cycle.is_finite() || tempo.events_per_graph_cycle <= 0.0 {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.events_per_graph_cycle"),
+            "events_per_graph_cycle must be finite and greater than zero.",
+            "Declare how many primary visual events one graph cycle produces.",
+        ));
+    }
+    if tempo.safety.is_some_and(|safety| {
+        !safety.max_primary_events_per_second.is_finite()
+            || safety.max_primary_events_per_second <= 0.0
+    }) {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.safety.max_primary_events_per_second"),
+            "Temporal safety limit must be finite and greater than zero.",
+            "Declare the maximum reviewed primary-event rate in events per second.",
+        ));
+    }
+
+    let has_random = definition
+        .graph
+        .nodes
+        .iter()
+        .any(|node| matches!(node, EffectNodeDSL::Random { .. }));
+    let has_spatial = definition
+        .graph
+        .nodes
+        .iter()
+        .any(|node| matches!(node, EffectNodeDSL::SpatialPhase { .. }));
+    let has_pulse_shape = definition.graph.nodes.iter().any(|node| match node {
+        EffectNodeDSL::Oscillator {
+            waveform: super::OscillatorWaveformDSL::Pulse,
+            ..
+        } => true,
+        EffectNodeDSL::StepSequence { steps, .. } => {
+            let total = steps
+                .iter()
+                .map(|step| step.width.unwrap_or(100.0))
+                .sum::<f64>();
+            let on = steps
+                .iter()
+                .filter(|step| step.values.dimmer.unwrap_or(1.0) > 0.1)
+                .map(|step| step.width.unwrap_or(100.0))
+                .sum::<f64>();
+            total > f64::EPSILON && on > f64::EPSILON && on < total
+        }
+        _ => false,
+    });
+    if matches!(
+        tempo.primary_event,
+        super::PrimaryVisualEventDSL::PulseOnset
+    ) && !has_pulse_shape
+    {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.primary_event"),
+            "Pulse onset behavior requires a pulse-producing graph node.",
+            "Use a Pulse oscillator or an on/off StepSequence, or declare the event the Graph actually produces.",
+        ));
+    }
+    if matches!(
+        tempo.primary_event,
+        super::PrimaryVisualEventDSL::RandomRefresh
+    ) && !has_random
+    {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.primary_event"),
+            "Random refresh behavior requires a deterministic Random graph node.",
+            "Repair the graph or declare the visual event it actually produces.",
+        ));
+    }
+    if matches!(
+        tempo.primary_event,
+        super::PrimaryVisualEventDSL::OneWayTraversal
+            | super::PrimaryVisualEventDSL::SpatialPropagation
+    ) && !has_spatial
+    {
+        diagnostics.push(Diagnostic::error(
+            CATALOG_METADATA_INVALID,
+            format!("{path}.primary_event"),
+            "Spatial travel behavior requires a SpatialPhase graph node.",
+            "Repair the graph or declare the visual event it actually produces.",
+        ));
+    }
 }
 
 fn validate_parameter_schema(
@@ -734,6 +831,10 @@ fn validate_graph_bindings(
                 EffectNodeDSL::Oscillator { .. },
                 ParameterValueTypeDSL::Enum
             ) | (
+                EffectNodePropertyDSL::DutyCycle,
+                EffectNodeDSL::Oscillator { .. },
+                ParameterValueTypeDSL::Scalar
+            ) | (
                 EffectNodePropertyDSL::Attack | EffectNodePropertyDSL::Release,
                 EffectNodeDSL::Envelope { .. },
                 ParameterValueTypeDSL::Scalar
@@ -748,7 +849,7 @@ fn validate_graph_bindings(
                 CATALOG_GRAPH_BINDING_INVALID,
                 format!("{binding_path}.property"),
                 "Graph binding property, node type, and parameter type are incompatible.",
-                "Bind waveform→oscillator enum, attack/release→envelope scalar, or color_stops→gradient.",
+                "Bind waveform/duty_cycle→oscillator, attack/release→envelope, or color_stops→gradient.",
             ));
         } else if !binding_default_matches_node(parameter, node, binding.property) {
             diagnostics.push(Diagnostic::error(
@@ -806,6 +907,11 @@ fn binding_default_matches_node(
             };
             value == waveform
         }
+        (
+            EffectNodePropertyDSL::DutyCycle,
+            EffectNodeDSL::Oscillator { duty_cycle, .. },
+            ParameterValueDSL::Scalar(value),
+        ) => duty_cycle.is_some_and(|duty| (*value - duty).abs() <= f64::EPSILON),
         (
             EffectNodePropertyDSL::Attack,
             EffectNodeDSL::Envelope { attack, .. },
@@ -1178,6 +1284,28 @@ fn validate_effect_node_values(
                 }
             }
         }
+        EffectNodeDSL::Oscillator {
+            waveform,
+            duty_cycle,
+            ..
+        } => {
+            if duty_cycle.is_some_and(|duty| !duty.is_finite() || duty <= 0.0 || duty > 1.0) {
+                diagnostics.push(Diagnostic::error(
+                    DOC_INVALID_RANGE,
+                    format!("{path}.duty_cycle"),
+                    "Oscillator duty_cycle must be finite and inside (0, 1].",
+                    "Use the fraction of a graph cycle that remains on.",
+                ));
+            }
+            if duty_cycle.is_some() && !matches!(waveform, super::OscillatorWaveformDSL::Pulse) {
+                diagnostics.push(Diagnostic::error(
+                    DOC_EFFECT_GRAPH_INVALID,
+                    format!("{path}.duty_cycle"),
+                    "Only a Pulse oscillator accepts duty_cycle.",
+                    "Remove duty_cycle or select the pulse waveform.",
+                ));
+            }
+        }
         EffectNodeDSL::Envelope {
             attack, release, ..
         } => {
@@ -1189,6 +1317,7 @@ fn validate_effect_node_values(
             from,
             to,
             group_size,
+            partition_count,
             custom_order,
             ..
         } => {
@@ -1202,6 +1331,20 @@ fn validate_effect_node_values(
                 diagnostics.push(invalid_number(
                     format!("{path}.group_size"),
                     "SpatialPhase group_size must be greater than zero.",
+                ));
+            }
+            if partition_count.is_some_and(|count| count == 0) {
+                diagnostics.push(invalid_number(
+                    format!("{path}.partition_count"),
+                    "SpatialPhase partition_count must be greater than zero.",
+                ));
+            }
+            if group_size.is_some() && partition_count.is_some() {
+                diagnostics.push(Diagnostic::error(
+                    DOC_EFFECT_GRAPH_INVALID,
+                    path.clone(),
+                    "SpatialPhase cannot use group_size and partition_count together.",
+                    "Choose either fixed fixture groups or topology-relative partitions.",
                 ));
             }
             if matches!(basis, super::SpatialBasisDSL::Custom) && custom_order.is_empty() {

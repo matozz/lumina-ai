@@ -20,7 +20,7 @@
       },
       "scope": "arrangement",
       "section": "main",
-      "help": "Beat-synced left-to-right and right-to-left travel speed."
+      "help": "Normalized travel rate; 1× crosses in one direction per beat and returns on the next."
     },
     {
       "id": "intensity",
@@ -50,6 +50,10 @@
       "help": "Optional single-color override. Clear it to use the Effect color or intensity fallback."
     }
   ],
+  "tempo": {
+    "primary_event": "directional_traversal",
+    "events_per_graph_cycle": 2
+  },
   "graph": {
     "nodes": [
       {
@@ -99,33 +103,44 @@
         "custom_order": []
       },
       {
-        "type": "fixture_mask",
-        "id": "traveling-column",
-        "input": {
+        "type": "math",
+        "id": "distance-squared",
+        "operation": "multiply",
+        "left": {
           "node_id": "column-distance",
           "port": "scalar"
         },
-        "min": -0.065,
-        "max": 0.065
+        "right": {
+          "node_id": "column-distance",
+          "port": "scalar"
+        }
       },
       {
-        "type": "constant",
-        "id": "level",
-        "value": {
-          "type": "scalar",
-          "value": 1
-        }
+        "type": "map",
+        "id": "soft-column",
+        "input": {
+          "node_id": "distance-squared",
+          "port": "scalar"
+        },
+        "input_range": [0, 0.035],
+        "output_range": [1, 0]
+      },
+      {
+        "type": "clamp",
+        "id": "visible-column",
+        "input": {
+          "node_id": "soft-column",
+          "port": "scalar"
+        },
+        "min": 0,
+        "max": 1
       },
       {
         "type": "attribute_writer",
         "id": "writer",
         "input": {
-          "node_id": "level",
+          "node_id": "visible-column",
           "port": "scalar"
-        },
-        "mask": {
-          "node_id": "traveling-column",
-          "port": "mask"
         },
         "attribute_id": "intensity"
       }
@@ -140,7 +155,6 @@
     "density": 0.3,
     "motion": "chase",
     "colorfulness": 0,
-    "strobe_risk": "none",
     "required_attributes": ["intensity"],
     "layout_capabilities": ["matrix", "coordinates"]
   }

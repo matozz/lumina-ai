@@ -67,17 +67,17 @@ Computer Use server error -10005: failedToCreateImageDestination
 
 ### 3.2 Cue 角色
 
-| Cue              | Effect                     | TargetSet | 当前用途                       |
-| ---------------- | -------------------------- | --------- | ------------------------------ |
-| `FullFade`       | Fade / Crossfade           | all       | 长铺底                         |
-| `FullBreath`     | Blackout-safe Transition   | all       | buildup 主体及速度/强度变化    |
-| `FullRain`       | Seeded Column Rain         | all       | 上升、转场和 fill              |
-| `FullFlash`      | Short Color Burst          | all       | 一拍 drop accent               |
-| `FullBloom`      | Center-out / Edge-in Bloom | all       | 与 Flash 交替形成 drop pattern |
-| `CenterPingPong` | Column Ping-Pong           | center    | 中心区域 fill                  |
-| `CenterPulse`    | Safe Strobe Pulse          | center    | 半拍中心 accent                |
-| `EdgePulse`      | Breathe                    | edges     | 半拍边缘回应                   |
-| `Gentle Breathe` | Breathe                    | all       | 短暂 recovery                  |
+| Cue              | Effect                     | TargetSet | 当前用途                        |
+| ---------------- | -------------------------- | --------- | ------------------------------- |
+| `FullFade`       | Fade / Crossfade           | all       | 长铺底                          |
+| `FullBreath`     | Blackout-safe Transition   | all       | buildup 主体及速度/强度变化     |
+| `FullRain`       | Seeded Column Rain         | all       | 上升、转场和 fill               |
+| `FullFlash`      | Color Accent               | all       | 一拍平滑 drop accent            |
+| `FullBloom`      | Center-out / Edge-in Bloom | all       | 与 Accent 交替形成 drop pattern |
+| `CenterPingPong` | Column Ping-Pong           | center    | 中心区域 fill                   |
+| `CenterPulse`    | Column Center Ripple       | center    | 半拍中心波纹 accent             |
+| `EdgePulse`      | Breathe                    | edges     | 半拍边缘回应                    |
+| `Gentle Breathe` | Breathe                    | all       | 短暂 recovery                   |
 
 TargetSet 仍然属于 Cue Layer。下一 Goal 不得在 CueClip 上新增 TargetSet 选择或覆盖概念。
 

@@ -4,7 +4,7 @@ use crate::compiler::diagnostic::{
 use crate::compiler::{CompiledProjectSnapshot, Compiler, LayoutCoord};
 use crate::document::{
     builtin_production_catalog, layout_authoring_capacity, layout_fixture_size_for_fixture,
-    layout_to_show_dsl, load_document, load_project_bundle, resolve_cue_recipe,
+    layout_to_show_dsl, load_document, load_project_bundle, load_project_draft, resolve_cue_recipe,
     validate_effect_draft, validate_layout_geometry, validate_production_catalog, AssetRef,
     CueDefinition, CueRecipeRef, EffectDefinitionDocument, LayoutDefinition, LayoutGeometry,
     MetaDSL, PatchDSL, ProductionCatalog, ProjectBundle, ShowDocumentV1, StageDocument,
@@ -15,6 +15,9 @@ use crate::engine::effect::{
     SPEED_PARAMETER_ID,
 };
 use crate::engine::render::{render_at, LivePhaser, RenderSource, RenderTime};
+use crate::engine::temporal::{
+    analyze_project_temporal_behavior, TemporalAnalysisRequest, TemporalFingerprintReport,
+};
 use crate::engine::transport::OutputRate;
 use crate::state::{
     EngineState, LivePadQuantize, PreviewSession, PreviewSource, RenderContext,
@@ -156,6 +159,24 @@ pub fn validate_effect_working_draft(
     effect: EffectDefinitionDocument,
 ) -> Result<EffectDefinitionDocument, Vec<Diagnostic>> {
     validate_effect_draft(effect)
+}
+
+#[tauri::command]
+pub async fn analyze_effect_temporal(
+    project_json: String,
+    request: TemporalAnalysisRequest,
+) -> Result<TemporalFingerprintReport, Vec<Diagnostic>> {
+    let project = load_project_draft(&project_json)?;
+    tokio::task::spawn_blocking(move || analyze_project_temporal_behavior(&project, &request))
+        .await
+        .map_err(|error| {
+            vec![Diagnostic::error(
+                PROJECT_SCHEMA_INVALID,
+                "temporal.worker",
+                format!("Temporal analysis worker failed: {error}"),
+                "Retry after the current Effect preview compiles successfully.",
+            )]
+        })?
 }
 
 #[tauri::command]
@@ -1202,9 +1223,6 @@ mod tests {
         bundle.effects = vec![traveler];
         bundle.manifest.effect_refs = vec![reference.clone()];
         bundle.cues[0].layers[0].effect_ref = reference;
-        bundle.cues[0].risk_summary =
-            serde_json::from_value(serde_json::json!({ "strobe_risk": "none" }))
-                .expect("traveler risk summary");
         bundle.cues[0].layers[0].parameter_overrides.insert(
             "speed".to_string(),
             serde_json::from_value(serde_json::json!({ "type": "scalar", "value": 2.0 }))
@@ -1372,6 +1390,10 @@ mod tests {
           "groups": [{ "id": "all", "name": "All", "fixtures": { "range": [1, 1] } }],
           "effect_definitions": [{
             "id": "project.red-pulse", "name": "Red Pulse", "revision": 1, "source": "project_local",
+            "tempo": {
+              "primary_event": "pulse_onset",
+              "events_per_graph_cycle": 1.0
+            },
             "parameters": [
               { "id": "speed", "name": "Speed", "schema": { "type": "scalar", "default": 1.0, "range": { "min": 0.25, "max": 8.0, "step": 0.25 }, "unit": "multiplier" }, "scope": "arrangement", "section": "main", "help": "Beat-synced playback speed." },
               { "id": "phase", "name": "Phase", "schema": { "type": "scalar", "default": 0.0, "range": { "min": -1.0, "max": 1.0, "step": 0.05 }, "unit": "cycles" }, "scope": "arrangement", "section": "main", "help": "Cycle offset." },
@@ -1387,7 +1409,7 @@ mod tests {
               ] },
               { "type": "attribute_writer", "id": "output", "input": { "node_id": "shape-pulse", "port": "attribute_set" } }
             ] },
-            "catalog": { "energy": 0.7, "density": 0.5, "motion": "pulse", "colorfulness": 1.0, "strobe_risk": "low", "required_attributes": ["intensity", "color.rgb"] }
+            "catalog": { "energy": 0.7, "density": 0.5, "motion": "pulse", "colorfulness": 1.0, "required_attributes": ["intensity", "color.rgb"] }
           }],
           "effect_instances": [{ "id": "red-pulse", "definition_id": "project.red-pulse", "definition_revision": 1, "target_group_id": "all", "seed": "0000000000000001" }],
           "timeline": { "ppq": 960, "tempo_map": { "points": [{ "time_tick": 0, "bpm": 120 }] }, "tracks": [] }

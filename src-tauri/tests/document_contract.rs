@@ -29,6 +29,10 @@ const VALID_DOCUMENT: &str = r##"{
     "name": "Pulse",
     "revision": 1,
     "source": "project_local",
+    "tempo": {
+      "primary_event": "one_way_traversal",
+      "events_per_graph_cycle": 1.0
+    },
     "parameters": [{
       "id": "speed",
       "name": "Speed",
@@ -70,7 +74,6 @@ const VALID_DOCUMENT: &str = r##"{
       "density": 0.5,
       "motion": "pulse",
       "colorfulness": 0.5,
-      "strobe_risk": "none",
       "required_attributes": ["intensity", "color.rgb"]
     }
   }],

@@ -91,7 +91,6 @@ export interface CueDefinition {
   name: string;
   nominal_length_ticks: number;
   revision: number;
-  risk_summary: CueRiskSummary;
   schema_version: 1;
   trigger_policy: CueTriggerPolicy;
 }
@@ -123,10 +122,6 @@ export interface CueMixOverride {
 }
 
 export type CueQuantize = "off" | "beat" | "bar";
-
-export interface CueRiskSummary {
-  strobe_risk: StrobeRiskDSL;
-}
 
 export interface CueTrack {
   automation_lanes?: Array<ArrangementAutomationLane>;
@@ -162,7 +157,6 @@ export interface EffectCatalogDSL {
   mood?: Array<string>;
   motion: MotionTagDSL;
   required_attributes?: Array<string>;
-  strobe_risk: StrobeRiskDSL;
   visibility?: CatalogVisibilityDSL;
 }
 
@@ -175,9 +169,10 @@ export interface EffectDefinitionDocument {
   revision: number;
   schema_version: 1;
   source: EffectSourceDSL;
+  tempo: EffectTempoBehaviorDSL;
 }
 
-export type EffectFamilyDSL = "intensity" | "color" | "movement" | "spatial" | "strobe" | "utility";
+export type EffectFamilyDSL = "intensity" | "color" | "movement" | "spatial" | "utility";
 
 export interface EffectGraphDSL {
   nodes: Array<EffectNodeDSL>;
@@ -204,6 +199,7 @@ export type EffectNodeDSL =
       type: "step_sequence";
     }
   | {
+      duty_cycle?: number | null;
       id: string;
       phase: EffectPortRefDSL;
       type: "oscillator";
@@ -223,6 +219,7 @@ export type EffectNodeDSL =
       group_size?: number | null;
       id: string;
       input: EffectPortRefDSL;
+      partition_count?: number | null;
       to: number;
       type: "spatial_phase";
       wrap: boolean;
@@ -269,7 +266,12 @@ export type EffectNodeDSL =
       type: "attribute_writer";
     };
 
-export type EffectNodePropertyDSL = "waveform" | "attack" | "release" | "color_stops";
+export type EffectNodePropertyDSL =
+  | "waveform"
+  | "duty_cycle"
+  | "attack"
+  | "release"
+  | "color_stops";
 
 export type EffectPortDSL =
   | "scalar"
@@ -288,6 +290,12 @@ export interface EffectPortRefDSL {
 }
 
 export type EffectSourceDSL = "built_in" | "project_local" | "user_library";
+
+export interface EffectTempoBehaviorDSL {
+  events_per_graph_cycle: number;
+  primary_event: PrimaryVisualEventDSL;
+  safety?: TempoSafetyLimitDSL | null;
+}
 
 export interface FormulaDef {
   count: number;
@@ -604,6 +612,16 @@ export interface PatchDSL {
   profile_id: string;
 }
 
+export type PrimaryVisualEventDSL =
+  | "pulse_onset"
+  | "one_way_traversal"
+  | "directional_traversal"
+  | "random_refresh"
+  | "rise_fall_cycle"
+  | "color_cycle"
+  | "movement_cycle"
+  | "spatial_propagation";
+
 export interface ProjectManifest {
   active_arrangement_id: string;
   arrangement_refs: Array<AssetRef>;
@@ -653,7 +671,15 @@ export type SortByDSL =
   | "x+y"
   | "-(x+y)";
 
-export type SpatialBasisDSL = "index" | "x" | "random_x" | "y" | "distance" | "angle" | "custom";
+export type SpatialBasisDSL =
+  | "index"
+  | "x"
+  | "x_distance"
+  | "random_x"
+  | "y"
+  | "distance"
+  | "angle"
+  | "custom";
 
 export interface StageDocument {
   groups: Array<GroupDSL>;
@@ -673,8 +699,6 @@ export interface StepValuesDSL {
   pan?: number | null;
   tilt?: number | null;
 }
-
-export type StrobeRiskDSL = "none" | "low" | "medium" | "high";
 
 export interface SvgPathDef {
   d: string;
@@ -781,6 +805,10 @@ export interface TempoMapDSL {
 export interface TempoPointDSL {
   bpm: number;
   time_tick: number;
+}
+
+export interface TempoSafetyLimitDSL {
+  max_primary_events_per_second: number;
 }
 
 export interface TimeSignaturePoint {

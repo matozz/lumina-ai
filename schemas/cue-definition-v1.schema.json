@@ -37,9 +37,6 @@
       "format": "uint32",
       "minimum": 1
     },
-    "risk_summary": {
-      "$ref": "#/$defs/CueRiskSummary"
-    },
     "schema_version": {
       "type": "integer",
       "format": "uint32",
@@ -60,8 +57,7 @@
     "nominal_length_ticks",
     "layers",
     "trigger_policy",
-    "capability_summary",
-    "risk_summary"
+    "capability_summary"
   ],
   "$defs": {
     "AssetRef": {
@@ -213,16 +209,6 @@
     "CueQuantize": {
       "type": "string",
       "enum": ["off", "beat", "bar"]
-    },
-    "CueRiskSummary": {
-      "type": "object",
-      "properties": {
-        "strobe_risk": {
-          "$ref": "#/$defs/StrobeRiskDSL"
-        }
-      },
-      "additionalProperties": false,
-      "required": ["strobe_risk"]
     },
     "CueTriggerMode": {
       "type": "string",
@@ -405,10 +391,6 @@
           "required": ["type", "value"]
         }
       ]
-    },
-    "StrobeRiskDSL": {
-      "type": "string",
-      "enum": ["none", "low", "medium", "high"]
     },
     "TargetSetRef": {
       "type": "object",

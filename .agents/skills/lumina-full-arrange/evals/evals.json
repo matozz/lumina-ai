@@ -53,6 +53,35 @@
         "Bars 1-32 remain intentionally empty, the Arrangement is long enough to include bar 104, and the output has no unexplained tail after the requested endpoint.",
         "The output is schema-, reference-, exact-ref-, and semantic-valid; the input hash is unchanged and every built-in dependency is deeply unchanged."
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "Audit temporal behavior from the attached Lumina Base Pack before proposing any Arrangement. Use the real runtime analyzer, not Effect names or JavaScript waveform math. At 128 BPM: verify normalized 1× and 4× rates; explain Column Ping-Pong directional traversal versus Graph cycles; verify Color Accent remains smoothly visible at 0.25× and 1× with no hard on/off duty; confirm the two/three/four-column Effects declare topology-relative partitions; compare Spatial Wipe on two materially different TargetSets; and identify 4×/8× preview aliasing at 30fps. Confirm the pack has no Safe Strobe Pulse or persisted strobe-risk tags. Save compact JSON reports and at least one runtime contact sheet. Do not generate an Arrangement pack.",
+      "expected_output": "A source-backed temporal audit whose structured reports come from Lumina compile + render_at and cover normalized rate, ping-pong, smooth accent persistence, topology-relative column partitions, TargetSet topology, and high-speed aliasing.",
+      "files": ["evals/files/base-assets.lumina-assets.json"],
+      "expectations": [
+        "The reports show 1× = 1 primary event/beat and 4× = 4 primary events/beat with strictly increasing measured rate.",
+        "Column Ping-Pong reports two directional traversals per Graph cycle, 0.5 Graph cycles/beat at 1×, and spatial reversals.",
+        "Color Accent remains above a visible intensity floor at 0.25× and 1×, has nonzero intensity variance, and reports neither on-duty nor strobe metrics.",
+        "Column Half Relay, Column Thirds Triplet, Column Quarter Cascade, and Four-Column Prism declare partition counts 2, 3, 4, and 4 respectively.",
+        "Spatial Wipe is analyzed on two exact TargetSets with distinct cache identities and resolved fixture counts, with applicable centroid/path metrics.",
+        "The audit confirms Safe Strobe Pulse is absent and no Effect Catalog or Cue risk-summary tag is persisted.",
+        "The 30fps comparison identifies 4× as caution and 8× as severe for continuous primary events, and the output includes a runtime SVG contact sheet."
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Use the attached Base Pack to create a confirmed 16-bar Arrangement that needs a brief but continuously faded project-local color accent. Follow the full temporal loop: audit candidates before selection; copy Color Accent rather than mutate the built-in; set typed attack and release parameters with matching Envelope graph bindings; do not use Pulse/Saw, hard on/off StepSequence, or FixtureMask flashes; validate; run the real runtime analyzer on the generated Effect and actual TargetSet/BPM at every used speed; compare measured intensity persistence, peaks, event rate, change energy, and aliasing to the brief; revise if needed; then hand off a new validated Project Pack plus report and contact sheet paths.",
+      "expected_output": "A validated import-safe Arrangement pack with an unchanged built-in source, a project-local smoothly faded accent whose real runtime fingerprint matches its typed attack/release and Envelope behavior, and a documented temporal before/after audit.",
+      "files": ["evals/files/base-assets.lumina-assets.json"],
+      "expectations": [
+        "The built-in source Effect is deeply unchanged and the generated Effect is project_local with a non-built-in exact identity and complete typed tempo contract.",
+        "The generated accent's typed attack/release parameters match their bound Envelope node, tempo contains no duplicated shape/name/tags, and semantic validation passes.",
+        "The generated graph contains no Pulse/Saw oscillator, hard on/off StepSequence, or FixtureMask; the final written Pack is re-opened and analyzed through the real runtime path.",
+        "Measured 1× primary rate is one event/beat, minimum intensity stays visibly above zero, intensity variance is nonzero, and on-duty/strobe metrics are absent.",
+        "The transcript records actual BPM/TargetSet/seed/overrides, measured events/s, persistence/change energy, alias risk, report cache key, and report/contact-sheet paths.",
+        "Any speed used by the Arrangement was analyzed after generation, and the handoff distinguishes runtime metrics from subjective Arrange/Live acceptance."
+      ]
     }
   ]
 }

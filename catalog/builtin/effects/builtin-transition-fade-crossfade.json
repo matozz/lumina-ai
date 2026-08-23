@@ -51,6 +51,10 @@
       "help": "Single-color output override for Cue and Arrangement authoring."
     }
   ],
+  "tempo": {
+    "primary_event": "rise_fall_cycle",
+    "events_per_graph_cycle": 1
+  },
   "graph": {
     "nodes": [
       {
@@ -96,7 +100,6 @@
     "density": 1,
     "motion": "organic",
     "colorfulness": 0.75,
-    "strobe_risk": "none",
     "required_attributes": ["intensity", "color.rgb"],
     "layout_capabilities": ["any"]
   }

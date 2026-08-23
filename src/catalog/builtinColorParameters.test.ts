@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { builtinEffects } from "./builtinCatalog";
 
 const EXPLICIT_DEFAULT_COLOR_EFFECT_IDS = [
+  "builtin.spatial.column-center-ripple",
+  "builtin.spatial.column-quarter-cascade",
+  "builtin.spatial.column-thirds-triplet",
   "builtin.spatial.radial-bloom",
   "builtin.transition.blackout-safe",
   "builtin.transition.fade-crossfade",
@@ -22,7 +25,7 @@ describe("Production Color overrides", () => {
     }
   });
 
-  it("preserves authored defaults only for Effects that previously enabled Color", () => {
+  it("preserves authored defaults only for Effects with an explicit Color output", () => {
     for (const effect of builtinEffects) {
       const color = effect.parameters.find((parameter) => parameter.id === "color")!;
       const expectsDefault = EXPLICIT_DEFAULT_COLOR_EFFECT_IDS.includes(effect.id);

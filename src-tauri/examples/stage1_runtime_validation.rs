@@ -4,7 +4,7 @@ use lumina_ai_lib::engine::clock::ManualClock;
 use lumina_ai_lib::engine::effect::{
     common_parameters, CompiledEffectGraph, CompiledEffectNode, CompiledEffectStep,
     CompiledProfileSequence, EffectCatalog, EffectDefinition, EffectDefinitionHandle,
-    EffectInstance, EffectNodeHandle, EffectSource, SpatialBasis,
+    EffectInstance, EffectNodeHandle, EffectSource, EffectTempoBehavior, SpatialBasis,
 };
 use lumina_ai_lib::engine::output::{LogicalFrame, OutputHub};
 use lumina_ai_lib::engine::profile::{
@@ -170,6 +170,9 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
         revision: 1,
         source: EffectSource::ProjectLocal,
         parameters: common_parameters(1.0),
+        tempo: EffectTempoBehavior {
+            events_per_graph_cycle: 1.0,
+        },
         graph: CompiledEffectGraph {
             nodes: vec![
                 CompiledEffectNode::Time,
@@ -180,6 +183,7 @@ fn synthetic_show(fixture_count: usize) -> CompiledShow {
                     to: 1.0,
                     wrap: false,
                     group_size: None,
+                    partition_count: None,
                     custom_order: Vec::new(),
                 },
                 CompiledEffectNode::StepSequence {

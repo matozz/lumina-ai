@@ -132,7 +132,7 @@ fn benchmark_show() -> lumina_ai_lib::compiler::CompiledShow {
                   "attribute_id": "intensity" }
             ]},
             "catalog": { "mood": ["benchmark"], "energy": 0.8, "density": 0.8, "motion": "chase",
-              "colorfulness": 1, "strobe_risk": "none", "required_attributes": ["intensity", "color.rgb"] }
+              "colorfulness": 1, "required_attributes": ["intensity", "color.rgb"] }
         }],
         "effect_instances": instances
     });

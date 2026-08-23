@@ -377,9 +377,6 @@
           "format": "uint32",
           "minimum": 1
         },
-        "risk_summary": {
-          "$ref": "#/$defs/CueRiskSummary"
-        },
         "schema_version": {
           "type": "integer",
           "format": "uint32",
@@ -400,8 +397,7 @@
         "nominal_length_ticks",
         "layers",
         "trigger_policy",
-        "capability_summary",
-        "risk_summary"
+        "capability_summary"
       ]
     },
     "CueLayer": {
@@ -504,16 +500,6 @@
     "CueQuantize": {
       "type": "string",
       "enum": ["off", "beat", "bar"]
-    },
-    "CueRiskSummary": {
-      "type": "object",
-      "properties": {
-        "strobe_risk": {
-          "$ref": "#/$defs/StrobeRiskDSL"
-        }
-      },
-      "additionalProperties": false,
-      "required": ["strobe_risk"]
     },
     "CueTrack": {
       "type": "object",
@@ -644,16 +630,13 @@
             "type": "string"
           }
         },
-        "strobe_risk": {
-          "$ref": "#/$defs/StrobeRiskDSL"
-        },
         "visibility": {
           "$ref": "#/$defs/CatalogVisibilityDSL",
           "default": "standard"
         }
       },
       "additionalProperties": false,
-      "required": ["energy", "density", "motion", "colorfulness", "strobe_risk"]
+      "required": ["energy", "density", "motion", "colorfulness"]
     },
     "EffectDefinitionDocument": {
       "type": "object",
@@ -689,6 +672,9 @@
         },
         "source": {
           "$ref": "#/$defs/EffectSourceDSL"
+        },
+        "tempo": {
+          "$ref": "#/$defs/EffectTempoBehaviorDSL"
         }
       },
       "additionalProperties": false,
@@ -699,13 +685,14 @@
         "revision",
         "source",
         "parameters",
+        "tempo",
         "graph",
         "catalog"
       ]
     },
     "EffectFamilyDSL": {
       "type": "string",
-      "enum": ["intensity", "color", "movement", "spatial", "strobe", "utility"]
+      "enum": ["intensity", "color", "movement", "spatial", "utility"]
     },
     "EffectGraphDSL": {
       "type": "object",
@@ -793,6 +780,12 @@
         {
           "type": "object",
           "properties": {
+            "duty_cycle": {
+              "type": ["number", "null"],
+              "format": "double",
+              "maximum": 1.0,
+              "minimum": 1e-6
+            },
             "id": {
               "type": "string"
             },
@@ -867,6 +860,11 @@
             },
             "input": {
               "$ref": "#/$defs/EffectPortRefDSL"
+            },
+            "partition_count": {
+              "type": ["integer", "null"],
+              "format": "uint32",
+              "minimum": 0
             },
             "to": {
               "type": "number",
@@ -1060,7 +1058,7 @@
     },
     "EffectNodePropertyDSL": {
       "type": "string",
-      "enum": ["waveform", "attack", "release", "color_stops"]
+      "enum": ["waveform", "duty_cycle", "attack", "release", "color_stops"]
     },
     "EffectPortDSL": {
       "type": "string",
@@ -1092,6 +1090,31 @@
     "EffectSourceDSL": {
       "type": "string",
       "enum": ["built_in", "project_local", "user_library"]
+    },
+    "EffectTempoBehaviorDSL": {
+      "type": "object",
+      "properties": {
+        "events_per_graph_cycle": {
+          "type": "number",
+          "format": "double",
+          "minimum": 1e-6
+        },
+        "primary_event": {
+          "$ref": "#/$defs/PrimaryVisualEventDSL"
+        },
+        "safety": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TempoSafetyLimitDSL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": ["primary_event", "events_per_graph_cycle"]
     },
     "FormulaDef": {
       "type": "object",
@@ -2201,6 +2224,19 @@
       "additionalProperties": false,
       "required": ["profile_id", "id_range"]
     },
+    "PrimaryVisualEventDSL": {
+      "type": "string",
+      "enum": [
+        "pulse_onset",
+        "one_way_traversal",
+        "directional_traversal",
+        "random_refresh",
+        "rise_fall_cycle",
+        "color_cycle",
+        "movement_cycle",
+        "spatial_propagation"
+      ]
+    },
     "ScalarParameterRangeDSL": {
       "type": "object",
       "properties": {
@@ -2273,7 +2309,7 @@
     },
     "SpatialBasisDSL": {
       "type": "string",
-      "enum": ["index", "x", "random_x", "y", "distance", "angle", "custom"]
+      "enum": ["index", "x", "x_distance", "random_x", "y", "distance", "angle", "custom"]
     },
     "StageDocument": {
       "type": "object",
@@ -2357,10 +2393,6 @@
         }
       },
       "additionalProperties": false
-    },
-    "StrobeRiskDSL": {
-      "type": "string",
-      "enum": ["none", "low", "medium", "high"]
     },
     "SvgPathDef": {
       "type": "object",
@@ -2729,6 +2761,18 @@
       },
       "additionalProperties": false,
       "required": ["time_tick", "bpm"]
+    },
+    "TempoSafetyLimitDSL": {
+      "type": "object",
+      "properties": {
+        "max_primary_events_per_second": {
+          "type": "number",
+          "format": "double",
+          "minimum": 1e-6
+        }
+      },
+      "additionalProperties": false,
+      "required": ["max_primary_events_per_second"]
     },
     "TimeSignaturePoint": {
       "type": "object",

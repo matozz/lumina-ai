@@ -41,7 +41,7 @@ Avoid dense one-beat Clip repetition when a longer CueClip plus typed automation
 - Make each change legible for at least a phrase fragment.
 - Use automation with a stated target: intensity lift, speed staircase, color convergence, or coverage growth.
 - Preserve a final contrast for the drop.
-- Treat strobe as a separately confirmed accent, not the default source of excitement.
+- Build excitement with measured rate, spatial dialogue, color, and smooth accent persistence; do not generate hard strobe flashes.
 
 ## Drop variation
 

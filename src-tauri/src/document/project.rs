@@ -1,6 +1,7 @@
 use super::{
-    ClipPlaybackDSL, EffectCatalogDSL, EffectGraphDSL, EffectSourceDSL, GlobalParameterDSL,
-    GroupDSL, KeyframeDSL, ParameterDefinitionDSL, ParameterValueDSL, PatchDSL, TempoMapDSL,
+    ClipPlaybackDSL, EffectCatalogDSL, EffectGraphDSL, EffectSourceDSL, EffectTempoBehaviorDSL,
+    GlobalParameterDSL, GroupDSL, KeyframeDSL, ParameterDefinitionDSL, ParameterValueDSL, PatchDSL,
+    TempoMapDSL,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -426,6 +427,7 @@ pub struct EffectDefinitionDocument {
     pub revision: u32,
     pub source: EffectSourceDSL,
     pub parameters: Vec<ParameterDefinitionDSL>,
+    pub tempo: EffectTempoBehaviorDSL,
     pub graph: EffectGraphDSL,
     pub catalog: EffectCatalogDSL,
 }
@@ -456,7 +458,6 @@ pub struct CueDefinition {
     pub automation_lanes: Vec<CueAutomationLane>,
     pub trigger_policy: CueTriggerPolicy,
     pub capability_summary: CueCapabilitySummary,
-    pub risk_summary: CueRiskSummary,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
@@ -543,12 +544,6 @@ pub struct CueAutomationTarget {
 pub struct CueCapabilitySummary {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required_attributes: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct CueRiskSummary {
-    pub strobe_risk: super::StrobeRiskDSL,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
@@ -733,6 +728,36 @@ mod tests {
             "revision": "latest"
         }));
         assert!(textual_revision.is_err());
+    }
+
+    #[test]
+    fn tempo_contract_rejects_removed_duplicate_metadata() {
+        let minimal = json!({
+            "primary_event": "pulse_onset",
+            "events_per_graph_cycle": 1.0
+        });
+        serde_json::from_value::<EffectTempoBehaviorDSL>(minimal.clone())
+            .expect("minimal tempo contract parses");
+
+        for (field, value) in [
+            ("kind", json!("pulse")),
+            ("one_x_events_per_beat", json!(1.0)),
+            ("phase_anchor", json!("onset")),
+            ("duty_cycle", json!(0.2)),
+            ("direction_reversals_per_graph_cycle", json!(2)),
+            ("topology_sensitivity", json!(["target_set"])),
+            ("recommended_speed", json!({ "min": 0.25, "max": 1.0 })),
+        ] {
+            let mut obsolete = minimal.clone();
+            obsolete
+                .as_object_mut()
+                .expect("tempo fixture is an object")
+                .insert(field.to_string(), value);
+            assert!(
+                serde_json::from_value::<EffectTempoBehaviorDSL>(obsolete).is_err(),
+                "removed tempo field {field} must fail closed"
+            );
+        }
     }
 
     #[test]
