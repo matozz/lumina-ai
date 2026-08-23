@@ -23,7 +23,7 @@ TargetSet 选择仍属于 Cue Layer。Arrangement 只负责调度 Cue；Clip sch
 
 ### 编辑空间与视口
 
-- Preview 与 Timeline 使用可调整的纵向 splitter。Timeline Focus mode 会压缩 Preview，并可折叠左右辅助区；这些比例、折叠状态、Zoom 和 Snap 只属于 workspace UI cache，不写入 `ProjectBundle`。切换 Focus mode 会保留当前 Zoom/Snap。
+- Preview 与 Timeline 使用可调整的纵向 splitter。Timeline Focus mode 会压缩 Preview，并可折叠左右辅助区；Preview header 的 fullscreen 按钮把 **Arrangement preview surface** 提升为展示层，并在 Tauri 中进入当前窗口的系统全屏（macOS 为独立 fullscreen Space），浏览器环境回退到 element fullscreen。退出只恢复进入该模式时由 Preview 拥有的系统全屏状态。这些比例、折叠状态、fullscreen、Zoom 和 Snap 只属于 workspace UI cache，不写入 `ProjectBundle`。切换 Focus mode 会保留当前 Zoom/Snap。
 - Zoom、Snap 和视觉 Grid 完全独立。Snap 默认 1/2 拍，并可选择 1 小节、1 拍、1/2、1/4 或 1/8 拍；下拉值直接显示 `1 bar`、`1 beat`、`½ beat` 等粒度，不重复 `Snap` 前缀。Grid/Ruler 只按像素密度降低显示密度，不能偷偷改变吸附。
 - **Fit** 或 `Cmd/Ctrl+0` 显示完整 Arrangement，包括未放置 CueClip 的空尾。低 Zoom 的短 Clip 使用忠实宽度和紧凑色条，不用固定最小宽度制造遮挡。
 - `Cmd/Ctrl+↑/↓` 只缩放 Timeline；鼠标锚点优先，其次使用可见 playhead 或 viewport 中心。现有 132 BPM、多 TempoMap Arrangement 继续按自己的精确文档时间编辑，不被 128 BPM 产品默认值覆盖。
@@ -32,7 +32,7 @@ TargetSet 选择仍属于 Cue Layer。Arrangement 只负责调度 Cue；Clip sch
 
 顶层 `ArrangementTimelineSelection` 同时表达跨 Track 的 CueClip 和跨 lane 的 keyframe，并保存 anchor/primary。空白拖动建立可跨视觉行和 automation lane 的 marquee；Shift 追加，Cmd/Ctrl 单击 toggle。模型级 hit-test 不依赖当前挂载的 DOM 节点，边缘 auto-scroll 通过 `requestAnimationFrame` 更新；Escape、pointercancel 和 lost capture 恢复手势前快照。
 
-批量 Move、Resize、Duplicate、Delete、Copy/Paste 会先完整预验证，再在一个 Project transaction 中提交。Clip 复制会连同以其 `clip_id` 为 target 的 lane/keyframe 一起复制并重映射内部 ID；移动 Clip 同步移动这些 keyframe。只选 keyframe 时可跨 lane 移动或复制，但每条 lane 必须保持严格递增、同 tick 唯一且至少保留一个点。typed internal clipboard 只保证同一 Arrangement，不把 ProjectBundle 或依赖偷渡到系统剪贴板。
+批量 Move、Resize、Duplicate、Delete、Copy/Paste 会先完整预验证，再在一个 Project transaction 中提交。Clip 复制会连同以其 `clip_id` 为 target 的 lane/keyframe 一起复制并重映射内部 ID；移动 Clip 同步移动这些 keyframe。只选 keyframe 时可跨 lane 移动或复制，但每条 lane 必须保持 **tick 非递减**、ID 唯一且至少保留一个点；点可以落在同一 tick，拖动不能越过未选点但可以与其重合。typed internal clipboard 只保证同一 Arrangement，不把 ProjectBundle 或依赖偷渡到系统剪贴板。
 
 ### 固定快捷键
 
@@ -58,7 +58,7 @@ App WebView 默认禁止页面级文本选择、浏览器导航/刷新/打印/�
 
 - CueClip 右键从该 Clip 精确引用的 Cue/Effect 建立菜单，只显示 `scope: arrangement` 的非结构参数；连续/离散 interpolation 从 parameter schema type 推导。可直接 Add/Reveal automation、Duplicate、Copy 或 Delete。
 - 这里创建的是 **单个 CueClip instance** 的 Arrangement automation，typed target 包含 `clip_id`。同一 Cue（例如 FullFlash）在时间轴上出现多次时，每个需要单独变化的 Clip 都要分别添加；若希望所有使用该 Cue 的 Clip 继承同一曲线，应在 Cue Builder 中创建一次 Cue-local automation。
-- 新 lane 在右键 context tick 的当前 Snap 格创建一个使用当前有效值的 keyframe；已有 typed target lane 会被定位，并在该格补点或聚焦已有点。创建、定位和拖动都不自动打开编辑器，只有直接点击关键点才打开；这些操作不移动 playhead，也不改变 transport。
+- 新 lane 在右键 context tick 的当前 Snap 格创建一个使用当前有效值的 keyframe；Add/Reveal 已有 typed target lane 时会在空格补点，在已有点的格聚焦该点。若需要瞬时切换，可在 automation row 明确执行 Add 或双击，在同一 tick 追加第二个点。创建、定位和拖动都不自动打开编辑器，只有直接点击关键点才打开；这些操作不移动 playhead，也不改变 transport。
 - 空白 Cue row 提供 **Place selected Cue here** 与 **Paste here**。Automation row/keyframe 提供 Add、Edit、Interpolation、Copy/Paste、Delete selected 和 Delete lane；离散参数只允许 hold。
 - 单 Layer label 使用 `Cue · Parameter`；多 Layer 依次用 TargetSet、Effect 或 `Layer N` 消歧。label 每次从 exact ref 动态解析，不持久化 display string，也不显示 raw Layer ID 或 revision。
 
@@ -66,7 +66,7 @@ App WebView 默认禁止页面级文本选择、浏览器导航/刷新/打印/�
 
 Automation header、row、curve 和 hit geometry 统一为 32 px，关键点使用紧凑的 10 px 圆点。关键点拖动在每个 rAF frame 计算一次 projected integer tick；所有选中点以及前后相邻 segment 共用该 projection，点中心与 curve endpoint 保持对齐。pointerup 只提交一次，取消会恢复 DOM preview。
 
-`hold` 使用“前一点保持到边界、在边界点立即写入新值”的阶梯路径，不需要 `boundary + 1 tick`。既有数据不会被静默重写。
+`hold` 使用“前一点保持到边界、在边界点立即写入新值”的阶梯路径，不需要 `boundary + 1 tick`。同 tick stack 的稳定数组顺序是行为真值：第一个点定义从左侧到达边界的值，最后一个点从该 tick 起生效，因此两个同 tick 点形成零时长的垂直切换边。中间点保留稳定顺序但没有可观察时长。相距或重合在 10 px 范围内的点，点击后提供带 tick/value 的 chooser，避免靠层叠顺序猜选。既有数据不会被静默重写。
 
 Color automation 使用 typed `color` 值：keyframe 是实际色块，segment 是居中的端点色带，Inspector 同时提供 native color picker 和 `#RRGGBB` 输入。Color 点在纵向中线，不伪装成标量高低曲线；runtime 使用 Lab 插值并将结果写入 `color.rgb`。Production Effect 都声明 standard Color 参数，因此 Context menu 可从具体 CueClip 创建 Color lane；即使该 Effect 默认不写颜色，lane 也是只对该 CueClip 的显式颜色覆盖。
 
@@ -103,7 +103,8 @@ Project Template 保留 20×20 Stage 的 quadrant/corner TargetSet，但不再�
 ## 验收
 
 - 多 Cue placement、重叠、resize、automation、Undo/Redo 和 save/reopen 保持 tick 不变。
+- 同 tick automation 可保存、编译并在边界取最后一点；重叠/近邻 chooser 可选择具体点。
 - 空的 House 128、全部内置 Effect/Stage exact ref 均可解析，Base Pack 的 Cue 集合为空；四象限各 100 fixtures，四角各 25 fixtures。
 - 3/4、4/4、拍号切换、多 TempoMap 和任意 Seek/Replay 结果确定。
 - 1,000 CueClip 的 viewport 和 DOM-ref 高频路径满足交互预算。
-- 1100×720 与常用大窗口下，默认/Focus mode、library、canvas、timeline、context menu 和 inspector 均可操作且无横向抖动。
+- 1100×720 与常用大窗口下，默认/Focus mode、Preview 系统全屏、library、canvas、timeline、context menu 和 inspector 均可操作且无横向抖动。
