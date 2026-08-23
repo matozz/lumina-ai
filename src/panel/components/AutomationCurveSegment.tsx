@@ -33,7 +33,7 @@ export const AutomationCurveSegment = forwardRef<SVGSVGElement, AutomationCurveS
       <svg
         ref={ref}
         className="text-primary/80 pointer-events-none absolute top-0 overflow-visible"
-        style={{ left: geometry.left, width: geometry.width, height }}
+        style={{ left: geometry.left, width: Math.max(1, geometry.width), height }}
         viewBox={`0 0 ${Math.max(1, geometry.width)} ${height}`}
         preserveAspectRatio="none"
         data-automation-curve
@@ -106,7 +106,7 @@ export function updateAutomationCurveElement(
     valueInset,
   );
   element.style.left = `${geometry.left}px`;
-  element.style.width = `${geometry.width}px`;
+  element.style.width = `${Math.max(1, geometry.width)}px`;
   element.setAttribute("viewBox", `0 0 ${Math.max(1, geometry.width)} ${height}`);
   element.querySelector("path")?.setAttribute("d", geometry.path);
 }

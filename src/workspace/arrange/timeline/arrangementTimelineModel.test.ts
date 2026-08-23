@@ -235,7 +235,7 @@ describe("Arrangement timeline model", () => {
     expect(lane.keyframes).toHaveLength(2);
   });
 
-  it("adds, moves, and edits a typed automation curve without duplicate ticks", () => {
+  it("adds, moves, and edits an ordered same-tick automation boundary", () => {
     const option = automationOptions(bundle, arrangement)[0];
     const laneId = addAutomationLane(arrangement, "cues", option, 0);
     addAutomationKeyframe(
@@ -258,9 +258,12 @@ describe("Arrangement timeline model", () => {
       value: { type: "scalar", value: 0.25 },
       interpolation: "ease_in_out",
     });
-    expect(() => moveAutomationKeyframes(arrangement, "cues", laneId, [middle.id], -2_160)).toThrow(
-      /collide/,
-    );
+    moveAutomationKeyframes(arrangement, "cues", laneId, [middle.id], -2_160);
+    expect(lane.keyframes.map((keyframe) => keyframe.time_tick)).toEqual([0, 0]);
+    expect(automationLaneValueAtTick(lane, 0, { type: "scalar", value: 1 })).toEqual({
+      type: "scalar",
+      value: 0.25,
+    });
   });
 
   it("evaluates Color in Lab and hold values through the exact boundary tick", () => {
@@ -299,6 +302,42 @@ describe("Arrangement timeline model", () => {
     expect(automationLaneValueAtTick(lane, 1_920, { type: "color", value: "#000000" })).toEqual({
       type: "color",
       value: "#00FF00",
+    });
+  });
+
+  it("uses the last authored point at a same-tick instantaneous switch", () => {
+    const lane = {
+      id: "instant-switch",
+      target: { scope: "global" as const, parameter_id: "master_dimmer" as const },
+      keyframes: [
+        {
+          id: "start",
+          time_tick: 0,
+          value: { type: "scalar" as const, value: 0 },
+          interpolation: "linear" as const,
+        },
+        {
+          id: "left-limit",
+          time_tick: 960,
+          value: { type: "scalar" as const, value: 0.25 },
+          interpolation: "linear" as const,
+        },
+        {
+          id: "boundary",
+          time_tick: 960,
+          value: { type: "scalar" as const, value: 1 },
+          interpolation: "hold" as const,
+        },
+      ],
+    };
+
+    expect(automationLaneValueAtTick(lane, 959, { type: "scalar", value: 0 })).toEqual({
+      type: "scalar",
+      value: 0.25 * (959 / 960),
+    });
+    expect(automationLaneValueAtTick(lane, 960, { type: "scalar", value: 0 })).toEqual({
+      type: "scalar",
+      value: 1,
     });
   });
 

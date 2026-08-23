@@ -383,6 +383,39 @@ mod tests {
     }
 
     #[test]
+    fn same_tick_keyframes_create_an_ordered_instantaneous_switch() {
+        let mut lane = lane();
+        lane.keyframes = vec![
+            keyframe("start", 0, 0.0),
+            keyframe("left-limit", 10, 0.25),
+            keyframe("boundary", 10, 0.9),
+            keyframe("end", 20, 1.0),
+        ];
+
+        assert_eq!(
+            evaluate_lane_at(&lane, MusicalTime::from_ticks(9)),
+            Some(AnimatableValue::Float(0.225))
+        );
+        assert_eq!(
+            evaluate_lane_at(&lane, MusicalTime::from_ticks(10)),
+            Some(AnimatableValue::Float(0.9))
+        );
+        assert_eq!(
+            evaluate_lane_at(&lane, MusicalTime::from_ticks(15)),
+            Some(AnimatableValue::Float(0.95))
+        );
+        assert_eq!(
+            integrate_lane_scalar_ticks(
+                Some(&lane),
+                MusicalTime::ZERO,
+                MusicalTime::from_ticks(20),
+                1.0,
+            ),
+            10.75
+        );
+    }
+
+    #[test]
     fn direction_lane_uses_discrete_hold_values() {
         let mut lane = lane();
         lane.keyframes = vec![

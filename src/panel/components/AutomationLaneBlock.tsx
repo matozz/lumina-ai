@@ -241,14 +241,10 @@ export const AutomationLaneBlock = memo(({ event, viewport }: AutomationLaneBloc
     }
   };
   const addAtTick = (requestedTick: number) => {
-    const step = Math.max(1, Math.round(ppq / 4));
-    let timeTick = Math.max(0, Math.min(0xffff_ffff, requestedTick));
-    const occupied = new Set(lane.keyframes.map((keyframe) => keyframe.time_tick));
-    while (occupied.has(timeTick) && timeTick <= 0xffff_ffff - step) timeTick += step;
-    if (occupied.has(timeTick)) return;
+    const timeTick = Math.max(0, Math.min(0xffff_ffff, requestedTick));
     const previous = [...lane.keyframes]
       .reverse()
-      .find((keyframe) => keyframe.time_tick < timeTick);
+      .find((keyframe) => keyframe.time_tick <= timeTick);
     const value = structuredClone(previous?.value ?? parameter.initialValue);
     const interpolation: KeyframeInterpolationDSL =
       parameterAutomation(parameter.definition) === "discrete" ? "hold" : "linear";

@@ -215,7 +215,7 @@ describe("AutomationLaneBlock", () => {
     expect(timelineActions.onAddKeyframe).toHaveBeenCalledWith(
       "automation",
       "speed-lane",
-      4_080,
+      3_840,
       { type: "scalar", value: 1 },
       "linear",
     );

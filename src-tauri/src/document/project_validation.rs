@@ -1264,13 +1264,13 @@ fn validate_keyframes(
     }
     if keyframes
         .windows(2)
-        .any(|pair| pair[0].time_tick >= pair[1].time_tick)
+        .any(|pair| pair[0].time_tick > pair[1].time_tick)
     {
         diagnostics.push(Diagnostic::error(
             PROJECT_SCHEMA_INVALID,
             format!("{path}.keyframes"),
-            "Automation keyframes must use strictly increasing tick positions.",
-            "Sort keyframes by tick and resolve duplicate positions explicitly.",
+            "Automation keyframes must use non-decreasing tick positions.",
+            "Sort keyframes by tick; same-tick order defines the instantaneous boundary value.",
         ));
     }
     if keyframes
@@ -2320,6 +2320,34 @@ pub(crate) mod tests {
             validated.into_bundle().manifest.active_arrangement_id,
             "arrangement-1"
         );
+    }
+
+    #[test]
+    fn accepts_ordered_same_tick_automation_and_rejects_descending_ticks() {
+        let mut bundle = valid_bundle();
+        bundle.arrangements[0].tracks[0].automation_lanes =
+            serde_json::from_value(json!([{
+                "id": "instant-master",
+                "target": { "scope": "global", "parameter_id": "master_dimmer" },
+                "keyframes": [
+                    { "id": "start", "time_tick": 0, "value": { "type": "scalar", "value": 0.0 }, "interpolation": "linear" },
+                    { "id": "left-limit", "time_tick": 960, "value": { "type": "scalar", "value": 0.25 }, "interpolation": "linear" },
+                    { "id": "boundary", "time_tick": 960, "value": { "type": "scalar", "value": 1.0 }, "interpolation": "hold" }
+                ]
+            }]))
+            .expect("same-tick Arrangement automation");
+
+        ValidatedProject::validate(bundle.clone()).expect("ordered same-tick points validate");
+
+        bundle.arrangements[0].tracks[0].automation_lanes[0]
+            .keyframes
+            .swap(0, 2);
+        let diagnostics =
+            ValidatedProject::validate(bundle).expect_err("descending points remain invalid");
+        assert!(diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == PROJECT_SCHEMA_INVALID
+                && diagnostic.message.contains("non-decreasing")
+        }));
     }
 
     #[test]

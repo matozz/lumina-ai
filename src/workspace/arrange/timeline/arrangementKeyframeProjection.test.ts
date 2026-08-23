@@ -36,7 +36,7 @@ describe("Arrangement keyframe projection", () => {
           keyframeId: "intensity-a",
         },
       ]),
-    ).toEqual({ minimum: -100, maximum: 29 });
+    ).toEqual({ minimum: -100, maximum: 30 });
   });
 
   it("projects selected points through every registered lane in one shared frame", () => {

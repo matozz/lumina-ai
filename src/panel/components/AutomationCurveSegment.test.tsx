@@ -83,6 +83,24 @@ describe("AutomationCurveSegment", () => {
     expect(curvePath("hold", 48, 7, 25)).not.toContain("47");
   });
 
+  it("keeps a same-tick instantaneous switch visible as a vertical edge", () => {
+    const { container } = render(
+      <AutomationCurveSegment
+        start={start}
+        end={{ ...end, time_tick: start.time_tick }}
+        definition={definition}
+        ppq={960}
+        beatWidth={48}
+        height={32}
+        valueInset={6}
+      />,
+    );
+    const curve = container.querySelector<SVGSVGElement>("[data-automation-curve]")!;
+
+    expect(curve.style.width).toBe("1px");
+    expect(curve.querySelector("path")?.getAttribute("d")).toBe("M 0 11 L 0 21");
+  });
+
   it("renders Color as a centered endpoint gradient band instead of scalar height", () => {
     const colorDefinition: ParameterDefinitionDSL = {
       ...definition,

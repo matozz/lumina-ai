@@ -62,7 +62,7 @@ struct AggregatedAutomation {
     owner_track: usize,
     id: String,
     target: AutomationTargetDSL,
-    keyframes: BTreeMap<u32, crate::document::KeyframeDSL>,
+    keyframes: Vec<crate::document::KeyframeDSL>,
 }
 
 impl Compiler {
@@ -314,10 +314,10 @@ impl Compiler {
                                         instance_id: instance_id.clone(),
                                         parameter_id: cue_lane.target.parameter_id.clone(),
                                     },
-                                    keyframes: BTreeMap::new(),
+                                    keyframes: Vec::new(),
                                 });
                         for keyframe in cue_keyframes_for_clip(cue_lane, cue, clip) {
-                            aggregate.keyframes.insert(keyframe.time_tick, keyframe);
+                            aggregate.keyframes.push(keyframe);
                         }
                     }
                 }
@@ -380,28 +380,29 @@ impl Compiler {
                         owner_track: track_index,
                         id: lane.id.clone(),
                         target,
-                        keyframes: BTreeMap::new(),
+                        keyframes: Vec::new(),
                     });
                 aggregate.id = lane.id.clone();
                 aggregate.owner_track = track_index;
                 for keyframe in &lane.keyframes {
-                    aggregate
-                        .keyframes
-                        .insert(keyframe.time_tick, keyframe.clone());
+                    aggregate.keyframes.push(keyframe.clone());
                 }
             }
         }
 
-        for aggregate in automation.into_values() {
+        for mut aggregate in automation.into_values() {
             if aggregate.keyframes.is_empty() {
                 continue;
             }
+            aggregate
+                .keyframes
+                .sort_by_key(|keyframe| keyframe.time_tick);
             timeline_tracks[aggregate.owner_track]
                 .automation_lanes
                 .push(AutomationLaneDSL {
                     id: aggregate.id,
                     target: aggregate.target,
-                    keyframes: aggregate.keyframes.into_values().collect(),
+                    keyframes: aggregate.keyframes,
                 });
         }
 
@@ -902,7 +903,7 @@ fn cue_keyframes_for_clip(
                 continue;
             }
             let mut mapped = keyframe.clone();
-            mapped.id = format!("{}:{}:{}", clip.id, lane.id, occurrence);
+            mapped.id = format!("{}:{}:{}:{}", clip.id, lane.id, occurrence, keyframe.id);
             mapped.time_tick =
                 u32::try_from(u64::from(clip.start_tick).saturating_add(occurrence - start))
                     .unwrap_or(u32::MAX);
@@ -1878,6 +1879,41 @@ mod tests {
 
         let track = &snapshot.show.timeline.as_ref().expect("timeline").tracks[0];
         assert_eq!(track.overlap_policy, OverlapPolicyDSL::Layer);
+    }
+
+    #[test]
+    fn arrangement_compilation_preserves_same_tick_authoring_order() {
+        let mut bundle = matrix_project();
+        bundle.arrangements[0].tracks[0].automation_lanes =
+            serde_json::from_value(serde_json::json!([{
+                "id": "instant-master",
+                "target": { "scope": "global", "parameter_id": "master_dimmer" },
+                "keyframes": [
+                    { "id": "start", "time_tick": 0, "value": { "type": "scalar", "value": 0.0 }, "interpolation": "linear" },
+                    { "id": "left-limit", "time_tick": 960, "value": { "type": "scalar", "value": 0.25 }, "interpolation": "linear" },
+                    { "id": "boundary", "time_tick": 960, "value": { "type": "scalar", "value": 1.0 }, "interpolation": "hold" }
+                ]
+            }]))
+            .expect("same-tick Arrangement automation");
+
+        let snapshot = Compiler::compile_active_project(
+            ValidatedProject::validate(bundle).expect("same-tick Project validates"),
+        )
+        .expect("same-tick Project compiles");
+        let lane = &snapshot
+            .show
+            .timeline
+            .as_ref()
+            .expect("timeline")
+            .automation_lanes[0];
+
+        assert_eq!(
+            lane.keyframes
+                .iter()
+                .map(|keyframe| keyframe.id.as_str())
+                .collect::<Vec<_>>(),
+            ["start", "left-limit", "boundary"]
+        );
     }
 
     #[test]

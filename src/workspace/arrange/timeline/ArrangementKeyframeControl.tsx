@@ -2,6 +2,7 @@ import { useRef } from "react";
 import type { ArrangementDocument, KeyframeDSL, ParameterDefinitionDSL } from "@/bridge/types";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { AutomationKeyframeInspector } from "@/panel/components/AutomationKeyframeInspector";
 import { keyframeMoveBounds, keyframeTransform, keyframeValueY } from "@/panel/keyframeGeometry";
@@ -16,6 +17,7 @@ interface ArrangementKeyframeControlProps {
   onDelete: () => void;
   onElement: (element: HTMLButtonElement | null) => void;
   onInspectorOpenChange: (open: boolean) => void;
+  onChooseNearby: (keyframeId: string) => void;
   onStartMove: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onUpdate: (changes: Partial<Pick<KeyframeDSL, "time_tick" | "value" | "interpolation">>) => void;
   rowHeight: number;
@@ -34,6 +36,7 @@ export function ArrangementKeyframeControl({
   onDelete,
   onElement,
   onInspectorOpenChange,
+  onChooseNearby,
   onStartMove,
   onUpdate,
   rowHeight,
@@ -41,6 +44,14 @@ export function ArrangementKeyframeControl({
   valueInset,
 }: ArrangementKeyframeControlProps) {
   const bounds = keyframeMoveBounds(keyframes, new Set([keyframe.id]));
+  const nearby = nearbyAutomationKeyframes(
+    keyframes,
+    keyframe,
+    definition,
+    geometry,
+    rowHeight,
+    valueInset,
+  );
   const pointerRef = useRef<{ clientX: number; clientY: number; moved: boolean } | null>(null);
   const suppressOpenRef = useRef(false);
   return (
@@ -77,6 +88,9 @@ export function ArrangementKeyframeControl({
               keyframe.value.type === "color" ? `, ${keyframe.value.value.toUpperCase()}` : ""
             }`}
             aria-pressed={selected}
+            title={
+              nearby.length > 1 ? `${nearby.length} nearby points · click to choose` : undefined
+            }
             data-keyframe-id={keyframe.id}
             data-keyframe-color={
               keyframe.value.type === "color" ? keyframe.value.value.toUpperCase() : undefined
@@ -112,6 +126,27 @@ export function ArrangementKeyframeControl({
         }
       />
       <PopoverContent className="w-72" sideOffset={8}>
+        {nearby.length > 1 && (
+          <div className="flex flex-col gap-2 pb-3">
+            <p className="text-muted-foreground text-xs">
+              {nearby.length} nearby points · choose one to edit
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {nearby.map((candidate, index) => (
+                <Button
+                  key={candidate.id}
+                  size="xs"
+                  variant={candidate.id === keyframe.id ? "secondary" : "outline"}
+                  aria-pressed={candidate.id === keyframe.id}
+                  onClick={() => onChooseNearby(candidate.id)}
+                >
+                  {nearbyKeyframeLabel(candidate, index)}
+                </Button>
+              ))}
+            </div>
+            <Separator />
+          </div>
+        )}
         <AutomationKeyframeInspector
           canDelete={keyframes.length > 1}
           definition={definition}
@@ -127,4 +162,35 @@ export function ArrangementKeyframeControl({
       </PopoverContent>
     </Popover>
   );
+}
+
+export function nearbyAutomationKeyframes(
+  keyframes: KeyframeDSL[],
+  keyframe: KeyframeDSL,
+  definition: ParameterDefinitionDSL,
+  geometry: TimelineGeometry,
+  rowHeight: number,
+  valueInset: number,
+) {
+  const x = ticksToPixels(keyframe.time_tick, geometry);
+  const y = keyframeValueY(keyframe.value, definition, rowHeight, valueInset);
+  return keyframes.filter((candidate) => {
+    const candidateX = ticksToPixels(candidate.time_tick, geometry);
+    const candidateY = keyframeValueY(candidate.value, definition, rowHeight, valueInset);
+    return Math.abs(candidateX - x) <= 10 && Math.abs(candidateY - y) <= 10;
+  });
+}
+
+function nearbyKeyframeLabel(keyframe: KeyframeDSL, index: number) {
+  const value =
+    keyframe.value.type === "scalar"
+      ? keyframe.value.value.toFixed(2)
+      : keyframe.value.type === "color"
+        ? keyframe.value.value.toUpperCase()
+        : keyframe.value.type === "direction"
+          ? keyframe.value.value
+          : keyframe.value.type === "boolean"
+            ? String(keyframe.value.value)
+            : keyframe.value.value;
+  return `${index + 1} · ${keyframe.time_tick} t · ${value}`;
 }
