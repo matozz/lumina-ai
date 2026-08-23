@@ -28,6 +28,7 @@ describe("PreviewSession boundary state machine", () => {
     vi.clearAllMocks();
     localStorage.clear();
     projectActions.reset();
+    authoringTransportActions.reset();
     commandMocks.previewProject.mockImplementation(
       (options: { source: PreviewSource; context: RenderContext; playheadTick: number }) =>
         Promise.resolve(frame(options.source, options.context, options.playheadTick)),
@@ -137,6 +138,47 @@ describe("PreviewSession boundary state machine", () => {
       }),
     );
     expect(useAuthoringTransportStore.getState().sessions[secondKey].cursorTick).toBe(1_920);
+  });
+
+  it("requests Arrangement preview frames on a 60fps budget", async () => {
+    const callbacks = new Map<number, FrameRequestCallback>();
+    let nextFrameRequest = 0;
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn((callback: FrameRequestCallback) => {
+        nextFrameRequest += 1;
+        callbacks.set(nextFrameRequest, callback);
+        return nextFrameRequest;
+      }),
+    );
+    vi.stubGlobal(
+      "cancelAnimationFrame",
+      vi.fn((request: number) => callbacks.delete(request)),
+    );
+
+    render(<Harness workspace="arrange" />);
+    await waitFor(() => expect(commandMocks.previewProject).toHaveBeenCalledOnce());
+
+    const state = useProjectStore.getState();
+    const key = authoringSessionKey("arrangement", assetKey(state.selectedArrangementRef));
+    act(() => authoringTransportActions.play(key, 0));
+    await waitFor(() => expect(commandMocks.renderProjectPreview).toHaveBeenCalled());
+    await act(async () => {
+      await Promise.resolve();
+    });
+    commandMocks.renderProjectPreview.mockClear();
+
+    const firstRequest = callbacks.entries().next().value as
+      | [number, FrameRequestCallback]
+      | undefined;
+    expect(firstRequest).toBeDefined();
+    callbacks.delete(firstRequest![0]);
+    await act(async () => {
+      firstRequest![1](17);
+      await Promise.resolve();
+    });
+
+    expect(commandMocks.renderProjectPreview).toHaveBeenCalledOnce();
   });
 });
 

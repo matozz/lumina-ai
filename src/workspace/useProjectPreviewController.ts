@@ -31,6 +31,8 @@ interface ActiveAuthoringSession {
   arrangement: ArrangementDocument;
 }
 
+const AUTHORING_PREVIEW_FRAME_RATE = 60;
+
 export function useProjectPreviewController(workspace: WorkspaceId) {
   const bundle = useProjectStore(projectSelectors.bundle);
   const selectedEffectRef = useProjectStore(projectSelectors.selectedEffectRef);
@@ -217,7 +219,6 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
     let lastRenderedAt = 0;
     let renderPending = false;
     let queuedTick: number | null = null;
-    const previewFrameRate = activeAuthoring.scope === "effect" ? 60 : 30;
     let commandRevision = useAuthoringTransportStore.getState().sessions[key]?.commandRevision ?? 0;
 
     const renderTick = (tick: number) => {
@@ -259,7 +260,7 @@ export function useProjectPreviewController(workspace: WorkspaceId) {
           if (next.tick !== session.cursorTick || next.ended) {
             authoringTransportActions.publishCursor(key, next.tick, next.ended);
           }
-          if (now - lastRenderedAt >= 1_000 / previewFrameRate) {
+          if (now - lastRenderedAt >= 1_000 / AUTHORING_PREVIEW_FRAME_RATE) {
             lastRenderedAt = now;
             renderTick(next.tick);
           }
@@ -290,8 +291,7 @@ function authoringDescriptor(
 }
 
 function dispatchPreviewFrame(frame: ProjectPreviewFrame) {
-  publishProjectPreview(frame);
-  projectActions.setPreviewResult(frame);
+  projectActions.setPreviewResult(publishProjectPreview(frame));
 }
 
 export function formatPreviewError(error: unknown) {

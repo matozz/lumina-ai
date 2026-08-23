@@ -291,7 +291,7 @@ pub async fn preview_project(
         .previews
         .replace(source, context, playhead_tick, snapshot)
         .await;
-    render_preview_session(&session)
+    render_preview_session(&session, true)
 }
 
 #[tauri::command]
@@ -310,7 +310,7 @@ pub async fn render_project_preview(
                 "No PreviewSession has been compiled.",
             )]
         })?;
-    render_preview_session(&session)
+    render_preview_session(&session, false)
 }
 
 #[tauri::command]
@@ -945,6 +945,7 @@ fn project_compile_failure(errors: Vec<Diagnostic>) -> ProjectCompileResult {
 
 fn render_preview_session(
     session: &PreviewSession,
+    include_layout: bool,
 ) -> Result<ProjectPreviewFrame, Vec<Diagnostic>> {
     let show = &session.snapshot.show;
     let beat = session.playhead_tick as f64
@@ -1009,7 +1010,11 @@ fn render_preview_session(
         stage_ref: session.snapshot.stage_ref.clone(),
         arrangement_ref: session.snapshot.arrangement_ref.clone(),
         playhead_tick: session.playhead_tick,
-        layout_coords: show.coords.clone(),
+        layout_coords: if include_layout {
+            show.coords.clone()
+        } else {
+            Vec::new()
+        },
         outputs,
     })
 }
@@ -1063,13 +1068,13 @@ mod tests {
     use super::{
         atomic_write, compile_dsl, is_live_catalog_instance, live_effect_catalog, load_project,
         preview_dsl, preview_effect_loop, preview_instance_speed, preview_layout,
-        resolve_production_cue_recipe, save_project, SAVE_SEQUENCE,
+        render_preview_session, resolve_production_cue_recipe, save_project, SAVE_SEQUENCE,
     };
     use crate::document::{
         load_project_bundle, valid_bundle, AssetRef, CueRecipeRef, LayoutFixtureSizeOverride,
         LayoutGeometry, LayoutSize, TempoPointDSL,
     };
-    use crate::state::ShowSnapshot;
+    use crate::state::{PreviewSession, PreviewSource, RenderContext, ShowSnapshot};
     use std::sync::atomic::Ordering;
     use std::sync::Arc;
 
@@ -1240,6 +1245,33 @@ mod tests {
         let instance_id = cue.layers[0].instance.as_str();
 
         assert_eq!(preview_instance_speed(&snapshot.show, instance_id), 2.0);
+    }
+
+    #[test]
+    fn incremental_authoring_preview_omits_the_static_layout() {
+        let bundle = valid_bundle();
+        let source = serde_json::to_string(&bundle).expect("serialize Project");
+        let snapshot = Arc::new(
+            crate::compiler::Compiler::compile_active_project(
+                load_project_bundle(&source).expect("Project validates"),
+            )
+            .expect("Project compiles"),
+        );
+        let session = PreviewSession {
+            generation: 7,
+            source: PreviewSource::AuthoringDraft,
+            context: RenderContext::Stage,
+            playhead_tick: 0,
+            snapshot,
+        };
+
+        let initial = render_preview_session(&session, true).expect("initial frame");
+        let incremental = render_preview_session(&session, false).expect("incremental frame");
+
+        assert!(!initial.layout_coords.is_empty());
+        assert!(incremental.layout_coords.is_empty());
+        assert_eq!(incremental.generation, initial.generation);
+        assert_eq!(incremental.outputs.len(), initial.outputs.len());
     }
 
     #[test]

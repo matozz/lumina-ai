@@ -29,6 +29,19 @@ export const CanvasView = ({
     const renderer = new CanvasRenderer(canvasRef.current);
     rendererRef.current = renderer;
     renderer.startRenderLoop();
+    let projectLayoutGeneration: number | null = null;
+
+    const applyProjectFrame = (frame: ProjectPreviewFrame) => {
+      if (frame.generation !== projectLayoutGeneration && frame.layout_coords.length > 0) {
+        renderer.initFromLayout(frame.layout_coords);
+        projectLayoutGeneration = frame.generation;
+      }
+      renderer.applyFrame(
+        frame.outputs,
+        true,
+        showIntensityWithoutColor ? INTENSITY_PREVIEW_COLOR : undefined,
+      );
+    };
 
     const unlistenPromise =
       frameSource === "live"
@@ -47,15 +60,11 @@ export const CanvasView = ({
     const handleProjectPreview = (event: Event) => {
       if (frameSource !== "preview" || layoutOnly) return;
       const frame = (event as CustomEvent<ProjectPreviewFrame>).detail;
-      renderer.initFromLayout(frame.layout_coords);
-      renderer.applyFrame(
-        frame.outputs,
-        true,
-        showIntensityWithoutColor ? INTENSITY_PREVIEW_COLOR : undefined,
-      );
+      applyProjectFrame(frame);
     };
     const handleLayoutDraft = (event: Event) => {
       if (frameSource !== "preview") return;
+      projectLayoutGeneration = null;
       renderer.initFromLayout((event as CustomEvent<LayoutCoord[]>).detail, "layout-draft");
     };
     window.addEventListener("engine:project-preview-frame", handleProjectPreview);
@@ -66,12 +75,7 @@ export const CanvasView = ({
       if (snapshot?.type === "layout") {
         renderer.initFromLayout(snapshot.coords, "layout-draft");
       } else if (snapshot?.type === "project" && !layoutOnly) {
-        renderer.initFromLayout(snapshot.frame.layout_coords);
-        renderer.applyFrame(
-          snapshot.frame.outputs,
-          true,
-          showIntensityWithoutColor ? INTENSITY_PREVIEW_COLOR : undefined,
-        );
+        applyProjectFrame(snapshot.frame);
       }
     }
 

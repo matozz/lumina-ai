@@ -49,7 +49,7 @@ Random 为相邻 seeded cycle 生成确定性目标，并用 smoothstep 在整�
 
 空间方向使用 compiled Effect instance 的真实 SpatialPhase offsets 作为进度基准。Wrapped 轨迹使用强度加权的圆周质心并跨周期解包；只有持续至少三个 sample 且累计位移达到轨迹范围 2% 的反向 run 才计为 reversal。由此不会把 one-way wrap reset、离散 fixture 抖动或环形传播误报为反向，同时仍能在 ping-pong 中测得真正的方向切换。
 
-Effect Lab 的 speed 选项显示例如 `1× · 1 traversal/beat · 2.13 events/s`，并始终提供全部六档节拍同步速度。Lab Effect preview 以最高 60fps 请求真实 runtime frame；紧凑的 behavior 区域只分析并显示当前所选 speed 的主要事件率以及适用的 duty、空间轨迹或 strobe 指标，不展示 runtime 实现标签、多速度对比、帧数或 aliasing 警告。参数控制仍是用户入口；完整多速度 fingerprint、readability 和 aliasing 由 CLI、Golden、Catalog 审查与 AI 编排消费。
+Effect Lab 的 speed 选项显示例如 `1× · 1 traversal/beat · 2.13 events/s`，并始终提供全部六档节拍同步速度。Effect、Cue 和 Arrangement authoring preview 都以最高 60fps 请求真实 runtime frame；紧凑的 behavior 区域只分析并显示当前所选 speed 的主要事件率以及适用的 duty、空间轨迹或 strobe 指标，不展示 runtime 实现标签、多速度对比、帧数或 aliasing 警告。参数控制仍是用户入口；完整多速度 fingerprint、readability 和 aliasing 由 CLI、Golden、Catalog 审查与 AI 编排消费。
 
 AI/自动化可用同一路径生成结构化报告和 runtime contact sheet：
 
