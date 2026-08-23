@@ -49,7 +49,7 @@ Random 为相邻 seeded cycle 生成确定性目标，并用 smoothstep 在整�
 
 空间方向使用 compiled Effect instance 的真实 SpatialPhase offsets 作为进度基准。Wrapped 轨迹使用强度加权的圆周质心并跨周期解包；只有持续至少三个 sample 且累计位移达到轨迹范围 2% 的反向 run 才计为 reversal。由此不会把 one-way wrap reset、离散 fixture 抖动或环形传播误报为反向，同时仍能在 ping-pong 中测得真正的方向切换。
 
-Effect Lab 的 speed 选项显示例如 `1× · 1 traversal/beat · 2.13 events/s`，并始终提供全部六档节拍同步速度。Lab Effect preview 以最高 60fps 请求真实 runtime frame；紧凑的 behavior 区域只分析并显示当前所选 speed 的主要事件率以及适用的 duty、空间轨迹或 strobe 指标，不展示 runtime 实现标签、多速度对比、帧数或 aliasing 警告。参数控制仍是用户入口；完整多速度 fingerprint、readability 和 aliasing 由 CLI、Golden、Catalog 审查与 AI 编排消费。
+Effect Lab 的 speed 选项显示例如 `1× · 1 traversal/beat · 2.13 events/s`，并始终提供全部六档节拍同步速度。Effect、Cue 和 Arrangement authoring preview 都以最高 60fps 请求真实 runtime frame；紧凑的 behavior 区域只分析并显示当前所选 speed 的主要事件率以及适用的 duty、空间轨迹或 strobe 指标，不展示 runtime 实现标签、多速度对比、帧数或 aliasing 警告。参数控制仍是用户入口；完整多速度 fingerprint、readability 和 aliasing 由 CLI、Golden、Catalog 审查与 AI 编排消费。
 
 AI/自动化可用同一路径生成结构化报告和 runtime contact sheet：
 
@@ -88,6 +88,8 @@ cache identity 包含 exact Effect、Stage、Layout、TargetSet、resolved fixtu
 - Arrangement scalar/Color 自动得到 continuous automation；direction/boolean/enum 自动得到 discrete automation；`color_stops` 固定为 Effect scope 且不可 automation。
 - `section` 只控制 Main/Advanced 分区；`help` 是 UI、Tooltip、aria 和 Skill 共同使用的作者说明。
 - `graph_binding` 仅在参数直接绑定 EffectGraph node property 时声明，不承担 authoring policy。
+
+内置 Effect 的标准 Intensity 参数默认值统一为 `1`，所有写入 intensity 的 authored Graph 路径也必须能够达到 `1`；运动、呼吸和转场仍可通过连续 envelope/profile 改变瞬时亮度。Cue recipe 不再用默认 override 二次压暗，较低能量由 Arrangement automation 显式表达。颜色 Gradient 用色相/饱和度变化塑造层次，不能用近黑色端点替代 dimmer fade；真正的 blackout 只能来自可审查的 intensity 路径。
 
 旧的 `value_type`、typed `default_value`、`required`、`safe_fallback`、`override_policy`、`automation`、`advanced`、`ui_hint`、平铺 `range/step/unit/enum_values` 都已删除。它们或与类型重复，或允许互相矛盾的组合。表单 last-known-good 属于编辑会话状态，不再伪装成资产内的 `safe_fallback`；控件形态从 `schema.type` 和 unit 推导。
 

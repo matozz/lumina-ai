@@ -12,22 +12,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8570034163006345,
+              "mean": 0.8999511957052221,
               "minimum": 0.0,
-              "variance": 0.12254856074967824
+              "variance": 0.09003904105396493
             },
             "aliasing": {
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.000682830810546875,
+            "frame_delta_change_energy": 0.0009754725615493953,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.69921875,
-              "mean": 0.34982824157841647,
+              "maximum": 0.9988839030265808,
+              "mean": 0.4997546378838552,
               "minimum": 0.0,
-              "variance": 0.04087387091317182
+              "variance": 0.08341606546432319
             },
             "peaks": {
               "count": 0,
@@ -42,22 +42,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8585365853658536,
+              "mean": 0.9014634146341464,
               "minimum": 0.0,
-              "variance": 0.12145151695419229
+              "variance": 0.08882712671029191
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0013639009557664394,
+            "frame_delta_change_energy": 0.0019484299700707197,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.698317289352417,
-              "mean": 0.3496529032944179,
+              "maximum": 0.9975961446762085,
+              "mean": 0.4995041546461786,
               "minimum": 0.0,
-              "variance": 0.040914419973449814
+              "variance": 0.08349881884988215
             },
             "peaks": {
               "count": 0,
@@ -72,22 +72,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8576998050682261,
+              "mean": 0.8966861598440545,
               "minimum": 0.0,
-              "variance": 0.12205084945415379
+              "variance": 0.09264009058817654
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.002727801911532879,
+            "frame_delta_change_energy": 0.0038968599401414394,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.698317289352417,
-              "mean": 0.3493027395875598,
+              "maximum": 0.9975961446762085,
+              "mean": 0.4990039203555612,
               "minimum": 0.0,
-              "variance": 0.04100343286769938
+              "variance": 0.08368047765034642
             },
             "peaks": {
               "count": 4,
@@ -107,22 +107,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8576998050682261,
+              "mean": 0.8888888888888888,
               "minimum": 0.0,
-              "variance": 0.12205084945415393
+              "variance": 0.09876543209876605
             },
             "aliasing": {
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.005389873869717121,
+            "frame_delta_change_energy": 0.0076998197473585606,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.6899038553237915,
-              "mean": 0.349227766486404,
+              "maximum": 0.9855769276618958,
+              "mean": 0.4988968151877498,
               "minimum": 0.0,
-              "variance": 0.04101633523168393
+              "variance": 0.08370680854484354
             },
             "peaks": {
               "count": 0,
@@ -146,13 +146,13 @@
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.0107421875,
+            "frame_delta_change_energy": 0.015345982275903225,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.6875,
-              "mean": 0.3490778184541252,
+              "maximum": 0.9821428656578064,
+              "mean": 0.4986826050118861,
               "minimum": 0.0,
-              "variance": 0.04117222826789921
+              "variance": 0.08402495872914276
             },
             "peaks": {
               "count": 16,
@@ -193,13 +193,13 @@
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.0107421875,
+            "frame_delta_change_energy": 0.015345982275903225,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.6875,
-              "mean": 0.3494183821794463,
+              "maximum": 0.9821428656578064,
+              "mean": 0.49916912462653185,
               "minimum": 0.0,
-              "variance": 0.04109339706954708
+              "variance": 0.08386407872847869
             },
             "peaks": {
               "count": 32,
@@ -279,22 +279,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8585365853658536,
+              "mean": 0.9014634146341464,
               "minimum": 0.0,
-              "variance": 0.12145151695419229
+              "variance": 0.08882712671029191
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0013639009557664394,
+            "frame_delta_change_energy": 0.0019484299700707197,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.698317289352417,
-              "mean": 0.3496529032944179,
+              "maximum": 0.9975961446762085,
+              "mean": 0.4995041546461786,
               "minimum": 0.0,
-              "variance": 0.040914419973449814
+              "variance": 0.08349881884988215
             },
             "peaks": {
               "count": 0,
@@ -731,22 +731,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9748169838945804,
+              "mean": 0.9834065397754987,
               "minimum": 0.6,
-              "variance": 0.008501979682264921
+              "variance": 0.005737346194420365
             },
             "aliasing": {
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0008078280166955657,
+            "frame_delta_change_energy": 0.0008975867080152958,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.7421363592147827,
-              "mean": 0.5977334194354407,
-              "minimum": 0.4391113519668579,
-              "variance": 0.00504084499024531
+              "maximum": 0.8245959639549255,
+              "mean": 0.6641482611991768,
+              "minimum": 0.4879015177488327,
+              "variance": 0.006223265717754164
             },
             "peaks": {
               "count": 0,
@@ -759,12 +759,12 @@
             "spatial_centroid": {
               "direction_reversals": 7,
               "end": [
-                0.7466421168771974,
+                0.7466421162367765,
                 0.5
               ],
-              "path_distance": 3.344501654703821,
+              "path_distance": 3.34450164044918,
               "start": [
-                0.7466421168771974,
+                0.7466421162367765,
                 0.5
               ]
             },
@@ -773,22 +773,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9746341463414637,
+              "mean": 0.9824390243902441,
               "minimum": 0.6,
-              "variance": 0.008566329565734667
+              "variance": 0.006091612135633644
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0016133588855154824,
+            "frame_delta_change_energy": 0.0017926210333826062,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.7421363592147827,
-              "mean": 0.597687049511002,
-              "minimum": 0.43993900120258334,
-              "variance": 0.005043283911542587
+              "maximum": 0.8245959639549255,
+              "mean": 0.664096739123507,
+              "minimum": 0.48882113099098207,
+              "variance": 0.006226276708679754
             },
             "peaks": {
               "count": 0,
@@ -801,12 +801,12 @@
             "spatial_centroid": {
               "direction_reversals": 7,
               "end": [
-                0.7466421168771974,
+                0.7466421162367765,
                 0.5
               ],
-              "path_distance": 3.3371945337793223,
+              "path_distance": 3.337194519811437,
               "start": [
-                0.7466421168771974,
+                0.7466421162367765,
                 0.5
               ]
             },
@@ -815,22 +815,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9727095516569207,
+              "mean": 0.9836257309941524,
               "minimum": 0.6,
-              "variance": 0.00923573825184574
+              "variance": 0.0056578092404500156
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.003222123492741953,
+            "frame_delta_change_energy": 0.0035801373131107567,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.7421363592147827,
-              "mean": 0.5975927132960643,
-              "minimum": 0.4414636343717575,
-              "variance": 0.0050493076669095435
+              "maximum": 0.8245959639549255,
+              "mean": 0.6639919208155736,
+              "minimum": 0.49051515758037567,
+              "variance": 0.006233713443030552
             },
             "peaks": {
               "count": 3,
@@ -847,12 +847,12 @@
             "spatial_centroid": {
               "direction_reversals": 7,
               "end": [
-                0.7466421168771974,
+                0.7466421162367765,
                 0.5
               ],
-              "path_distance": 3.337194533779318,
+              "path_distance": 3.3371945198114275,
               "start": [
-                0.7466421168771974,
+                0.7466421162367765,
                 0.5
               ]
             },
@@ -861,22 +861,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9711500974658877,
+              "mean": 0.9836257309941525,
               "minimum": 0.6,
-              "variance": 0.010083862461004144
+              "variance": 0.005657809240450016
             },
             "aliasing": {
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.006407492735888823,
+            "frame_delta_change_energy": 0.00711943657370283,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.7356545329093933,
-              "mean": 0.5975572544231742,
-              "minimum": 0.4447742372751236,
-              "variance": 0.005044460713759387
+              "maximum": 0.8173939347267151,
+              "mean": 0.6639525206814041,
+              "minimum": 0.49419360160827636,
+              "variance": 0.0062277295728604635
             },
             "peaks": {
               "count": 7,
@@ -897,12 +897,12 @@
             "spatial_centroid": {
               "direction_reversals": 15,
               "end": [
-                0.7466421168771974,
+                0.7466421162367765,
                 0.5
               ],
-              "path_distance": 6.617456936024359,
+              "path_distance": 6.6174569679378,
               "start": [
-                0.7466421168771974,
+                0.7466421162367765,
                 0.5
               ]
             },
@@ -920,13 +920,13 @@
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.012741476949304359,
+            "frame_delta_change_energy": 0.014157196995802208,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.7356545329093933,
-              "mean": 0.5975069861198252,
-              "minimum": 0.4508727014064789,
-              "variance": 0.005060986406492917
+              "maximum": 0.8173939347267151,
+              "mean": 0.6638966659472479,
+              "minimum": 0.5009696841239929,
+              "variance": 0.0062481313901242
             },
             "peaks": {
               "count": 15,
@@ -955,12 +955,12 @@
             "spatial_centroid": {
               "direction_reversals": 31,
               "end": [
-                0.7466421168771974,
+                0.7466421162367765,
                 0.5
               ],
-              "path_distance": 13.234913872048713,
+              "path_distance": 13.234913935875621,
               "start": [
-                0.7466421168771974,
+                0.7466421162367765,
                 0.5
               ]
             },
@@ -978,13 +978,13 @@
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.01274147694930435,
+            "frame_delta_change_energy": 0.014157196995802255,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.7356545329093933,
-              "mean": 0.5975986381856395,
-              "minimum": 0.4508727014064789,
-              "variance": 0.005057305450408134
+              "maximum": 0.8173939347267151,
+              "mean": 0.6639985015741244,
+              "minimum": 0.5009696841239929,
+              "variance": 0.0062435870002975164
             },
             "peaks": {
               "count": 31,
@@ -1014,12 +1014,12 @@
             "spatial_centroid": {
               "direction_reversals": 63,
               "end": [
-                0.7466421168771974,
+                0.7466421162367765,
                 0.5
               ],
-              "path_distance": 26.46982774409742,
+              "path_distance": 26.46982787175125,
               "start": [
-                0.7466421168771974,
+                0.7466421162367765,
                 0.5
               ]
             },
@@ -1076,22 +1076,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9729044834307992,
+              "mean": 0.983820662768031,
               "minimum": 0.6,
-              "variance": 0.008642051305434861
+              "variance": 0.005215811892738099
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0032190606376388984,
+            "frame_delta_change_energy": 0.003576734141097404,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.6895151376724243,
-              "mean": 0.5976925036131064,
-              "minimum": 0.4736897677183151,
-              "variance": 0.0028351770556220707
+              "maximum": 0.766127935051918,
+              "mean": 0.6641027989065671,
+              "minimum": 0.5263219743967056,
+              "variance": 0.0035002187109391667
             },
             "peaks": {
               "count": 3,
@@ -1108,13 +1108,13 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.6842658290050537,
-                0.5
+                0.6842658280119305,
+                0.5000000000000001
               ],
-              "path_distance": 2.694843123239222,
+              "path_distance": 2.694843108263111,
               "start": [
-                0.6842658290050537,
-                0.5
+                0.6842658280119305,
+                0.5000000000000001
               ]
             },
             "speed": 1.0
@@ -1162,22 +1162,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9120546608101396,
-              "minimum": 0.6,
-              "variance": 0.016882503600775364
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0007470703349099483,
+            "frame_delta_change_energy": 0.0008789062485448075,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.5440000221133232,
-              "mean": 0.4675373470618878,
-              "minimum": 0.39100001752376556,
-              "variance": 0.0029275517996960885
+              "maximum": 0.6400000050663948,
+              "mean": 0.5500439247142825,
+              "minimum": 0.46000000536441804,
+              "variance": 0.00405197463010821
             },
             "peaks": {
               "count": 0,
@@ -1190,12 +1190,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.6406249950780288,
+                0.640624996907718,
                 0.5
               ],
-              "path_distance": 2.999679179607672,
+              "path_distance": 2.99967918900029,
               "start": [
-                0.6406249950780288,
+                0.640624996907718,
                 0.5
               ]
             },
@@ -1204,22 +1204,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9100487804878019,
-              "minimum": 0.6,
-              "variance": 0.01707950981558603
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.001494140669819901,
+            "frame_delta_change_energy": 0.0017578124970896118,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.5440000221133232,
-              "mean": 0.46757464591322767,
-              "minimum": 0.39100001752376556,
-              "variance": 0.002928974279087527
+              "maximum": 0.6400000050663948,
+              "mean": 0.550087806179756,
+              "minimum": 0.46000000536441804,
+              "variance": 0.004053943490019207
             },
             "peaks": {
               "count": 0,
@@ -1232,12 +1232,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.6406249950780288,
+                0.640624996907718,
                 0.5
               ],
-              "path_distance": 2.9996791796076745,
+              "path_distance": 2.9996791890002976,
               "start": [
-                0.6406249950780288,
+                0.640624996907718,
                 0.5
               ]
             },
@@ -1246,22 +1246,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.913840155945422,
-              "minimum": 0.6,
-              "variance": 0.01667004852395228
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0029882813396398,
+            "frame_delta_change_energy": 0.003515624994179237,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.5440000221133232,
-              "mean": 0.4676491330444928,
-              "minimum": 0.39100001752376556,
-              "variance": 0.0029318068241432987
+              "maximum": 0.6400000050663948,
+              "mean": 0.5501754378976178,
+              "minimum": 0.46000000536441804,
+              "variance": 0.00405786392685701
             },
             "peaks": {
               "count": 0,
@@ -1274,12 +1274,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.6406249950780288,
+                0.640624996907718,
                 0.5
               ],
-              "path_distance": 2.9996791796076705,
+              "path_distance": 2.9996791890002976,
               "start": [
-                0.6406249950780288,
+                0.640624996907718,
                 0.5
               ]
             },
@@ -1288,22 +1288,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9216374269005874,
-              "minimum": 0.6,
-              "variance": 0.01576963852125457
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.005976562679279598,
+            "frame_delta_change_energy": 0.00703124998835847,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.5440000221133232,
-              "mean": 0.4676491334511525,
-              "minimum": 0.39100001752376556,
-              "variance": 0.0029318068131579263
+              "maximum": 0.6400000050663948,
+              "mean": 0.5501754371423938,
+              "minimum": 0.46000000536441804,
+              "variance": 0.004057863934106618
             },
             "peaks": {
               "count": 0,
@@ -1316,12 +1316,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.6406249950780288,
+                0.640624996907718,
                 0.5
               ],
-              "path_distance": 5.9970008247371265,
+              "path_distance": 5.997000909356558,
               "start": [
-                0.6406249950780288,
+                0.640624996907718,
                 0.5
               ]
             },
@@ -1330,22 +1330,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9060428849902563,
-              "minimum": 0.6,
-              "variance": 0.01744886365795369
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.011953125358559167,
+            "frame_delta_change_energy": 0.014062499976716913,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.5440000221133232,
-              "mean": 0.4676491349616008,
-              "minimum": 0.39100001752376556,
-              "variance": 0.0029318068004984396
+              "maximum": 0.6400000050663948,
+              "mean": 0.5501754391175977,
+              "minimum": 0.46000000536441804,
+              "variance": 0.004057864004927477
             },
             "peaks": {
               "count": 0,
@@ -1358,12 +1358,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.6406249950780288,
+                0.640624996907718,
                 0.5
               ],
-              "path_distance": 11.992610579156613,
+              "path_distance": 11.992610853888866,
               "start": [
-                0.6406249950780288,
+                0.640624996907718,
                 0.5
               ]
             },
@@ -1372,22 +1372,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9061463414634114,
-              "minimum": 0.6,
-              "variance": 0.017454905413444532
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.011953125358559209,
+            "frame_delta_change_energy": 0.01406249997671692,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.5440000221133232,
-              "mean": 0.4675746462912075,
-              "minimum": 0.39100001752376556,
-              "variance": 0.002928974275186799
+              "maximum": 0.6400000050663948,
+              "mean": 0.5500878053947188,
+              "minimum": 0.46000000536441804,
+              "variance": 0.004053943555850351
             },
             "peaks": {
               "count": 0,
@@ -1400,12 +1400,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.6406249950780288,
+                0.640624996907718,
                 0.5
               ],
-              "path_distance": 23.98522115831334,
+              "path_distance": 23.985221707777583,
               "start": [
-                0.6406249950780288,
+                0.640624996907718,
                 0.5
               ]
             },
@@ -1462,22 +1462,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.913840155945419,
-              "minimum": 0.7,
-              "variance": 0.014954648913815921
+              "mean": 1.0,
+              "minimum": 1.0,
+              "variance": 0.0
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0029882813396398004,
+            "frame_delta_change_energy": 0.0035156249941792335,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.5215936601161957,
-              "mean": 0.4675745716423784,
-              "minimum": 0.4134063273668289,
-              "variance": 0.0014630569978968124
+              "maximum": 0.6136395990848541,
+              "mean": 0.5500877186016964,
+              "minimum": 0.4863603800535202,
+              "variance": 0.0020249922898914873
             },
             "peaks": {
               "count": 0,
@@ -1490,13 +1490,13 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.6050420117379561,
-                0.5
+                0.6050420137539778,
+                0.5000000000000001
               ],
-              "path_distance": 2.5882706292588997,
+              "path_distance": 2.5882705498997334,
               "start": [
-                0.6050420117379561,
-                0.5
+                0.6050420137539778,
+                0.5000000000000001
               ]
             },
             "speed": 1.0
@@ -1544,22 +1544,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8824792581747095,
+              "mean": 0.9059053196681229,
               "minimum": 0.6,
-              "variance": 0.028433872800620777
+              "variance": 0.02495780655540059
             },
             "aliasing": {
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0008085883222520343,
+            "frame_delta_change_energy": 0.0008984314656117947,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.5687999665737152,
-              "mean": 0.48599998748203505,
-              "minimum": 0.40319998264312745,
-              "variance": 0.00342624689517392
+              "maximum": 0.6319999843835831,
+              "mean": 0.5400000002426066,
+              "minimum": 0.4480000019073486,
+              "variance": 0.0042299346730261
             },
             "peaks": {
               "count": 0,
@@ -1574,22 +1574,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8821463414634155,
+              "mean": 0.9055609756097568,
               "minimum": 0.6,
-              "variance": 0.02841295419393213
+              "variance": 0.024954441403926577
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0016171442111954089,
+            "frame_delta_change_energy": 0.0017968269239645475,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.5687999665737152,
-              "mean": 0.48599998874780637,
-              "minimum": 0.40319998264312745,
-              "variance": 0.0034245757094965037
+              "maximum": 0.6319999843835831,
+              "mean": 0.5400000010525302,
+              "minimum": 0.4480000019073486,
+              "variance": 0.004227871349808638
             },
             "peaks": {
               "count": 0,
@@ -1604,22 +1604,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8830409356725171,
+              "mean": 0.9048732943469805,
               "minimum": 0.6,
-              "variance": 0.028425840429533958
+              "variance": 0.024947011236125947
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0032340285135433063,
+            "frame_delta_change_energy": 0.0035933651612140177,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.5687999665737152,
-              "mean": 0.48599998824312907,
-              "minimum": 0.40319998264312745,
-              "variance": 0.0034212380007486195
+              "maximum": 0.6319999843835831,
+              "mean": 0.5400000003694789,
+              "minimum": 0.4480000019073486,
+              "variance": 0.004223750503339368
             },
             "peaks": {
               "count": 0,
@@ -1634,22 +1634,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8783625730994176,
+              "mean": 0.9033138401559475,
               "minimum": 0.6,
-              "variance": 0.029492835402345794
+              "variance": 0.024959778697339122
             },
             "aliasing": {
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.006465979013591999,
+            "frame_delta_change_energy": 0.007184421387501052,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.5687999665737152,
-              "mean": 0.4859999881269407,
-              "minimum": 0.40319998264312745,
-              "variance": 0.0034212382005487387
+              "maximum": 0.6319999843835831,
+              "mean": 0.5400000002068155,
+              "minimum": 0.4480000019073486,
+              "variance": 0.004223750571117911
             },
             "peaks": {
               "count": 0,
@@ -1664,22 +1664,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.881481481481484,
+              "mean": 0.9064327485380139,
               "minimum": 0.6,
-              "variance": 0.02961807811710332
+              "variance": 0.024929379980164937
             },
             "aliasing": {
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.012915339041501292,
+            "frame_delta_change_energy": 0.014350377442315215,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.5687999665737152,
-              "mean": 0.4859999865932543,
-              "minimum": 0.40319998264312745,
-              "variance": 0.0034212376240345625
+              "maximum": 0.6319999843835831,
+              "mean": 0.5399999997420619,
+              "minimum": 0.4480000019073486,
+              "variance": 0.004223750104684917
             },
             "peaks": {
               "count": 0,
@@ -1694,22 +1694,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8813658536585389,
+              "mean": 0.9063414634146355,
               "minimum": 0.6,
-              "variance": 0.029633256395002312
+              "variance": 0.024945151695419082
             },
             "aliasing": {
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.012915339041501214,
+            "frame_delta_change_energy": 0.014350377442315237,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.5687999665737152,
-              "mean": 0.485999986607856,
-              "minimum": 0.40319998264312745,
-              "variance": 0.0034245754168385073
+              "maximum": 0.6319999843835831,
+              "mean": 0.5399999997499507,
+              "minimum": 0.4480000019073486,
+              "variance": 0.004227870836494387
             },
             "peaks": {
               "count": 0,
@@ -1772,22 +1772,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.8813658536585396,
+              "mean": 0.9047804878048806,
               "minimum": 0.6,
-              "variance": 0.028696671029148742
+              "variance": 0.02527470791195702
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.001617155023268425,
+            "frame_delta_change_energy": 0.0017968389438465253,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.568797205388546,
-              "mean": 0.4860699471642325,
-              "minimum": 0.40320277214050293,
-              "variance": 0.003429587047252401
+              "maximum": 0.6319969117641449,
+              "mean": 0.5400777323856581,
+              "minimum": 0.448003089427948,
+              "variance": 0.00423405832281061
             },
             "peaks": {
               "count": 0,
@@ -1852,13 +1852,13 @@
               "risk": "none"
             },
             "color_change_energy": 0.002861346585692462,
-            "frame_delta_change_energy": 0.0012492988694361616,
+            "frame_delta_change_energy": 0.0013445137096937036,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.6290000200271606,
-              "mean": 0.5737769796069863,
-              "minimum": 0.5185000181198121,
-              "variance": 0.0015270254765970513
+              "maximum": 0.7400000035762787,
+              "mean": 0.6750317240616595,
+              "minimum": 0.6100000023841858,
+              "variance": 0.002113529999827088
             },
             "peaks": {
               "count": 0,
@@ -1871,12 +1871,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.5878378365572844,
+                0.5878378362051321,
                 0.5
               ],
-              "path_distance": 1.7371002078288538,
+              "path_distance": 1.737100192366938,
               "start": [
-                0.5878378365572844,
+                0.5878378362051321,
                 0.5
               ]
             },
@@ -1895,13 +1895,13 @@
               "risk": "none"
             },
             "color_change_energy": 0.005245698355178343,
-            "frame_delta_change_energy": 0.002390526169921039,
+            "frame_delta_change_energy": 0.002580955850436116,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.6290000200271606,
-              "mean": 0.57380391546575,
-              "minimum": 0.5185000181198121,
-              "variance": 0.0015277674493391034
+              "maximum": 0.7400000035762787,
+              "mean": 0.6750634150330618,
+              "minimum": 0.6100000023841858,
+              "variance": 0.002114556988910585
             },
             "peaks": {
               "count": 0,
@@ -1914,12 +1914,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.5878378365572844,
+                0.5878378362051321,
                 0.5
               ],
-              "path_distance": 1.7370772589091863,
+              "path_distance": 1.7370773035153984,
               "start": [
-                0.5878378365572844,
+                0.5878378362051321,
                 0.5
               ]
             },
@@ -1938,13 +1938,13 @@
               "risk": "none"
             },
             "color_change_energy": 0.010154794431302596,
-            "frame_delta_change_energy": 0.0046969017700785485,
+            "frame_delta_change_energy": 0.005077761131108713,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.6290000200271606,
-              "mean": 0.573857709585342,
-              "minimum": 0.5185000181198121,
-              "variance": 0.0015292448737721518
+              "maximum": 0.7400000035762787,
+              "mean": 0.6751267052417138,
+              "minimum": 0.6100000023841858,
+              "variance": 0.0021166018797073734
             },
             "peaks": {
               "count": 0,
@@ -1957,12 +1957,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.5878378365572844,
+                0.5878378362051321,
                 0.5
               ],
-              "path_distance": 1.7367860776964914,
+              "path_distance": 1.7367861165095793,
               "start": [
-                0.5878378365572844,
+                0.5878378362051321,
                 0.5
               ]
             },
@@ -1981,13 +1981,13 @@
               "risk": "none"
             },
             "color_change_energy": 0.01990474369693966,
-            "frame_delta_change_energy": 0.009292592248740723,
+            "frame_delta_change_energy": 0.010054310970801051,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.6290000200271606,
-              "mean": 0.573857708655834,
-              "minimum": 0.5185000181198121,
-              "variance": 0.001529244869337753
+              "maximum": 0.7400000035762787,
+              "mean": 0.6751267040798299,
+              "minimum": 0.6100000023841858,
+              "variance": 0.0021166019011990165
             },
             "peaks": {
               "count": 0,
@@ -2000,12 +2000,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.5878378365572844,
+                0.5878378362051321,
                 0.5
               ],
-              "path_distance": 3.4732330716544775,
+              "path_distance": 3.4732331445937907,
               "start": [
-                0.5878378365572844,
+                0.5878378362051321,
                 0.5
               ]
             },
@@ -2024,13 +2024,13 @@
               "risk": "caution"
             },
             "color_change_energy": 0.039090261025106474,
-            "frame_delta_change_energy": 0.01840537790528825,
+            "frame_delta_change_energy": 0.019928815349408893,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.6290000200271606,
-              "mean": 0.5738577058673138,
-              "minimum": 0.5185000181198121,
-              "variance": 0.0015292449000953866
+              "maximum": 0.7400000035762787,
+              "mean": 0.6751267036150771,
+              "minimum": 0.6100000023841858,
+              "variance": 0.002116601937644489
             },
             "peaks": {
               "count": 0,
@@ -2043,12 +2043,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.5878378365572844,
+                0.5878378362051321,
                 0.5
               ],
-              "path_distance": 6.936879628453043,
+              "path_distance": 6.936879618799245,
               "start": [
-                0.5878378365572844,
+                0.5878378362051321,
                 0.5
               ]
             },
@@ -2067,13 +2067,13 @@
               "risk": "severe"
             },
             "color_change_energy": 0.03909026102510638,
-            "frame_delta_change_energy": 0.018405377905288234,
+            "frame_delta_change_energy": 0.01992881534940885,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.6290000200271606,
-              "mean": 0.5738039084876422,
-              "minimum": 0.5185000181198121,
-              "variance": 0.0015277674401706933
+              "maximum": 0.7400000035762787,
+              "mean": 0.675063412590726,
+              "minimum": 0.6100000023841858,
+              "variance": 0.002114557011783192
             },
             "peaks": {
               "count": 0,
@@ -2086,12 +2086,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.5878378365572844,
+                0.5878378362051321,
                 0.5
               ],
-              "path_distance": 13.873759256906078,
+              "path_distance": 13.873759237598493,
               "start": [
-                0.5878378365572844,
+                0.5878378362051321,
                 0.5
               ]
             },
@@ -2158,13 +2158,13 @@
               "risk": "none"
             },
             "color_change_energy": 0.005245698355178366,
-            "frame_delta_change_energy": 0.002390526169921038,
+            "frame_delta_change_energy": 0.002580955850436122,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.6128176689147949,
-              "mean": 0.5737769642457727,
-              "minimum": 0.5346823692321777,
-              "variance": 0.0007631399235731413
+              "maximum": 0.7209619522094727,
+              "mean": 0.6750317077171513,
+              "minimum": 0.6290380716323852,
+              "variance": 0.0010562490120799232
             },
             "peaks": {
               "count": 0,
@@ -2177,13 +2177,13 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.5638005486934244,
-                0.49999999999999994
+                0.5638005478321603,
+                0.5000000000000002
               ],
-              "path_distance": 1.5166474838456048,
+              "path_distance": 1.516647485842185,
               "start": [
-                0.5638005486934244,
-                0.49999999999999994
+                0.5638005478321603,
+                0.5000000000000002
               ]
             },
             "speed": 0.5
@@ -2231,22 +2231,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 0.4,
-              "mean": 0.2710590531966756,
+              "mean": 0.27183992191312284,
               "minimum": 0.2,
-              "variance": 0.009162421598127288
+              "variance": 0.009207010002141533
             },
             "aliasing": {
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0007031188346445565,
+            "frame_delta_change_energy": 0.0007812431780621423,
             "graph_cycles_per_beat": 0.125,
             "intensity": {
-              "maximum": 0.1992841422557831,
-              "mean": 0.17965435980332478,
-              "minimum": 0.1597597599029541,
-              "variance": 0.00011141377277060688
+              "maximum": 0.22142683267593383,
+              "mean": 0.19961596065836718,
+              "minimum": 0.17751084566116332,
+              "variance": 0.0001375478814277993
             },
             "peaks": {
               "count": 0,
@@ -2262,7 +2262,7 @@
                 0.0,
                 0.5
               ],
-              "path_distance": 4.000000000000007,
+              "path_distance": 3.9999999999999987,
               "start": [
                 0.0,
                 0.5
@@ -2273,22 +2273,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 0.4,
-              "mean": 0.27024390243902174,
+              "mean": 0.27180487804877784,
               "minimum": 0.2,
-              "variance": 0.009114574657941703
+              "variance": 0.00920503509815574
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0014062376692891118,
+            "frame_delta_change_energy": 0.0015624863561242808,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.19927340149879455,
-              "mean": 0.17965318783972364,
-              "minimum": 0.15981013774871827,
-              "variance": 0.00011140873399605938
+              "maximum": 0.2214148998260498,
+              "mean": 0.19961465827648167,
+              "minimum": 0.17756682634353638,
+              "variance": 0.00013754166587506643
             },
             "peaks": {
               "count": 0,
@@ -2304,7 +2304,7 @@
                 0.0,
                 0.5
               ],
-              "path_distance": 4.000000000000007,
+              "path_distance": 3.9999999999999996,
               "start": [
                 0.0,
                 0.5
@@ -2324,13 +2324,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.002811934892088177,
+            "frame_delta_change_energy": 0.003124372195452449,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.19924954175949097,
-              "mean": 0.179661508672825,
-              "minimum": 0.16030345438048244,
-              "variance": 0.00011096674752688776
+              "maximum": 0.2213883876800537,
+              "mean": 0.19962390389213566,
+              "minimum": 0.17811495726928114,
+              "variance": 0.00013699602045313578
             },
             "peaks": {
               "count": 0,
@@ -2346,7 +2346,7 @@
                 0.0,
                 0.5
               ],
-              "path_distance": 3.999999999999998,
+              "path_distance": 3.999999999999997,
               "start": [
                 0.0,
                 0.5
@@ -2366,13 +2366,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.005623869784176339,
+            "frame_delta_change_energy": 0.006248744390904903,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.19924954175949097,
-              "mean": 0.17970826535196993,
-              "minimum": 0.16225713416934012,
-              "variance": 0.00010902957907962411
+              "maximum": 0.2213883876800537,
+              "mean": 0.19967585662652168,
+              "minimum": 0.18028571009635924,
+              "variance": 0.00013460445172258566
             },
             "peaks": {
               "count": 0,
@@ -2388,7 +2388,7 @@
                 0.0,
                 0.5
               ],
-              "path_distance": 7.999999999999991,
+              "path_distance": 7.999999999999995,
               "start": [
                 0.0,
                 0.5
@@ -2408,13 +2408,13 @@
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.011247739568352712,
+            "frame_delta_change_energy": 0.012497488781809809,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.1976785659790039,
-              "mean": 0.17955939402589483,
-              "minimum": 0.16225713416934012,
-              "variance": 0.00010955533826729391
+              "maximum": 0.21964285969734193,
+              "mean": 0.19951044332678994,
+              "minimum": 0.18028571009635924,
+              "variance": 0.00013525352977584323
             },
             "peaks": {
               "count": 0,
@@ -2430,7 +2430,7 @@
                 0.0,
                 0.5
               ],
-              "path_distance": 16.000000000000032,
+              "path_distance": 16.000000000000014,
               "start": [
                 0.0,
                 0.5
@@ -2450,13 +2450,13 @@
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.011247739568352703,
+            "frame_delta_change_energy": 0.012497488781809755,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.1976785659790039,
-              "mean": 0.17955896417106107,
-              "minimum": 0.16225713416934012,
-              "variance": 0.00010966203194480677
+              "maximum": 0.21964285969734193,
+              "mean": 0.19950996571052257,
+              "minimum": 0.18028571009635924,
+              "variance": 0.00013538525039069135
             },
             "peaks": {
               "count": 0,
@@ -2472,7 +2472,7 @@
                 0.0,
                 0.5
               ],
-              "path_distance": 32.00000000000015,
+              "path_distance": 32.000000000000014,
               "start": [
                 0.0,
                 0.5
@@ -2540,13 +2540,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0029360144864767753,
+            "frame_delta_change_energy": 0.0032622383674606663,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.20650301575660707,
-              "mean": 0.19040529022345457,
-              "minimum": 0.1482539653778076,
-              "variance": 0.00043936708803252915
+              "maximum": 0.2294477939605713,
+              "mean": 0.21156143881670986,
+              "minimum": 0.16472663283348082,
+              "variance": 0.0005424285189793461
             },
             "peaks": {
               "count": 0,
@@ -2559,12 +2559,12 @@
             "spatial_centroid": {
               "direction_reversals": 3,
               "end": [
-                0.04365929146091384,
+                0.043659291572353626,
                 0.5
               ],
-              "path_distance": 3.6507256683126843,
+              "path_distance": 3.6507256674211703,
               "start": [
-                0.04365929146091384,
+                0.043659291572353626,
                 0.5
               ]
             },
@@ -2613,22 +2613,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 0.6,
-              "mean": 0.3967789165446604,
+              "mean": 0.404587603709131,
               "minimum": 0.2,
-              "variance": 0.011541015543774782
+              "variance": 0.011217997328030329
             },
             "aliasing": {
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0008287010015919807,
+            "frame_delta_change_energy": 0.0009749423363246026,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.2557446214556694,
-              "mean": 0.19123629480954932,
-              "minimum": 0.15111111104488373,
-              "variance": 0.000958145965026415
+              "maximum": 0.3008760195970535,
+              "mean": 0.22498387004102005,
+              "minimum": 0.17777777433395386,
+              "variance": 0.001326153512184874
             },
             "peaks": {
               "count": 0,
@@ -2641,13 +2641,13 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.5069218571597423,
-                0.4115165305523463
+                0.506921851315022,
+                0.411516531034542
               ],
-              "path_distance": 2.889869276332692,
+              "path_distance": 2.8898693757805396,
               "start": [
-                0.5069218571597423,
-                0.4115165305523463
+                0.506921851315022,
+                0.411516531034542
               ]
             },
             "speed": 0.25
@@ -2655,22 +2655,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 0.6,
-              "mean": 0.3959024390243902,
+              "mean": 0.40370731707317103,
               "minimum": 0.2,
-              "variance": 0.01166711243307559
+              "variance": 0.011357963117192163
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0016556296264752738,
+            "frame_delta_change_energy": 0.0019477995112538338,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.2557446214556694,
-              "mean": 0.19122622284783827,
-              "minimum": 0.15111111104488373,
-              "variance": 0.0009582093464460869
+              "maximum": 0.3008760195970535,
+              "mean": 0.22497202052692106,
+              "minimum": 0.17777777433395386,
+              "variance": 0.0013262412337623098
             },
             "peaks": {
               "count": 0,
@@ -2683,13 +2683,13 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.5069218571597423,
-                0.4115165305523463
+                0.506921851315022,
+                0.411516531034542
               ],
-              "path_distance": 2.875976441981524,
+              "path_distance": 2.875976346802963,
               "start": [
-                0.5069218571597423,
-                0.4115165305523463
+                0.506921851315022,
+                0.411516531034542
               ]
             },
             "speed": 0.5
@@ -2697,22 +2697,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 0.6,
-              "mean": 0.39805068226120854,
+              "mean": 0.4011695906432749,
               "minimum": 0.2,
-              "variance": 0.01161413388355008
+              "variance": 0.011491809445641358
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0033087922725826497,
+            "frame_delta_change_energy": 0.0038926966954022663,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.2557446214556694,
-              "mean": 0.1912115307916936,
-              "minimum": 0.15111111134290695,
-              "variance": 0.0009586859751218401
+              "maximum": 0.3008760195970535,
+              "mean": 0.22495473606370328,
+              "minimum": 0.17777777433395386,
+              "variance": 0.0013269009335285153
             },
             "peaks": {
               "count": 0,
@@ -2725,13 +2725,13 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.5069218571597423,
-                0.4115165305523463
+                0.506921851315022,
+                0.411516531034542
               ],
-              "path_distance": 2.8559873653455736,
+              "path_distance": 2.855987302583228,
               "start": [
-                0.5069218571597423,
-                0.4115165305523463
+                0.506921851315022,
+                0.411516531034542
               ]
             },
             "speed": 1.0
@@ -2748,13 +2748,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.006565368827432397,
+            "frame_delta_change_energy": 0.007723963167518365,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.2557446214556694,
-              "mean": 0.19127005670749764,
-              "minimum": 0.15111111134290695,
-              "variance": 0.000960590245574083
+              "maximum": 0.3008760195970535,
+              "mean": 0.22502358953971385,
+              "minimum": 0.17777777433395386,
+              "variance": 0.0013295365939216854
             },
             "peaks": {
               "count": 0,
@@ -2767,13 +2767,13 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.5069218571597423,
-                0.4115165305523463
+                0.506921851315022,
+                0.411516531034542
               ],
-              "path_distance": 5.584081341400033,
+              "path_distance": 5.584081305445606,
               "start": [
-                0.5069218571597423,
-                0.4115165305523463
+                0.506921851315022,
+                0.411516531034542
               ]
             },
             "speed": 2.0
@@ -2790,13 +2790,13 @@
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.01290242467075586,
+            "frame_delta_change_energy": 0.015179322846233877,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.2557446214556694,
-              "mean": 0.19134022366930875,
-              "minimum": 0.15111111134290695,
-              "variance": 0.0009646426032769044
+              "maximum": 0.3008760195970535,
+              "mean": 0.22510613923649117,
+              "minimum": 0.17777777433395386,
+              "variance": 0.0013351454164485473
             },
             "peaks": {
               "count": 32,
@@ -2826,13 +2826,13 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.5069218571597423,
-                0.4115165305523463
+                0.506921851315022,
+                0.411516531034542
               ],
-              "path_distance": 10.331426391829881,
+              "path_distance": 10.33142539356502,
               "start": [
-                0.5069218571597423,
-                0.4115165305523463
+                0.506921851315022,
+                0.411516531034542
               ]
             },
             "speed": 4.0
@@ -2849,13 +2849,13 @@
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.012902424670755886,
+            "frame_delta_change_energy": 0.01517932284623384,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.2557446214556694,
-              "mean": 0.1913688709212521,
-              "minimum": 0.15111111134290695,
-              "variance": 0.0009647417156768102
+              "maximum": 0.3008760195970535,
+              "mean": 0.2251398418833564,
+              "minimum": 0.17777777433395386,
+              "variance": 0.0013352825963583268
             },
             "peaks": {
               "count": 64,
@@ -2885,13 +2885,13 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.5069218571597423,
-                0.4115165305523463
+                0.506921851315022,
+                0.411516531034542
               ],
-              "path_distance": 20.66285278365979,
+              "path_distance": 20.66285078712995,
               "start": [
-                0.5069218571597423,
-                0.4115165305523463
+                0.506921851315022,
+                0.411516531034542
               ]
             },
             "speed": 8.0
@@ -2947,22 +2947,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 0.45,
-              "mean": 0.3968226120857696,
+              "mean": 0.4050877192982448,
               "minimum": 0.35,
-              "variance": 0.0005904890013641429
+              "variance": 0.0006230429875859251
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.003291591948363932,
+            "frame_delta_change_energy": 0.0038724610349163435,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.21318452024017462,
-              "mean": 0.19122918301710715,
-              "minimum": 0.1781488873809576,
-              "variance": 0.00012061465500384647
+              "maximum": 0.2508053099049721,
+              "mean": 0.22497550312874753,
+              "minimum": 0.2095869206264615,
+              "variance": 0.00016694068840953058
             },
             "peaks": {
               "count": 0,
@@ -2975,13 +2975,13 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.506366056915982,
-                0.4764468636823849
+                0.5063660587490844,
+                0.4764468640769742
               ],
-              "path_distance": 1.780121845389161,
+              "path_distance": 1.7801218418472693,
               "start": [
-                0.506366056915982,
-                0.4764468636823849
+                0.5063660587490844,
+                0.4764468640769742
               ]
             },
             "speed": 1.0
@@ -3029,22 +3029,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.7832113225963632,
+              "mean": 0.79492435334307,
               "minimum": 0.6,
-              "variance": 0.013695690335439631
+              "variance": 0.01535735152502122
             },
             "aliasing": {
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0008789062267169366,
+            "frame_delta_change_energy": 0.0009765624999999995,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.5399999856948853,
-              "mean": 0.44999998973766286,
-              "minimum": 0.3599999904632568,
-              "variance": 0.004048023270066681
+              "maximum": 0.6,
+              "mean": 0.5000000015410689,
+              "minimum": 0.4,
+              "variance": 0.0049975598517739495
             },
             "peaks": {
               "count": 0,
@@ -3060,7 +3060,7 @@
                 0.6,
                 0.5
               ],
-              "path_distance": 1.632971887296868,
+              "path_distance": 1.6329718252975538,
               "start": [
                 0.6,
                 0.5
@@ -3071,22 +3071,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.7851707317073139,
+              "mean": 0.7929756097560942,
               "minimum": 0.6,
-              "variance": 0.013984970850684016
+              "variance": 0.015092121356335428
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0017578124534338739,
+            "frame_delta_change_energy": 0.001953124999999999,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.5399999856948853,
-              "mean": 0.44999999067223584,
-              "minimum": 0.3599999904632568,
-              "variance": 0.004046048660588195
+              "maximum": 0.6,
+              "mean": 0.5000000002815538,
+              "minimum": 0.4,
+              "variance": 0.0049951220089681
             },
             "peaks": {
               "count": 0,
@@ -3102,7 +3102,7 @@
                 0.6,
                 0.5
               ],
-              "path_distance": 1.6329718872968684,
+              "path_distance": 1.632971825297552,
               "start": [
                 0.6,
                 0.5
@@ -3122,13 +3122,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.003515624906867749,
+            "frame_delta_change_energy": 0.003906250000000002,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.5399999856948853,
-              "mean": 0.44999998934715835,
-              "minimum": 0.3599999904632568,
-              "variance": 0.0040421051324325595
+              "maximum": 0.6,
+              "mean": 0.49999999883448476,
+              "minimum": 0.4,
+              "variance": 0.004990253449531772
             },
             "peaks": {
               "count": 0,
@@ -3144,7 +3144,7 @@
                 0.6,
                 0.5
               ],
-              "path_distance": 1.6329718872968648,
+              "path_distance": 1.632971825297548,
               "start": [
                 0.6,
                 0.5
@@ -3164,13 +3164,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.007031249813735478,
+            "frame_delta_change_energy": 0.007812500000000005,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.5399999856948853,
-              "mean": 0.44999999241435046,
-              "minimum": 0.3599999904632568,
-              "variance": 0.0040421052238415935
+              "maximum": 0.6,
+              "mean": 0.49999999925203714,
+              "minimum": 0.4,
+              "variance": 0.004990253444744599
             },
             "peaks": {
               "count": 0,
@@ -3186,7 +3186,7 @@
                 0.6,
                 0.5
               ],
-              "path_distance": 3.265943774593727,
+              "path_distance": 3.2659436505950974,
               "start": [
                 0.6,
                 0.5
@@ -3206,13 +3206,13 @@
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.014062499627470929,
+            "frame_delta_change_energy": 0.01562500000000003,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.5399999856948853,
-              "mean": 0.4499999927847011,
-              "minimum": 0.3599999904632568,
-              "variance": 0.004042105300202094
+              "maximum": 0.6,
+              "mean": 0.4999999995352481,
+              "minimum": 0.4,
+              "variance": 0.004990253414284718
             },
             "peaks": {
               "count": 0,
@@ -3228,7 +3228,7 @@
                 0.6,
                 0.5
               ],
-              "path_distance": 6.531887549187469,
+              "path_distance": 6.531887301190204,
               "start": [
                 0.6,
                 0.5
@@ -3248,13 +3248,13 @@
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.014062499627470894,
+            "frame_delta_change_energy": 0.01562499999999996,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.5399999856948853,
-              "mean": 0.4499999927892903,
-              "minimum": 0.3599999904632568,
-              "variance": 0.004046048817568126
+              "maximum": 0.6,
+              "mean": 0.4999999995347939,
+              "minimum": 0.4,
+              "variance": 0.004995121954201098
             },
             "peaks": {
               "count": 0,
@@ -3270,7 +3270,7 @@
                 0.6,
                 0.5
               ],
-              "path_distance": 13.06377509837496,
+              "path_distance": 13.063774602380395,
               "start": [
                 0.6,
                 0.5
@@ -3329,22 +3329,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 0.9,
-              "mean": 0.784405458089672,
+              "mean": 0.795321637426903,
               "minimum": 0.7,
-              "variance": 0.002251936968259949
+              "variance": 0.003252966724804183
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.003515311203598511,
+            "frame_delta_change_energy": 0.003905901404589324,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.49499998055398464,
-              "mean": 0.44999998855447587,
-              "minimum": 0.4049999862909317,
-              "variance": 0.0010105263200266557
+              "maximum": 0.5499999996274709,
+              "mean": 0.5000000001682374,
+              "minimum": 0.45,
+              "variance": 0.001247563373898606
             },
             "peaks": {
               "count": 0,
@@ -3357,12 +3357,12 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.6373738697524112,
+                0.6373738698001876,
                 0.5000000000000001
               ],
-              "path_distance": 2.209050501327329,
+              "path_distance": 2.2090505152664126,
               "start": [
-                0.6373738697524112,
+                0.6373738698001876,
                 0.5000000000000001
               ]
             },
@@ -4030,14 +4030,14 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "color_change_energy": 0.004011166690298591,
-            "frame_delta_change_energy": 0.0014257637824972788,
+            "color_change_energy": 0.002881270748238681,
+            "frame_delta_change_energy": 0.0012110926232539708,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.8500000238418579,
-              "mean": 0.5767465191477389,
-              "minimum": 0.10199999809265137,
-              "variance": 0.06168774003676245
+              "maximum": 1.0,
+              "mean": 0.6785252979866117,
+              "minimum": 0.11999999731779099,
+              "variance": 0.08538095005918844
             },
             "peaks": {
               "count": 0,
@@ -4061,14 +4061,14 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "color_change_energy": 0.0070498976819193425,
-            "frame_delta_change_energy": 0.002755254702831297,
+            "color_change_energy": 0.0037005329423244167,
+            "frame_delta_change_energy": 0.0023728481132081693,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.8500000238418579,
-              "mean": 0.5765126321083162,
-              "minimum": 0.10199999809265137,
-              "variance": 0.06177413277562527
+              "maximum": 1.0,
+              "mean": 0.6782501364553847,
+              "minimum": 0.11999999731779099,
+              "variance": 0.08550052477823412
             },
             "peaks": {
               "count": 0,
@@ -4092,14 +4092,14 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "color_change_energy": 0.013657824895551729,
-            "frame_delta_change_energy": 0.00545604182924966,
+            "color_change_energy": 0.00692814260323046,
+            "frame_delta_change_energy": 0.004695932163017288,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.8500000238418579,
-              "mean": 0.5760393289097568,
-              "minimum": 0.10199999809265137,
-              "variance": 0.06195860876692113
+              "maximum": 1.0,
+              "mean": 0.6776933080242623,
+              "minimum": 0.11999999731779099,
+              "variance": 0.08575585480564085
             },
             "peaks": {
               "count": 0,
@@ -4123,14 +4123,14 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "color_change_energy": 0.026924636032305976,
-            "frame_delta_change_energy": 0.01089211945722303,
+            "color_change_energy": 0.013464277865729946,
+            "frame_delta_change_energy": 0.009346957285366126,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.8500000238418579,
-              "mean": 0.5759012526006494,
-              "minimum": 0.10199999809265137,
-              "variance": 0.06200864572043509
+              "maximum": 1.0,
+              "mean": 0.6775308648599984,
+              "minimum": 0.11999999731779099,
+              "variance": 0.0858251106484689
             },
             "peaks": {
               "count": 0,
@@ -4154,14 +4154,14 @@
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "color_change_energy": 0.05376822886353552,
-            "frame_delta_change_energy": 0.02176904331424431,
+            "color_change_energy": 0.02626005751350644,
+            "frame_delta_change_energy": 0.018673760825691978,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.8500000238418579,
-              "mean": 0.5755256848958036,
-              "minimum": 0.10199999809265137,
-              "variance": 0.06231402387449816
+              "maximum": 1.0,
+              "mean": 0.6770890195786837,
+              "minimum": 0.11999999731779099,
+              "variance": 0.08624777879302623
             },
             "peaks": {
               "count": 0,
@@ -4185,14 +4185,14 @@
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "color_change_energy": 0.05376822886353572,
-            "frame_delta_change_energy": 0.02176904331424426,
+            "color_change_energy": 0.02626005751350642,
+            "frame_delta_change_energy": 0.018673760825692012,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.8500000238418579,
-              "mean": 0.5759876611756115,
-              "minimum": 0.10199999809265137,
-              "variance": 0.0621558469868662
+              "maximum": 1.0,
+              "mean": 0.6776325210638162,
+              "minimum": 0.11999999731779099,
+              "variance": 0.08602884886264449
             },
             "peaks": {
               "count": 0,
@@ -4264,14 +4264,14 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "color_change_energy": 0.013657824895551727,
-            "frame_delta_change_energy": 0.005456041829249659,
+            "color_change_energy": 0.00692814260323046,
+            "frame_delta_change_energy": 0.004695932163017287,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.8500000238418579,
-              "mean": 0.5760393289097568,
-              "minimum": 0.10199999809265137,
-              "variance": 0.06195860876692113
+              "maximum": 1.0,
+              "mean": 0.6776933080242623,
+              "minimum": 0.11999999731779099,
+              "variance": 0.08575585480564085
             },
             "peaks": {
               "count": 0,
@@ -4326,22 +4326,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.7832308443142888,
-              "minimum": 0.48,
-              "variance": 0.019213182923689343
+              "mean": 0.7950219619326403,
+              "minimum": 0.52,
+              "variance": 0.018307673993027577
             },
             "aliasing": {
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0008789050960368367,
+            "frame_delta_change_energy": 0.0009765612509323821,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.6016924226284027,
-              "mean": 0.45007390668717007,
-              "minimum": 0.2983075678348541,
-              "variance": 0.011511217679464301
+              "maximum": 0.6685471606254577,
+              "mean": 0.5000821316072962,
+              "minimum": 0.33145286187529566,
+              "variance": 0.01421138066662873
             },
             "peaks": {
               "count": 0,
@@ -4356,22 +4356,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.783336585365846,
-              "minimum": 0.48,
-              "variance": 0.019211111100535323
+              "mean": 0.7950439024390166,
+              "minimum": 0.52,
+              "variance": 0.018215437096966148
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0017577668676102892,
+            "frame_delta_change_energy": 0.0019530743283892277,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.6016912114620209,
-              "mean": 0.45014775330480056,
-              "minimum": 0.29830876007676127,
-              "variance": 0.011516776121779444
+              "maximum": 0.6685458052158356,
+              "mean": 0.5001641824007016,
+              "minimum": 0.3314541892707348,
+              "variance": 0.014218242926578695
             },
             "peaks": {
               "count": 0,
@@ -4386,22 +4386,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.7841715399610146,
-              "minimum": 0.48,
-              "variance": 0.019376750301137342
+              "mean": 0.7944639376218331,
+              "minimum": 0.52,
+              "variance": 0.017875005034787526
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.003515367591703585,
+            "frame_delta_change_energy": 0.0039059640445930194,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.6016912114620209,
-              "mean": 0.45029522847274345,
-              "minimum": 0.29830876007676127,
-              "variance": 0.0115278440628441
+              "maximum": 0.6685458052158356,
+              "mean": 0.5003280435720656,
+              "minimum": 0.3314541892707348,
+              "variance": 0.014231906978246505
             },
             "peaks": {
               "count": 0,
@@ -4416,22 +4416,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.7869785575048722,
+              "mean": 0.797270955165691,
               "minimum": 0.52,
-              "variance": 0.01907098784431294
+              "variance": 0.017711070832810795
             },
             "aliasing": {
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.007028379563998889,
+            "frame_delta_change_energy": 0.007809310850134352,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.6015589880943298,
-              "mean": 0.4502952306277566,
-              "minimum": 0.2984410034865141,
-              "variance": 0.01152784434506601
+              "maximum": 0.6683988773822784,
+              "mean": 0.5003280444451943,
+              "minimum": 0.33160112239420414,
+              "variance": 0.01423190716708155
             },
             "peaks": {
               "count": 0,
@@ -4446,22 +4446,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.781364522417153,
+              "mean": 0.801637426900584,
               "minimum": 0.52,
-              "variance": 0.019267533790074093
+              "variance": 0.016493225265893814
             },
             "aliasing": {
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.014044502102478894,
+            "frame_delta_change_energy": 0.015605002584052272,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.6014580190181732,
-              "mean": 0.4502952299184261,
-              "minimum": 0.29854195773601533,
-              "variance": 0.011527844456932609
+              "maximum": 0.6682867014408111,
+              "mean": 0.5003280443824526,
+              "minimum": 0.3317132955789566,
+              "variance": 0.014231907444836074
             },
             "peaks": {
               "count": 0,
@@ -4476,22 +4476,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.781307317073166,
+              "mean": 0.8014439024390202,
               "minimum": 0.52,
-              "variance": 0.019282973848899373
+              "variance": 0.016470890755502874
             },
             "aliasing": {
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.014044502102478887,
+            "frame_delta_change_energy": 0.01560500258405225,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.6014580190181732,
-              "mean": 0.45014775402662166,
-              "minimum": 0.29854195773601533,
-              "variance": 0.0115167765181827
+              "maximum": 0.6682867014408111,
+              "mean": 0.5001641822780041,
+              "minimum": 0.3317132955789566,
+              "variance": 0.014218243322792212
             },
             "peaks": {
               "count": 0,
@@ -4554,22 +4554,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 0.92,
-              "mean": 0.7836097560975616,
-              "minimum": 0.56,
-              "variance": 0.007417603807257574
+              "mean": 0.7945365853658536,
+              "minimum": 0.64,
+              "variance": 0.006969565734681785
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0017577828354627043,
+            "frame_delta_change_energy": 0.0019530920870035528,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.5701771921664477,
-              "mean": 0.4500777185916559,
-              "minimum": 0.3298227982968092,
-              "variance": 0.007221392287479771
+              "maximum": 0.6335302219539881,
+              "mean": 0.500086366166328,
+              "minimum": 0.3664697864279151,
+              "variance": 0.008915299537407814
             },
             "peaks": {
               "count": 0,
@@ -4623,23 +4623,23 @@
         "fingerprints": [
           {
             "active_fixture_fraction": {
-              "maximum": 0.84,
-              "mean": 0.7839921913128238,
+              "maximum": 0.88,
+              "mean": 0.7950805270863712,
               "minimum": 0.68,
-              "variance": 0.002083232735510556
+              "variance": 0.0020154278736119117
             },
             "aliasing": {
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.00087890003443777,
+            "frame_delta_change_energy": 0.0009765556119287015,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.46571057048626247,
-              "mean": 0.4499973360920781,
-              "minimum": 0.4342894129574415,
-              "variance": 0.0001233661277413096
+              "maximum": 0.5174562006257475,
+              "mean": 0.49999705306123343,
+              "minimum": 0.4825438088228111,
+              "variance": 0.00015230387337750165
             },
             "peaks": {
               "count": 0,
@@ -4652,36 +4652,36 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.446802466419602,
-                0.7181811238986648
+                0.44680247085262975,
+                0.7181811248974944
               ],
-              "path_distance": 5.836237598648411,
+              "path_distance": 5.8362375956117445,
               "start": [
-                0.446802466419602,
-                0.7181811238986648
+                0.44680247085262975,
+                0.7181811248974944
               ]
             },
             "speed": 0.25
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.84,
-              "mean": 0.7840780487804844,
+              "maximum": 0.88,
+              "mean": 0.7950048780487761,
               "minimum": 0.68,
-              "variance": 0.002069223176680521
+              "variance": 0.00203553656157051
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0017577713771727871,
+            "frame_delta_change_energy": 0.0019530793555697652,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.46570988063700497,
-              "mean": 0.44999468629830497,
-              "minimum": 0.43429008671570046,
-              "variance": 0.00012332033848546975
+              "maximum": 0.5174554417096079,
+              "mean": 0.4999941086973867,
+              "minimum": 0.4825445541234876,
+              "variance": 0.00015224733856599533
             },
             "peaks": {
               "count": 0,
@@ -4694,36 +4694,36 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.446802466419602,
-                0.7181811238986648
+                0.44680247085262975,
+                0.7181811248974944
               ],
-              "path_distance": 5.836127530018875,
+              "path_distance": 5.836127527339911,
               "start": [
-                0.446802466419602,
-                0.7181811238986648
+                0.44680247085262975,
+                0.7181811248974944
               ]
             },
             "speed": 0.5
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.84,
-              "mean": 0.7844054580896682,
+              "maximum": 0.88,
+              "mean": 0.794074074074073,
               "minimum": 0.68,
-              "variance": 0.0019774730306381166
+              "variance": 0.0019485091329145832
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0035153305562973004,
+            "frame_delta_change_energy": 0.003905922941741696,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.46570988063700497,
-              "mean": 0.44998939401180976,
-              "minimum": 0.43429008671570046,
-              "variance": 0.0001232288452388291
+              "maximum": 0.5174554417096079,
+              "mean": 0.4999882282919966,
+              "minimum": 0.4825445541234876,
+              "variance": 0.0001521343819143455
             },
             "peaks": {
               "count": 0,
@@ -4736,36 +4736,36 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.446802466419602,
-                0.7181811238986648
+                0.44680247085262975,
+                0.7181811248974944
               ],
-              "path_distance": 5.835687260613713,
+              "path_distance": 5.835687262750514,
               "start": [
-                0.446802466419602,
-                0.7181811238986648
+                0.44680247085262975,
+                0.7181811248974944
               ]
             },
             "speed": 1.0
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.84,
-              "mean": 0.7837816764132549,
+              "maximum": 0.88,
+              "mean": 0.7931384015594528,
               "minimum": 0.68,
-              "variance": 0.0019326774810103007
+              "variance": 0.001973971098419655
             },
             "aliasing": {
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.007028289535675467,
+            "frame_delta_change_energy": 0.007809210826950452,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.46569839533418417,
-              "mean": 0.4499893946733595,
-              "minimum": 0.4343015812570229,
-              "variance": 0.00012322885849611875
+              "maximum": 0.5174426721781492,
+              "mean": 0.49998822866910697,
+              "minimum": 0.48255732679739594,
+              "variance": 0.0001521343878682177
             },
             "peaks": {
               "count": 0,
@@ -4778,36 +4778,36 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.446802466419602,
-                0.7181811238986648
+                0.44680247085262975,
+                0.7181811248974944
               ],
-              "path_distance": 11.667852791545794,
+              "path_distance": 11.667852802190405,
               "start": [
-                0.446802466419602,
-                0.7181811238986648
+                0.44680247085262975,
+                0.7181811248974944
               ]
             },
             "speed": 2.0
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.84,
-              "mean": 0.7825341130604286,
+              "maximum": 0.88,
+              "mean": 0.7925146198830398,
               "minimum": 0.68,
-              "variance": 0.002090264430841031
+              "variance": 0.0019400704490270418
             },
             "aliasing": {
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.014042496782340088,
+            "frame_delta_change_energy": 0.015602774545895981,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.46569839533418417,
-              "mean": 0.4499893943073697,
-              "minimum": 0.4343015812570229,
-              "variance": 0.00012322887701731909
+              "maximum": 0.5174426721781492,
+              "mean": 0.49998822916215724,
+              "minimum": 0.48255732679739594,
+              "variance": 0.00015213437879743602
             },
             "peaks": {
               "count": 0,
@@ -4820,36 +4820,36 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.446802466419602,
-                0.7181811238986648
+                0.44680247085262975,
+                0.7181811248974944
               ],
-              "path_distance": 23.307544736760327,
+              "path_distance": 23.307544737408744,
               "start": [
-                0.446802466419602,
-                0.7181811238986648
+                0.44680247085262975,
+                0.7181811248974944
               ]
             },
             "speed": 4.0
           },
           {
             "active_fixture_fraction": {
-              "maximum": 0.84,
-              "mean": 0.7825170731707282,
+              "maximum": 0.88,
+              "mean": 0.792507317073167,
               "minimum": 0.68,
-              "variance": 0.002092005806067812
+              "variance": 0.0019419084830458282
             },
             "aliasing": {
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.014042496782340068,
+            "frame_delta_change_energy": 0.015602774545895898,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.46569839533418417,
-              "mean": 0.44999468648041924,
-              "minimum": 0.4343015812570229,
-              "variance": 0.00012332036503187368
+              "maximum": 0.5174426721781492,
+              "mean": 0.4999941093565493,
+              "minimum": 0.48255732679739594,
+              "variance": 0.00015224732690169259
             },
             "peaks": {
               "count": 0,
@@ -4862,13 +4862,13 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.446802466419602,
-                0.7181811238986648
+                0.44680247085262975,
+                0.7181811248974944
               ],
-              "path_distance": 46.615089473520904,
+              "path_distance": 46.61508947481753,
               "start": [
-                0.446802466419602,
-                0.7181811238986648
+                0.44680247085262975,
+                0.7181811248974944
               ]
             },
             "speed": 8.0
@@ -4923,23 +4923,23 @@
         "fingerprints": [
           {
             "active_fixture_fraction": {
-              "maximum": 0.82,
-              "mean": 0.7830409356725128,
+              "maximum": 0.84,
+              "mean": 0.7955165692007801,
               "minimum": 0.75,
-              "variance": 0.0003774973496118476
+              "variance": 0.000436039199145797
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0035152549032604623,
+            "frame_delta_change_energy": 0.0039058388615928613,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.4662504893401638,
-              "mean": 0.4499999888257807,
-              "minimum": 0.43374949195684165,
-              "variance": 0.00013178202298041138
+              "maximum": 0.5180561144929379,
+              "mean": 0.5000000001291988,
+              "minimum": 0.4819438864983385,
+              "variance": 0.00016269386812833077
             },
             "peaks": {
               "count": 0,
@@ -4952,13 +4952,13 @@
             "spatial_centroid": {
               "direction_reversals": 0,
               "end": [
-                0.5000000014372262,
-                0.70693311500176
+                0.5000000010518771,
+                0.7069331151245769
               ],
-              "path_distance": 5.316313652445218,
+              "path_distance": 5.316313647901123,
               "start": [
-                0.5000000014372262,
-                0.70693311500176
+                0.5000000010518771,
+                0.7069331151245769
               ]
             },
             "speed": 1.0
@@ -5726,13 +5726,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0007324218458961695,
+            "frame_delta_change_energy": 0.0008300781191792339,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.8999999761581421,
-              "mean": 0.5248169739721111,
+              "maximum": 1.0,
+              "mean": 0.5747925817617385,
               "minimum": 0.15000000596046448,
-              "variance": 0.046922144778305704
+              "variance": 0.06026889528693354
             },
             "peaks": {
               "count": 0,
@@ -5756,13 +5756,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.001464843691792339,
+            "frame_delta_change_energy": 0.0016601562383584678,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.8999999761581421,
-              "mean": 0.5246341363685887,
+              "maximum": 1.0,
+              "mean": 0.5745853659292547,
               "minimum": 0.15000000596046448,
-              "variance": 0.046972040462265434
+              "variance": 0.06033298363682774
             },
             "peaks": {
               "count": 0,
@@ -5786,13 +5786,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.002929687383584678,
+            "frame_delta_change_energy": 0.0033203124767169356,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.8999999761581421,
-              "mean": 0.5242689957744197,
+              "maximum": 1.0,
+              "mean": 0.5741715403909107,
               "minimum": 0.15000000596046448,
-              "variance": 0.04708005218500674
+              "variance": 0.060471718716789656
             },
             "peaks": {
               "count": 4,
@@ -5821,13 +5821,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.005859374767169356,
+            "frame_delta_change_energy": 0.006640624953433871,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.8999999761581421,
-              "mean": 0.5242689955420429,
+              "maximum": 1.0,
+              "mean": 0.5741715396937803,
               "minimum": 0.15000000596046448,
-              "variance": 0.04714858289731411
+              "variance": 0.060559742167639416
             },
             "peaks": {
               "count": 8,
@@ -5860,13 +5860,13 @@
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.011718749534338713,
+            "frame_delta_change_energy": 0.013281249906867743,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.8999999761581421,
-              "mean": 0.5242689960067964,
+              "maximum": 1.0,
+              "mean": 0.5741715401585339,
               "minimum": 0.15000000596046448,
-              "variance": 0.04742270566144042
+              "variance": 0.06091183726031005
             },
             "peaks": {
               "count": 16,
@@ -5907,13 +5907,13 @@
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.011718749534338713,
+            "frame_delta_change_energy": 0.013281249906867743,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.8999999761581421,
-              "mean": 0.5246341364848904,
+              "maximum": 1.0,
+              "mean": 0.5745853660455564,
               "minimum": 0.15000000596046448,
-              "variance": 0.0473321776302143
+              "variance": 0.06079555902974884
             },
             "peaks": {
               "count": 32,
@@ -6002,13 +6002,13 @@
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.001464843691792339,
+            "frame_delta_change_energy": 0.0016601562383584678,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.8999999761581421,
-              "mean": 0.5246341363685887,
+              "maximum": 1.0,
+              "mean": 0.5745853659292547,
               "minimum": 0.15000000596046448,
-              "variance": 0.046972040462265434
+              "variance": 0.06033298363682774
             },
             "peaks": {
               "count": 0,
@@ -6445,22 +6445,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9623621278672668,
-              "minimum": 0.88,
-              "variance": 0.0018302427043057257
+              "mean": 0.992952659834068,
+              "minimum": 0.92,
+              "variance": 0.00028688941337429364
             },
             "aliasing": {
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.00012071661021764188,
+            "frame_delta_change_energy": 0.00015956792718498046,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.42797635912895204,
-              "mean": 0.38404839917850103,
-              "minimum": 0.33756580770015715,
-              "variance": 0.0005852653796459744
+              "maximum": 0.5611181733012199,
+              "mean": 0.5030524728238847,
+              "minimum": 0.4416099637746811,
+              "variance": 0.001022609896346142
             },
             "peaks": {
               "count": 0,
@@ -6473,13 +6473,13 @@
             "spatial_centroid": {
               "direction_reversals": 1,
               "end": [
-                0.48067276056170405,
-                0.5199751921917874
+                0.4804715358644063,
+                0.5201831650843707
               ],
-              "path_distance": 0.22737703904501674,
+              "path_distance": 0.2293924934172583,
               "start": [
-                0.5220712481371931,
-                0.5670649305215482
+                0.5222802557637256,
+                0.5677000337828175
               ]
             },
             "speed": 0.25
@@ -6487,22 +6487,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9623804878048755,
-              "minimum": 0.88,
-              "variance": 0.0018316015704937848
+              "mean": 0.9929365853658535,
+              "minimum": 0.92,
+              "variance": 0.0002888398810231992
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.00024143322043528327,
+            "frame_delta_change_energy": 0.0003191358543699604,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.42797635912895204,
-              "mean": 0.38403382373059664,
-              "minimum": 0.33756580770015715,
-              "variance": 0.0005855496500065833
+              "maximum": 0.5611181733012199,
+              "mean": 0.5030332062817202,
+              "minimum": 0.4416099637746811,
+              "variance": 0.0010231065881313541
             },
             "peaks": {
               "count": 0,
@@ -6515,13 +6515,13 @@
             "spatial_centroid": {
               "direction_reversals": 2,
               "end": [
-                0.48067276056170405,
-                0.5199751921917874
+                0.4804715358644063,
+                0.5201831650843707
               ],
-              "path_distance": 0.22737703876216697,
+              "path_distance": 0.22939249328814515,
               "start": [
-                0.5220712481371931,
-                0.5670649305215482
+                0.5222802557637256,
+                0.5677000337828175
               ]
             },
             "speed": 0.5
@@ -6529,22 +6529,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.962417153996101,
-              "minimum": 0.88,
-              "variance": 0.001818718770067911
+              "mean": 0.992904483430799,
+              "minimum": 0.92,
+              "variance": 0.00028961465826142534
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.000482866440870567,
+            "frame_delta_change_energy": 0.0006382717087399213,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.42797635912895204,
-              "mean": 0.38400471536446285,
-              "minimum": 0.33756580770015715,
-              "variance": 0.000586116081123939
+              "maximum": 0.5611181733012199,
+              "mean": 0.5029947298219102,
+              "minimum": 0.4416099637746811,
+              "variance": 0.0010240963021032976
             },
             "peaks": {
               "count": 0,
@@ -6557,13 +6557,13 @@
             "spatial_centroid": {
               "direction_reversals": 2,
               "end": [
-                0.48067276056170405,
-                0.5199751921917874
+                0.4804715358644063,
+                0.5201831650843707
               ],
-              "path_distance": 0.22737703869455225,
+              "path_distance": 0.2293924932646067,
               "start": [
-                0.5220712481371931,
-                0.5670649305215482
+                0.5222802557637256,
+                0.5677000337828175
               ]
             },
             "speed": 1.0
@@ -6571,22 +6571,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.967017543859646,
-              "minimum": 0.88,
-              "variance": 0.0015663486200882392
+              "mean": 0.9910331384015566,
+              "minimum": 0.92,
+              "variance": 0.0003094589408326956
             },
             "aliasing": {
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0009299460552574593,
+            "frame_delta_change_energy": 0.0012292390070797405,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.45920890510082246,
-              "mean": 0.39446216874594353,
-              "minimum": 0.33756580770015715,
-              "variance": 0.0008874896920173124
+              "maximum": 0.6024025598168373,
+              "mean": 0.5168177999210407,
+              "minimum": 0.4416099637746811,
+              "variance": 0.0015506738865163378
             },
             "peaks": {
               "count": 0,
@@ -6599,13 +6599,13 @@
             "spatial_centroid": {
               "direction_reversals": 3,
               "end": [
-                0.45566075438070774,
-                0.48533157706484653
+                0.4552827101944819,
+                0.48520651004912574
               ],
-              "path_distance": 0.4189257357074634,
+              "path_distance": 0.422599751979907,
               "start": [
-                0.5220712481371931,
-                0.5670649305215482
+                0.5222802557637256,
+                0.5677000337828175
               ]
             },
             "speed": 2.0
@@ -6613,22 +6613,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9671734892787491,
-              "minimum": 0.84,
-              "variance": 0.0016452272114116737
+              "mean": 0.9907992202729039,
+              "minimum": 0.88,
+              "variance": 0.0004206088103082041
             },
             "aliasing": {
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.0018432593016768817,
+            "frame_delta_change_energy": 0.0024364921357482687,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.4618344607949257,
-              "mean": 0.3869448519392092,
-              "minimum": 0.2945010802149773,
-              "variance": 0.0013898825909014988
+              "maximum": 0.6058731231093407,
+              "mean": 0.5068811172700068,
+              "minimum": 0.3846853289008141,
+              "variance": 0.0024284841532198767
             },
             "peaks": {
               "count": 0,
@@ -6641,13 +6641,13 @@
             "spatial_centroid": {
               "direction_reversals": 7,
               "end": [
-                0.4905088429716201,
-                0.5363299948600864
+                0.49041268306532804,
+                0.5366980687266442
               ],
-              "path_distance": 0.9793233717906967,
+              "path_distance": 0.9886365819620344,
               "start": [
-                0.5220712481371931,
-                0.5670649305215482
+                0.5222802557637256,
+                0.5677000337828175
               ]
             },
             "speed": 4.0
@@ -6655,22 +6655,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9709658536585385,
-              "minimum": 0.84,
-              "variance": 0.0014641402974420045
+              "mean": 0.9921560975609778,
+              "minimum": 0.88,
+              "variance": 0.00033652197501486827
             },
             "aliasing": {
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.0017699131125846195,
+            "frame_delta_change_energy": 0.0023395402649475745,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.4723772883415222,
-              "mean": 0.39239686978648347,
-              "minimum": 0.2945010802149773,
-              "variance": 0.0015946518610944072
+              "maximum": 0.6198090490698814,
+              "mean": 0.5140878073349232,
+              "minimum": 0.3846853289008141,
+              "variance": 0.0027862690210816022
             },
             "peaks": {
               "count": 0,
@@ -6683,13 +6683,13 @@
             "spatial_centroid": {
               "direction_reversals": 19,
               "end": [
-                0.5066757438854174,
-                0.5664135578647226
+                0.5067264640917077,
+                0.5669181458388501
               ],
-              "path_distance": 2.0806043287301375,
+              "path_distance": 2.0998966966883796,
               "start": [
-                0.5220712481371931,
-                0.5670649305215482
+                0.5222802557637256,
+                0.5677000337828175
               ]
             },
             "speed": 8.0
@@ -6745,22 +6745,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.9777972709551705,
-              "minimum": 0.93,
-              "variance": 0.00031152225376089305
+              "mean": 0.9947563352826545,
+              "minimum": 0.97,
+              "variance": 0.00005106148520532458
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.00045598196767969017,
+            "frame_delta_change_energy": 0.000602734768835945,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.4230519420653582,
-              "mean": 0.4059265630499079,
-              "minimum": 0.38640720024704933,
-              "variance": 0.00011222213519794836
+              "maximum": 0.5546088822931051,
+              "mean": 0.5319718840363891,
+              "minimum": 0.5061704240739345,
+              "variance": 0.0001960810817933266
             },
             "peaks": {
               "count": 0,
@@ -6773,13 +6773,13 @@
             "spatial_centroid": {
               "direction_reversals": 1,
               "end": [
-                0.5001161302260223,
-                0.5166166246934988
+                0.5001171854042522,
+                0.5167675581867096
               ],
-              "path_distance": 0.08085988064508129,
+              "path_distance": 0.08157345864216338,
               "start": [
-                0.48880347410314484,
-                0.5373217246296311
+                0.4887046538040229,
+                0.5376511226750313
               ]
             },
             "speed": 1.0
@@ -6827,22 +6827,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.7964860907759883,
+              "mean": 0.8999511957052221,
               "minimum": 0.0,
-              "variance": 0.16209599797637433
+              "variance": 0.09003904105396493
             },
             "aliasing": {
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0004779815499205142,
+            "frame_delta_change_energy": 0.0009754725615493953,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.48945310711860657,
-              "mean": 0.24487976879090537,
+              "maximum": 0.9988839030265808,
+              "mean": 0.4997546378838552,
               "minimum": 0.0,
-              "variance": 0.02002819672842485
+              "variance": 0.08341606546432319
             },
             "peaks": {
               "count": 0,
@@ -6857,22 +6857,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.7960975609756098,
+              "mean": 0.9014634146341464,
               "minimum": 0.0,
-              "variance": 0.16232623438429675
+              "variance": 0.08882712671029191
             },
             "aliasing": {
               "frames_per_primary_event": 28.125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0009547306690365076,
+            "frame_delta_change_energy": 0.0019484299700707197,
             "graph_cycles_per_beat": 0.5,
             "intensity": {
-              "maximum": 0.4888221025466919,
-              "mean": 0.24475703193465384,
+              "maximum": 0.9975961446762085,
+              "mean": 0.4995041546461786,
               "minimum": 0.0,
-              "variance": 0.020048065787574586
+              "variance": 0.08349881884988215
             },
             "peaks": {
               "count": 0,
@@ -6887,22 +6887,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.7953216374269005,
+              "mean": 0.8966861598440545,
               "minimum": 0.0,
-              "variance": 0.16278513046749518
+              "variance": 0.09264009058817654
             },
             "aliasing": {
               "frames_per_primary_event": 14.0625,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0019094613380730152,
+            "frame_delta_change_energy": 0.0038968599401414394,
             "graph_cycles_per_beat": 1.0,
             "intensity": {
-              "maximum": 0.4888221025466919,
-              "mean": 0.24451191734239372,
+              "maximum": 0.9975961446762085,
+              "mean": 0.4990039203555612,
               "minimum": 0.0,
-              "variance": 0.02009168213923395
+              "variance": 0.08368047765034642
             },
             "peaks": {
               "count": 4,
@@ -6922,22 +6922,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.7953216374269005,
+              "mean": 0.8888888888888888,
               "minimum": 0.0,
-              "variance": 0.16278513046749557
+              "variance": 0.09876543209876605
             },
             "aliasing": {
               "frames_per_primary_event": 7.03125,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0037729116156697273,
+            "frame_delta_change_energy": 0.0076998197473585606,
             "graph_cycles_per_beat": 2.0,
             "intensity": {
-              "maximum": 0.4829326868057251,
-              "mean": 0.24445943534374237,
+              "maximum": 0.9855769276618958,
+              "mean": 0.4988968151877498,
               "minimum": 0.0,
-              "variance": 0.02009800405392775
+              "variance": 0.08370680854484354
             },
             "peaks": {
               "count": 0,
@@ -6952,22 +6952,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.7797270955165692,
+              "mean": 0.8732943469785575,
               "minimum": 0.0,
-              "variance": 0.1717527520338654
+              "variance": 0.11065133051385322
             },
             "aliasing": {
               "frames_per_primary_event": 3.515625,
               "preview_fps": 30.0,
               "risk": "caution"
             },
-            "frame_delta_change_energy": 0.007519531063735485,
+            "frame_delta_change_energy": 0.015345982275903225,
             "graph_cycles_per_beat": 4.0,
             "intensity": {
-              "maximum": 0.48124998807907104,
-              "mean": 0.24435447240665875,
+              "maximum": 0.9821428656578064,
+              "mean": 0.4986826050118861,
               "minimum": 0.0,
-              "variance": 0.020174391709468522
+              "variance": 0.08402495872914276
             },
             "peaks": {
               "count": 16,
@@ -6999,22 +6999,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.7804878048780488,
+              "mean": 0.8741463414634146,
               "minimum": 0.0,
-              "variance": 0.17132659131469566
+              "variance": 0.1100145151695436
             },
             "aliasing": {
               "frames_per_primary_event": 1.7578125,
               "preview_fps": 30.0,
               "risk": "severe"
             },
-            "frame_delta_change_energy": 0.007519531063735485,
+            "frame_delta_change_energy": 0.015345982275903225,
             "graph_cycles_per_beat": 8.0,
             "intensity": {
-              "maximum": 0.48124998807907104,
-              "mean": 0.24459286701388475,
+              "maximum": 0.9821428656578064,
+              "mean": 0.49916912462653185,
               "minimum": 0.0,
-              "variance": 0.020135764422381488
+              "variance": 0.08386407872847869
             },
             "peaks": {
               "count": 32,
@@ -7094,22 +7094,22 @@
           {
             "active_fixture_fraction": {
               "maximum": 1.0,
-              "mean": 0.7964860907759883,
+              "mean": 0.8999511957052221,
               "minimum": 0.0,
-              "variance": 0.16209599797637433
+              "variance": 0.09003904105396493
             },
             "aliasing": {
               "frames_per_primary_event": 56.25,
               "preview_fps": 30.0,
               "risk": "none"
             },
-            "frame_delta_change_energy": 0.0004779815499205142,
+            "frame_delta_change_energy": 0.0009754725615493953,
             "graph_cycles_per_beat": 0.25,
             "intensity": {
-              "maximum": 0.48945310711860657,
-              "mean": 0.24487976879090537,
+              "maximum": 0.9988839030265808,
+              "mean": 0.4997546378838552,
               "minimum": 0.0,
-              "variance": 0.02002819672842485
+              "variance": 0.08341606546432319
             },
             "peaks": {
               "count": 0,

@@ -38,7 +38,7 @@
       "name": "Intensity",
       "schema": {
         "type": "scalar",
-        "default": 0.7,
+        "default": 1,
         "range": {
           "min": 0,
           "max": 1,
@@ -48,7 +48,7 @@
       },
       "scope": "arrangement",
       "section": "main",
-      "help": "Safe capped transition intensity."
+      "help": "Peak transition intensity."
     },
     {
       "id": "attack",
@@ -121,7 +121,7 @@
           "port": "scalar"
         },
         "input_range": [0, 1],
-        "output_range": [0, 0.7]
+        "output_range": [0, 1]
       },
       {
         "type": "attribute_writer",

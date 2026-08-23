@@ -1322,7 +1322,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.85,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
@@ -1716,7 +1716,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.85,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
@@ -1778,7 +1778,7 @@
             "default": [
               {
                 "position": 0,
-                "color": "#190D3B"
+                "color": "#7A5AAE"
               },
               {
                 "position": 1,
@@ -1788,7 +1788,7 @@
           },
           "scope": "effect",
           "section": "advanced",
-          "help": "Dark-to-bright accent colors.",
+          "help": "Chromatic accent colors; brightness is shaped by the intensity envelope instead of black color mixing.",
           "graph_binding": {
             "node_id": "gradient",
             "property": "color_stops"
@@ -1835,7 +1835,7 @@
             "stops": [
               {
                 "position": 0,
-                "color": "#190D3B"
+                "color": "#7A5AAE"
               },
               {
                 "position": 1,
@@ -2128,7 +2128,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.7,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
@@ -2445,7 +2445,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.9,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
@@ -2863,7 +2863,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.9,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
@@ -2979,7 +2979,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.9,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
@@ -3124,7 +3124,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.9,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
@@ -3305,7 +3305,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.85,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
@@ -3450,7 +3450,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.85,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
@@ -3605,7 +3605,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.9,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
@@ -3804,7 +3804,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.9,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
@@ -3933,7 +3933,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.7,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
@@ -3943,7 +3943,7 @@
           },
           "scope": "arrangement",
           "section": "main",
-          "help": "Safe capped transition intensity."
+          "help": "Peak transition intensity."
         },
         {
           "id": "attack",
@@ -4021,7 +4021,7 @@
             ],
             "output_range": [
               0,
-              0.7
+              1
             ]
           },
           {
@@ -4085,7 +4085,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.8,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
@@ -4131,7 +4131,7 @@
             ],
             "output_range": [
               0.08,
-              0.95
+              1
             ]
           },
           {
@@ -4250,7 +4250,7 @@
             ],
             "output_range": [
               0.15,
-              0.9
+              1
             ]
           },
           {

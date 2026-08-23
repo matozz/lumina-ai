@@ -17,6 +17,7 @@ Lab、Cues 和 Arrange 需要同一套音乐时钟与交互语义，但不能复
 - 每个 Effect、Cue 和 Arrangement authoring scope 拥有独立 session entry；cursor、loop 和 playback state 不进入 ProjectBundle。
 - Local preview timing 只存在于 session。Follow Arrangement 读取选中 Arrangement 的完整 PPQ、TempoMap 和 TimeSignatureMap。
 - cursor 从 monotonic elapsed time 经 TempoMap 反解，不能按 `requestAnimationFrame` delta 累加浮点 beat。
+- Effect、Cue 和 Arrangement 的真实 runtime preview 都以最高 60fps 请求；任一时刻只允许一个 render IPC in flight，并合并积压 tick，避免高延迟时形成无界队列。首次编译帧携带 Layout，后续同 generation 帧只传 fixture output；Canvas 只在 generation 或 Layout draft 变化时重建灯具与 fit camera。
 - ArrangementTimeline 直接编辑 CueClip 和 typed automation。Pointer move 只更新 DOM refs；pointer up/cancel 最多提交一个 transaction。
 - playhead 使用独立轻量 subscription；viewport virtualization、adaptive snap、CSS grid 和 overscan 避免内容长度决定 DOM 数量。
 - action-local validation failure 不写 ProjectBundle/history，并在相关 inspector/control 附近显示 recovery。

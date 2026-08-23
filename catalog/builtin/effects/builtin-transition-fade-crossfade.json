@@ -78,7 +78,7 @@
           "port": "scalar"
         },
         "input_range": [0, 1],
-        "output_range": [0.15, 0.9]
+        "output_range": [0.15, 1]
       },
       {
         "type": "attribute_writer",
