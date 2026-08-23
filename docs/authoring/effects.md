@@ -89,6 +89,8 @@ cache identity 包含 exact Effect、Stage、Layout、TargetSet、resolved fixtu
 - `section` 只控制 Main/Advanced 分区；`help` 是 UI、Tooltip、aria 和 Skill 共同使用的作者说明。
 - `graph_binding` 仅在参数直接绑定 EffectGraph node property 时声明，不承担 authoring policy。
 
+内置 Effect 的标准 Intensity 参数默认值统一为 `1`，所有写入 intensity 的 authored Graph 路径也必须能够达到 `1`；运动、呼吸和转场仍可通过连续 envelope/profile 改变瞬时亮度。Cue recipe 不再用默认 override 二次压暗，较低能量由 Arrangement automation 显式表达。颜色 Gradient 用色相/饱和度变化塑造层次，不能用近黑色端点替代 dimmer fade；真正的 blackout 只能来自可审查的 intensity 路径。
+
 旧的 `value_type`、typed `default_value`、`required`、`safe_fallback`、`override_policy`、`automation`、`advanced`、`ui_hint`、平铺 `range/step/unit/enum_values` 都已删除。它们或与类型重复，或允许互相矛盾的组合。表单 last-known-good 属于编辑会话状态，不再伪装成资产内的 `safe_fallback`；控件形态从 `schema.type` 和 unit 推导。
 
 Effect Catalog 继续保留 `source/revision` 供 exact reference，保留 energy/density/motion/colorfulness 供发现，并保留 `required_attributes/layout_capabilities` 做 fail-closed 兼容性校验。后两项不能仅从 Graph 猜测：通用 attribute-set writer、Targeting Scene 和布局语义都可能使静态推断不完整。Catalog 不保存 `strobe_risk`，Cue 也不保存 `risk_summary`；旧字段按 unknown-field 策略 fail closed。普通 UI 不展示 source、revision 或 raw capability token。

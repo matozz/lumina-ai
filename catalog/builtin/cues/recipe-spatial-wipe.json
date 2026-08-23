@@ -26,7 +26,7 @@
         },
         "intensity": {
           "type": "scalar",
-          "value": 0.8
+          "value": 1
         }
       },
       "phase": 0,

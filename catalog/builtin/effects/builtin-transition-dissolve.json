@@ -27,7 +27,7 @@
       "name": "Intensity",
       "schema": {
         "type": "scalar",
-        "default": 0.8,
+        "default": 1,
         "range": {
           "min": 0,
           "max": 1,
@@ -68,7 +68,7 @@
           "port": "scalar"
         },
         "input_range": [0, 1],
-        "output_range": [0.08, 0.95]
+        "output_range": [0.08, 1]
       },
       {
         "type": "attribute_writer",

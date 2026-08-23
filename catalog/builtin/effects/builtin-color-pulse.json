@@ -27,7 +27,7 @@
       "name": "Intensity",
       "schema": {
         "type": "scalar",
-        "default": 0.85,
+        "default": 1,
         "range": {
           "min": 0,
           "max": 1,
@@ -89,7 +89,7 @@
         "default": [
           {
             "position": 0,
-            "color": "#190D3B"
+            "color": "#7A5AAE"
           },
           {
             "position": 1,
@@ -99,7 +99,7 @@
       },
       "scope": "effect",
       "section": "advanced",
-      "help": "Dark-to-bright accent colors.",
+      "help": "Chromatic accent colors; brightness is shaped by the intensity envelope instead of black color mixing.",
       "graph_binding": {
         "node_id": "gradient",
         "property": "color_stops"
@@ -146,7 +146,7 @@
         "stops": [
           {
             "position": 0,
-            "color": "#190D3B"
+            "color": "#7A5AAE"
           },
           {
             "position": 1,

@@ -23,7 +23,7 @@
       "name": "Intensity",
       "schema": {
         "type": "scalar",
-        "default": 0.9,
+        "default": 1,
         "range": { "min": 0, "max": 1, "step": 0.05 },
         "unit": "normalized"
       },

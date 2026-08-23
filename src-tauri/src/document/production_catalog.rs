@@ -1614,6 +1614,127 @@ mod tests {
     }
 
     #[test]
+    fn built_in_defaults_keep_authored_brightness_at_full_scale() {
+        fn referenced_node_ids(value: &serde_json::Value, output: &mut Vec<String>) {
+            match value {
+                serde_json::Value::Object(object) => {
+                    if let Some(node_id) = object.get("node_id").and_then(|value| value.as_str()) {
+                        output.push(node_id.to_string());
+                    }
+                    for value in object.values() {
+                        referenced_node_ids(value, output);
+                    }
+                }
+                serde_json::Value::Array(values) => {
+                    for value in values {
+                        referenced_node_ids(value, output);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        let catalog = builtin_production_catalog().expect("checked-in catalog parses");
+        for effect in &catalog.effects {
+            if let Some(parameter) = effect
+                .parameters
+                .iter()
+                .find(|parameter| parameter.id == "intensity")
+            {
+                let crate::document::ParameterSchemaDSL::Scalar { default, range, .. } =
+                    &parameter.schema
+                else {
+                    panic!("{} intensity parameter must be scalar", effect.id);
+                };
+                assert_eq!(
+                    *default, 1.0,
+                    "{} must default to full intensity",
+                    effect.id
+                );
+                assert_eq!(range.max, 1.0, "{} intensity range must reach 1", effect.id);
+            }
+
+            let nodes = serde_json::to_value(&effect.graph.nodes)
+                .expect("Effect graph nodes serialize")
+                .as_array()
+                .expect("Effect graph nodes are an array")
+                .clone();
+            let nodes_by_id = nodes
+                .iter()
+                .filter_map(|node| Some((node.get("id")?.as_str()?.to_string(), node)))
+                .collect::<BTreeMap<_, _>>();
+            let mut pending = nodes
+                .iter()
+                .filter(|node| {
+                    node.get("type").and_then(|value| value.as_str()) == Some("attribute_writer")
+                        && node.get("attribute_id").and_then(|value| value.as_str())
+                            == Some("intensity")
+                })
+                .flat_map(|writer| {
+                    let mut ids = Vec::new();
+                    referenced_node_ids(writer, &mut ids);
+                    ids
+                })
+                .collect::<Vec<_>>();
+            let mut visited = BTreeSet::new();
+            while let Some(node_id) = pending.pop() {
+                if !visited.insert(node_id.clone()) {
+                    continue;
+                }
+                let node = nodes_by_id
+                    .get(&node_id)
+                    .unwrap_or_else(|| panic!("{} references missing node {node_id}", effect.id));
+                if node.get("type").and_then(|value| value.as_str()) == Some("map") {
+                    let maximum = node["output_range"]
+                        .as_array()
+                        .expect("map output range")
+                        .iter()
+                        .filter_map(|value| value.as_f64())
+                        .fold(f64::NEG_INFINITY, f64::max);
+                    assert!(
+                        maximum >= 1.0,
+                        "{} intensity path is capped below full scale by {node_id}",
+                        effect.id
+                    );
+                }
+                referenced_node_ids(node, &mut pending);
+            }
+
+            for node in nodes.iter().filter(|node| {
+                node.get("type").and_then(|value| value.as_str()) == Some("color_gradient")
+            }) {
+                for stop in node["stops"].as_array().expect("gradient stops") {
+                    let color = stop["color"].as_str().expect("validated hex color");
+                    let rgb = u32::from_str_radix(color.trim_start_matches('#'), 16)
+                        .expect("validated hex color");
+                    let brightest_channel = [(rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff]
+                        .into_iter()
+                        .max()
+                        .expect("three channels");
+                    assert!(
+                        brightest_channel >= 0x60,
+                        "{} gradient stop {color} mixes visible output toward black",
+                        effect.id
+                    );
+                }
+            }
+        }
+
+        for recipe in &catalog.cue_recipes {
+            for layer in &recipe.layers {
+                if let Some(value) = layer.parameter_overrides.get("intensity") {
+                    assert!(
+                        matches!(value, ParameterValueDSL::Scalar(value) if *value == 1.0),
+                        "{} must not dim {} by default",
+                        recipe.id,
+                        layer.effect_ref.id
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn built_in_effects_use_continuous_profiles_and_declared_column_partitions() {
         let catalog = builtin_production_catalog().expect("checked-in catalog parses");
         for effect in &catalog.effects {
