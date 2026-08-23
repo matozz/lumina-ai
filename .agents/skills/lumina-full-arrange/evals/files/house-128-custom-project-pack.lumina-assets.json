@@ -709,7 +709,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.7,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
@@ -854,7 +854,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.9,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
@@ -1035,7 +1035,7 @@
           "name": "Intensity",
           "schema": {
             "type": "scalar",
-            "default": 0.85,
+            "default": 1,
             "range": {
               "min": 0,
               "max": 1,
