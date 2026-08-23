@@ -252,7 +252,6 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
         snappedTickForPointerDelta(0, ticksToPixels(tick, geometry), geometry),
       ),
     );
-    if (lane.keyframes.some((keyframe) => keyframe.time_tick === snapped)) return;
     onAdd(
       snapped,
       automationLaneValueAtTick(lane, snapped, parameterInitialValue(definition)),
@@ -376,6 +375,13 @@ export const ArrangementAutomationLane = memo(function ArrangementAutomationLane
                   else keyframeRefs.current.delete(keyframe.id);
                 }}
                 onInspectorOpenChange={(open) => setInspectorId(open ? keyframe.id : null)}
+                onChooseNearby={(keyframeId) => {
+                  onSelectKeyframe(
+                    { type: "keyframe", trackId, laneId: lane.id, keyframeId },
+                    { additive: false, toggle: false },
+                  );
+                  setInspectorId(keyframeId);
+                }}
                 onStartMove={(event) => {
                   if (event.button !== 0) return;
                   event.preventDefault();

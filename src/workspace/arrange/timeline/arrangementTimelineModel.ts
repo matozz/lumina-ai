@@ -475,13 +475,14 @@ function valueAtTick(
 ): ParameterValueDSL {
   const ordered = [...keyframes].sort((left, right) => left.time_tick - right.time_tick);
   if (ordered.length === 0) return structuredClone(fallback);
-  const nextIndex = ordered.findIndex((keyframe) => keyframe.time_tick >= timeTick);
-  if (nextIndex <= 0) {
-    return structuredClone(nextIndex === 0 ? ordered[0].value : ordered[ordered.length - 1].value);
+  const upper = ordered.findIndex((keyframe) => keyframe.time_tick > timeTick);
+  if (upper === 0) return structuredClone(ordered[0].value);
+  if (upper === -1) return structuredClone(ordered[ordered.length - 1].value);
+  const previous = ordered[upper - 1];
+  if (previous.time_tick === timeTick) {
+    return structuredClone(previous.value);
   }
-  const next = ordered[nextIndex];
-  if (next.time_tick === timeTick) return structuredClone(next.value);
-  const previous = ordered[nextIndex - 1];
+  const next = ordered[upper];
   if (previous.interpolation === "hold") {
     return structuredClone(previous.value);
   }
@@ -544,13 +545,12 @@ export function moveAutomationKeyframes(
   if (
     nextTicks.some(
       (tick) => !Number.isInteger(tick) || tick < 0 || tick >= arrangement.length_ticks,
-    ) ||
-    new Set(nextTicks).size !== nextTicks.length
+    )
   ) {
     throw timelineError(
       "ARRANGEMENT_KEYFRAME_MOVE_INVALID",
-      "The keyframe move would leave the Arrangement or collide with another keyframe.",
-      "Move within the ruler and keep keyframes on distinct ticks.",
+      "The keyframe move would leave the Arrangement.",
+      "Move every selected keyframe inside the ruler.",
     );
   }
   lane.keyframes.forEach((keyframe, index) => {
@@ -653,20 +653,15 @@ function validateClipRange(
 
 function validateKeyframeTick(
   arrangement: ArrangementDocument,
-  lane: ArrangementAutomationLane,
+  _lane: ArrangementAutomationLane,
   timeTick: number,
-  exceptId?: string,
+  _exceptId?: string,
 ) {
-  if (
-    !Number.isInteger(timeTick) ||
-    timeTick < 0 ||
-    timeTick >= arrangement.length_ticks ||
-    lane.keyframes.some((keyframe) => keyframe.id !== exceptId && keyframe.time_tick === timeTick)
-  ) {
+  if (!Number.isInteger(timeTick) || timeTick < 0 || timeTick >= arrangement.length_ticks) {
     throw timelineError(
       "ARRANGEMENT_KEYFRAME_TICK_INVALID",
-      "Automation keyframes must use distinct integer ticks inside the Arrangement.",
-      "Choose an unoccupied tick before the Arrangement end.",
+      "Automation keyframes must use integer ticks inside the Arrangement.",
+      "Choose a tick before the Arrangement end; same-tick points are allowed.",
     );
   }
 }

@@ -22,13 +22,13 @@ export function keyframeMoveBounds(
 
     for (let previous = index - 1; previous >= 0; previous -= 1) {
       if (!selectedIds.has(keyframes[previous].id)) {
-        minimum = Math.max(minimum, keyframes[previous].time_tick + 1 - keyframe.time_tick);
+        minimum = Math.max(minimum, keyframes[previous].time_tick - keyframe.time_tick);
         break;
       }
     }
     for (let next = index + 1; next < keyframes.length; next += 1) {
       if (!selectedIds.has(keyframes[next].id)) {
-        maximum = Math.min(maximum, keyframes[next].time_tick - 1 - keyframe.time_tick);
+        maximum = Math.min(maximum, keyframes[next].time_tick - keyframe.time_tick);
         break;
       }
     }

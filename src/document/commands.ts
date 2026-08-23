@@ -374,7 +374,10 @@ function applyCommand(document: FullDSL, command: DocumentCommand) {
       }
       const oldStart = lane.keyframes[0].time_tick;
       const oldDuration = lane.keyframes[lane.keyframes.length - 1].time_tick - oldStart;
-      if (oldDuration <= 0) throw new DocumentCommandError("lane duration must be positive");
+      if (oldDuration === 0) {
+        for (const keyframe of lane.keyframes) keyframe.time_tick = command.start_tick;
+        return;
+      }
       const scaledTicks = lane.keyframes.map(
         (keyframe) =>
           command.start_tick +
@@ -382,10 +385,10 @@ function applyCommand(document: FullDSL, command: DocumentCommand) {
       );
       if (
         scaledTicks.some((tick) => tick > MAX_TICK) ||
-        scaledTicks.some((tick, index) => index > 0 && scaledTicks[index - 1] >= tick)
+        scaledTicks.some((tick, index) => index > 0 && scaledTicks[index - 1] > tick)
       ) {
         throw new DocumentCommandError(
-          "scaled keyframes must fit the tick range and remain strictly increasing",
+          "scaled keyframes must fit the tick range and remain non-decreasing",
         );
       }
       lane.keyframes.forEach((keyframe, index) => {
@@ -548,8 +551,8 @@ function assertLane(lane: AutomationLaneDSL) {
       throw new DocumentCommandError("AutomationLane keyframe IDs must be non-empty and unique");
     }
     ids.add(keyframe.id);
-    if (index > 0 && lane.keyframes[index - 1].time_tick >= keyframe.time_tick) {
-      throw new DocumentCommandError("AutomationLane keyframes must be strictly increasing");
+    if (index > 0 && lane.keyframes[index - 1].time_tick > keyframe.time_tick) {
+      throw new DocumentCommandError("AutomationLane keyframes must be non-decreasing");
     }
   });
 }

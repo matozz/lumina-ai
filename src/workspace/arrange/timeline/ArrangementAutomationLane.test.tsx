@@ -147,4 +147,70 @@ describe("ArrangementAutomationLane pointer projection", () => {
     fireEvent.click(point);
     expect(screen.getByRole("heading", { name: "Intensity keyframe" })).toBeTruthy();
   });
+
+  it("offers an explicit chooser for visually overlapping keyframes", () => {
+    const arrangement = createHouseArrangementReference();
+    const lane = arrangement.tracks[0].automation_lanes?.find(
+      (candidate) => candidate.id === "rain-rise-intensity",
+    )!;
+    lane.keyframes = [
+      {
+        id: "left-limit",
+        time_tick: 960,
+        value: { type: "scalar", value: 0.5 },
+        interpolation: "linear",
+      },
+      {
+        id: "boundary",
+        time_tick: 960,
+        value: { type: "scalar", value: 0.51 },
+        interpolation: "hold",
+      },
+    ];
+    const viewportRef = createRef<HTMLDivElement>();
+    const onSelectKeyframe = vi.fn();
+    render(
+      <div ref={viewportRef}>
+        <ArrangementAutomationLane
+          arrangement={arrangement}
+          clipboardKind={null}
+          definition={definition}
+          geometry={createTimelineGeometry(960, 48, 240)}
+          lane={lane}
+          onAdd={vi.fn()}
+          onCancelReady={vi.fn()}
+          onCopyItems={vi.fn()}
+          onDeleteItems={vi.fn()}
+          onDeleteKeyframes={vi.fn()}
+          onDeleteLane={vi.fn()}
+          onMoveItems={vi.fn()}
+          onPasteAt={vi.fn()}
+          onPreviewItems={vi.fn()}
+          onRegisterProjection={vi.fn()}
+          onResetProjection={vi.fn()}
+          onSelectKeyframe={onSelectKeyframe}
+          onSnapPreview={vi.fn()}
+          onUpdateKeyframe={vi.fn()}
+          revealRequest={null}
+          selection={arrangementSelectionFromItems([])}
+          trackId="cues"
+          viewport={{ startBeat: 0, endBeat: 4 }}
+          viewportRef={viewportRef}
+        />
+      </div>,
+    );
+    const points = screen.getAllByRole("button", { name: "Intensity keyframe at tick 960" });
+
+    fireEvent.pointerDown(points[1], { button: 0, pointerId: 20, clientX: 48, clientY: 9 });
+    fireEvent.pointerUp(points[1], { pointerId: 20, clientX: 48, clientY: 9 });
+    fireEvent.click(points[1]);
+
+    expect(screen.getByText("2 nearby points · choose one to edit")).toBeTruthy();
+    onSelectKeyframe.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "1 · 960 t · 0.50" }));
+    expect(onSelectKeyframe).toHaveBeenCalledWith(
+      { type: "keyframe", trackId: "cues", laneId: lane.id, keyframeId: "left-limit" },
+      { additive: false, toggle: false },
+    );
+  });
 });

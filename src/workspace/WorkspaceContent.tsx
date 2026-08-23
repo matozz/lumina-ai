@@ -1,7 +1,18 @@
-import { FlaskConical, Layers2, Layers3, Lightbulb, RadioTower, TriangleAlert } from "lucide-react";
+import {
+  FlaskConical,
+  Fullscreen,
+  Layers2,
+  Layers3,
+  Lightbulb,
+  RadioTower,
+  Shrink,
+  TriangleAlert,
+} from "lucide-react";
+import { useRef, useState } from "react";
 import { AuthoringTransportBar } from "@/authoring/AuthoringTransportBar";
 import { CanvasView } from "@/canvas/CanvasView";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { exactAsset } from "@/document/projectModel";
 import { cn } from "@/lib/utils";
@@ -12,6 +23,7 @@ import { EffectLabPreview } from "./effect-lab/EffectLabPreview";
 import { CuePreview } from "./cues/CuePreview";
 import { ArrangementTimeline } from "./arrange/ArrangementTimeline";
 import { WorkspacePanelHeader } from "./WorkspacePanelHeader";
+import { usePreviewFullscreen } from "./usePreviewFullscreen";
 
 export function WorkspaceContent({ workspace }: { workspace: WorkspaceId }) {
   const arrangeTimelineFocus = useWorkspaceStore(workspaceSelectors.arrangeTimelineFocus);
@@ -86,14 +98,32 @@ function WorkspaceSurface({
   const arrangement = exactAsset(bundle.arrangements, arrangementRef);
   const meta = surfaceMeta(workspace);
   const Icon = meta.icon;
+  const surfaceRef = useRef<HTMLElement>(null);
+  const [fullscreenError, setFullscreenError] = useState<string | null>(null);
+  const { previewFullscreen, togglePreviewFullscreen } = usePreviewFullscreen(
+    surfaceRef,
+    workspace === "arrange" && !compact,
+  );
+
+  const toggleFullscreen = async () => {
+    setFullscreenError(null);
+    try {
+      await togglePreviewFullscreen();
+    } catch (error) {
+      setFullscreenError(error instanceof Error ? error.message : String(error));
+    }
+  };
 
   return (
     <section
+      ref={surfaceRef}
       className={cn(
         "bg-background relative flex min-h-0 flex-col",
         compact ? "shrink-0" : "h-full",
+        previewFullscreen && "fixed inset-0 z-50 h-screen w-screen",
       )}
       data-arrange-preview-compact={compact || undefined}
+      data-preview-fullscreen={previewFullscreen || undefined}
     >
       <WorkspacePanelHeader icon={Icon} title={meta.title}>
         <span className="text-muted-foreground min-w-0 truncate text-[10px]">
@@ -102,6 +132,18 @@ function WorkspaceSurface({
         <span className="text-muted-foreground ml-auto font-mono text-[10px] tabular-nums">
           {arrangement?.tempo_map.points.length ?? 0} tempo points · TimeSignatureMap
         </span>
+        {workspace === "arrange" && !compact && (
+          <Button
+            size="icon-xs"
+            variant={previewFullscreen ? "secondary" : "ghost"}
+            aria-label={previewFullscreen ? "Exit preview fullscreen" : "Enter preview fullscreen"}
+            aria-pressed={previewFullscreen}
+            title={previewFullscreen ? "Exit preview fullscreen" : "Preview in system fullscreen"}
+            onClick={() => void toggleFullscreen()}
+          >
+            {previewFullscreen ? <Shrink aria-hidden="true" /> : <Fullscreen aria-hidden="true" />}
+          </Button>
+        )}
       </WorkspacePanelHeader>
       {workspace === "arrange" && arrangement && (
         <AuthoringTransportBar
@@ -123,6 +165,15 @@ function WorkspaceSurface({
                 <TriangleAlert aria-hidden="true" />
                 <AlertTitle>Arrangement preview unavailable</AlertTitle>
                 <AlertDescription>{previewError}</AlertDescription>
+              </Alert>
+            </div>
+          )}
+          {workspace === "arrange" && fullscreenError && (
+            <div className="absolute right-3 bottom-3 max-w-sm">
+              <Alert variant="destructive">
+                <TriangleAlert aria-hidden="true" />
+                <AlertTitle>Fullscreen unavailable</AlertTitle>
+                <AlertDescription>{fullscreenError}</AlertDescription>
               </Alert>
             </div>
           )}

@@ -346,6 +346,48 @@ describe("DocumentCommand transactions", () => {
     });
   });
 
+  it("preserves ordered same-tick points through generic document commands", () => {
+    const source = document();
+    source.timeline!.tracks[0].automation_lanes = [
+      {
+        id: "master",
+        target: { scope: "global", parameter_id: "master_dimmer" },
+        keyframes: [
+          {
+            id: "left-limit",
+            time_tick: 960,
+            value: { type: "scalar", value: 0.25 },
+            interpolation: "linear",
+          },
+          {
+            id: "boundary",
+            time_tick: 960,
+            value: { type: "scalar", value: 1 },
+            interpolation: "hold",
+          },
+        ],
+      },
+    ];
+
+    const next = applyDocumentTransaction(
+      source,
+      transaction([
+        {
+          type: "scale_automation_lane",
+          track_id: "effects",
+          lane_id: "master",
+          start_tick: 1_920,
+          duration_tick: 960,
+        },
+      ]),
+    );
+
+    expect(next.timeline?.tracks[0].automation_lanes?.[0].keyframes).toEqual([
+      expect.objectContaining({ id: "left-limit", time_tick: 1_920 }),
+      expect.objectContaining({ id: "boundary", time_tick: 1_920 }),
+    ]);
+  });
+
   it("fails the whole transaction when any command is invalid", () => {
     const source = document();
     expect(() =>

@@ -324,7 +324,7 @@ TargetSet 仍然属于 Cue Layer。下一 Goal 不得在 CueClip 上新增 Targe
 #### Automation 规则
 
 - 只选择关键点而未选择其 Clip 时，只移动/复制这些关键点。
-- 支持跨多条 lane 的水平批量移动；每条 lane 都必须保持严格递增、同 tick 唯一。
+- 支持跨多条 lane 的水平批量移动；每条 lane 都必须保持 tick 非递减。相同 tick 的稳定数组顺序表达瞬时切换边界。
 - 删除后每条 lane 至少保留一个关键点；若选择包含某 lane 的全部关键点，UI 必须提示用户删除 lane 或保留一个点，不能生成无效文档。
 
 #### Clipboard 规则

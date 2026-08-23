@@ -1,5 +1,5 @@
-import { createEvent, fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createEvent, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { projectActions } from "@/stores/project";
 import { workspaceActions } from "@/stores/workspace";
 import { WorkspaceContent } from "./WorkspaceContent";
@@ -36,9 +36,22 @@ vi.mock("@/components/ui/resizable", () => ({
 }));
 
 describe("WorkspaceContent", () => {
+  const originalRequestFullscreen = Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    "requestFullscreen",
+  );
+
   beforeEach(() => {
     projectActions.reset();
     workspaceActions.reset();
+  });
+
+  afterEach(() => {
+    if (originalRequestFullscreen) {
+      Object.defineProperty(HTMLElement.prototype, "requestFullscreen", originalRequestFullscreen);
+    } else {
+      Reflect.deleteProperty(HTMLElement.prototype, "requestFullscreen");
+    }
   });
 
   it("visualizes intensity-only output on the Arrange canvas", () => {
@@ -81,6 +94,23 @@ describe("WorkspaceContent", () => {
     expect(screen.getByRole("alert").textContent).toContain(
       "The selected Cue revision could not be compiled.",
     );
+  });
+
+  it("expands the Arrangement preview surface through the fullscreen control", async () => {
+    const requestFullscreen = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(HTMLElement.prototype, "requestFullscreen", {
+      configurable: true,
+      value: requestFullscreen,
+    });
+    const { container } = render(<WorkspaceContent workspace="arrange" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Enter preview fullscreen" }));
+
+    await waitFor(() => {
+      expect(requestFullscreen).toHaveBeenCalledOnce();
+      expect(container.querySelector("[data-preview-fullscreen]")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Exit preview fullscreen" })).toBeTruthy();
+    });
   });
 
   it("compresses the preview and gives Timeline the remaining height in focus mode", () => {

@@ -110,12 +110,11 @@ export function validateArrangementEdit(arrangement: ArrangementDocument) {
         ticks.length < 1 ||
         ticks.some(
           (tick) => !Number.isInteger(tick) || tick < 0 || tick >= arrangement.length_ticks,
-        ) ||
-        new Set(ticks).size !== ticks.length
+        )
       ) {
         throw bulkError(
           "ARRANGEMENT_KEYFRAME_MOVE_INVALID",
-          `Automation lane ${lane.id} would contain an invalid or duplicate tick.`,
+          `Automation lane ${lane.id} would contain an invalid tick.`,
         );
       }
       lane.keyframes.sort((left, right) => left.time_tick - right.time_tick);

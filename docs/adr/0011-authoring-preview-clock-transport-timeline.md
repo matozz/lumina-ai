@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-04
-- Amended: 2026-08-08 for Authoring V1
+- Amended: 2026-08-23 for Arrangement preview fullscreen
 - Extends: ADR-0001、ADR-0003、ADR-0010
 
 ## Context
@@ -20,6 +20,7 @@ Lab、Cues 和 Arrange 需要同一套音乐时钟与交互语义，但不能复
 - ArrangementTimeline 直接编辑 CueClip 和 typed automation。Pointer move 只更新 DOM refs；pointer up/cancel 最多提交一个 transaction。
 - playhead 使用独立轻量 subscription；viewport virtualization、adaptive snap、CSS grid 和 overscan 避免内容长度决定 DOM 数量。
 - action-local validation failure 不写 ProjectBundle/history，并在相关 inspector/control 附近显示 recovery。
+- Arrangement Preview fullscreen 是 workspace 展示状态：Tauri 使用当前原生窗口 fullscreen 并只展示 Preview surface，浏览器使用 element fullscreen；它不复制 Preview 算法、不改变 PreviewSession，也不写入 ProjectBundle。
 
 ## Consequences
 

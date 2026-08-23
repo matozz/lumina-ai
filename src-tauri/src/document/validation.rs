@@ -1597,12 +1597,12 @@ fn validate_timeline(
                         "Use a stable unique keyframe ID.",
                     ));
                 }
-                if previous_tick.is_some_and(|tick| tick >= keyframe.time_tick) {
+                if previous_tick.is_some_and(|tick| tick > keyframe.time_tick) {
                     diagnostics.push(Diagnostic::error(
                         DOC_TIMELINE_TARGET_INVALID,
                         format!("{path}.keyframes"),
-                        "Automation keyframes must use strictly increasing time_tick values.",
-                        "Sort keyframes and use at most one keyframe per tick.",
+                        "Automation keyframes must use non-decreasing time_tick values.",
+                        "Sort keyframes by tick; same-tick array order defines the boundary value.",
                     ));
                 }
                 previous_tick = Some(keyframe.time_tick);

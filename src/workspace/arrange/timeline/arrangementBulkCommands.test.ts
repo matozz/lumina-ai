@@ -45,7 +45,7 @@ describe("Arrangement bulk commands", () => {
     );
   });
 
-  it("moves keyframes across lanes and rejects duplicate ticks atomically", () => {
+  it("moves keyframes across lanes, permits same-tick stacks, and rejects invalid ranges", () => {
     const arrangement = createHouseArrangementReference();
     const selection: ArrangementTimelineSelection = {
       anchor: null,
@@ -67,8 +67,17 @@ describe("Arrangement bulk commands", () => {
         ?.keyframes[0].time_tick,
     ).toBe(30_960);
 
+    moveArrangementSelection(arrangement, selection, 15_120);
+    expect(
+      arrangement.tracks[0].automation_lanes
+        ?.find((lane) => lane.id === "full-breath-speed")
+        ?.keyframes.filter((keyframe) => keyframe.time_tick === 46_080),
+    ).toHaveLength(2);
+
     const before = structuredClone(arrangement);
-    expect(() => moveArrangementSelection(arrangement, selection, 15_120)).toThrow(/duplicate/);
+    expect(() =>
+      moveArrangementSelection(arrangement, selection, arrangement.length_ticks),
+    ).toThrow(/invalid tick/);
     expect(arrangement).toEqual(before);
   });
 

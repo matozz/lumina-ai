@@ -17,14 +17,14 @@ const keyframes: KeyframeDSL[] = [0, 480, 960, 1_440].map((time_tick, index) => 
 describe("keyframe geometry", () => {
   it("bounds non-contiguous multi-selection without crossing unselected keys", () => {
     const bounds = keyframeMoveBounds(keyframes, new Set(["key-1", "key-3"]));
-    expect(bounds).toEqual({ minimum: -479, maximum: 479 });
-    expect(clampKeyframeDelta(-960, bounds)).toBe(-479);
+    expect(bounds).toEqual({ minimum: -480, maximum: 480 });
+    expect(clampKeyframeDelta(-960, bounds)).toBe(-480);
   });
 
-  it("clamps a dragged point to the nearest legal Snap instead of a one-tick boundary", () => {
+  it("clamps a dragged point to the nearest legal Snap and permits a same-tick boundary", () => {
     expect(clampKeyframeDeltaToSnap(960, { minimum: -960, maximum: 959 }, 960, 240)).toBe(720);
     expect(clampKeyframeDeltaToSnap(-960, { minimum: -960, maximum: 959 }, 960, 240)).toBe(-960);
-    expect(clampKeyframeDeltaToSnap(480, { minimum: -479, maximum: 479 }, 480, 480)).toBe(0);
+    expect(clampKeyframeDeltaToSnap(480, { minimum: -480, maximum: 480 }, 480, 480)).toBe(480);
   });
 
   it("maps scalar ranges vertically", () => {
